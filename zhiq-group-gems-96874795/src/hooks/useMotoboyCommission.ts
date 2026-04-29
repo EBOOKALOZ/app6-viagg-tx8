@@ -1,0 +1,215 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { calculateCommissionRate } from "@/lib/api";
+
+export interface GroupDetail {
+  id: string;
+  group_name: string | null;
+  group_link: string | null;
+  city_name: string | null;
+  neighborhood: string | null;
+  validation_status: string;
+  is_active: boolean;
+  is_valid: boolean;
+  valid_for_commission: boolean;
+  members_count: number;
+  last_posted_at: string | null;
+  created_at: string;
+}
+
+export interface MotoboyCommissionData {
+  commissionRate: number;
+  activeGroups: number;
+  validForCommission: number;
+  totalGroups: number;
+  pendingGroups: number;
+  expiredGroups: number;
+  atRiskGroups: number;
+  groups: GroupDetail[];
+  groupsByRegion: Record<string, { total: number; valid: number }>;
+  nextTierRate: number | null;
+  groupsToNextTier: number;
+  isOnline: boolean;
+}
+
+const COMMISSION_TIERS = [
+  { min: 0, rate: 25 },
+  { min: 1, rate: 18 },
+  { min: 2, rate: 12 },
+  { min: 3, rate: 6 },
+];
+
+/**
+ * Hook that calculates commission rate from REAL whatsapp_groups data.
+ * Also computes detailed breakdowns for the premium groups dashboard.
+ *
+ * Commission tiers:
+ *   0 groups → 25%
+ *   1 group  → 18%
+ *   2 groups → 12%
+ *   3+ groups → 6%
+ */
+export function useMotoboyCommission(userId: string | undefined) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ['motoboy-commission', userId],
+    queryFn: async (): Promise<MotoboyCommissionData> => {
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+
+      const { data: groups, error } = await (supabase
+        .from('whatsapp_groups') as any)
+        .select('id, group_name, group_link, city_name, neighborhood, validation_status, is_active, is_valid, valid_for_commission, members_count, last_posted_at, created_at')
+        .eq('owner_user_id', userId);
+
+      const { data: profile } = await supabase
+        .from('motoboy_profiles')
+        .select('is_online')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const isOnline = profile?.is_online ?? false;
+
+      if (error) {
+        console.error('[useMotoboyCommission] Error fetching groups:', error);
+        throw error;
+      }
+
+      const allGroups: GroupDetail[] = (groups || []).map((g: any) => ({
+        id: g.id,
+        group_name: g.group_name || null,
+        group_link: g.group_link || null,
+        city_name: g.city_name || null,
+        neighborhood: g.neighborhood || null,
+        validation_status: g.validation_status || 'pending',
+        is_active: g.is_active ?? false,
+        is_valid: g.is_valid ?? false,
+        valid_for_commission: g.valid_for_commission ?? false,
+        members_count: g.members_count ?? 0,
+        last_posted_at: g.last_posted_at || null,
+        created_at: g.created_at,
+      }));
+
+      const totalGroups = allGroups.length;
+
+      // Count from DB flag
+      const dbValidCount = allGroups.filter(g => g.valid_for_commission).length;
+      // Fallback: derive from approval + active + valid (resilient to missing triggers)
+      const derivedValidCount = allGroups.filter(g =>
+        g.validation_status === 'approved' && g.is_active && g.is_valid
+      ).length;
+      // Use whichever is higher — respects trigger when it runs, falls back when it doesn't
+      const validForCommission = Math.max(dbValidCount, derivedValidCount);
+
+      const activeGroups = allGroups.filter(g => g.validation_status === 'approved' && g.is_active).length;
+      const pendingGroups = allGroups.filter(g => g.validation_status === 'pending').length;
+      const expiredGroups = allGroups.filter(g => !g.is_active || (!g.is_valid && g.validation_status !== 'pending')).length;
+
+      // Mark derived validity on each group for downstream use
+      const isGroupEffectivelyValid = (g: GroupDetail) =>
+        g.valid_for_commission || (g.validation_status === 'approved' && g.is_active && g.is_valid);
+
+      const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
+      const atRiskGroups = allGroups.filter(g =>
+        g.is_active && g.validation_status === 'approved' &&
+        (!g.last_posted_at || g.last_posted_at < fifteenDaysAgo)
+      ).length;
+
+      const groupsByRegion: Record<string, { total: number; valid: number }> = {};
+      allGroups.forEach(g => {
+        const region = g.city_name || 'Sem região';
+        if (!groupsByRegion[region]) groupsByRegion[region] = { total: 0, valid: 0 };
+        groupsByRegion[region].total++;
+        if (isGroupEffectivelyValid(g)) groupsByRegion[region].valid++;
+      });
+
+      const commissionRate = calculateCommissionRate(validForCommission);
+
+      const cappedValid = Math.min(validForCommission, 3);
+      const nextTier = COMMISSION_TIERS.find(t => t.min > cappedValid);
+      const nextTierRate = nextTier?.rate ?? null;
+      const groupsToNextTier = nextTier ? nextTier.min - validForCommission : 0;
+
+      return {
+        commissionRate, activeGroups, validForCommission, totalGroups,
+        pendingGroups, expiredGroups, atRiskGroups,
+        groups: allGroups, groupsByRegion, nextTierRate, groupsToNextTier,
+        isOnline
+      };
+    },
+    enabled: !!userId,
+    staleTime: 0,
+    gcTime: 30_000,
+  });
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`commission-groups-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_groups' },
+        (payload: any) => {
+          console.log('[Commission Realtime] Group changed:', payload.eventType);
+          queryClient.invalidateQueries({ queryKey: ['motoboy-commission', userId] });
+        }
+      ).subscribe();
+
+    const profileChannel = supabase
+      .channel(`motoboy-profile-status-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'motoboy_profiles', filter: `user_id=eq.${userId}` },
+        () => {
+          console.log('[Commission Realtime] Profile status changed');
+          queryClient.invalidateQueries({ queryKey: ['motoboy-commission', userId] });
+        }
+      ).subscribe();
+
+    return () => { 
+      supabase.removeChannel(channel); 
+      supabase.removeChannel(profileChannel);
+    };
+  }, [userId, queryClient]);
+
+  const toggleOnline = async () => {
+    if (!userId || query.data?.isOnline === undefined) return;
+    
+    const newStatus = !query.data.isOnline;
+    console.log('[useMotoboyCommission] Toggling online to:', newStatus);
+    
+    try {
+      const { error } = await supabase
+        .from('motoboy_profiles')
+        .update({ is_online: newStatus })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      
+      // Optimistic update
+      queryClient.setQueryData(['motoboy-commission', userId], (old: any) => ({
+        ...old,
+        isOnline: newStatus
+      }));
+    } catch (err) {
+      console.error('Error toggling online status:', err);
+      throw err;
+    }
+  };
+
+  return {
+    ...query,
+    commissionRate: query.data?.commissionRate ?? 25,
+    activeGroups: query.data?.activeGroups ?? 0,
+    validForCommission: query.data?.validForCommission ?? 0,
+    totalGroups: query.data?.totalGroups ?? 0,
+    pendingGroups: query.data?.pendingGroups ?? 0,
+    expiredGroups: query.data?.expiredGroups ?? 0,
+    atRiskGroups: query.data?.atRiskGroups ?? 0,
+    groups: query.data?.groups ?? [],
+    groupsByRegion: query.data?.groupsByRegion ?? {},
+    nextTierRate: query.data?.nextTierRate ?? null,
+    groupsToNextTier: query.data?.groupsToNextTier ?? 0,
+    isOnline: query.data?.isOnline ?? false,
+    toggleOnline,
+  };
+}

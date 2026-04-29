@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Preview WhatsApp</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'Segoe UI', sans-serif;
+      background: #111b21;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+
+    h2 {
+      color: #aaa;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    /* ── Fundo do chat ── */
+    .chat-bg {
+      width: 100%;
+      max-width: 420px;
+      background-color: #0b141a;
+      background-image: url("https://web.whatsapp.com/img/bg-chat-tile-light_a4be512e7195b6b733d9110b408f075d.png");
+      border-radius: 16px;
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* ── Data separador ── */
+    .date-sep {
+      text-align: center;
+      font-size: 11px;
+      color: #e9edef;
+      background: rgba(17,27,33,0.6);
+      border-radius: 6px;
+      padding: 4px 10px;
+      align-self: center;
+      margin-bottom: 4px;
+    }
+
+    /* ── Bolha de mensagem ── */
+    .bubble-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+      align-self: flex-end;
+    }
+
+    .bubble {
+      max-width: 340px;
+      background: #202c33;
+      border-radius: 8px 8px 8px 0px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    /* ── Sender name ── */
+    .sender-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #53bdeb;
+      padding: 8px 12px 2px;
+    }
+
+    /* ── Texto da mensagem ── */
+    .msg-text {
+      font-size: 14px;
+      color: #e9edef;
+      line-height: 1.5;
+      padding: 4px 12px 6px;
+      white-space: pre-wrap;
+    }
+
+    /* ── OG Link Preview Card ── */
+    .og-card {
+      border-left: 4px solid #25D366;
+      background: #1a2229;
+      margin: 0 8px 8px;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .og-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .og-image-placeholder {
+      width: 100%;
+      height: 180px;
+      background: linear-gradient(135deg, #1e3a2f, #0d2b20);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+
+    .og-body {
+      padding: 8px 10px 10px;
+    }
+
+    .og-site {
+      font-size: 11px;
+      color: #8696a0;
+      margin-bottom: 3px;
+    }
+
+    .og-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e9edef;
+      line-height: 1.3;
+      margin-bottom: 3px;
+    }
+
+    .og-desc {
+      font-size: 12px;
+      color: #8696a0;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ── Timestamp ── */
+    .timestamp {
+      font-size: 11px;
+      color: #8696a0;
+      text-align: right;
+      padding: 2px 10px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .check-icon { color: #53bdeb; font-size: 13px; }
+
+    /* ── Label explicativo ── */
+    .label {
+      margin-top: 28px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .label h3 {
+      color: #8696a0;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .label-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .label-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+
+    .label-text {
+      font-size: 13px;
+      color: #aaa;
+      line-height: 1.5;
+    }
+
+    .label-text strong { color: #e9edef; }
+  </style>
+</head>
+<body>
+
+  <h2>Preview real — WhatsApp Group</h2>
+
+  <div class="chat-bg">
+
+    <div class="date-sep">Hoje</div>
+
+    <div class="bubble-wrap">
+      <div class="avatar">M</div>
+      <div class="bubble">
+
+        <div class="sender-name">Motoboy Viagg</div>
+
+        <!-- Texto da campanha -->
+        <div class="msg-text">🏪 <strong style="color:#e9edef">Loja Exemplo</strong>
+📍 Blumenau · SC
+
+🛍️ Ofertas especiais:
+• Livro Físico — R$ 29,90
+• Relógio Moderno — R$ 145,00
+• Placa APM — R$ 256,00</div>
+
+        <!-- OG Preview Card (gerado pela Edge Function) -->
+        <div class="og-card">
+          <!-- Imagem do produto (og:image) -->
+          <div class="og-image-placeholder">🏪</div>
+          <div class="og-body">
+            <div class="og-site">broifhfqmnzqoongtokm.supabase.co</div>
+            <div class="og-title">Loja Exemplo — Ofertas Especiais</div>
+            <div class="og-desc">Blumenau · SC · Livro Físico, Relógio Moderno e mais. Veja as ofertas da loja!</div>
+          </div>
+        </div>
+
+        <div class="timestamp">
+          14:32
+          <span class="check-icon">✓✓</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Legenda explicativa -->
+  <div class="label">
+    <h3>O que é cada parte</h3>
+
+    <div class="label-item">
+      <div class="label-dot" style="background:#25D366"></div>
+      <div class="label-text">
+        <strong>Texto da mensagem</strong> — gerado automaticamente pela campanha do anunciante (message_text).
+      </div>
+    </div>
+
+    <div class="label-item">
+      <div class="label-dot" style="background:#53bdeb"></div>
+      <div class="label-text">
+        <strong>Card de preview (OG)</strong> — gerado pela Edge Function no Supabase. Aparece automaticamente quando o WhatsApp detecta o link. Mostra a imagem do produto, título e descrição da campanha.
+      </div>
+    </div>
+
+    <div class="label-item">
+      <div class="label-dot" style="background:#ff6a00"></div>
+      <div class="label-text">
+        <strong>Quando alguém toca no card</strong> → vai direto para a loja no app Viagg.
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,2 @@
+-- No-op: force types regeneration to include city, group_type, status, created_by columns on whatsapp_groups
+COMMENT ON TABLE public.whatsapp_groups IS 'Unified WhatsApp groups table for all profiles';

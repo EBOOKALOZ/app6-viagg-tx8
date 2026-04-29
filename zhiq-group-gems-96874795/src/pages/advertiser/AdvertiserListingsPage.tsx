@@ -1,0 +1,943 @@
+import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { 
+  Package, 
+  Plus, 
+  Search,
+  Building2, 
+  Car,
+  ShoppingBag,
+  Eye, 
+  Edit, 
+  MoreVertical, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle,
+  Loader2,
+  Trash2,
+  MapPin,
+  Gavel,
+  Tag,
+  Timer,
+  MessageSquare,
+  CheckCheck,
+  X,
+  Inbox,
+  Coins,
+  Users,
+  Bell,
+  Lock as LockIcon,
+  Unlock as UnlockIcon,
+  Play,
+  Pause,
+  Send,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn, formatCurrencyBRL } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { AdvertiserCommercialRuleCard } from "@/components/advertiser/AdvertiserCommercialRuleCard";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { useAdvertiserArremate } from "@/hooks/useAdvertiserArremate";
+import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
+import { useAdvertiserLeadsDashboard } from "@/hooks/useAdvertiserLeadsDashboard";
+import { LeadCard } from "@/components/advertiser/LeadCard";
+import { AdvertiserCreditPackagesPanel } from "@/components/advertiser/AdvertiserCreditPackagesPanel";
+import { useAdvertiserCampaignDispatch } from "@/hooks/useAdvertiserCampaignDispatch";
+
+// ─── Countdown inline ────────────────────────────────────────
+function InlineCountdown({ endsAt }: { endsAt: string }) {
+  const [now, setNow] = React.useState(Date.now());
+  React.useEffect(() => {
+    const iv = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const diff = new Date(endsAt).getTime() - now;
+  if (diff <= 0) return <span className="text-[10px] text-red-500 font-bold">Encerrado</span>;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const isUrgent = diff < 3600000;
+  return (
+    <span className={cn("font-mono text-[10px] font-bold tabular-nums", isUrgent && "text-red-500 animate-pulse")}>
+      {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
+    </span>
+  );
+}
+
+// ─── Badge de modalidade ─────────────────────────────────────
+function ListingModeBadge({ mode, endsAt }: { mode: string; endsAt?: string }) {
+  if (mode === 'auction') {
+    return (
+      <span className="flex items-center gap-1 px-2.5 py-1 bg-[#FF6A00]/10 text-[#FF6A00] text-[9px] font-black uppercase rounded-full border border-[#FF6A00]/20">
+        <Gavel className="w-2.5 h-2.5" />
+        Leilão
+        {endsAt && <> · <InlineCountdown endsAt={endsAt} /></>}
+      </span>
+    );
+  }
+  if (mode === 'arremate') {
+    return (
+      <span className="flex items-center gap-1 px-2.5 py-1 bg-[#E6E6FA]/10 text-[#E6E6FA] text-[9px] font-black uppercase rounded-full border border-[#E6E6FA]/20">
+        <Tag className="w-2.5 h-2.5" />
+        Arremate
+      </span>
+    );
+  }
+  return null;
+}
+
+type TabId = 'listings' | 'offers' | 'intentions';
+
+export default function AdvertiserListingsPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<TabId>('listings');
+
+  // ── Hooks de leilão e créditos ──
+  const { receivedOffers, loadingOffers, respondOffer } = useAdvertiserArremate();
+  const { acceptArremateOfferWithCredits, balance, usageRules } = useAdvertiserCredits();
+
+  // ── Hook unificado de leads + créditos (anunciante) ──
+  const {
+    dashboard,
+    leads,
+    leadsLoading: intentionsLoading,
+    unlockLead,
+    pollPurchaseStatus,
+    refetchAll,
+  } = useAdvertiserLeadsDashboard();
+
+  const pendingCount = dashboard.leads_pending;
+
+  // Custo por aceite (do admin)
+  const contactCost = usageRules.find(r => r.feature_code === 'offer_accept_contact_unlock')?.credits_cost ?? 2;
+  const intentionCost = usageRules.find(r => r.feature_code === 'purchase_intention_received')?.credits_cost ?? 5;
+  const totalAcceptCost = contactCost + intentionCost;
+
+  // ── Hook de envio para fila de postagem ──
+  const { dispatch: dispatchToQueue, loadingId: dispatchingId } = useAdvertiserCampaignDispatch();
+
+  // ── Estado da aba de Interessados ──
+  const [showBuyPanel, setShowBuyPanel] = React.useState(false);
+
+  const pendingOffersCount = receivedOffers.filter(o => o.status === 'pending').length;
+
+  // ── Query de listings ──
+  const listingsQuery = useQuery({
+    queryKey: ["advertiser-unified-listings", user?.id],
+    enabled: !!user,
+    refetchInterval: 8000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    staleTime: 0,
+    queryFn: async () => {
+      // 1. Real Estate
+      const rePromise = supabase
+        .from("real_estate_listings")
+        .select(`*, real_estate_media(public_masked_storage_path, original_storage_path)`)
+        .eq("owner_user_id", user?.id);
+
+      // 2. Vehicles
+      const vPromise = supabase
+        .from("vehicle_listings" as any)
+        .select(`*, vehicle_media(original_storage_path, public_masked_storage_path)`)
+        .eq("owner_user_id", user?.id);
+
+      // 3. Advertiser Ads
+      const { data: advertiserData } = await supabase.from('advertiser_accounts' as any).select('id').eq('user_id', user?.id).maybeSingle();
+      
+      const pPromise = supabase
+        .from("advertiser_listings" as any)
+        .select(`*, advertiser_listing_media(media_url)`)
+        .eq("advertiser_account_id", advertiserData?.id);
+
+      const [reRes, vRes, pRes] = await Promise.all([rePromise, vPromise, pPromise]);
+
+      const normalized: any[] = [];
+
+      (reRes.data || []).forEach(item => normalized.push({
+        id: item.id, title: item.title, category: 'imovel',
+        city: item.city, state: item.state, price: item.price_brl || 0,
+        status: item.visibility_status,
+        image: item.real_estate_media?.[0]?.public_masked_storage_path || item.real_estate_media?.[0]?.original_storage_path,
+        storageBucket: 'real-estate-public', typeLabel: item.property_type,
+        listingMode: 'normal', raw: item,
+      }));
+
+      (vRes.data || []).forEach((item: any) => {
+        // Prioridade 1: cover_image_url (full public URL definida pelo VehicleForm)
+        let imgUrl: string | null = item.cover_image_url || null;
+
+        // Prioridade 2: vehicle_media join (pode falhar se FK não existir no PostgREST)
+        if (!imgUrl && item.vehicle_media?.length > 0) {
+          const media = item.vehicle_media[0];
+          const mediaPath = media?.public_masked_storage_path || media?.original_storage_path;
+          if (mediaPath) {
+            imgUrl = mediaPath.startsWith('http') 
+              ? mediaPath 
+              : supabase.storage.from('real-estate-original').getPublicUrl(mediaPath).data.publicUrl;
+          }
+        }
+
+        normalized.push({
+          id: item.id, title: item.title, category: 'veiculo',
+          city: item.city, state: item.state, price: item.price_brl || 0,
+          status: item.visibility_status, image: imgUrl, storageBucket: null,
+          typeLabel: item.vehicle_type || 'Carro', listingMode: 'normal', raw: item,
+        });
+      });
+
+      // ── Fallback robusto: buscar imagens de veículos sem cover_image_url ──
+      const vehiclesWithoutImage = normalized.filter(n => n.category === 'veiculo' && !n.image);
+      if (vehiclesWithoutImage.length > 0) {
+        const vIds = vehiclesWithoutImage.map(v => v.id);
+        const { data: mediaRows } = await supabase
+          .from('vehicle_media' as any)
+          .select('listing_id, original_storage_path, public_masked_storage_path')
+          .in('listing_id', vIds);
+
+        if (mediaRows && mediaRows.length > 0) {
+          const mediaMap = new Map<string, string>();
+          for (const row of mediaRows as any[]) {
+            if (!mediaMap.has(row.listing_id)) {
+              const p = row.public_masked_storage_path || row.original_storage_path;
+              if (p) {
+                mediaMap.set(
+                  row.listing_id, 
+                  p.startsWith('http') 
+                    ? p 
+                    : supabase.storage.from('real-estate-original').getPublicUrl(p).data.publicUrl
+                );
+              }
+            }
+          }
+          for (const n of normalized) {
+            if (n.category === 'veiculo' && !n.image && mediaMap.has(n.id)) {
+              n.image = mediaMap.get(n.id)!;
+            }
+          }
+        }
+      }
+
+      (pRes.data || []).forEach(item => {
+        const mediaFallback = (item as any).advertiser_listing_media?.[0]?.media_url ?? null;
+        let pUrl = item.cover_image_url || mediaFallback;
+        if (pUrl && !pUrl.startsWith('http')) {
+          pUrl = supabase.storage.from('marketing-materials').getPublicUrl(pUrl).data.publicUrl;
+        }
+
+        normalized.push({
+          id: item.id, title: item.title, category: 'produto',
+          city: item.city || '', state: 'SP', 
+          price: item.price || 0, 
+          status: item.listing_status, 
+          image: pUrl, 
+          storageBucket: null,
+          typeLabel: item.category || 'Produto', 
+          listingMode: 'normal',
+          raw: item,
+        });
+      });
+
+      return normalized.sort((a, b) => new Date(b.raw.created_at).getTime() - new Date(a.raw.created_at).getTime());
+    }
+  });
+
+  // ── Realtime: novo/atualizado/excluído anúncio → revalida imediatamente ──
+  React.useEffect(() => {
+    if (!user?.id) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ["advertiser-unified-listings", user.id] });
+    };
+
+    const channel = supabase
+      .channel(`advertiser-listings-realtime-${user.id}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "real_estate_listings",
+        filter: `owner_user_id=eq.${user.id}`,
+      }, invalidate)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "vehicle_listings",
+        filter: `owner_user_id=eq.${user.id}`,
+      }, invalidate)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "advertiser_listings",
+      }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
+  const getStatusBadge = (status: string) => {
+    const s = status?.toLowerCase();
+    if (s === 'published' || s === 'active') {
+      return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#22C55E]/10 text-[#22C55E] text-[10px] font-black uppercase rounded-full border border-[#22C55E]/20"><CheckCircle2 className="w-3 h-3" /> Publicado</span>;
+    }
+    if (s === 'pending_review' || s === 'moderating') {
+      return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#FF6A00]/10 text-[#FF6A00] text-[10px] font-black uppercase rounded-full border border-[#FF6A00]/20"><Clock className="w-3 h-3" /> Em Análise</span>;
+    }
+    if (s === 'draft') {
+      return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#2A3038] text-[#A7B0BE] text-[10px] font-black uppercase rounded-full border border-[#2A3038]"><Edit className="w-3 h-3" /> Rascunho</span>;
+    }
+    if (s === 'paused') {
+      return <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 text-amber-400 text-[10px] font-black uppercase rounded-full border border-amber-400/20"><Clock className="w-3 h-3" /> Pausado</span>;
+    }
+    return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#EF4444]/10 text-[#EF4444] text-[10px] font-black uppercase rounded-full border border-[#EF4444]/20"><AlertCircle className="w-3 h-3" /> {status}</span>;
+  };
+
+  const deleteListing = useMutation({
+    mutationFn: async ({ id, category }: { id: string, category: string }) => {
+      let table = "real_estate_listings";
+      if (category === 'veiculo') table = "vehicle_listings";
+      if (category === 'produto') table = "advertiser_listings";
+      const { error } = await supabase.from(table as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { listingsQuery.refetch(); toast.success("Anúncio excluído com sucesso."); },
+    onError: (err: any) => toast.error(`Erro: ${err.message}`)
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: async ({ id, category, currentStatus }: { id: string, category: string, currentStatus: string }) => {
+      // Normalize current status
+      const s = currentStatus?.toLowerCase();
+      const isCurrentlyActive = s === 'active' || s === 'published' || s === 'active_published';
+      let table = "real_estate_listings";
+      let statusColumn = "visibility_status";
+      let activeStatus = "published";
+
+      if (category === 'veiculo') {
+        table = "vehicle_listings";
+        statusColumn = "visibility_status";
+      } else if (category === 'produto') {
+        table = "advertiser_listings";
+        statusColumn = "listing_status";
+        activeStatus = "active";
+      }
+      
+      const newStatus = isCurrentlyActive ? 'paused' : activeStatus;
+      
+      const { error } = await supabase.from(table as any).update({ [statusColumn]: newStatus }).eq("id", id);
+      if (error) throw error;
+      return newStatus;
+    },
+    onSuccess: (newStatus) => { 
+      listingsQuery.refetch(); 
+      if (newStatus === 'published' || newStatus === 'active') {
+        toast.success("Anúncio ativado com sucesso!"); 
+      } else {
+        toast.success("Anúncio pausado com sucesso.");
+      }
+    },
+    onError: (err: any) => toast.error(`Erro ao alterar status: ${err.message}`)
+  });
+
+  const filteredListings = listingsQuery.data?.filter(l =>
+    l.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    l.city?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // ── Aceitar oferta com créditos ──
+  const handleAcceptOffer = async (offerId: string) => {
+    await acceptArremateOfferWithCredits(offerId);
+    queryClient.invalidateQueries({ queryKey: ["advertiser-arremate-offers"] });
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-black text-[#F5F7FA] tracking-tight flex items-center gap-3">
+            <Package className="w-8 h-8 text-[#FF6A00]" />
+            MEUS ANÚNCIOS
+          </h1>
+          <p className="text-[#A7B0BE] font-medium tracking-tight">Gerencie suas ofertas e acompanhe o status de cada publicação.</p>
+        </div>
+        <Button
+          onClick={() => navigate("/anunciante/anuncios/novo")}
+          className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest h-12 px-6 rounded-xl shadow-lg shadow-[#FF6A00]/20 gap-2 transition-all hover:scale-105 active:scale-95"
+        >
+          <Plus className="w-5 h-5" /> Novo Anúncio
+        </Button>
+      </div>
+
+      <AdvertiserCommercialRuleCard />
+
+      {/* ── Tabs ── */}
+      <div className="flex gap-2 bg-[#0D0F12] p-1 rounded-2xl w-fit flex-wrap border border-[#2A3038]">
+        <button
+          onClick={() => setActiveTab('listings')}
+          className={cn(
+            'px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all',
+            activeTab === 'listings' ? 'bg-[#FF6A00] text-white shadow-sm shadow-[#FF6A00]/30' : 'text-[#A7B0BE] hover:text-[#F5F7FA]'
+          )}
+        >
+          Anúncios
+        </button>
+        <button
+          onClick={() => setActiveTab('offers')}
+          className={cn(
+            'px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2',
+            activeTab === 'offers' ? 'bg-[#FF6A00] text-white shadow-sm shadow-[#FF6A00]/30' : 'text-[#A7B0BE] hover:text-[#F5F7FA]'
+          )}
+        >
+          Ofertas Recebidas
+          {pendingOffersCount > 0 && (
+            <span className="w-5 h-5 rounded-full bg-[#E6E6FA] text-[#0D0F12] text-[9px] font-black flex items-center justify-center animate-bounce">
+              {pendingOffersCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('intentions')}
+          className={cn(
+            'px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2',
+            activeTab === 'intentions' ? 'bg-[#FF6A00] text-white shadow-sm shadow-[#FF6A00]/30' : 'text-[#A7B0BE] hover:text-[#F5F7FA]'
+          )}
+        >
+          <Users className="w-3.5 h-3.5" />
+          Interessados
+          {pendingCount > 0 && (
+            <span className="w-5 h-5 rounded-full bg-[#FF6A00] text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+              {pendingCount > 9 ? '9+' : pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ──────────────────────────────────────────────── */}
+      {/* TAB: ANÚNCIOS                                   */}
+      {/* ──────────────────────────────────────────────── */}
+      {activeTab === 'listings' && (
+        <>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A7B0BE] group-focus-within:text-[#FF6A00] transition-colors" />
+              <Input
+                placeholder="Buscar por título, cidade ou categoria..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 h-12 rounded-xl border-[#2A3038] bg-[#1B1F24] text-[#F5F7FA] placeholder:text-[#A7B0BE] focus-visible:ring-[#FF6A00]/20 focus-visible:border-[#FF6A00] transition-all font-medium"
+              />
+            </div>
+          </div>
+
+          {listingsQuery.isLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
+              <p className="text-sm font-black text-[#A7B0BE] uppercase tracking-widest">Sincronizando Marketplace...</p>
+            </div>
+          ) : !filteredListings || filteredListings.length === 0 ? (
+            <Card className="border border-dashed border-[#2A3038] bg-[#1B1F24] rounded-[40px] overflow-hidden shadow-none">
+              <CardContent className="p-20 flex flex-col items-center text-center space-y-6">
+                <div className="w-24 h-24 rounded-full bg-[#FF6A00]/10 flex items-center justify-center text-[#FF6A00] shadow-inner group relative">
+                  <Package className="w-10 h-10 relative z-10" />
+                  <div className="absolute inset-0 bg-[#FF6A00]/20 rounded-full animate-ping opacity-20" />
+                </div>
+                <h3 className="text-2xl font-black text-[#F5F7FA] uppercase tracking-tight">
+                  {searchTerm ? "Nenhum resultado" : "Nenhum anúncio encontrado"}
+                </h3>
+                <Button onClick={() => navigate("/anunciante/anuncios/novo")} className="h-14 px-10 rounded-2xl bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-[#FF6A00]/20">começar agora</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="bg-[#1B1F24] rounded-[32px] border border-[#2A3038] shadow-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-[#14171B] border-b border-[#2A3038]">
+                    <tr>
+                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest">Anúncio</th>
+                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest">Modalidade</th>
+                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest text-center">Status</th>
+                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest text-right">Valor</th>
+                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2A3038]">
+                    {filteredListings.map((listing) => (
+                      <tr key={listing.id} className="hover:bg-[#14171B] transition-colors group">
+                        <td className="p-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-[#14171B] overflow-hidden shrink-0 border border-[#2A3038] flex items-center justify-center">
+                              {listing.image ? (
+                                <img
+                                  src={
+                                    listing.image.startsWith('http') 
+                                      ? listing.image 
+                                      : listing.storageBucket
+                                        ? `${supabase.storage.from(listing.storageBucket).getPublicUrl(listing.image).data.publicUrl}`
+                                        : listing.image
+                                  }
+                                  className="w-full h-full object-cover" alt=""
+                                />
+                              ) : (
+                                listing.category === 'imovel' ? <Building2 className="w-5 h-5 text-[#2A3038]" /> :
+                                listing.category === 'veiculo' ? <Car className="w-5 h-5 text-[#2A3038]" /> :
+                                <ShoppingBag className="w-5 h-5 text-[#2A3038]" />
+                              )}
+                            </div>
+                            <div>
+                              <h3 className="font-black text-[#F5F7FA] text-sm line-clamp-1">{listing.title}</h3>
+                              <p className="text-[10px] font-bold text-[#A7B0BE] uppercase tracking-wider flex items-center gap-1">
+                                <MapPin className="w-3 h-3" /> {listing.city}, {listing.state}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-6">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">
+                                {listing.category === 'imovel' ? "🏘️" : listing.category === 'veiculo' ? "🚗" : "🛒"}
+                              </span>
+                              <span className="text-[11px] font-black text-[#F5F7FA] uppercase tracking-tight">{listing.typeLabel}</span>
+                            </div>
+                            {listing.listingMode && listing.listingMode !== 'normal' && (
+                              <ListingModeBadge mode={listing.listingMode} endsAt={listing.auctionEndsAt} />
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-6">
+                          <div className="flex justify-center">{getStatusBadge(listing.status)}</div>
+                        </td>
+                        <td className="p-6 text-right font-black text-[#F5F7FA] italic">
+                          {formatCurrencyBRL(listing.price)}
+                        </td>
+                        <td className="p-6">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost" size="icon" className="h-10 w-10 hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] rounded-xl text-[#A7B0BE]"
+                              onClick={() => {
+                                const paths: any = { imovel: '/imoveis', veiculo: '/veiculos', produto: '/produto' };
+                                window.open(`${paths[listing.category]}/${listing.id}`, '_blank');
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon" className="h-10 w-10 hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] rounded-xl text-[#A7B0BE]"
+                              onClick={() => {
+                                const paths: any = {
+                                  imovel: `/anunciante/anuncios/editar/imovel/${listing.id}`,
+                                  veiculo: `/anunciante/anuncios/editar/veiculo/${listing.id}`,
+                                  produto: `/anunciante/anuncios/editar/produto/${listing.id}`,
+                                };
+                                navigate(paths[listing.category]);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl"><MoreVertical className="w-4 h-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-2xl border-zinc-100">
+                                <DropdownMenuItem
+                                  disabled={dispatchingId === listing.id}
+                                  onClick={() => dispatchToQueue(listing.id, listing.category)}
+                                  className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-[#25D366] hover:bg-[#25D366]/10 mb-1"
+                                >
+                                  {dispatchingId === listing.id
+                                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
+                                    : <><Send className="w-4 h-4" /> Divulgar em Grupos</>
+                                  }
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {listing.status?.toLowerCase() === 'active' || listing.status?.toLowerCase() === 'published' ? (
+                                  <DropdownMenuItem
+                                    onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status })}
+                                    className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-amber-600 hover:bg-amber-50 mb-1"
+                                  >
+                                    <Pause className="w-4 h-4" /> Pausar Anúncio
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem
+                                    onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status })}
+                                    className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-emerald-600 hover:bg-emerald-50 mb-1"
+                                  >
+                                    <Play className="w-4 h-4" /> Ativar Anúncio
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => deleteListing.mutate({ id: listing.id, category: listing.category })}
+                                  className="text-destructive font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" /> Excluir Anúncio
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ──────────────────────────────────────────────── */}
+      {/* TAB: OFERTAS RECEBIDAS                          */}
+      {/* ──────────────────────────────────────────────── */}
+      {activeTab === 'offers' && (
+        <div className="space-y-6">
+          <AdvertiserCommercialRuleCard />
+          {/* Banner de créditos dinâmico */}
+          <div className="flex items-center justify-between p-4 bg-violet-50 rounded-2xl border border-violet-100">
+            <div className="flex items-center gap-3">
+              <Coins className="w-5 h-5 text-violet-600" />
+              <div>
+                <p className="text-xs font-black text-violet-700 uppercase">
+                  Custo de aceite: {totalAcceptCost} créditos por oferta
+                </p>
+                <p className="text-[11px] text-violet-500">
+                  {contactCost} comunicação + {intentionCost} intenção • Saldo: {balance.available_credits} créditos
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-black text-violet-700 bg-violet-100 px-3 py-1 rounded-full">
+              {pendingOffersCount} pendente{pendingOffersCount !== 1 ? 's' : ''}
+            </span>
+          </div>
+
+          {loadingOffers ? (
+            <div className="py-16 flex flex-col items-center gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+              <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Carregando ofertas...</p>
+            </div>
+          ) : receivedOffers.length === 0 ? (
+            <Card className="border-2 border-dashed border-violet-100 bg-violet-50/30 rounded-[40px]">
+              <CardContent className="p-16 flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-violet-100 flex items-center justify-center">
+                  <Inbox className="w-8 h-8 text-violet-400" />
+                </div>
+                <h3 className="text-xl font-black text-zinc-800 uppercase tracking-tight">Nenhuma oferta ainda</h3>
+                <p className="text-sm text-zinc-500 font-medium max-w-xs">
+                  Publique um produto no modo Arremate para começar a receber ofertas de compradores.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {receivedOffers.map((offer) => (
+                <div
+                  key={offer.id}
+                  className={cn(
+                    "p-5 rounded-2xl border-2 bg-white transition-all",
+                    offer.status === 'pending' ? 'border-violet-200 hover:border-violet-300 shadow-sm' :
+                    offer.status === 'accepted' ? 'border-emerald-200 bg-emerald-50/30' :
+                    'border-zinc-100 opacity-60'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                      <div className={cn(
+                        'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0',
+                        offer.status === 'pending' ? 'bg-violet-100' :
+                        offer.status === 'accepted' ? 'bg-emerald-100' : 'bg-zinc-100'
+                      )}>
+                        <MessageSquare className={cn(
+                          'w-5 h-5',
+                          offer.status === 'pending' ? 'text-violet-600' :
+                          offer.status === 'accepted' ? 'text-emerald-600' : 'text-zinc-400'
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-black text-zinc-900 uppercase tracking-tight">
+                            {offer.customer_name || 'Comprador'}
+                          </span>
+                          {offer.customer_whatsapp && offer.status === 'accepted' && (
+                            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                              📱 {offer.customer_whatsapp}
+                            </span>
+                          )}
+                          <span className={cn(
+                            'text-[9px] font-black uppercase px-2 py-0.5 rounded-full',
+                            offer.status === 'pending' ? 'bg-amber-50 text-amber-600' :
+                            offer.status === 'accepted' ? 'bg-emerald-50 text-emerald-600' :
+                            'bg-zinc-100 text-zinc-500'
+                          )}>
+                            {offer.status === 'pending' ? 'Pendente' :
+                             offer.status === 'accepted' ? 'Aceita' :
+                             offer.status === 'rejected' ? 'Recusada' : offer.status}
+                          </span>
+                        </div>
+                        <p className="text-xl font-black text-zinc-900 mt-1">
+                          {formatCurrencyBRL(offer.offer_amount)}
+                          <span className="text-xs text-zinc-400 font-normal ml-2">
+                            {offer.quantity > 1 ? `× ${offer.quantity} unidades` : ''}
+                          </span>
+                        </p>
+                        {offer.note && (
+                          <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{offer.note}</p>
+                        )}
+                        <p className="text-[10px] text-zinc-400 mt-1">
+                          {new Date(offer.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {offer.status === 'pending' && (
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => handleAcceptOffer(offer.id)}
+                          className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wide gap-1"
+                        >
+                          <CheckCheck className="w-3 h-3" /> Aceitar
+                          <span className="opacity-60">（{totalAcceptCost}cr）</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => respondOffer.mutate({ offerId: offer.id, accept: false })}
+                          className="h-9 px-3 rounded-xl border border-zinc-200 text-zinc-500 hover:text-red-600 hover:border-red-200 font-black text-[10px] uppercase gap-1"
+                        >
+                          <X className="w-3 h-3" /> Recusar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────── */}
+      {/* TAB: INTERESSADOS                               */}
+      {/* ──────────────────────────────────────────────── */}
+      {activeTab === 'intentions' && (
+        <div className="space-y-6">
+
+          {/* ── Stats cards ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Saldo */}
+            <div className="rounded-2xl bg-orange-50 border border-orange-200 p-4 space-y-1">
+              <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest flex items-center gap-1.5">
+                <Coins className="w-3 h-3" /> Saldo
+              </p>
+              <p className="text-3xl font-black text-orange-600 tabular-nums leading-none">
+                {dashboard.available_credits}
+              </p>
+              <p className="text-[10px] text-orange-400 font-medium">créditos disponíveis</p>
+            </div>
+
+            {/* Pendentes */}
+            <div className={cn(
+              "rounded-2xl border p-4 space-y-1 transition-colors",
+              pendingCount > 0 ? "bg-amber-50 border-amber-200" : "bg-zinc-50 border-zinc-200"
+            )}>
+              <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-1.5">
+                <LockIcon className="w-3 h-3" /> Aguardando
+              </p>
+              <p className={cn(
+                "text-3xl font-black tabular-nums leading-none",
+                pendingCount > 0 ? "text-amber-600" : "text-zinc-400"
+              )}>
+                {dashboard.leads_pending}
+              </p>
+              <p className="text-[10px] text-zinc-400 font-medium">leads bloqueados</p>
+            </div>
+
+            {/* Desbloqueados */}
+            <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-1">
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                <UnlockIcon className="w-3 h-3" /> Desbloqueados
+              </p>
+              <p className="text-3xl font-black text-emerald-600 tabular-nums leading-none">
+                {dashboard.leads_unlocked}
+              </p>
+              <p className="text-[10px] text-emerald-400 font-medium">contatos liberados</p>
+            </div>
+
+            {/* Consumidos */}
+            <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 space-y-1">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                Consumido
+              </p>
+              <p className="text-3xl font-black text-zinc-600 tabular-nums leading-none">
+                {dashboard.consumed_credits}
+              </p>
+              <p className="text-[10px] text-zinc-400 font-medium">créditos usados</p>
+            </div>
+          </div>
+
+          {/* ── Header saldo + toggle compra ── */}
+          <div className="rounded-2xl border overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-orange-50 border-b border-orange-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-orange-100 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-orange-700 uppercase tracking-tight">
+                    Leads de Imóveis e Veículos
+                  </p>
+                  <p className="text-[11px] text-orange-500 font-medium">
+                    Saldo: <strong>{dashboard.available_credits} créditos</strong>
+                    {pendingCount > 0 && (
+                      <span className="ml-2">
+                        · <strong className="text-amber-600">{pendingCount}</strong> aguardando desbloqueio
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setShowBuyPanel(v => !v)}
+                variant="outline"
+                size="sm"
+                className="shrink-0 font-black uppercase text-[10px] tracking-widest border-orange-300 text-orange-700 hover:bg-orange-100 rounded-xl h-9 gap-1.5"
+              >
+                <Coins className="w-3.5 h-3.5" />
+                {showBuyPanel ? 'Fechar pacotes' : 'Comprar créditos'}
+              </Button>
+            </div>
+
+            {/* Painel de compra expansível com PIX integrado */}
+            {showBuyPanel && (
+              <div className="p-6 bg-white border-t border-orange-100">
+                <AdvertiserCreditPackagesPanel
+                  availableCredits={dashboard.available_credits}
+                  pollStatus={pollPurchaseStatus}
+                  onPurchaseConfirmed={() => {
+                    setShowBuyPanel(false);
+                    refetchAll();
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* ── Lista de leads ── */}
+          {intentionsLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+              <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Carregando interessados...</p>
+            </div>
+          ) : leads.length === 0 ? (
+            <Card className="border-2 border-dashed border-orange-100 bg-orange-50/20 rounded-[40px]">
+              <CardContent className="p-16 flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center relative">
+                  <Users className="w-8 h-8 text-orange-400" />
+                  <div className="absolute inset-0 bg-orange-400/20 rounded-full animate-ping opacity-20" />
+                </div>
+                <h3 className="text-xl font-black text-zinc-800 uppercase tracking-tight">Nenhum interessado ainda</h3>
+                <p className="text-sm text-zinc-500 font-medium max-w-xs leading-relaxed">
+                  Quando um visitante clicar em "Estou Interessado" ou "WhatsApp" em um dos seus anúncios,
+                  ele aparecerá aqui aguardando desbloqueio.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Filtro rápido de status */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Mostrar:</p>
+                {[
+                  { key: "all", label: "Todos", count: leads.length },
+                  { key: "pending_unlock", label: "Aguardando", count: dashboard.leads_pending },
+                  { key: "unlocked", label: "Desbloqueados", count: dashboard.leads_unlocked },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => {}}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border border-zinc-200 bg-white hover:border-orange-300 hover:text-orange-600 transition-colors"
+                  >
+                    {f.label}
+                    <span className="w-4 h-4 rounded-full bg-zinc-100 flex items-center justify-center text-[8px] font-black">
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {leads.map((lead) => (
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    availableCredits={dashboard.available_credits}
+                    onUnlock={unlockLead}
+                    onBuyCredits={() => setShowBuyPanel(true)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── Histórico de compras recentes ── */}
+          {dashboard.recent_purchases.length > 0 && (
+            <div className="space-y-3 pt-4 border-t border-zinc-100">
+              <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
+                Últimas compras de créditos
+              </p>
+              <div className="space-y-2">
+                {dashboard.recent_purchases.slice(0, 5).map(p => {
+                  const statusColors: Record<string, string> = {
+                    paid:             "bg-emerald-100 text-emerald-700",
+                    awaiting_payment: "bg-amber-100 text-amber-700",
+                    pending:          "bg-zinc-100 text-zinc-500",
+                    failed:           "bg-red-100 text-red-600",
+                    expired:          "bg-zinc-100 text-zinc-400",
+                    cancelled:        "bg-zinc-100 text-zinc-400",
+                  };
+                  const statusLabels: Record<string, string> = {
+                    paid:             "Pago ✓",
+                    awaiting_payment: "Aguardando Pagamento",
+                    pending:          "Pendente",
+                    failed:           "Falhou",
+                    expired:          "Expirado",
+                    cancelled:        "Cancelado",
+                  };
+                  return (
+                    <div key={p.id} className="flex items-center justify-between p-3 bg-zinc-50 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                          <Coins className="w-4 h-4 text-orange-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-zinc-900">{p.package_name}</p>
+                          <p className="text-[10px] text-zinc-400 font-medium">
+                            {p.credits_total} créditos · R$ {Number(p.amount_brl).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                      <span className={cn("text-[10px] font-black px-2.5 py-1 rounded-full", statusColors[p.payment_status] ?? "bg-zinc-100 text-zinc-500")}>
+                        {statusLabels[p.payment_status] ?? p.payment_status}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+    </div>
+  );
+}

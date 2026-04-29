@@ -1,0 +1,17 @@
+-- Add latitude and longitude columns to delivery_orders
+ALTER TABLE public.delivery_orders 
+ADD COLUMN IF NOT EXISTS pickup_lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS pickup_lng DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS destination_lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS destination_lng DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS motoboy_lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS motoboy_lng DOUBLE PRECISION;
+
+-- Add latitude and longitude columns to motoboy_passenger_rides
+ALTER TABLE public.motoboy_passenger_rides
+ADD COLUMN IF NOT EXISTS pickup_lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS pickup_lng DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS destination_lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS destination_lng DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS motoboy_lat DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS motoboy_lng DOUBLE PRECISION;

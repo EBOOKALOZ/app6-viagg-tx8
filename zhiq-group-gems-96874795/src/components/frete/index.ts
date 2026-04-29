@@ -1,0 +1,1 @@
+export { FreteRequestModal } from './FreteRequestModal';

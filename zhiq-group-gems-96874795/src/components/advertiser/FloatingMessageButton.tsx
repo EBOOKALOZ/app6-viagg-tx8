@@ -1,0 +1,40 @@
+import { MessageSquare } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+
+export function FloatingMessageButton() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [show, setShow] = useState(false);
+  const [targetPath, setTargetPath] = useState('');
+
+  useEffect(() => {
+    const path = location.pathname;
+    let isAdvertiser = path.startsWith('/anunciante') || path.startsWith('/loja');
+    let isMerchant = path.startsWith('/merchant');
+
+    if (isAdvertiser) {
+      setShow(true);
+      setTargetPath('/anunciante/mensagens');
+    } else if (isMerchant) {
+      setShow(true);
+      setTargetPath('/merchant/mensagens');
+    } else {
+      setShow(false);
+    }
+  }, [location.pathname]);
+
+  if (!show) return null;
+
+  return (
+    <Button
+      onClick={() => navigate(targetPath)}
+      size="icon"
+      className="fixed bottom-24 right-6 z-50 h-14 w-14 rounded-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white shadow-lg shadow-[#FF6A00]/40 animate-pulse"
+      title="Ir para Mensagens"
+    >
+      <MessageSquare className="h-6 w-6" />
+    </Button>
+  );
+}

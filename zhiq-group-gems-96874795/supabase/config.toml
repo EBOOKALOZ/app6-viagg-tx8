@@ -1,0 +1,44 @@
+project_id = "jifnpjnffhzosxrdhvxb"
+
+[auth.email]
+[auth.email.template.magic_link]
+subject = "Seu link de acesso ao Viagg-TX8"
+
+[auth.email.template.confirmation]
+subject = "Confirme seu cadastro no Viagg-TX8"
+
+[auth.email.template.recovery]
+subject = "Recupere sua senha - Viagg-TX8"
+
+[auth.email.template.email_change]
+subject = "Confirme a alteração de e-mail - Viagg-TX8"
+
+[functions.campaign-share]
+verify_jwt = false
+
+[functions.send-auth-email]
+verify_jwt = false
+
+[functions.send-ticket-response]
+verify_jwt = false
+
+[functions.process-delivery-geocoding]
+verify_jwt = false
+
+[functions.get-route]
+verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.expire-motorista-rides]
+verify_jwt = false
+
+[functions.get-vapid-key]
+verify_jwt = false
+
+[functions.save-device-token]
+verify_jwt = false
+
+[functions.webhook-bridge]
+verify_jwt = false

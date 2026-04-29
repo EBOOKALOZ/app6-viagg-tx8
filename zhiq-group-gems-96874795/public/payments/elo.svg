@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" fill="none">
+  <path d="M40 10C20 10 10 25 10 40s10 30 30 30h10c5 0 10-2 14-5L45 40 64 15c-4-3-9-5-14-5H40z" fill="#FFD600"/>
+  <path d="M64 15L45 40l19 25c10-8 16-20 16-25s-6-17-16-25z" fill="#EF4123"/>
+  <path d="M40 10c-20 0-30 15-30 30s10 30 30 30" fill="#00A4E0"/>
+  <text x="100" y="50" font-family="Arial,sans-serif" font-weight="bold" font-size="36" fill="#333">elo</text>
+</svg>

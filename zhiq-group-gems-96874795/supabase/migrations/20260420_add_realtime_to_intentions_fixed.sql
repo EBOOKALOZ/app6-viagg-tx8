@@ -1,0 +1,1 @@
+ALTER PUBLICATION supabase_realtime ADD TABLE advertiser_contact_intentions;

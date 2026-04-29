@@ -1,0 +1,18 @@
+{
+  "name": "Viagg-TX8",
+  "short_name": "Viagg-TX8",
+  "description": "Sua plataforma de mobilidade urbana",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1729",
+  "theme_color": "#2dd4bf",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

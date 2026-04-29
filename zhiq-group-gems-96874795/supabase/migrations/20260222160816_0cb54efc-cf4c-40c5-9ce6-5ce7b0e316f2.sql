@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_queue ADD COLUMN IF NOT EXISTS theme_color text DEFAULT 'green';

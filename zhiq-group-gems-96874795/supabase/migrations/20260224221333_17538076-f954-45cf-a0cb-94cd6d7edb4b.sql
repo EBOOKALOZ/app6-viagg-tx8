@@ -1,0 +1,1 @@
+ALTER TABLE public.delivery_offers ADD COLUMN IF NOT EXISTS corrida_id UUID REFERENCES public.corridas(id) ON DELETE CASCADE

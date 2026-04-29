@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_queue ADD COLUMN IF NOT EXISTS target_profile text NOT NULL DEFAULT 'motoboy';

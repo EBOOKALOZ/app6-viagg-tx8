@@ -1,0 +1,281 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ZHIQ Design System - Dark theme with teal/green/gold accents */
+
+@layer base {
+  :root {
+    /* Viagg Identity - Verde institucional profundo + Dourado âmbar de apoio */
+    --background: 220 15% 9%;
+    --foreground: 210 20% 96%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 155 25% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 155 25% 10%;
+
+    /* Verde institucional - mais saturado e profundo */
+    --primary: 158 55% 24%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 10% 94%;
+    --secondary-foreground: 155 20% 15%;
+
+    --muted: 145 6% 88%;
+    --muted-foreground: 150 8% 40%;
+
+    /* Dourado âmbar - mais quente para ganhos e progresso */
+    --accent: 38 92% 50%;
+    --accent-foreground: 25 30% 12%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 8% 82%;
+    --input: 150 8% 82%;
+    --ring: 158 55% 24%;
+
+    --radius: 0.5rem;
+
+    /* Cores institucionais Viagg refinadas */
+    --zhiq-teal: 158 55% 24%;
+    --zhiq-green: 152 48% 32%;
+    --zhiq-gold: 38 92% 50%;
+    --zhiq-navy: 155 25% 8%;
+    --zhiq-navy-light: 155 18% 15%;
+
+    /* Cores funcionais com melhor contraste */
+    --success: 152 60% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 25 30% 12%;
+    --info: 205 75% 48%;
+
+    /* Motoboy Identity - Laranja vibrante #FF6A00 */
+    --motoboy: 25 100% 50%;
+    --motoboy-foreground: 0 0% 100%;
+    --motoboy-hover: 25 100% 42%;
+    --motoboy-light: 25 100% 96%;
+    --motoboy-header: 25 100% 94%;
+    --motoboy-header-foreground: 25 70% 20%;
+    --motoboy-surface: 145 20% 96%;
+    --motoboy-dashboard-bg: 148 18% 94%;
+    --info-foreground: 0 0% 100%;
+
+    /* Merchant/Lojista Identity - Verde institucional */
+    --merchant: 151 40% 31%;
+    --merchant-foreground: 0 0% 100%;
+    --merchant-hover: 151 42% 25%;
+    --merchant-light: 244 40% 93%;
+
+    /* Footer institucional (verde - default) */
+    --footer-bg: 156 71% 14%;
+    --footer-foreground: 0 0% 100%;
+    --footer-hover: 43 67% 52%;
+    --footer-border: 151 63% 20%;
+
+    /* Footer Motoboy (laranja vibrante #FF6A00) */
+    --footer-motoboy-bg: 25 100% 50%;
+    --footer-motoboy-foreground: 0 0% 100%;
+    --footer-motoboy-hover: 25 100% 42%;
+    --footer-motoboy-border: 25 100% 45%;
+
+    /* Footer Merchant (preto institucional) */
+    --footer-merchant-bg: 0 0% 12%;
+    --footer-merchant-foreground: 0 0% 85%;
+    --footer-merchant-hover: 151 40% 45%;
+    --footer-merchant-border: 0 0% 20%;
+
+    --sidebar-background: 155 22% 10%;
+    --sidebar-foreground: 145 5% 94%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 25 30% 12%;
+    --sidebar-accent: 155 18% 18%;
+    --sidebar-accent-foreground: 145 5% 94%;
+    --sidebar-border: 155 15% 22%;
+    --sidebar-ring: 158 55% 24%;
+    --chart-1: 158 55% 24%;
+    --chart-2: 152 48% 32%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 150 12% 50%;
+    --chart-5: 155 18% 35%;
+    --sidebar: 155 22% 10%;
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    --font-serif: 'Crimson Pro', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    --shadow-2xs: 0 1px 2px 0px hsl(155 25% 8% / 0.03);
+    --shadow-xs: 0 1px 3px 0px hsl(155 25% 8% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(155 25% 8% / 0.07), 0 1px 2px -1px hsl(155 25% 8% / 0.07);
+    --shadow: 0 2px 4px 0px hsl(155 25% 8% / 0.07), 0 1px 2px -1px hsl(155 25% 8% / 0.07);
+    --shadow-md: 0 4px 6px -1px hsl(155 25% 8% / 0.08), 0 2px 4px -1px hsl(155 25% 8% / 0.05);
+    --shadow-lg: 0 10px 15px -3px hsl(155 25% 8% / 0.08), 0 4px 6px -2px hsl(155 25% 8% / 0.04);
+    --shadow-xl: 0 20px 25px -5px hsl(155 25% 8% / 0.08), 0 10px 10px -5px hsl(155 25% 8% / 0.03);
+    --shadow-2xl: 0 25px 50px -12px hsl(155 25% 8% / 0.2);
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+  }
+
+  /* Light mode - tema refinado com melhor contraste */
+  .light {
+    --background: 244 30% 95%;
+    --foreground: 155 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 155 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 155 25% 10%;
+    --primary: 158 55% 24%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 150 10% 94%;
+    --secondary-foreground: 155 20% 15%;
+    --muted: 145 6% 88%;
+    --muted-foreground: 150 8% 40%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 25 30% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 8% 82%;
+    --input: 150 8% 82%;
+    --ring: 158 55% 24%;
+  }
+
+  /* Dark mode - verde institucional escuro refinado */
+  .dark {
+    --background: 155 22% 8%;
+    --foreground: 145 5% 96%;
+    --card: 155 18% 12%;
+    --card-foreground: 145 5% 96%;
+    --popover: 155 18% 14%;
+    --popover-foreground: 145 5% 96%;
+    --primary: 158 50% 42%;
+    --primary-foreground: 155 25% 6%;
+    --secondary: 155 14% 18%;
+    --secondary-foreground: 145 5% 92%;
+    --muted: 155 12% 22%;
+    --muted-foreground: 150 6% 55%;
+    --accent: 38 88% 52%;
+    --accent-foreground: 25 30% 10%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 155 12% 20%;
+    --input: 155 12% 20%;
+    --ring: 158 50% 42%;
+    --chart-1: 158 50% 42%;
+    --chart-2: 152 45% 38%;
+    --chart-3: 38 88% 52%;
+    --chart-4: 150 10% 48%;
+    --chart-5: 155 15% 32%;
+    --sidebar: 155 22% 8%;
+    --sidebar-foreground: 145 5% 94%;
+    --sidebar-primary: 38 88% 52%;
+    --sidebar-primary-foreground: 25 30% 10%;
+    --sidebar-accent: 155 14% 16%;
+    --sidebar-accent-foreground: 145 5% 92%;
+    --sidebar-border: 155 12% 20%;
+    --sidebar-ring: 158 50% 42%;
+
+    /* Motoboy Identity - Dark mode #FF6A00 */
+    --motoboy: 25 100% 55%;
+    --motoboy-foreground: 0 0% 100%;
+    --motoboy-hover: 25 100% 48%;
+    --motoboy-light: 25 60% 15%;
+    --motoboy-header: 25 40% 18%;
+    --motoboy-header-foreground: 25 30% 85%;
+    --motoboy-surface: 25 25% 12%;
+
+    /* Merchant/Lojista Identity - Dark mode */
+    --merchant: 151 45% 38%;
+    --merchant-foreground: 0 0% 100%;
+    --merchant-hover: 151 42% 30%;
+    --merchant-light: 151 30% 15%;
+
+    /* Footer institucional - Dark mode (same colors) */
+    --footer-bg: 156 71% 14%;
+    --footer-foreground: 0 0% 100%;
+    --footer-hover: 43 67% 52%;
+    --footer-border: 151 63% 20%;
+
+    /* Footer Motoboy - Dark mode #FF6A00 */
+    --footer-motoboy-bg: 25 100% 50%;
+    --footer-motoboy-foreground: 0 0% 100%;
+    --footer-motoboy-hover: 25 100% 42%;
+    --footer-motoboy-border: 25 100% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  html {
+    font-size: 109%;
+  }
+}
+
+@layer utilities {
+  .gradient-zhiq {
+    background: linear-gradient(135deg, hsl(var(--zhiq-teal)), hsl(var(--zhiq-green)), hsl(var(--zhiq-gold)));
+  }
+
+  .gradient-zhiq-text {
+    background: linear-gradient(135deg, hsl(var(--zhiq-teal)), hsl(var(--zhiq-green)), hsl(var(--zhiq-gold)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-teal {
+    box-shadow: 0 0 20px hsl(var(--zhiq-teal) / 0.3);
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 20px hsl(var(--zhiq-gold) / 0.3);
+  }
+
+  /* Leaflet draggable pin styles */
+  .draggable-pin {
+    background: transparent !important;
+    border: none !important;
+  }
+  
+  .draggable-pin:active {
+    cursor: grabbing !important;
+  }
+
+  /* Ensure leaflet container has proper stacking */
+  .leaflet-container {
+    z-index: 1 !important;
+  }
+  
+  .leaflet-control-container {
+    z-index: 100 !important;
+  }
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes loading-dot-pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1.2); }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
