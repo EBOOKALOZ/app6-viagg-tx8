@@ -22,6 +22,7 @@ import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents
 import { HowCreditsWorkModal } from "@/components/merchant/HowCreditsWorkModal";
 import { CreditConsumptionChart } from "@/components/merchant/CreditConsumptionChart";
 import { SmartRechargeSuggestion } from "@/components/merchant/SmartRechargeSuggestion";
+import { BalanceCard } from "@/components/wallet/BalanceCard";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 import logoImage from '@/assets/logo.png';
@@ -507,6 +508,28 @@ export default function MerchantCredits() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* ═══ BALANCE CARD — visão contábil dos 4 baldes ═══ */}
+      <div className="mb-6">
+        <BalanceCard
+          title="Saldo de créditos (contábil)"
+          primaryLabel="Disponível"
+          availableCents={Math.round((balance.available_credits || 0) * 100)}
+          reservedCents={Math.round((balance.reserved_credits || 0) * 100)}
+          pendingCents={0}
+          currentCents={Math.round(
+            ((balance.available_credits || 0) + (balance.reserved_credits || 0)) * 100
+          )}
+          formatValue={(c) => {
+            const v = c / 100;
+            const formatted = v.toLocaleString('pt-BR', {
+              minimumFractionDigits: v % 1 === 0 ? 0 : 2,
+              maximumFractionDigits: 2,
+            });
+            return `${formatted} cr.`;
+          }}
+        />
       </div>
 
       {/* ═══ SECTION TABS ═══ */}

@@ -39,6 +39,7 @@ import { useBankData } from "@/hooks/useBankData";
 import { PixFormModal } from "@/components/wallet/PixFormModal";
 import { BankAccountFormModal } from "@/components/wallet/BankAccountFormModal";
 import { CommissionGoalTracker } from "@/components/wallet/CommissionGoalTracker";
+import { BalanceCard } from "@/components/wallet/BalanceCard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -147,29 +148,15 @@ export default function MotoboyWalletContent() {
         </CardContent>
       </Card>
 
-      {/* ==================== PAY BALANCE BREAKDOWN ==================== */}
-      <div className="grid grid-cols-3 gap-2">
-        <Card className="border-0 bg-emerald-50">
-          <CardContent className="p-3 text-center">
-            <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-wider">Disponível</p>
-            <p className="text-lg font-black text-emerald-700">{formatCurrency(payBalance.availableCents / 100)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 bg-amber-50">
-          <CardContent className="p-3 text-center">
-            <p className="text-[9px] text-amber-600 font-bold uppercase tracking-wider">Pendente</p>
-            <p className="text-lg font-black text-amber-700">{formatCurrency(payBalance.pendingCents / 100)}</p>
-            <p className="text-[8px] text-amber-500">em escrow</p>
-          </CardContent>
-        </Card>
-        <Card className="border-0 bg-blue-50">
-          <CardContent className="p-3 text-center">
-            <p className="text-[9px] text-blue-600 font-bold uppercase tracking-wider">Reservado</p>
-            <p className="text-lg font-black text-blue-700">{formatCurrency(payBalance.reservedCents / 100)}</p>
-            <p className="text-[8px] text-blue-500">saques pendentes</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* ==================== PAY BALANCE BREAKDOWN (4 baldes contábeis) ==================== */}
+      <BalanceCard
+        title="Saldo da carteira (contábil)"
+        availableCents={payBalance.availableCents}
+        reservedCents={payBalance.reservedCents}
+        pendingCents={payBalance.pendingCents}
+        currentCents={payBalance.totalCents}
+        isLoading={isLoading}
+      />
 
       {/* ==================== EARNINGS & COMMISSION ==================== */}
       <Card>
