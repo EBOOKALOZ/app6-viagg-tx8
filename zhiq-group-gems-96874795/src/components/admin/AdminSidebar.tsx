@@ -33,6 +33,7 @@ import {
   Building2,
   Shield,
   Camera,
+  CreditCard,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -118,6 +119,8 @@ const menuSections: MenuSection[] = [
       { title: "PI2 — Motoboy", url: "/admin/pay/courier-wallets", icon: Bike },
       { title: "Wallets", url: "/admin/pay/wallets", icon: Wallet },
       { title: "Ledger", url: "/admin/pay/ledger", icon: Layers },
+      { title: "Gateways", url: "/admin/pagamentos/gateways", icon: CreditCard },
+      { title: "Demo Fluxo", url: "/admin/pagamentos/demo", icon: Activity },
     ],
   },
   {

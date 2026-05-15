@@ -38,6 +38,7 @@ import { useMotoboyPayWallet } from "@/hooks/useMotoboyPayWallet";
 import { useBankData } from "@/hooks/useBankData";
 import { PixFormModal } from "@/components/wallet/PixFormModal";
 import { BankAccountFormModal } from "@/components/wallet/BankAccountFormModal";
+import { CommissionGoalTracker } from "@/components/wallet/CommissionGoalTracker";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -185,16 +186,15 @@ export default function MotoboyWalletContent() {
               <p className="text-[10px] text-muted-foreground">{payEarnings.weekCount} transações</p>
             </div>
           </div>
-          {commission && (
-            <div className="mt-3 pt-3 border-t flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground">Sua comissão atual</span>
-              <Badge variant="secondary" className="bg-motoboy/10 text-motoboy text-xs font-black">
-                {commission.commissionPercent}% · {commission.activeGroups} grupos
-              </Badge>
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      {/* ==================== COMMISSION GOAL TRACKER ==================== */}
+      {commission && (
+        <CommissionGoalTracker
+          activeGroups={commission.activeGroups ?? 0}
+        />
+      )}
 
       {/* ==================== PAYOUT STATUS ==================== */}
       {payPayouts.length > 0 && (

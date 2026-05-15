@@ -19,6 +19,11 @@ import { toast } from "sonner";
 import { useMerchantCredits, CreditProduct, LedgerEntry } from "@/hooks/useMerchantCredits";
 import { useMerchantPayWallet } from "@/hooks/useMerchantPayWallet";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
+import { HowCreditsWorkModal } from "@/components/merchant/HowCreditsWorkModal";
+import { CreditConsumptionChart } from "@/components/merchant/CreditConsumptionChart";
+import { SmartRechargeSuggestion } from "@/components/merchant/SmartRechargeSuggestion";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 import logoImage from '@/assets/logo.png';
 
 // ─── Helpers ────────────────────────────
@@ -289,6 +294,7 @@ function LedgerRow({ entry }: { entry: LedgerEntry }) {
 // MAIN PAGE
 // ═══════════════════════════════════════
 export default function MerchantCredits() {
+  const [howCreditsOpen, setHowCreditsOpen] = useState(false);
   const {
     balance, subscription, products, ledger,
     usageRules, resultMetrics, isLoading,
@@ -389,15 +395,54 @@ export default function MerchantCredits() {
 
       {/* ═══ HEADER ═══ */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center shadow-md">
-            <Coins className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center shadow-md">
+              <Coins className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-gray-800">Créditos e Resultado</h1>
+              <p className="text-xs text-gray-400">Ativação comercial mensurável da sua loja</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-800">Créditos e Resultado</h1>
-            <p className="text-xs text-gray-400">Ativação comercial mensurável da sua loja</p>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setHowCreditsOpen(true)}
+            className="gap-2"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Como funcionam</span>
+          </Button>
         </div>
+      </div>
+
+      <HowCreditsWorkModal
+        open={howCreditsOpen}
+        onOpenChange={setHowCreditsOpen}
+      />
+
+      {/* ═══ SUGESTÃO INTELIGENTE DE RECARGA ═══ */}
+      <div className="mb-4">
+        <SmartRechargeSuggestion
+          availableCredits={balance.available_credits}
+          recentLedger={ledger.map((l: LedgerEntry) => ({
+            created_at: l.created_at,
+            entry_type: l.entry_type,
+            amount: l.amount,
+          }))}
+        />
+      </div>
+
+      {/* ═══ GRÁFICO DE CONSUMO ═══ */}
+      <div className="mb-4">
+        <CreditConsumptionChart
+          entries={ledger.map((l: LedgerEntry) => ({
+            created_at: l.created_at,
+            entry_type: l.entry_type,
+            amount: l.amount,
+          }))}
+        />
       </div>
 
       <MerchantRecentEvents module="credits" />

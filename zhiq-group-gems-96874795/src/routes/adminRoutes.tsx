@@ -61,6 +61,8 @@ import {
   AdminCreditGrants,
   AdminVehicleOverview,
   AdminMarketplaceCommerce,
+  AdminPaymentGateways,
+  AdminPaymentDemo,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -111,6 +113,8 @@ export const adminRoutes = (
       <Route path="/admin/pay/ledger" element={<AdminPayLedger />} />
       <Route path="/admin/pay/courier-wallets" element={<AdminCourierWallets />} />
       <Route path="/admin/pay/premium" element={<PayAdminPremium />} />
+      <Route path="/admin/pagamentos/gateways" element={<AdminPaymentGateways />} />
+      <Route path="/admin/pagamentos/demo" element={<AdminPaymentDemo />} />
       <Route path="/admin/perfis/dashboard" element={<AdminDashboardMultiPerfil />} />
       <Route path="/admin/perfis/:profileType" element={<AdminMultiPerfil />} />
       {/* Marketing */}
