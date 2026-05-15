@@ -1,4 +1,4 @@
-import { Home, History, User, Megaphone, Users } from "lucide-react";
+import { Home, History, User, Megaphone, Users, Wallet } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -14,6 +14,7 @@ export default function MotoboyBottomNav() {
     { icon: Home, label: "Início", path: basePath },
     { icon: Users, label: "Grupos", path: `${basePath}/grupos` },
     { icon: History, label: "Histórico", path: `${basePath}/historico` },
+    { icon: Wallet, label: "Carteira", path: `${basePath}/wallet` },
     { icon: Megaphone, label: "Postador", path: `${basePath}/campanhas` },
     { icon: User, label: "Perfil", path: `${basePath}/profile` },
   ];

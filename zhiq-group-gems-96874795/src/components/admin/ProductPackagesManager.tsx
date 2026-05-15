@@ -72,10 +72,12 @@ export function ProductPackagesManager() {
       const payload: any = {
         name: input.name,
         slug: input.slug || input.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
-        product_type: input.product_type || 'product',
+        product_type: input.product_type || 'pacote',
         credits_base: base,
         credits_bonus: bonus,
+        credits_amount: credits_amount_val,
         price_cents: price_cents_val,
+        price_brl: Number(input.price_brl) || 0,
         description: input.description || null,
         badge_text: input.badge_text || null,
         action_label: input.action_label || "ADQUIRIR AGORA",
@@ -116,9 +118,11 @@ export function ProductPackagesManager() {
         slug: input.slug || undefined,
         credits_base: base,
         credits_bonus: bonus,
+        credits_amount: credits_amount_val,
         price_cents: price_cents_val,
+        price_brl: Number(input.price_brl) || 0,
         description: input.description || "",
-        product_type: input.product_type || "product",
+        product_type: input.product_type || "pacote",
         badge_text: input.badge_text || null,
         action_label: input.action_label || "ADQUIRIR AGORA",
         features_json: Array.isArray(input.features_json) ? input.features_json : [],
@@ -322,6 +326,7 @@ export function ProductPackagesManager() {
 
       {(showCreatePkg || editingPkg) && (
         <PackageFormDialog
+          key={editingPkg?.id || 'new'}
           pkg={editingPkg || undefined}
           initialCategory="products"
           onClose={handleCloseForm}

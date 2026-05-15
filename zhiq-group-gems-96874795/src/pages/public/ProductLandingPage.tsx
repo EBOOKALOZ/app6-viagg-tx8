@@ -715,7 +715,7 @@ export default function ProductLandingPage() {
                                                 }}
                                             />
                                         </div>
-                                    )
+                                    )}
 
 
                                     {/* Saber Mais Button */}
