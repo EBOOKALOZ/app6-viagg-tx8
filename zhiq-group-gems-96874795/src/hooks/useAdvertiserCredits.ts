@@ -97,7 +97,7 @@ export function useAdvertiserCredits() {
       try {
         const { data: pkgData } = await (supabase.from("credit_packages") as any)
           .select("*")
-          .eq("active", true);
+          .eq("is_active", true);
         if (pkgData) {
           creditPackages = pkgData.map((p: any) => ({
             id: p.id, slug: p.slug, name: p.name,
@@ -105,7 +105,7 @@ export function useAdvertiserCredits() {
             credits_amount: p.credits_amount,
             price_brl: p.price_brl,
             reference_credit_value_brl: p.reference_credit_value_brl,
-            active: p.active,
+            active: p.is_active,
           }));
         }
       } catch { /* optional */ }

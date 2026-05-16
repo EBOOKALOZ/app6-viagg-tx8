@@ -240,7 +240,7 @@ export function useMerchantCredits() {
       try {
         const { data: pkgData } = await (supabase.from("credit_packages") as any)
           .select("*")
-          .eq("active", true);
+          .eq("is_active", true);
         if (pkgData) {
           creditPackages = pkgData.map((p: any) => ({
             id: p.id,
