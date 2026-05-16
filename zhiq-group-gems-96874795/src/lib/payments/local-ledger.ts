@@ -1,4 +1,9 @@
 /**
+ * @deprecated FASE 2: o orchestrator agora persiste em pay_* no banco
+ * (pay_post_transaction / Edge Function payments-charge). Este módulo NÃO é
+ * mais a fonte da verdade financeira — mantido só para Storybook/demos
+ * offline. Não usar em código de produção. Ver usePaymentsOrchestrator.ts.
+ *
  * Local Ledger — append-only ledger backed por localStorage (FASE 1).
  *
  * Mesma forma do ledger final do banco. Quando a tabela `pay_ledger_entries`

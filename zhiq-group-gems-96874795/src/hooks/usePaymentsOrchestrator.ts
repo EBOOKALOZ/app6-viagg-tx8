@@ -1,388 +1,326 @@
 /**
- * usePaymentsOrchestrator — orquestrador de pagamentos da Fase 1.
+ * usePaymentsOrchestrator — Fase 2: persistência no banco (pay_*).
  *
- * É o hook que a UI chama. Por baixo:
- *  1. Lê o driver ativo do `gatewayStorage`
- *  2. Chama charge/payout/refund do driver
- *  3. Registra entries no ledger local (Fase 1) ou no banco (Fase 1-DB)
- *  4. Aplica idempotência
+ * Mudança vs. Fase 1: NÃO usa mais o local-ledger (memória do browser).
  *
- * QUANDO O BANCO ESTIVER PRONTO: trocar a chamada do `postTransaction` local
- * pelo RPC equivalente (`pay_post_transaction` no banco). Nada mais muda.
+ *  - purchaseCredits → Edge Function `payments-charge` (cria pay_payment_order
+ *    + cobrança no gateway; o crédito do saldo só ocorre quando o webhook
+ *    confirmar o pagamento — ver supabase/functions/payments-webhook).
+ *  - requestDelivery / completeDelivery / cancelDelivery → double-entry via
+ *    RPC `pay_post_transaction` (merchant_wallet ↔ platform_escrow ↔
+ *    motoboy_wallet ↔ platform_main).
+ *  - requestPayout → ainda NÃO migrado (precisa de RPC de criação de
+ *    pay_payout_requests; cai na Prioridade 6 — telas/admin de saques).
+ *    Lança erro explícito em vez de mover dinheiro pela metade.
  *
- * NOTA: existe um hook legado `usePayments.ts` para outra finalidade
- *       (manual recharge/payouts). Este aqui é a nova camada gateway-driven.
+ * Unidades: a UI trabalha em CENTAVOS; o ledger pay_* é em REAIS (numeric).
+ * A conversão centavos→reais (÷100) acontece aqui, na borda.
+ *
+ * Identidade de conta: o chamador deve passar o owner_id correto
+ * (merchant_store.id / motoboy_profile.id), não o auth user id.
  */
 
 import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { gatewayStorage } from '@/lib/payments/storage';
-import { getDriver } from '@/lib/payments/registry';
-import {
-  postTransaction,
-  computeBalance,
-  getOrCreateAccount,
-} from '@/lib/payments/local-ledger';
+import { supabase } from '@/integrations/supabase/client';
 import { newIdempotencyKey } from '@/lib/payments/idempotency';
-import type {
-  ChargeResult,
-  PayoutResult,
-  PayoutParams,
-  ProviderContext,
-} from '@/lib/payments';
+import type { ChargeResult, PayoutParams } from '@/lib/payments';
 
-async function getActiveContext(): Promise<{
-  driver: ReturnType<typeof getDriver>;
-  context: ProviderContext;
-}> {
-  const active = await gatewayStorage.getActive();
-  if (!active) {
-    throw new Error(
-      'Nenhum gateway ativo. Configure em /admin/pagamentos/gateways.',
-    );
-  }
-  return {
-    driver: getDriver(active.provider_code),
-    context: {
-      mode: active.mode,
-      credentials: active.credentials,
-      config: active.config,
-    },
-  };
+const PAY_QUERY_KEY = ['pay-balances'] as const;
+
+/** Converte centavos (UI) → reais (DB). */
+function toReais(cents: number): number {
+  return Math.round(cents) / 100;
 }
 
-const LEDGER_QUERY_KEY = ['local-ledger'] as const;
+type PayOwnerType = 'platform' | 'merchant_store' | 'motoboy_profile';
+type PayAccountType =
+  | 'platform_main'
+  | 'platform_reserve'
+  | 'platform_escrow'
+  | 'merchant_wallet'
+  | 'motoboy_wallet';
+
+/** Resolve (ou cria) a conta financeira e devolve seu id. */
+async function accountId(
+  ownerType: PayOwnerType,
+  ownerId: string | null,
+  accountType: PayAccountType,
+): Promise<string> {
+  const { data, error } = await (supabase.rpc as any)(
+    'pay_get_or_create_account',
+    {
+      p_owner_type: ownerType,
+      p_owner_id: ownerId,
+      p_account_type: accountType,
+      p_metadata: {},
+    },
+  );
+  if (error) throw new Error(`Conta (${accountType}): ${error.message}`);
+  return (data as { id: string }).id;
+}
+
+interface LedgerEntryInput {
+  account_id: string;
+  direction: 'credit' | 'debit';
+  entry_type: string;
+  amount: number; // reais
+  reference_type?: string;
+  reference_id?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+}
+
+async function postTransaction(
+  scope: string,
+  idempotencyKey: string,
+  entries: LedgerEntryInput[],
+  metadata: Record<string, unknown> = {},
+): Promise<string> {
+  const { data, error } = await (supabase.rpc as any)('pay_post_transaction', {
+    p_scope: scope,
+    p_idempotency_key: idempotencyKey,
+    p_entries: entries,
+    p_metadata: metadata,
+  });
+  if (error) throw new Error(`pay_post_transaction: ${error.message}`);
+  const res = data as { entry_ids?: string[] };
+  return res?.entry_ids?.[0] ?? '';
+}
 
 export function usePaymentsOrchestrator() {
   const queryClient = useQueryClient();
   const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: LEDGER_QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: PAY_QUERY_KEY });
   }, [queryClient]);
 
-  /** Lojista compra pacote — CREDIT na conta de créditos */
+  /**
+   * Lojista compra pacote — cria a ordem + cobrança no gateway.
+   * O saldo NÃO é creditado aqui; só quando o webhook confirmar (PIX pago).
+   */
   const purchaseCredits = useMutation({
     mutationFn: async (input: {
-      merchant_user_id: string;
-      package_credits: number;
+      merchant_owner_id: string; // merchant_store.id
       package_price_cents: number;
       package_name: string;
-    }): Promise<{ charge: ChargeResult; ledger_tx_id: string }> => {
+      package_credits?: number;
+      method?: 'pix' | 'credit_card' | 'boleto';
+      payer_email?: string;
+    }): Promise<{
+      order_id: string;
+      status: string;
+      charge: ChargeResult;
+    }> => {
       const idempotency_key = newIdempotencyKey();
-      const { driver, context } = await getActiveContext();
-
-      const charge = await driver.charge(
+      const { data, error } = await supabase.functions.invoke(
+        'payments-charge',
         {
-          idempotency_key,
-          service_type: 'credit_purchase',
-          payer_user_id: input.merchant_user_id,
-          amount: { amount_cents: input.package_price_cents, currency: 'BRL' },
-          method: 'pix',
-          reference_type: 'credit_package',
-          reference_id: input.package_name,
-          description: `Compra: ${input.package_name}`,
+          body: {
+            payer_owner_type: 'merchant_store',
+            payer_owner_id: input.merchant_owner_id,
+            account_type: 'merchant_wallet',
+            amount_cents: input.package_price_cents,
+            method: input.method ?? 'pix',
+            description: `Compra: ${input.package_name}`,
+            reference_type: 'credit_package',
+            reference_id: null,
+            product_type: 'credit_package',
+            product_snapshot: {
+              package_name: input.package_name,
+              package_credits: input.package_credits ?? null,
+              price_brl: toReais(input.package_price_cents),
+            },
+            payer_email: input.payer_email,
+            idempotency_key,
+          },
         },
-        context,
       );
-
-      if (charge.status === 'failed') {
-        throw new Error(charge.error_message ?? 'Falha na cobrança');
+      if (error) throw new Error(error.message);
+      if (!data?.ok) {
+        throw new Error(data?.error ?? 'Falha ao gerar cobrança.');
       }
-
-      let ledger_tx_id = '';
-      if (charge.status === 'paid') {
-        const merchant = getOrCreateAccount(
-          'merchant_credits',
-          input.merchant_user_id,
-          `Lojista ${input.merchant_user_id.slice(0, 6)}`,
-        );
-        const gateway = getOrCreateAccount(
-          'gateway_clearing',
-          null,
-          'Gateway Clearing',
-        );
-        const tx = postTransaction({
-          idempotency_key: `ledger:${idempotency_key}`,
-          operation: 'credit_purchase',
-          description: `Pacote ${input.package_name} (${input.package_credits} créditos)`,
-          entries: [
-            {
-              account_id: gateway.id,
-              entry_type: 'DEBIT',
-              amount_cents: input.package_credits,
-              reference_type: 'credit_purchase',
-              reference_id: charge.charge_id,
-            },
-            {
-              account_id: merchant.id,
-              entry_type: 'CREDIT',
-              amount_cents: input.package_credits,
-              reference_type: 'credit_purchase',
-              reference_id: charge.charge_id,
-              metadata: {
-                package_name: input.package_name,
-                price_brl: input.package_price_cents / 100,
-              },
-            },
-          ],
-        });
-        ledger_tx_id = tx.transaction_id;
-      }
-      return { charge, ledger_tx_id };
+      const charge: ChargeResult = {
+        charge_id: data.order_id,
+        external_id: data.provider_payment_id ?? null,
+        status: 'pending',
+        payment_payload: {
+          pix_qr_base64: data.pix_qr_base64 ?? undefined,
+          pix_copy_paste: data.pix_copy_paste ?? undefined,
+          checkout_url: data.checkout_url ?? undefined,
+        },
+        expires_at: data.expires_at ?? undefined,
+      };
+      return { order_id: data.order_id, status: data.status, charge };
     },
     onSuccess: invalidate,
   });
 
-  /** Lojista chama motoboy — HOLD de créditos */
+  /** Lojista chama motoboy — transfere crédito merchant → escrow. */
   const requestDelivery = useMutation({
     mutationFn: async (input: {
-      merchant_user_id: string;
-      motoboy_user_id: string;
-      credits_cost: number;
+      merchant_owner_id: string;
+      credits_cost_cents: number;
       delivery_id: string;
+      motoboy_owner_id?: string;
       description?: string;
-    }): Promise<{ hold_entry_id: string; ledger_tx_id: string }> => {
-      const idempotency_key = newIdempotencyKey();
-      const merchant = getOrCreateAccount(
-        'merchant_credits',
-        input.merchant_user_id,
-        `Lojista ${input.merchant_user_id.slice(0, 6)}`,
+    }): Promise<{ ledger_entry_id: string }> => {
+      const idempotency_key = `delivery_request:${input.delivery_id}`;
+      const amount = toReais(input.credits_cost_cents);
+      const merchant = await accountId(
+        'merchant_store',
+        input.merchant_owner_id,
+        'merchant_wallet',
       );
-      const escrow = getOrCreateAccount(
-        'platform_escrow',
-        null,
-        'Escrow Plataforma',
-      );
-      const balance = computeBalance(merchant.id);
-      if (balance.available_cents < input.credits_cost) {
-        throw new Error(
-          `Saldo insuficiente. Disponível: ${balance.available_cents} | Necessário: ${input.credits_cost}`,
-        );
-      }
-      const tx = postTransaction({
-        idempotency_key: `ledger:${idempotency_key}`,
-        operation: 'delivery_request',
-        description:
-          input.description ?? `Chamada motoboy — entrega ${input.delivery_id}`,
-        entries: [
+      const escrow = await accountId('platform', null, 'platform_escrow');
+      const id = await postTransaction(
+        'delivery_request',
+        idempotency_key,
+        [
           {
-            account_id: merchant.id,
-            entry_type: 'HOLD',
-            amount_cents: input.credits_cost,
+            account_id: merchant,
+            direction: 'debit',
+            entry_type: 'payment_out',
+            amount,
             reference_type: 'delivery',
             reference_id: input.delivery_id,
-            metadata: { motoboy_user_id: input.motoboy_user_id },
+            description:
+              input.description ?? `Reserva entrega ${input.delivery_id}`,
+            metadata: { motoboy_owner_id: input.motoboy_owner_id },
           },
           {
-            account_id: escrow.id,
-            entry_type: 'CREDIT',
-            amount_cents: input.credits_cost,
+            account_id: escrow,
+            direction: 'credit',
+            entry_type: 'payment_in',
+            amount,
             reference_type: 'delivery',
             reference_id: input.delivery_id,
           },
         ],
-      });
-      return { hold_entry_id: tx.entries[0].id, ledger_tx_id: tx.transaction_id };
+      );
+      return { ledger_entry_id: id };
     },
     onSuccess: invalidate,
   });
 
-  /** Entrega concluída — RELEASE → motoboy CREDIT + comissão pra plataforma */
+  /** Entrega concluída — escrow → motoboy (líquido) + plataforma (comissão). */
   const completeDelivery = useMutation({
     mutationFn: async (input: {
-      hold_entry_id: string;
-      merchant_user_id: string;
-      motoboy_user_id: string;
-      credits_cost: number;
+      motoboy_owner_id: string;
+      credits_cost_cents: number;
       platform_fee_cents: number;
       delivery_id: string;
-    }): Promise<{ ledger_tx_id: string }> => {
-      const idempotency_key = newIdempotencyKey();
-      const merchant = getOrCreateAccount(
-        'merchant_credits',
-        input.merchant_user_id,
-        `Lojista ${input.merchant_user_id.slice(0, 6)}`,
+    }): Promise<{ ledger_entry_id: string }> => {
+      const idempotency_key = `delivery_complete:${input.delivery_id}`;
+      const gross = toReais(input.credits_cost_cents);
+      const fee = toReais(input.platform_fee_cents);
+      const net = gross - fee;
+      const escrow = await accountId('platform', null, 'platform_escrow');
+      const motoboy = await accountId(
+        'motoboy_profile',
+        input.motoboy_owner_id,
+        'motoboy_wallet',
       );
-      const escrow = getOrCreateAccount(
-        'platform_escrow',
-        null,
-        'Escrow Plataforma',
-      );
-      const motoboy = getOrCreateAccount(
-        'motoboy',
-        input.motoboy_user_id,
-        `Motoboy ${input.motoboy_user_id.slice(0, 6)}`,
-      );
-      const revenue = getOrCreateAccount(
-        'platform_revenue',
-        null,
-        'Receita Plataforma',
-      );
-
-      const net = input.credits_cost - input.platform_fee_cents;
-
-      const tx = postTransaction({
-        idempotency_key: `ledger:${idempotency_key}`,
-        operation: 'delivery_complete',
-        description: `Entrega ${input.delivery_id} concluída`,
-        entries: [
+      const platform = await accountId('platform', null, 'platform_main');
+      const id = await postTransaction(
+        'delivery_complete',
+        idempotency_key,
+        [
           {
-            account_id: merchant.id,
-            entry_type: 'RELEASE',
-            amount_cents: input.credits_cost,
-            reference_type: 'delivery',
-            reference_id: input.delivery_id,
-            parent_entry_id: input.hold_entry_id,
-          },
-          {
-            account_id: escrow.id,
-            entry_type: 'DEBIT',
-            amount_cents: input.credits_cost,
+            account_id: escrow,
+            direction: 'debit',
+            entry_type: 'payment_out',
+            amount: gross,
             reference_type: 'delivery',
             reference_id: input.delivery_id,
           },
           {
-            account_id: motoboy.id,
-            entry_type: 'CREDIT',
-            amount_cents: net,
+            account_id: motoboy,
+            direction: 'credit',
+            entry_type: 'motoboy_earning',
+            amount: net,
             reference_type: 'delivery',
             reference_id: input.delivery_id,
-            metadata: { gross: input.credits_cost, fee: input.platform_fee_cents },
+            metadata: { gross, fee },
           },
           {
-            account_id: revenue.id,
-            entry_type: 'CREDIT',
-            amount_cents: input.platform_fee_cents,
+            account_id: platform,
+            direction: 'credit',
+            entry_type: 'commission_income',
+            amount: fee,
             reference_type: 'delivery',
             reference_id: input.delivery_id,
-            metadata: { kind: 'commission' },
           },
         ],
-      });
-      return { ledger_tx_id: tx.transaction_id };
+      );
+      return { ledger_entry_id: id };
     },
     onSuccess: invalidate,
   });
 
-  /** Cancela entrega — REFUND do HOLD pro lojista */
+  /** Cancela entrega — devolve o escrow pro lojista. */
   const cancelDelivery = useMutation({
     mutationFn: async (input: {
-      hold_entry_id: string;
-      merchant_user_id: string;
-      credits_cost: number;
+      merchant_owner_id: string;
+      credits_cost_cents: number;
       delivery_id: string;
       reason: string;
-    }): Promise<{ ledger_tx_id: string }> => {
-      const idempotency_key = newIdempotencyKey();
-      const merchant = getOrCreateAccount(
-        'merchant_credits',
-        input.merchant_user_id,
-        `Lojista ${input.merchant_user_id.slice(0, 6)}`,
+    }): Promise<{ ledger_entry_id: string }> => {
+      const idempotency_key = `delivery_cancel:${input.delivery_id}`;
+      const amount = toReais(input.credits_cost_cents);
+      const merchant = await accountId(
+        'merchant_store',
+        input.merchant_owner_id,
+        'merchant_wallet',
       );
-      const escrow = getOrCreateAccount(
-        'platform_escrow',
-        null,
-        'Escrow Plataforma',
-      );
-      const tx = postTransaction({
-        idempotency_key: `ledger:${idempotency_key}`,
-        operation: 'delivery_cancel',
-        description: `Entrega ${input.delivery_id} cancelada — ${input.reason}`,
-        entries: [
+      const escrow = await accountId('platform', null, 'platform_escrow');
+      const id = await postTransaction(
+        'delivery_cancel',
+        idempotency_key,
+        [
           {
-            account_id: merchant.id,
-            entry_type: 'REFUND',
-            amount_cents: input.credits_cost,
+            account_id: escrow,
+            direction: 'debit',
+            entry_type: 'payment_out',
+            amount,
             reference_type: 'delivery',
             reference_id: input.delivery_id,
-            parent_entry_id: input.hold_entry_id,
+          },
+          {
+            account_id: merchant,
+            direction: 'credit',
+            entry_type: 'refund',
+            amount,
+            reference_type: 'delivery',
+            reference_id: input.delivery_id,
             metadata: { reason: input.reason },
           },
-          {
-            account_id: escrow.id,
-            entry_type: 'DEBIT',
-            amount_cents: input.credits_cost,
-            reference_type: 'delivery',
-            reference_id: input.delivery_id,
-          },
         ],
-      });
-      return { ledger_tx_id: tx.transaction_id };
+      );
+      return { ledger_entry_id: id };
     },
     onSuccess: invalidate,
   });
 
-  /** Motoboy saca PIX — PAYOUT */
+  /**
+   * Saque do motoboy — NÃO migrado nesta fase.
+   *
+   * Falta a RPC de criação de pay_payout_requests (entra na Prioridade 6,
+   * telas/admin de saques). Reservar saldo sem criar a solicitação deixaria
+   * fundos presos sem caminho de liberação — então falhamos explicitamente
+   * em vez de mover dinheiro pela metade.
+   */
   const requestPayout = useMutation({
-    mutationFn: async (input: {
-      motoboy_user_id: string;
+    mutationFn: async (_input: {
+      motoboy_owner_id: string;
       amount_cents: number;
       pix_key: string;
       pix_key_type: PayoutParams['pix_key_type'];
-    }): Promise<{ payout: PayoutResult; ledger_tx_id: string }> => {
-      const idempotency_key = newIdempotencyKey();
-      const { driver, context } = await getActiveContext();
-
-      const motoboy = getOrCreateAccount(
-        'motoboy',
-        input.motoboy_user_id,
-        `Motoboy ${input.motoboy_user_id.slice(0, 6)}`,
+    }): Promise<never> => {
+      throw new Error(
+        'Saque ainda não disponível: criação de pay_payout_requests é da ' +
+          'Prioridade 6 (admin de saques). Não implementado na Fase 2.',
       );
-      const gateway = getOrCreateAccount(
-        'gateway_clearing',
-        null,
-        'Gateway Clearing',
-      );
-      const balance = computeBalance(motoboy.id);
-      if (balance.available_cents < input.amount_cents) {
-        throw new Error(
-          `Saldo insuficiente. Disponível: ${balance.available_cents} | Solicitado: ${input.amount_cents}`,
-        );
-      }
-
-      const payout = await driver.payout(
-        {
-          idempotency_key,
-          recipient_user_id: input.motoboy_user_id,
-          amount: { amount_cents: input.amount_cents, currency: 'BRL' },
-          pix_key: input.pix_key,
-          pix_key_type: input.pix_key_type,
-          description: `Saque motoboy ${input.motoboy_user_id.slice(0, 6)}`,
-        },
-        context,
-      );
-
-      if (payout.status === 'failed' || payout.status === 'rejected') {
-        throw new Error(payout.error_message ?? 'Falha no saque');
-      }
-
-      const tx = postTransaction({
-        idempotency_key: `ledger:${idempotency_key}`,
-        operation: 'payout_request',
-        description: `Saque PIX ${input.pix_key_type}`,
-        entries: [
-          {
-            account_id: motoboy.id,
-            entry_type: 'PAYOUT',
-            amount_cents: input.amount_cents,
-            reference_type: 'payout',
-            reference_id: payout.payout_id,
-            metadata: {
-              pix_key_type: input.pix_key_type,
-              external_id: payout.external_id,
-            },
-          },
-          {
-            account_id: gateway.id,
-            entry_type: 'CREDIT',
-            amount_cents: input.amount_cents,
-            reference_type: 'payout',
-            reference_id: payout.payout_id,
-          },
-        ],
-      });
-      return { payout, ledger_tx_id: tx.transaction_id };
     },
-    onSuccess: invalidate,
   });
 
   return {
@@ -395,7 +333,6 @@ export function usePaymentsOrchestrator() {
       purchaseCredits.isPending ||
       requestDelivery.isPending ||
       completeDelivery.isPending ||
-      cancelDelivery.isPending ||
-      requestPayout.isPending,
+      cancelDelivery.isPending,
   };
 }

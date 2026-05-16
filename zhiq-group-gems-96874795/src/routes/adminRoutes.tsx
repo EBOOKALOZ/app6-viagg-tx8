@@ -64,6 +64,7 @@ import {
   AdminPaymentGateways,
   AdminPaymentDemo,
   AdminFase1Sim,
+  AdminMercadoPagoSecrets,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -117,6 +118,7 @@ export const adminRoutes = (
       <Route path="/admin/pagamentos/gateways" element={<AdminPaymentGateways />} />
       <Route path="/admin/pagamentos/demo" element={<AdminPaymentDemo />} />
       <Route path="/admin/pagamentos/simular" element={<AdminFase1Sim />} />
+      <Route path="/secrets/mercadopago" element={<AdminMercadoPagoSecrets />} />
       <Route path="/admin/perfis/dashboard" element={<AdminDashboardMultiPerfil />} />
       <Route path="/admin/perfis/:profileType" element={<AdminMultiPerfil />} />
       {/* Marketing */}
