@@ -104,7 +104,7 @@ export function usePaymentsOrchestrator() {
       package_price_cents: number;
       package_name: string;
       package_credits?: number;
-      method?: 'pix' | 'credit_card';
+      method?: 'pix' | 'credit_card' | 'boleto';
       payer_email?: string;
     }): Promise<{
       order_id: string;

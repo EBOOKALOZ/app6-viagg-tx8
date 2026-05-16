@@ -11,6 +11,7 @@ export const AdminLayout = lazy(() => import("@/components/admin/AdminLayout").t
 export const AdminPaymentGateways = lazy(() => import("@/pages/admin/AdminPaymentGateways"));
 export const AdminPaymentDemo = lazy(() => import("@/pages/admin/AdminPaymentDemo"));
 export const AdminFase1Sim = lazy(() => import("@/pages/admin/AdminFase1Sim"));
+export const AdminMercadoPagoSecrets = lazy(() => import("@/pages/admin/AdminMercadoPagoSecrets"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
 export const MotoboyLayout = lazy(() => import("@/components/motoboy/MotoboyLayout").then(m => ({ default: m.MotoboyLayout })));
 export const MotoboyOnboardingLayout = lazy(() => import("@/components/motoboy/MotoboyOnboardingLayout").then(m => ({ default: m.MotoboyOnboardingLayout })));

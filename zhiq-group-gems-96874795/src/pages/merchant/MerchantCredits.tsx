@@ -18,6 +18,8 @@ import {
 import { toast } from "sonner";
 import { useMerchantCredits, CreditProduct, LedgerEntry } from "@/hooks/useMerchantCredits";
 import { useMerchantPayWallet } from "@/hooks/useMerchantPayWallet";
+import { usePaymentsOrchestrator } from "@/hooks/usePaymentsOrchestrator";
+import { supabase } from "@/integrations/supabase/client";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
 import { HowCreditsWorkModal } from "@/components/merchant/HowCreditsWorkModal";
 import { CreditConsumptionChart } from "@/components/merchant/CreditConsumptionChart";
@@ -299,8 +301,9 @@ export default function MerchantCredits() {
   const {
     balance, subscription, products, ledger,
     usageRules, resultMetrics, isLoading,
-    createCreditOrder, getOrderStatus, cancelOrder,
+    getOrderStatus, cancelOrder, storeId,
   } = useMerchantCredits();
+  const { purchaseCredits } = usePaymentsOrchestrator();
 
   const { purchases: payPurchases, consumption: payConsumption, debits: payDebits, rechargeAdvice } = useMerchantPayWallet();
 
@@ -336,13 +339,44 @@ export default function MerchantCredits() {
     setActiveOrder(null);
   };
 
-  // Confirm: create order then go to awaiting step
+  // Confirm: gera cobrança REAL via Mercado Pago (Edge Function
+  // payments-charge → pay_payment_orders). O crédito só cai quando o
+  // webhook confirmar o pagamento.
   const handleConfirmPurchase = async () => {
     if (!checkoutProduct || isProcessing) return;
+    if (!storeId) {
+      toast.error("Loja não encontrada");
+      return;
+    }
     setIsProcessing(true);
     try {
-      const order = await createCreditOrder(checkoutProduct, paymentMethod);
-      setActiveOrder(order);
+      const method =
+        paymentMethod === "cartao"
+          ? "credit_card"
+          : paymentMethod === "boleto"
+            ? "boleto"
+            : "pix";
+      const res = await purchaseCredits({
+        merchant_owner_id: storeId,
+        package_price_cents: checkoutProduct.price_cents,
+        package_name: checkoutProduct.name,
+        package_credits: checkoutProduct.credits_total,
+        method,
+      });
+      const pp = res.charge.payment_payload ?? {};
+      setActiveOrder({
+        id: res.order_id,
+        status: "pending",
+        __pay: true,
+        pix_code: pp.pix_copy_paste ?? null,
+        pix_qr_base64: pp.pix_qr_base64 ?? null,
+        checkout_url: pp.checkout_url ?? null,
+        boleto_line: null,
+        expires_at: res.charge.expires_at ?? null,
+      });
+      if (pp.checkout_url) {
+        window.open(pp.checkout_url, "_blank", "noopener");
+      }
       setCheckoutStep("awaiting");
       toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
     } catch (err: any) {
@@ -356,15 +390,26 @@ export default function MerchantCredits() {
   useEffect(() => {
     if (checkoutStep !== "awaiting" || !activeOrder?.id) return;
     const interval = setInterval(async () => {
-      const updated = await getOrderStatus(activeOrder.id);
-      if (!updated) return;
-      if (updated.status === "paid") {
-        setActiveOrder(updated);
+      let status: string | null = null;
+      if (activeOrder.__pay) {
+        // Novo pipeline: lê pay_payment_orders (webhook confirma).
+        const { data } = await (supabase.from("pay_payment_orders") as any)
+          .select("status")
+          .eq("id", activeOrder.id)
+          .maybeSingle();
+        status = (data as { status?: string } | null)?.status ?? null;
+      } else {
+        const updated = await getOrderStatus(activeOrder.id);
+        status = updated?.status ?? null;
+      }
+      if (!status) return;
+      if (status === "paid") {
+        setActiveOrder((o: any) => ({ ...o, status: "paid" }));
         setCheckoutStep("confirmed");
         toast.success(`${checkoutProduct?.credits_total} créditos adicionados! 🎉`, { duration: 5000 });
         clearInterval(interval);
-      } else if (updated.status === "failed" || updated.status === "expired") {
-        setActiveOrder(updated);
+      } else if (status === "failed" || status === "expired" || status === "cancelled") {
+        setActiveOrder((o: any) => ({ ...o, status }));
         setCheckoutStep("failed");
         clearInterval(interval);
       }
@@ -374,7 +419,11 @@ export default function MerchantCredits() {
 
   // Close checkout (cancel if pending)
   const handleCloseCheckout = async () => {
-    if (activeOrder && (activeOrder.status === "awaiting_payment" || activeOrder.status === "pending")) {
+    if (
+      activeOrder &&
+      !activeOrder.__pay &&
+      (activeOrder.status === "awaiting_payment" || activeOrder.status === "pending")
+    ) {
       await cancelOrder(activeOrder.id);
     }
     setCheckoutProduct(null);
