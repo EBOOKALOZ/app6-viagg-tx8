@@ -147,13 +147,13 @@ export default function AdminPaymentDemo() {
   const handlePurchase = async () => {
     try {
       const res = await purchaseCredits({
-        merchant_user_id: DEMO_MERCHANT_ID,
+        merchant_owner_id: DEMO_MERCHANT_ID,
         package_credits: packageCredits,
         package_price_cents: packageCredits * 100, // 1 crédito = R$1 (demo)
         package_name: `Pacote ${packageCredits}`,
       });
       toast.success(
-        `Compra: ${res.charge.status}${res.ledger_tx_id ? ` · tx ${res.ledger_tx_id.slice(-6)}` : ''}`,
+        `Ordem ${res.order_id.slice(-6)} · ${res.status} — pague o PIX p/ confirmar`,
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro na compra');
@@ -164,14 +164,14 @@ export default function AdminPaymentDemo() {
     try {
       const deliveryId = `dlv_${Date.now().toString(36)}`;
       const res = await requestDelivery({
-        merchant_user_id: DEMO_MERCHANT_ID,
-        motoboy_user_id: DEMO_MOTOBOY_ID,
-        credits_cost: deliveryCost,
+        merchant_owner_id: DEMO_MERCHANT_ID,
+        motoboy_owner_id: DEMO_MOTOBOY_ID,
+        credits_cost_cents: deliveryCost * 100,
         delivery_id: deliveryId,
       });
-      setPendingHoldId(res.hold_entry_id);
+      setPendingHoldId(res.ledger_entry_id);
       setPendingDeliveryId(deliveryId);
-      toast.success(`HOLD criado · ${deliveryCost} créditos retidos`);
+      toast.success(`Escrow criado · R$ ${deliveryCost} retidos`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro');
     }
@@ -184,11 +184,9 @@ export default function AdminPaymentDemo() {
     }
     try {
       await completeDelivery({
-        hold_entry_id: pendingHoldId,
-        merchant_user_id: DEMO_MERCHANT_ID,
-        motoboy_user_id: DEMO_MOTOBOY_ID,
-        credits_cost: deliveryCost,
-        platform_fee_cents: platformFee,
+        motoboy_owner_id: DEMO_MOTOBOY_ID,
+        credits_cost_cents: deliveryCost * 100,
+        platform_fee_cents: platformFee * 100,
         delivery_id: pendingDeliveryId,
       });
       setPendingHoldId(null);
@@ -208,9 +206,8 @@ export default function AdminPaymentDemo() {
     }
     try {
       await cancelDelivery({
-        hold_entry_id: pendingHoldId,
-        merchant_user_id: DEMO_MERCHANT_ID,
-        credits_cost: deliveryCost,
+        merchant_owner_id: DEMO_MERCHANT_ID,
+        credits_cost_cents: deliveryCost * 100,
         delivery_id: pendingDeliveryId,
         reason: 'Cancelamento demo',
       });
@@ -224,13 +221,13 @@ export default function AdminPaymentDemo() {
 
   const handlePayout = async () => {
     try {
-      const res = await requestPayout({
-        motoboy_user_id: DEMO_MOTOBOY_ID,
-        amount_cents: payoutAmount,
-        pix_key: 'demo@viagg.local',
+      await requestPayout({
+        motoboy_owner_id: DEMO_MOTOBOY_ID,
+        amount_cents: payoutAmount * 100,
+        pix_key: 'demo@viagg.com.br',
         pix_key_type: 'email',
       });
-      toast.success(`Saque ${res.payout.status} · ${payoutAmount} créditos`);
+      toast.success('Saque solicitado');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro');
     }

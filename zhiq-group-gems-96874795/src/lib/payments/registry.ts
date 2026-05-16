@@ -83,8 +83,9 @@ export const DRIVER_CATALOG: Record<GatewayProviderCode, DriverMetadata> = {
       boleto: true,
       subscriptions: true,
     },
-    implementation_status: 'skeleton',
-    notes: 'Implementação completa na Fase 2.',
+    implementation_status: 'ready',
+    notes:
+      'PIX (QR/copia-e-cola), cartão/boleto via Checkout Pro, refund total/parcial e webhook HMAC. PIX out depende de habilitação de money-out na conta MP.',
   },
   asaas: {
     code: 'asaas',
