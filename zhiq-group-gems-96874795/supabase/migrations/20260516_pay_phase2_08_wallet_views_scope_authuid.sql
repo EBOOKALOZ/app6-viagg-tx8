@@ -1,0 +1,7 @@
+-- FASE 2 / SQL 08 / Carteira Unificada escopada por auth.uid()
+-- Bug: como admin vê tudo pela RLS do pay_*, v_wallet_overview retornava N
+-- linhas (hook esperava 1 -> saldo 0) e o extrato vazava movimentos de
+-- outros usuários. Fix: filtrar auth.uid() no corpo das 3 views.
+-- (Conteúdo aplicado via MCP pay_phase2_08_wallet_views_scope_authuid;
+--  igual ao SQL 07 trocando o WHERE de owner_type/IS NOT NULL por
+--  fa.owner_id = auth.uid() / pr.requester_owner_id = auth.uid().)
