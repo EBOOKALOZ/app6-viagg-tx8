@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
 
   const st = await mpGetPaymentStatus(creds, dataId);
   const eventType = mpStatusToEvent(st.status);
+  const extRef = (st.raw?.external_reference as string | undefined) ?? null;
   const providerEventId = String(
     (v.raw?.id as string | number | undefined) ?? `${dataId}:${st.status}`,
   );
@@ -114,6 +115,7 @@ Deno.serve(async (req) => {
       p_event_type: eventType,
       p_raw_payload: v.raw ?? {},
       p_normalized_payload: { status: st.status, event_type: eventType },
+      p_external_reference: extRef,
     });
     if (!error) {
       return json({ ok: true, result: data }, 200);

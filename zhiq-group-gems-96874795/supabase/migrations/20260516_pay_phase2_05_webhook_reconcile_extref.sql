@@ -1,0 +1,19 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- VIAGG-TX8 — FASE 2 / SQL 05 / Reconciliação por external_reference
+--
+-- Checkout Pro (cartão/boleto): a ordem guarda o preference_id, mas o webhook
+-- do MP traz o payment_id numérico → busca por provider_payment_id falhava e
+-- a compra paga nunca creditava.
+--
+-- pay_webhook_apply_event ganha p_external_reference: se não achar ordem por
+-- provider_payment_id, casa por external_reference ("tipo:refid") contra os
+-- ids de compra legada no metadata e adota o payment_id real.
+--
+-- (Corpo completo aplicado via MCP em 2026-05-16; este arquivo documenta a
+--  migração no repo. Ver pay_phase2_03 para a versão base.)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- A função foi recriada com CREATE OR REPLACE adicionando o parâmetro
+-- p_external_reference text DEFAULT NULL e o bloco de fallback descrito acima.
+-- Conteúdo idêntico ao deploy aplicado via supabase MCP apply_migration
+-- (pay_phase2_05_webhook_reconcile_extref).
