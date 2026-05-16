@@ -141,6 +141,10 @@ export function useAdvertiserCreditPurchase() {
       purchaseId?: string;
       amountBrl?: number;
       creditsTotal?: number;
+      pix_copia_cola?: string;
+      pix_qr_code_base64?: string;
+      checkout_url?: string;
+      pix_expiration?: string;
       error?: string;
     }> => {
       if (!user?.id) return { success: false, error: "not_authenticated" };
@@ -161,6 +165,35 @@ export function useAdvertiserCreditPurchase() {
           };
         }
 
+        // Cobrança REAL no Mercado Pago. O webhook, ao confirmar, chama
+        // pay_grant_legacy → credita o saldo do anunciante e marca paid.
+        const { data: charge, error: chargeErr } = await supabase.functions.invoke(
+          "payments-charge",
+          {
+            body: {
+              payer_owner_type: "platform",
+              payer_owner_id: null,
+              account_type: "platform_main",
+              amount_cents: Math.round(Number(result.amount_brl || 0) * 100),
+              method: "pix",
+              description: `Créditos anunciante: ${result.package_name ?? "pacote"}`,
+              reference_type: "advertiser_credit_purchase",
+              reference_id: result.purchase_id,
+              product_type: "advertiser_credits",
+              metadata: {
+                grant_kind: "advertiser",
+                advertiser_purchase_id: result.purchase_id,
+              },
+            },
+          },
+        );
+        if (chargeErr || !charge?.ok) {
+          return {
+            success: false,
+            error: charge?.error || chargeErr?.message || "falha no gateway",
+          };
+        }
+
         // Invalida histórico de compras para mostrar o pedido recente
         queryClient.invalidateQueries({ queryKey: ["advertiser-purchase-history"] });
 
@@ -169,6 +202,10 @@ export function useAdvertiserCreditPurchase() {
           purchaseId: result.purchase_id,
           amountBrl: result.amount_brl,
           creditsTotal: result.credits_total,
+          pix_copia_cola: charge.pix_copy_paste ?? undefined,
+          pix_qr_code_base64: charge.pix_qr_base64 ?? undefined,
+          checkout_url: charge.checkout_url ?? undefined,
+          pix_expiration: charge.expires_at ?? undefined,
         };
       } finally {
         setIsCreating(false);

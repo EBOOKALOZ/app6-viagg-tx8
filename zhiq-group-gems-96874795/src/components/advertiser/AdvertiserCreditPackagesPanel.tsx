@@ -79,7 +79,13 @@ export function AdvertiserCreditPackagesPanel({
         creditsTotal: result.creditsTotal!,
         amountBrl: result.amountBrl!,
         checkoutPayload: {
-          instructions: `Pedido criado! ID: ${result.purchaseId}. Entre em contato com o suporte informando este ID para finalizar o pagamento e liberar seus créditos.`,
+          pix_copia_cola: result.pix_copia_cola,
+          pix_qr_code_base64: result.pix_qr_code_base64,
+          checkout_url: result.checkout_url,
+          pix_expiration: result.pix_expiration,
+          instructions: result.checkout_url
+            ? "Abrimos o checkout do Mercado Pago em outra aba. Conclua o pagamento por lá."
+            : "Pague o PIX abaixo. Os créditos entram automaticamente após a confirmação.",
         },
         status: "pending",
       });

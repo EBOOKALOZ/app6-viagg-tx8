@@ -301,7 +301,7 @@ export default function MerchantCredits() {
   const {
     balance, subscription, products, ledger,
     usageRules, resultMetrics, isLoading,
-    getOrderStatus, cancelOrder, storeId,
+    createCreditOrder, getOrderStatus, cancelOrder, storeId,
   } = useMerchantCredits();
   const { purchaseCredits } = usePaymentsOrchestrator();
 
@@ -356,12 +356,20 @@ export default function MerchantCredits() {
           : paymentMethod === "boleto"
             ? "boleto"
             : "pix";
+      // 1) cria a linha legada credit_purchases (o webhook chama
+      //    confirm_credit_purchase com esse id p/ creditar o saldo do lojista).
+      const legacyOrder = await createCreditOrder(checkoutProduct, paymentMethod);
+      // 2) cobrança REAL no MP, linkando a compra legada via metadata.
       const res = await purchaseCredits({
         merchant_owner_id: storeId,
         package_price_cents: checkoutProduct.price_cents,
         package_name: checkoutProduct.name,
         package_credits: checkoutProduct.credits_total,
         method,
+        metadata: {
+          grant_kind: "merchant",
+          credit_purchase_id: legacyOrder.id,
+        },
       });
       const pp = res.charge.payment_payload ?? {};
       setActiveOrder({

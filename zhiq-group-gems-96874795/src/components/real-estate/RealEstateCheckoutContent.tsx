@@ -288,8 +288,52 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             }
             if (!purchase) throw new Error("Falha ao criar registro de compra.");
 
+            // Cobrança REAL no Mercado Pago (Edge Function payments-charge).
+            // O webhook, ao confirmar, chama pay_grant_legacy que credita o
+            // saldo imobiliário e marca a compra como paga.
+            let realPix = pixCode;
+            let realQr: string | null = null;
+            let realCheckout: string | null = null;
+            const mpMethod =
+                paymentMethod === "cartao" ? "credit_card"
+                : paymentMethod === "boleto" ? "boleto" : "pix";
+            const { data: chargeData, error: chargeErr } = await supabase.functions.invoke(
+                "payments-charge",
+                {
+                    body: {
+                        payer_owner_type: "platform",
+                        payer_owner_id: null,
+                        account_type: "platform_main",
+                        amount_cents: Math.round((pkg.price_brl || 0) * 100),
+                        method: mpMethod,
+                        description: `Créditos imobiliários: ${pkg.name}`,
+                        reference_type: "real_estate_credit_purchase",
+                        reference_id: purchase.id,
+                        product_type: "real_estate_credits",
+                        metadata: {
+                            grant_kind: "real_estate",
+                            real_estate_purchase_id: purchase.id,
+                        },
+                    },
+                },
+            );
+            if (chargeErr || !chargeData?.ok) {
+                throw new Error(chargeData?.error || chargeErr?.message || "Falha ao gerar cobrança no gateway");
+            }
+            realPix = chargeData.pix_copy_paste ?? null;
+            realQr = chargeData.pix_qr_base64 ?? null;
+            realCheckout = chargeData.checkout_url ?? null;
+            if (realCheckout) window.open(realCheckout, "_blank", "noopener");
+
             setIsExpired(false);
-            setActiveOrder({ ...purchase, pix_code: pixCode, boleto_line: boletoLine, expires_at: expiresAt });
+            setActiveOrder({
+                ...purchase,
+                pix_code: realPix,
+                pix_qr_base64: realQr,
+                checkout_url: realCheckout,
+                boleto_line: null,
+                expires_at: chargeData.expires_at ?? expiresAt,
+            });
             setCheckoutStep("awaiting");
             toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
         } catch (error: any) {

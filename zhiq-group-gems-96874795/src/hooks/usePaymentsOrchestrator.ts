@@ -100,12 +100,21 @@ export function usePaymentsOrchestrator() {
    */
   const purchaseCredits = useMutation({
     mutationFn: async (input: {
-      merchant_owner_id: string; // merchant_store.id
+      merchant_owner_id: string; // store/owner id da conta pay destino
       package_price_cents: number;
       package_name: string;
       package_credits?: number;
       method?: 'pix' | 'credit_card' | 'boleto';
       payer_email?: string;
+      /** 'merchant_store' (default) | 'platform' | 'motoboy_profile' */
+      payer_owner_type?: string;
+      /** conta pay destino (default merchant_wallet) */
+      account_type?: string;
+      /**
+       * Ponte p/ concessão legada: { grant_kind, <ref>_id }.
+       * Ex: { grant_kind:'real_estate', real_estate_purchase_id:'...' }
+       */
+      metadata?: Record<string, unknown>;
     }): Promise<{
       order_id: string;
       status: string;
@@ -116,9 +125,9 @@ export function usePaymentsOrchestrator() {
         'payments-charge',
         {
           body: {
-            payer_owner_type: 'merchant_store',
+            payer_owner_type: input.payer_owner_type ?? 'merchant_store',
             payer_owner_id: input.merchant_owner_id,
-            account_type: 'merchant_wallet',
+            account_type: input.account_type ?? 'merchant_wallet',
             amount_cents: input.package_price_cents,
             method: input.method ?? 'pix',
             description: `Compra: ${input.package_name}`,
@@ -131,6 +140,7 @@ export function usePaymentsOrchestrator() {
               price_brl: toReais(input.package_price_cents),
             },
             payer_email: input.payer_email,
+            metadata: input.metadata ?? {},
             idempotency_key,
           },
         },
