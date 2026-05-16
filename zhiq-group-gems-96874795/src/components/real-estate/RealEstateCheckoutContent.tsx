@@ -3,18 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-    CreditCard, 
-    CheckCircle2, 
-    ArrowLeft, 
-    ShieldCheck, 
-    Building2, 
+import {
+    CheckCircle2,
+    ArrowLeft,
+    ShieldCheck,
+    Building2,
     Loader2,
     Calendar,
     Star,
     X,
-    QrCode,
-    Copy,
     Timer,
     Clock,
     XCircle,
@@ -24,7 +21,6 @@ import {
 import { cn } from "@/lib/utils";
 
 type CheckoutStep = "select" | "awaiting" | "confirmed" | "failed";
-type PaymentMethod = "pix" | "boleto" | "cartao";
 
 const formatCurrency = (amount: number) => {
     return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -51,7 +47,6 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
     const [isProcessing, setIsProcessing] = useState(false);
     
     const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>("select");
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
     const [activeOrder, setActiveOrder] = useState<any>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [isExpired, setIsExpired] = useState(false);
@@ -217,15 +212,11 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             const { data: userData } = await supabase.auth.getUser();
             if (!userData.user) throw new Error("Usuário não autenticado");
 
-            const pixCode = paymentMethod === "pix"
-                ? `00020126580014br.gov.bcb.pix0136viagg-real-estate-${Date.now()}520400005303986540${pkg.price_brl.toFixed(2)}5802BR5925VIAGG TX86009SAO PAULO62070503***6304`
-                : null;
-
-            const boletoLine = paymentMethod === "boleto"
-                ? `23793.38128 60000.000${Math.floor(Math.random() * 90000000 + 10000000)} ${Math.floor(Math.random() * 9 + 1)} ${Math.floor(Date.now() / 1000).toString().slice(-8)}`
-                : null;
-
-            const providerReference = pixCode || boletoLine || `card_${Date.now()}`;
+            // Recarga sempre via Checkout Pro do Mercado Pago — o usuário
+            // escolhe PIX, cartão ou boleto na própria página segura do MP.
+            const pixCode = null;
+            const boletoLine = null;
+            const providerReference = `mp_${Date.now()}`;
             const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
             const purchasePayload: any = {
@@ -236,7 +227,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                 credits_total: (pkg.credits_amount || 0) + (pkg.bonus_credits || 0),
                 amount_brl: pkg.price_brl || 0,
                 payment_status: 'awaiting_payment',
-                provider_name: paymentMethod,
+                provider_name: 'mercado_pago',
                 provider_reference: providerReference,
                 // NOTA: a tabela não tem coluna expires_at — vai no metadata.
                 metadata: {
@@ -258,7 +249,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     amount_paid: pkg.price_brl,
                     credits_granted: (pkg.credits_amount || 0) + (pkg.bonus_credits || 0),
                     status: 'awaiting_payment',
-                    provider_name: paymentMethod,
+                    provider_name: 'mercado_pago',
                     provider_payment_id: providerReference,
                     metadata: {
                         product_id: pkg.id,
@@ -297,9 +288,10 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             let realPix = pixCode;
             let realQr: string | null = null;
             let realCheckout: string | null = null;
-            const mpMethod =
-                paymentMethod === "cartao" ? "credit_card"
-                : paymentMethod === "boleto" ? "boleto" : "pix";
+            // "credit_card" (qualquer valor != "pix") faz a edge function
+            // gerar a preference do Checkout Pro (checkout_url), onde o
+            // usuário escolhe como pagar (PIX, cartão, boleto...).
+            const mpMethod = "credit_card";
 
             // Destino do crédito conforme o contexto da tela.
             let chargeMeta: Record<string, unknown>;
@@ -472,48 +464,26 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                         {/* STEP: SELECT */}
                         {checkoutStep === "select" && (
                             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                                <div className="space-y-4">
-                                    <div className="space-y-1">
-                                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em]">Pagamento</span>
-                                        <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Escolha o método</h3>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button 
-                                            onClick={() => setPaymentMethod("pix")}
-                                            className={cn(
-                                                "flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all gap-3",
-                                                paymentMethod === "pix" ? "border-orange-500 bg-orange-100/30 text-orange-600" : "border-zinc-100 text-zinc-400 grayscale opacity-60 hover:border-zinc-200"
-                                            )}
-                                        >
-                                            <QrCode className="w-8 h-8" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">PIX</span>
-                                        </button>
-                                        <button 
-                                            onClick={() => setPaymentMethod("cartao")}
-                                            className={cn(
-                                                "flex flex-col items-center justify-center p-6 rounded-3xl border-2 transition-all gap-3",
-                                                paymentMethod === "cartao" ? "border-orange-500 bg-orange-100/30 text-orange-600" : "border-zinc-100 text-zinc-400 grayscale opacity-60 hover:border-zinc-200"
-                                            )}
-                                        >
-                                            <CreditCard className="w-8 h-8" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">Cartão</span>
-                                        </button>
-                                    </div>
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em]">Pagamento</span>
+                                    <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tighter">Recarga via Mercado Pago</h3>
+                                    <p className="text-zinc-500 font-medium text-sm leading-tight pt-1">
+                                        Você escolhe como pagar (PIX, cartão ou boleto) na página segura do Mercado Pago.
+                                    </p>
                                 </div>
 
-                                <Button 
+                                <Button
                                     onClick={handleConfirmPurchase}
                                     disabled={isProcessing}
                                     className="w-full h-16 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-orange-500/20 active:scale-[0.98] transition-all"
                                 >
                                     {isProcessing ? (
                                         <><Loader2 className="w-6 h-6 animate-spin mr-3" /> Gerando...</>
-                                    ) : "Confirmar e Pagar Agora"}
+                                    ) : "Recarga via Mercado Pago"}
                                 </Button>
-                                
+
                                 <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-loose">
-                                    {isListingCheckout 
+                                    {isListingCheckout
                                         ? "A liberação do seu anúncio ocorrerá \nimediatamente após a confirmação."
                                         : "Seus créditos estarão disponíveis \nimediatamente após o pagamento."}
                                 </p>
@@ -535,10 +505,10 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                             {isExpired ? "Cobrança Expirada" : "Aguardando Pagamento"}
                                         </h3>
                                         <p className="text-zinc-500 text-xs font-medium uppercase tracking-widest">
-                                            {isExpired ? "O código não é mais válido" : "Escaneie o código abaixo"}
+                                            {isExpired ? "O link não é mais válido" : "Conclua o pagamento no Mercado Pago"}
                                         </p>
                                     </div>
-                                    
+
                                     {timeLeft !== null && !isExpired && (
                                         <div className="inline-flex items-center gap-2 bg-zinc-900 text-white px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl">
                                             <Clock className="w-3 h-3 text-orange-500" />
@@ -547,66 +517,46 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                     )}
                                 </div>
 
-                                {paymentMethod === "pix" && (
-                                    <div className={cn("space-y-6 transition-all", isExpired && "opacity-20 grayscale pointer-events-none")}>
-                                        <div className="bg-zinc-900 p-6 rounded-3xl flex flex-col items-center gap-4 shadow-2xl">
-                                            <div className="bg-white p-2 rounded-2xl">
-                                               <QrCode className="w-40 h-40 text-zinc-900" />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest text-center">Copia e Cola</p>
-                                            <div className="flex gap-2">
-                                                <div className="flex-1 bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-3 text-[10px] font-mono text-zinc-400 truncate">
-                                                    {activeOrder.pix_code}
-                                                </div>
-                                                <button 
-                                                    disabled={isExpired}
-                                                    onClick={() => {
-                                                        navigator.clipboard.writeText(activeOrder.pix_code);
-                                                        toast.success("Código copiado!");
-                                                    }}
-                                                    className="w-12 h-12 bg-zinc-900 text-white rounded-xl flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50"
-                                                >
-                                                    <Copy className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {isExpired ? (
                                     <div className="space-y-4">
-                                        <Button 
+                                        <Button
                                             onClick={handleConfirmPurchase}
                                             className="w-full h-14 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm uppercase shadow-xl"
                                         >
-                                            Gerar Novo QR Code
+                                            Gerar Novo Link
                                         </Button>
-                                        <Button 
-                                            variant="ghost" 
+                                        <Button
+                                            variant="ghost"
                                             onClick={() => setCheckoutStep("select")}
                                             className="w-full text-zinc-400 hover:text-zinc-600 font-bold text-xs uppercase"
                                         >
-                                            Escolher outro método
+                                            Voltar
                                         </Button>
                                     </div>
                                 ) : (
-                                    <>
+                                    <div className="space-y-4">
+                                        {activeOrder.checkout_url && (
+                                            <Button
+                                                onClick={() => window.open(activeOrder.checkout_url, "_blank", "noopener")}
+                                                className="w-full h-14 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm uppercase shadow-xl shadow-orange-500/20"
+                                            >
+                                                Abrir Mercado Pago
+                                            </Button>
+                                        )}
+
                                         <div className="flex items-center justify-center gap-2 text-zinc-400 text-[10px] font-bold uppercase tracking-widest">
                                             <Loader2 className="w-3 h-3 animate-spin" />
-                                            Sincronizando com Banco...
+                                            Aguardando confirmação do pagamento...
                                         </div>
-                                        
-                                        <Button 
-                                            variant="ghost" 
+
+                                        <Button
+                                            variant="ghost"
                                             onClick={() => setCheckoutStep("select")}
                                             className="w-full text-zinc-400 hover:text-zinc-600 font-bold text-xs uppercase"
                                         >
-                                            Mudar método
+                                            Cancelar
                                         </Button>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         )}

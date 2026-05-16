@@ -20,9 +20,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   QrCode,
-  CreditCard,
   Receipt,
-  Plus,
   Minus,
   ShoppingBag,
   AlertCircle,
@@ -46,7 +44,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -71,18 +68,12 @@ export default function AdvertiserWalletPage() {
   const { balance: advCredits, isLoading: isLoadingAdvertiserCredits } = useAdvertiserCredits();
 
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [showAddBalance, setShowAddBalance] = useState(false);
   const [showPixConfig, setShowPixConfig] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>("extrato");
 
   // PIX config state
   const [pixData, setPixData] = useState<{ pix_tipo_chave: string | null; pix_chave: string | null } | null>(null);
   const [pixLoading, setPixLoading] = useState(true);
-
-  // Add balance state
-  const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "credit_card" | "mercado_pago">("pix");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // PIX form state
   const [pixTipo, setPixTipo] = useState("");
@@ -122,36 +113,6 @@ export default function AdvertiserWalletPage() {
   const formatCurrency = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
   const formatCurrencyFromReais = (reais: number) => reais.toFixed(2).replace(".", ",");
 
-  // ======= ADD BALANCE HANDLERS =======
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "");
-    const numericValue = parseInt(value, 10) / 100;
-    if (isNaN(numericValue) || value === "") { setAmount(""); return; }
-    setAmount(numericValue.toFixed(2));
-  };
-
-  const formatDisplayValue = (value: string) => {
-    if (!value) return "";
-    const num = parseFloat(value);
-    if (isNaN(num)) return "";
-    return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const handleAddBalance = async () => {
-    const numericAmount = parseFloat(amount);
-    if (!amount || numericAmount <= 0) { toast.error("Informe um valor válido"); return; }
-    if (numericAmount < 10) { toast.error("Valor mínimo: R$ 10,00"); return; }
-
-    setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    toast.success("Solicitação de recarga enviada!", {
-      description: `R$ ${formatDisplayValue(amount)} via ${paymentMethod === "pix" ? "PIX" : paymentMethod === "credit_card" ? "Cartão" : "Mercado Pago"}`,
-    });
-    setAmount("");
-    setIsSubmitting(false);
-    setShowAddBalance(false);
-  };
-
   // ======= PIX SAVE =======
   const handlePixSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,14 +124,17 @@ export default function AdvertiserWalletPage() {
         .upsert({
           user_id: user.id,
           pix_tipo_chave: pixTipo,
-          pix_chave: pixChave,
+          pix_chave: pixChave.trim(),
         }, { onConflict: "user_id" });
       if (error) throw error;
       toast.success("Chave Pix salva com sucesso!");
-      setPixData({ pix_tipo_chave: pixTipo, pix_chave: pixChave });
+      setPixData({ pix_tipo_chave: pixTipo, pix_chave: pixChave.trim() });
       setShowPixConfig(false);
-    } catch {
-      toast.error("Erro ao salvar dados do Pix");
+    } catch (err: any) {
+      console.error("[PIX] Erro ao salvar chave:", err);
+      toast.error("Erro ao salvar chave Pix", {
+        description: err?.message || err?.hint || "Tente novamente em instantes.",
+      });
     } finally {
       setPixSubmitting(false);
     }
@@ -289,13 +253,6 @@ export default function AdvertiserWalletPage() {
           {/* Action buttons */}
           <div className="flex flex-wrap gap-3 mt-6">
             <Button
-              onClick={() => setShowAddBalance(true)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/30"
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Adicionar Saldo
-            </Button>
-            <Button
               variant="outline"
               onClick={() => {
                 setPixTipo(pixData?.pix_tipo_chave || "");
@@ -361,10 +318,10 @@ export default function AdvertiserWalletPage() {
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div>
             <p className="text-sm font-bold">Saldo zerado</p>
-            <p className="text-xs text-amber-300/70 mt-0.5">Adicione saldo para não interromper os despachos de entrega.</p>
+            <p className="text-xs text-amber-300/70 mt-0.5">Compre um pacote de créditos para continuar anunciando.</p>
           </div>
-          <Button size="sm" onClick={() => setShowAddBalance(true)} className="ml-auto bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shrink-0">
-            Recarregar
+          <Button size="sm" onClick={() => navigate("/anunciante/creditos")} className="ml-auto bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shrink-0">
+            Comprar Créditos
           </Button>
         </div>
       )}
@@ -447,83 +404,6 @@ export default function AdvertiserWalletPage() {
           Criptografia ponta a ponta garantida pela plataforma
         </p>
       </div>
-
-      {/* ========== ADD BALANCE MODAL ========== */}
-      <Dialog open={showAddBalance} onOpenChange={setShowAddBalance}>
-        <DialogContent className="sm:max-w-md bg-[#1B1F24] border-[#2A3038] text-[#F5F7FA]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#F5F7FA]">
-              <Wallet className="h-5 w-5 text-emerald-400" />
-              Adicionar Saldo
-            </DialogTitle>
-            <DialogDescription className="text-[#A7B0BE]">
-              Recarregue sua carteira para gerenciar entregas e serviços.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 pt-2">
-            <div className="space-y-2">
-              <Label className="text-[#A7B0BE] text-xs uppercase tracking-wider font-bold">Valor</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A7B0BE] font-bold">R$</span>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0,00"
-                  value={formatDisplayValue(amount)}
-                  onChange={handleAmountChange}
-                  className="pl-10 text-lg font-black bg-[#0D0F12] border-[#2A3038] text-white placeholder:text-[#A7B0BE]/40 focus-visible:ring-emerald-500/30"
-                  disabled={isSubmitting}
-                />
-              </div>
-              <p className="text-[10px] text-[#A7B0BE]/60">Valor mínimo: R$ 10,00</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-[#A7B0BE] text-xs uppercase tracking-wider font-bold">Método de Pagamento</Label>
-              <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="grid gap-2" disabled={isSubmitting}>
-                {[
-                  { value: "pix" as const, label: "PIX", icon: <QrCode className="h-4 w-4" />, desc: "Transferência instantânea" },
-                  { value: "credit_card" as const, label: "Cartão de Crédito", icon: <CreditCard className="h-4 w-4" />, desc: "Visa, Mastercard, Elo" },
-                  { value: "mercado_pago" as const, label: "Mercado Pago", icon: <Wallet className="h-4 w-4" />, desc: "Saldo ou cartão" },
-                ].map((m) => (
-                  <label
-                    key={m.value}
-                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
-                      paymentMethod === m.value
-                        ? "border-emerald-500/40 bg-emerald-500/5"
-                        : "border-[#2A3038] hover:bg-[#2A3038]/50"
-                    } ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
-                  >
-                    <RadioGroupItem value={m.value} className="border-[#2A3038] text-emerald-400" />
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                      paymentMethod === m.value ? "bg-emerald-500/20 text-emerald-400" : "bg-[#2A3038] text-[#A7B0BE]"
-                    }`}>
-                      {m.icon}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-[#F5F7FA]">{m.label}</p>
-                      <p className="text-[10px] text-[#A7B0BE]">{m.desc}</p>
-                    </div>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-
-            <Button
-              onClick={handleAddBalance}
-              disabled={isSubmitting || !amount}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase tracking-wider h-12"
-            >
-              {isSubmitting ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</>
-              ) : (
-                <><Wallet className="h-4 w-4 mr-2" /> Adicionar Saldo</>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* ========== PIX CONFIG MODAL ========== */}
       <Dialog open={showPixConfig} onOpenChange={setShowPixConfig}>
