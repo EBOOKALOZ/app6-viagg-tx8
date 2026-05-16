@@ -1,0 +1,16 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- VIAGG-TX8 — FASE 2 / SQL 06 / grant_kind 'advertiser_credit'
+--
+-- O checkout /anunciante usa o RealEstateCheckoutContent (catálogo de pacotes
+-- imobiliário) mas o saldo do usuário é o do ANUNCIANTE
+-- (advertiser_credit_balances, exibido em /anunciante/carteira).
+--
+-- Novo branch em pay_grant_legacy: 'advertiser_credit' credita
+-- advertiser_credit_balances direto do metadata da ordem
+-- (advertiser_account_id + credits), sem exigir advertiser_credit_purchases.
+-- Idempotente por advertiser_credit_ledger.source_id = order_id.
+--
+-- (Função recriada via MCP apply_migration pay_phase2_06_grant_advertiser_credit
+--  com todos os branches: merchant / advertiser_credit / advertiser /
+--  real_estate. Este arquivo documenta a migração no repo.)
+-- ═══════════════════════════════════════════════════════════════════════════

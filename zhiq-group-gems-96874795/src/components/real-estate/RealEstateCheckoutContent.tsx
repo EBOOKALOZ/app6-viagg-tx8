@@ -35,9 +35,12 @@ interface RealEstateCheckoutContentProps {
     onBack?: () => void;
     onSuccess?: () => void;
     layout?: 'public' | 'dashboard';
+    /** Qual carteira recebe o crédito. 'advertiser' = carteira do anunciante
+     *  (/anunciante/carteira); 'real_estate' = créditos imobiliários. */
+    walletContext?: 'advertiser' | 'real_estate';
 }
 
-export function RealEstateCheckoutContent({ listingId: propListingId, onBack, onSuccess, layout = 'public' }: RealEstateCheckoutContentProps) {
+export function RealEstateCheckoutContent({ listingId: propListingId, onBack, onSuccess, layout = 'public', walletContext = 'real_estate' }: RealEstateCheckoutContentProps) {
     const { listingId: paramListingId } = useParams();
     const listingId = propListingId || paramListingId;
     const navigate = useNavigate();
@@ -297,6 +300,33 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             const mpMethod =
                 paymentMethod === "cartao" ? "credit_card"
                 : paymentMethod === "boleto" ? "boleto" : "pix";
+
+            // Destino do crédito conforme o contexto da tela.
+            let chargeMeta: Record<string, unknown>;
+            if (walletContext === "advertiser") {
+                const { data: advAcct } = await (supabase
+                    .from("advertiser_accounts") as any)
+                    .select("id")
+                    .eq("user_id", userData.user.id)
+                    .maybeSingle();
+                if (!advAcct?.id) {
+                    throw new Error("Conta de anunciante não encontrada para este usuário.");
+                }
+                const credits =
+                    (pkg.credits_amount || 0) + (pkg.bonus_credits || 0);
+                chargeMeta = {
+                    grant_kind: "advertiser_credit",
+                    advertiser_account_id: advAcct.id,
+                    credits,
+                    real_estate_purchase_id: purchase.id, // só p/ trilha
+                };
+            } else {
+                chargeMeta = {
+                    grant_kind: "real_estate",
+                    real_estate_purchase_id: purchase.id,
+                };
+            }
+
             const { data: chargeData, error: chargeErr } = await supabase.functions.invoke(
                 "payments-charge",
                 {
@@ -306,14 +336,20 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                         account_type: "platform_main",
                         amount_cents: Math.round((pkg.price_brl || 0) * 100),
                         method: mpMethod,
-                        description: `Créditos imobiliários: ${pkg.name}`,
-                        reference_type: "real_estate_credit_purchase",
+                        description:
+                            walletContext === "advertiser"
+                                ? `Créditos anunciante: ${pkg.name}`
+                                : `Créditos imobiliários: ${pkg.name}`,
+                        reference_type:
+                            walletContext === "advertiser"
+                                ? "advertiser_credit_purchase"
+                                : "real_estate_credit_purchase",
                         reference_id: purchase.id,
-                        product_type: "real_estate_credits",
-                        metadata: {
-                            grant_kind: "real_estate",
-                            real_estate_purchase_id: purchase.id,
-                        },
+                        product_type:
+                            walletContext === "advertiser"
+                                ? "advertiser_credits"
+                                : "real_estate_credits",
+                        metadata: chargeMeta,
                     },
                 },
             );

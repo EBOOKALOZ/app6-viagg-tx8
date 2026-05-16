@@ -32,9 +32,10 @@ export default function AdvertiserCheckoutPage() {
             </div>
 
             <div className="mt-8">
-                <RealEstateCheckoutContent 
+                <RealEstateCheckoutContent
                     listingId={effectiveId}
                     layout="dashboard"
+                    walletContext="advertiser"
                     onBack={() => navigate('/anunciante/creditos')}
                     onSuccess={() => {
                         // Optional: additional logic on success inside dashboard
