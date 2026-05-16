@@ -575,6 +575,10 @@ export function useAdminCredits() {
            product_type: input.product_type || "pacote",
            credits_base: input.credits_base,
            credits_bonus: input.credits_bonus,
+           // Colunas legadas NOT NULL (sem default) — espelham os campos novos.
+           credits_amount: input.credits_base,
+           bonus_credits: input.credits_bonus,
+           price_brl: input.price_brl,
            price_cents,
            description: input.description || null,
            badge_text: input.badge_text || null,
