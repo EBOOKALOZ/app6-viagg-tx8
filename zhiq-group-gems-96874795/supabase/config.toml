@@ -14,9 +14,12 @@ subject = "Recupere sua senha - Viagg-TX8"
 subject = "Confirme a alteração de e-mail - Viagg-TX8"
 
 [functions.payments-charge]
-verify_jwt = true
+verify_jwt = false
 
 [functions.payments-webhook]
+verify_jwt = false
+
+[functions.payments-gateway-test]
 verify_jwt = false
 
 [functions.campaign-share]
