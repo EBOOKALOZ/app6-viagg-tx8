@@ -235,10 +235,11 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                 payment_status: 'awaiting_payment',
                 provider_name: paymentMethod,
                 provider_reference: providerReference,
-                expires_at: expiresAt,
+                // NOTA: a tabela não tem coluna expires_at — vai no metadata.
                 metadata: {
                     pix_code: pixCode,
                     boleto_line: boletoLine,
+                    expires_at: expiresAt,
                     listing_id: listing ? listingId : null,
                     is_direct_package: !listing
                 }
@@ -288,7 +289,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             if (!purchase) throw new Error("Falha ao criar registro de compra.");
 
             setIsExpired(false);
-            setActiveOrder({ ...purchase, pix_code: pixCode, boleto_line: boletoLine });
+            setActiveOrder({ ...purchase, pix_code: pixCode, boleto_line: boletoLine, expires_at: expiresAt });
             setCheckoutStep("awaiting");
             toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
         } catch (error: any) {
