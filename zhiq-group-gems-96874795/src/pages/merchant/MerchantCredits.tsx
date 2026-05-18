@@ -313,6 +313,9 @@ export default function MerchantCredits() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<"select" | "awaiting" | "confirmed" | "failed">("select");
   const [activeOrder, setActiveOrder] = useState<any>(null);
+  // "Comprar + Saldo" da Carteira: recarga avulsa em R$ → créditos.
+  const [topupOpen, setTopupOpen] = useState(false);
+  const [topupReais, setTopupReais] = useState("");
 
   const pacotes = products.filter(p => p.type === "pacote");
   const planos = products.filter(p => p.type !== "pacote");
@@ -339,6 +342,56 @@ export default function MerchantCredits() {
     setActiveOrder(null);
   };
 
+  // Preço de referência do crédito (R$ → créditos): menor custo/crédito
+  // entre os pacotes avulsos ativos; fallback p/ R$ 1,00 = 1 crédito.
+  const creditRateCents = (() => {
+    const rates = pacotes
+      .map(p => p.cost_per_credit_cents)
+      .filter(r => r > 0);
+    return rates.length ? Math.min(...rates) : 100;
+  })();
+
+  // "Comprar + Saldo": valida o R$ digitado, monta um produto sintético
+  // (tipo pacote) e reaproveita o MESMO checkout dos pacotes — cobrança
+  // real via Mercado Pago (purchaseCredits → Edge Function payments-charge).
+  const handleTopupContinue = () => {
+    const reais = parseFloat(topupReais.replace(",", "."));
+    if (!Number.isFinite(reais) || reais < 5) {
+      toast.error("Informe um valor de no mínimo R$ 5,00");
+      return;
+    }
+    const priceCents = Math.round(reais * 100);
+    const credits = Math.floor(priceCents / creditRateCents);
+    if (credits < 1) {
+      toast.error("Valor insuficiente para 1 crédito");
+      return;
+    }
+    const synthetic: CreditProduct = {
+      id: `wallet-topup-${priceCents}`,
+      slug: "wallet-topup",
+      name: `Recarga de Saldo — ${formatCurrency(priceCents)}`,
+      type: "pacote",
+      credits_base: credits,
+      credits_bonus: 0,
+      credits_total: credits,
+      price_cents: priceCents,
+      cost_per_credit_cents: creditRateCents,
+      rollover_enabled: false,
+      rollover_percent: 0,
+      is_recommended: false,
+      is_active: true,
+      sort_order: 0,
+      description: null,
+      badge_text: null,
+      action_label: null,
+      action_enabled: true,
+      features_json: [],
+    };
+    setTopupOpen(false);
+    setTopupReais("");
+    handleSelectProduct(synthetic);
+  };
+
   // Confirm: gera cobrança REAL via Mercado Pago (Edge Function
   // payments-charge → pay_payment_orders). O crédito só cai quando o
   // webhook confirmar o pagamento.
@@ -356,21 +409,40 @@ export default function MerchantCredits() {
           : paymentMethod === "boleto"
             ? "boleto"
             : "pix";
-      // 1) cria a linha legada credit_purchases (o webhook chama
-      //    confirm_credit_purchase com esse id p/ creditar o saldo do lojista).
-      const legacyOrder = await createCreditOrder(checkoutProduct, paymentMethod);
-      // 2) cobrança REAL no MP, linkando a compra legada via metadata.
-      const res = await purchaseCredits({
-        merchant_owner_id: storeId,
-        package_price_cents: checkoutProduct.price_cents,
-        package_name: checkoutProduct.name,
-        package_credits: checkoutProduct.credits_total,
-        method,
-        metadata: {
-          grant_kind: "merchant",
-          credit_purchase_id: legacyOrder.id,
-        },
-      });
+      // "Comprar + Saldo": recarga avulsa em R$. NÃO concede pontos —
+      // pula a linha legada credit_purchases e NÃO manda grant_kind, então
+      // pay_grant_legacy faz skip. O webhook ainda credita o valor em R$
+      // no merchant_wallet pay_* (target_account_id), que é exatamente a
+      // conta debitada ao pagar o motoboy (requestDelivery). Pontos
+      // (merchant_credit_balances) só vêm da compra de pacotes/planos.
+      const isWalletTopup = checkoutProduct.slug === "wallet-topup";
+
+      let res: Awaited<ReturnType<typeof purchaseCredits>>;
+      if (isWalletTopup) {
+        res = await purchaseCredits({
+          merchant_owner_id: storeId,
+          package_price_cents: checkoutProduct.price_cents,
+          package_name: checkoutProduct.name,
+          method,
+          metadata: {},
+        });
+      } else {
+        // 1) cria a linha legada credit_purchases (o webhook chama
+        //    confirm_credit_purchase com esse id p/ creditar os PONTOS).
+        const legacyOrder = await createCreditOrder(checkoutProduct, paymentMethod);
+        // 2) cobrança REAL no MP, linkando a compra legada via metadata.
+        res = await purchaseCredits({
+          merchant_owner_id: storeId,
+          package_price_cents: checkoutProduct.price_cents,
+          package_name: checkoutProduct.name,
+          package_credits: checkoutProduct.credits_total,
+          method,
+          metadata: {
+            grant_kind: "merchant",
+            credit_purchase_id: legacyOrder.id,
+          },
+        });
+      }
       const pp = res.charge.payment_payload ?? {};
       setActiveOrder({
         id: res.order_id,
@@ -414,7 +486,12 @@ export default function MerchantCredits() {
       if (status === "paid") {
         setActiveOrder((o: any) => ({ ...o, status: "paid" }));
         setCheckoutStep("confirmed");
-        toast.success(`${checkoutProduct?.credits_total} créditos adicionados! 🎉`, { duration: 5000 });
+        toast.success(
+          checkoutProduct?.slug === "wallet-topup"
+            ? `Saldo de ${formatCurrency(checkoutProduct.price_cents)} adicionado à carteira! 🎉`
+            : `${checkoutProduct?.credits_total} créditos adicionados! 🎉`,
+          { duration: 5000 },
+        );
         clearInterval(interval);
       } else if (status === "failed" || status === "expired" || status === "cancelled") {
         setActiveOrder((o: any) => ({ ...o, status }));
@@ -1108,6 +1185,28 @@ export default function MerchantCredits() {
       {activeSection === "wallet" && (
         <div className="space-y-6">
 
+          {/* Comprar + Saldo — recarga avulsa em R$ via Mercado Pago */}
+          <div className="rounded-2xl border border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50 p-5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center shadow-md shrink-0">
+                <Coins className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-gray-800">Comprar + Saldo</p>
+                <p className="text-[11px] text-gray-500">
+                  Recarregue saldo em R$ via Mercado Pago. Esse saldo paga
+                  entregas (motoboy) — não vira pontos.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { setTopupReais(""); setTopupOpen(true); }}
+              className="shrink-0 px-4 py-2.5 rounded-xl text-sm font-black text-white bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+            >
+              <CreditCard className="h-4 w-4" /> Comprar + Saldo
+            </button>
+          </div>
+
           {/* Recharge advice banner */}
           {rechargeAdvice.urgency !== "low" && (
             <div className={`rounded-2xl p-4 flex items-center gap-3 ${
@@ -1241,6 +1340,91 @@ export default function MerchantCredits() {
             )}
           </div>
 
+        </div>
+      )}
+
+      {/* ═══ MODAL: COMPRAR + SALDO (valor em R$) ═══ */}
+      {topupOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setTopupOpen(false)}
+          />
+          <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm mx-auto p-6 shadow-2xl z-10">
+            <button
+              onClick={() => setTopupOpen(false)}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+            >
+              <span className="text-gray-500 font-bold text-sm">✕</span>
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center shadow-md">
+                <Coins className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-800">Comprar + Saldo</h2>
+                <p className="text-xs text-gray-400">Quanto deseja recarregar?</p>
+              </div>
+            </div>
+
+            {/* Atalhos de valor */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {[50, 100, 200, 500].map(v => (
+                <button
+                  key={v}
+                  onClick={() => setTopupReais(String(v))}
+                  className={`py-2 rounded-xl border-2 text-xs font-black transition-all ${
+                    parseFloat(topupReais.replace(",", ".")) === v
+                      ? "border-[#FF6A00] bg-orange-50 text-[#FF6A00]"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  }`}
+                >
+                  R$ {v}
+                </button>
+              ))}
+            </div>
+
+            {/* Valor livre */}
+            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Valor (R$)</label>
+            <div className="flex items-center gap-2 mt-1 mb-3">
+              <span className="text-lg font-black text-gray-500">R$</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={5}
+                step="0.01"
+                value={topupReais}
+                onChange={(e) => setTopupReais(e.target.value)}
+                placeholder="0,00"
+                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-lg font-black text-gray-800 outline-none focus:border-[#FF6A00]"
+              />
+            </div>
+
+            {/* Prévia do saldo (recarga é em R$, não em pontos) */}
+            {(() => {
+              const reais = parseFloat(topupReais.replace(",", "."));
+              const valid = Number.isFinite(reais) && reais >= 5;
+              return (
+                <div className="bg-gray-50 rounded-xl px-4 py-3 mb-5 border border-gray-200 flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Você receberá</span>
+                  <span className="text-sm font-black text-emerald-600">
+                    {valid ? `${formatCurrency(Math.round(reais * 100))} de saldo` : "—"}
+                  </span>
+                </div>
+              );
+            })()}
+
+            <button
+              onClick={handleTopupContinue}
+              className="w-full py-3.5 rounded-xl text-sm font-black text-white bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+            >
+              <CreditCard className="h-4 w-4" /> Continuar para pagamento
+            </button>
+            <p className="text-[10px] text-gray-400 text-center mt-2">
+              Pagamento seguro via Mercado Pago (PIX, cartão ou boleto).
+            </p>
+          </div>
         </div>
       )}
 
@@ -1383,7 +1567,11 @@ export default function MerchantCredits() {
                     <span className="text-sm font-black text-[#FF6A00]">{formatCurrency(checkoutProduct.price_cents)}</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-[10px] text-gray-400">{checkoutProduct.credits_total} créditos</span>
+                    <span className="text-[10px] text-gray-400">
+                      {checkoutProduct.slug === "wallet-topup"
+                        ? "Recarga de saldo"
+                        : `${checkoutProduct.credits_total} créditos`}
+                    </span>
                     <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase">Aguardando</span>
                   </div>
                 </div>
@@ -1498,7 +1686,9 @@ export default function MerchantCredits() {
                   </div>
                   <h2 className="text-xl font-black text-gray-800 mb-1">Pagamento Confirmado!</h2>
                   <p className="text-sm text-gray-500">
-                    {checkoutProduct.credits_total} créditos foram adicionados à sua conta.
+                    {checkoutProduct.slug === "wallet-topup"
+                      ? `Saldo de ${formatCurrency(checkoutProduct.price_cents)} adicionado à sua carteira.`
+                      : `${checkoutProduct.credits_total} créditos foram adicionados à sua conta.`}
                   </p>
 
                   <div className="bg-emerald-50 rounded-2xl p-4 mt-5 border border-emerald-200">
@@ -1506,10 +1696,12 @@ export default function MerchantCredits() {
                       <span className="text-xs text-gray-500">Produto</span>
                       <span className="text-sm font-bold text-gray-700">{checkoutProduct.name}</span>
                     </div>
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-xs text-gray-500">Créditos adicionados</span>
-                      <span className="text-sm font-black text-emerald-600">+{checkoutProduct.credits_total}</span>
-                    </div>
+                    {checkoutProduct.slug !== "wallet-topup" && (
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-xs text-gray-500">Créditos adicionados</span>
+                        <span className="text-sm font-black text-emerald-600">+{checkoutProduct.credits_total}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between py-1">
                       <span className="text-xs text-gray-500">Valor pago</span>
                       <span className="text-sm font-bold text-gray-700">{formatCurrency(checkoutProduct.price_cents)}</span>

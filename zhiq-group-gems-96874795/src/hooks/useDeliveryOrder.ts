@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { calculateDistanceKm, calculateMotoboyValue } from '@/lib/deliveryPricing';
+import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
+import { fetchOrderPayContext } from '@/lib/payments/deliveryPay';
 
 // Taxa padrão de comissão (fallback)
 const DEFAULT_COMMISSION_RATE = 0.25; // 25% de taxa para motoboys sem grupos
@@ -62,6 +64,7 @@ const logDeliveryData = (label: string, data: any) => {
 
 export function useDeliveryOrder() {
   const { user } = useAuth();
+  const { completeDelivery, cancelDelivery: cancelDeliveryPay } = usePaymentsOrchestrator();
   const [activeOrder, setActiveOrder] = useState<DeliveryOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
@@ -364,7 +367,27 @@ export function useDeliveryOrder() {
         console.error('[validateCode] Erro ao finalizar via RPC:', completeError);
         throw completeError;
       }
-      
+
+      // LIBERAR PAGAMENTO pay_*: escrow → motoboy_wallet (líquido) +
+      // plataforma (comissão). O motoboy recebe em R$ na carteira pay_*
+      // (owner = auth user id, igual a useMotoboyPayWallet). commissionRate
+      // vem em PERCENTUAL (ex.: 25), então /100 p/ obter a fração.
+      try {
+        const grossCents = Math.round(Number(fullOrderData?.total_price ?? 0) * 100);
+        const feeCents = Math.round((grossCents * commissionRate) / 100);
+        if (grossCents > 0) {
+          await completeDelivery({
+            motoboy_owner_id: user.id,
+            credits_cost_cents: grossCents,
+            platform_fee_cents: feeCents,
+            delivery_id: deliveryId,
+          });
+        }
+      } catch (payErr: any) {
+        // Estado da entrega já mudou; não reverter. Loga p/ conciliação.
+        console.error('[validateCode] completeDelivery (pay_*) falhou:', payErr);
+      }
+
       // Criar registro no histórico com lojaNome já resolvido
       const historyData = {
         pickup_location: fullOrderData?.pickup_location,
@@ -616,7 +639,23 @@ export function useDeliveryOrder() {
         toast.error('Não foi possível cancelar a entrega');
         return false;
       }
-      
+
+      // ESTORNO pay_*: devolve o valor retido no escrow ao merchant_wallet
+      // do lojista (R$), revertendo a reserva feita no aceite.
+      try {
+        const ctx = await fetchOrderPayContext(orderId);
+        if (ctx?.storeId && ctx.amountCents > 0) {
+          await cancelDeliveryPay({
+            merchant_owner_id: ctx.storeId,
+            credits_cost_cents: ctx.amountCents,
+            delivery_id: orderId,
+            reason: 'Cancelada pelo lojista',
+          });
+        }
+      } catch (payErr: any) {
+        console.error('[cancelDelivery] cancelDelivery (pay_*) falhou:', payErr);
+      }
+
       toast.info('Entrega cancelada', {
         description: 'Você pode aceitar novas entregas',
       });

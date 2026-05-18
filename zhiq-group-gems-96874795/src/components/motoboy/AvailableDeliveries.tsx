@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { broadcastDeliveryAcceptedGlobal } from '@/lib/broadcastDeliveryAccepted';
+import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
+import { resolveMerchantStoreId } from '@/lib/payments/deliveryPay';
 import { calculateDistanceKm, calculateEstimatedTimeMinutes } from '@/lib/deliveryPricing';
 import { DeliveryPreviewCard } from './DeliveryPreviewCard';
 
@@ -46,6 +48,7 @@ interface AvailableDeliveriesProps {
 
 export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesProps = {}) {
   const { user } = useAuth();
+  const { requestDelivery } = usePaymentsOrchestrator();
   const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState<AvailableDelivery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -267,19 +270,37 @@ export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesPro
         return;
       }
       
-      // RESERVAR PAGAMENTO DO LOJISTA
+      // RESERVAR PAGAMENTO DO LOJISTA — sai do merchant_wallet pay_* (R$,
+      // a mesma conta que a recarga "Comprar + Saldo" alimenta), NÃO dos
+      // pontos. Retém no platform_escrow até a entrega ser concluída.
       const { data: deliveryData } = await supabase
         .from('service_orders')
         .select('merchant_id, total_price')
         .eq('id', deliveryId)
         .single();
-      
+
       if (deliveryData?.merchant_id && deliveryData?.total_price) {
-        await supabase.rpc('reserve_delivery_payment', {
-          _user_id: deliveryData.merchant_id,
-          _delivery_id: deliveryId,
-          _amount: deliveryData.total_price,
-        });
+        const storeId = await resolveMerchantStoreId(deliveryData.merchant_id);
+        if (!storeId) {
+          console.error('[AvailableDeliveries] merchant_store não resolvido p/', deliveryData.merchant_id);
+        } else {
+          try {
+            await requestDelivery({
+              merchant_owner_id: storeId,
+              motoboy_owner_id: motoboyId,
+              credits_cost_cents: Math.round(Number(deliveryData.total_price) * 100),
+              delivery_id: deliveryId,
+              description: `Reserva entrega ${deliveryId}`,
+            });
+          } catch (payErr: any) {
+            // Não derruba a entrega já aceita: registra e avisa. O lojista
+            // pode estar sem saldo pay_* migrado durante a transição.
+            console.error('[AvailableDeliveries] requestDelivery (pay_*) falhou:', payErr);
+            toast.warning('Entrega aceita, mas a reserva de saldo do lojista falhou', {
+              description: payErr?.message || 'Verifique o saldo da carteira do lojista.',
+            });
+          }
+        }
       }
       
       // BROADCAST IMEDIATO
