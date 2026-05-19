@@ -92,7 +92,7 @@ export function useDeliveryOrder() {
           .select('*')
           .or(`motoboy_id.eq.${user.id},courier_id.eq.${user.id}`)
           .eq('service_type', 'delivery')
-          .in('status', ['accepted', 'a_caminho', 'in_progress', 'buscando', 'entregando'])
+          .in('status', ['accepted', 'in_progress', 'assigned'])
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -155,7 +155,7 @@ export function useDeliveryOrder() {
           const updated = payload.new as any;
           
           // Atualizar estado para qualquer status ativo
-          const activeStatuses = ['accepted', 'a_caminho', 'in_progress', 'buscando', 'entregando'];
+          const activeStatuses = ['accepted', 'in_progress', 'assigned'];
           if (activeStatuses.includes(updated.status)) {
             setActiveOrder({
               id: updated.id,
@@ -197,7 +197,7 @@ export function useDeliveryOrder() {
           console.log('[useDeliveryOrder] Realtime INSERT recebido:', payload.new);
           const inserted = payload.new as any;
           
-          const activeStatuses = ['accepted', 'a_caminho', 'in_progress', 'buscando', 'entregando'];
+          const activeStatuses = ['accepted', 'in_progress', 'assigned'];
           if (activeStatuses.includes(inserted.status)) {
             setActiveOrder({
               id: inserted.id,
