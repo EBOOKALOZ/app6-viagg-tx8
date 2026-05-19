@@ -256,8 +256,13 @@ export default function AdvertiserNewDelivery() {
       setIsLoadingBalance(true);
       try {
         if (!user) return;
-        const { data: account } = await supabase.from('financial_accounts').select('available_balance').eq('owner_user_id', user.id).maybeSingle();
-        if (alive) setSaldoAtual(account?.available_balance || 0);
+        // Fonte da verdade = carteira pay_* do merchant (mesma conta debitada
+        // ao pagar o motoboy). RPC SECURITY DEFINER contorna o mismatch de
+        // RLS (owner = store_id, não auth.uid()). NÃO usar financial_accounts
+        // legado (vazio → "saldo insuficiente" falso).
+        const { data: payWallet } = await supabase.rpc('get_my_merchant_pay_wallet');
+        const availableCents = Number((payWallet as any)?.available_cents ?? 0);
+        if (alive) setSaldoAtual(availableCents / 100);
       } catch (err) {
         if (alive) setSaldoAtual(0);
       } finally {
