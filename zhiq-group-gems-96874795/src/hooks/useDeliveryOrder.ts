@@ -82,11 +82,13 @@ export function useDeliveryOrder() {
         logDeliveryData('Entrega ativa encontrada via RPC', data[0]);
         setActiveOrder(data[0] as DeliveryOrder);
       } else {
-        // CORREÇÃO: Buscar por motoboy_id na tabela service_orders
+        // O aceite atual grava courier_id (versões antigas usavam
+        // motoboy_id) — casa qualquer um dos dois p/ a corrida ativa
+        // aparecer pro motoboy independente da coluna preenchida.
         const { data: directData, error: directError } = await supabase
           .from('service_orders')
           .select('*')
-          .eq('motoboy_id', user.id)
+          .or(`motoboy_id.eq.${user.id},courier_id.eq.${user.id}`)
           .eq('service_type', 'delivery')
           .in('status', ['accepted', 'a_caminho', 'in_progress', 'buscando', 'entregando'])
           .order('created_at', { ascending: false })
@@ -144,7 +146,7 @@ export function useDeliveryOrder() {
           event: 'UPDATE',
           schema: 'public',
           table: 'service_orders',
-          filter: `motoboy_id=eq.${user.id}`,
+          filter: `courier_id=eq.${user.id}`,
         },
         (payload) => {
           console.log('[useDeliveryOrder] Realtime UPDATE recebido:', payload.new);
@@ -187,7 +189,7 @@ export function useDeliveryOrder() {
           event: 'INSERT',
           schema: 'public',
           table: 'service_orders',
-          filter: `motoboy_id=eq.${user.id}`,
+          filter: `courier_id=eq.${user.id}`,
         },
         (payload) => {
           console.log('[useDeliveryOrder] Realtime INSERT recebido:', payload.new);
