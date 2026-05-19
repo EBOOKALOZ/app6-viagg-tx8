@@ -75,10 +75,12 @@ export function useDeliveryOrder() {
     try {
       const { data, error } = await supabase
         .rpc('get_active_delivery', { _user_id: user.id });
-      
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
+
+      // NÃO abortar se a RPC falhar: get_active_delivery pode não existir
+      // no banco (divergência) → o erro derrubava o fetch inteiro e a
+      // corrida nunca aparecia pro motoboy. Erro/sem dado = cai no
+      // SELECT direto abaixo (fonte da verdade, casa courier_id).
+      if (!error && data && data.length > 0) {
         logDeliveryData('Entrega ativa encontrada via RPC', data[0]);
         setActiveOrder(data[0] as DeliveryOrder);
       } else {
