@@ -39,16 +39,18 @@ export function useMotoboyDeliveryHistory() {
                 startDate.setDate(now.getDate() - 30);
             }
 
-            const { data, error } = await supabase
-                .from('delivery_orders')
-                .select('id, pickup_address, drop_address, price, distance_km, status, created_at')
-                .eq('motoboy_id', user.id)
-                .gte('created_at', startDate.toISOString())
-                .order('created_at', { ascending: false });
+            // Fonte da verdade = pay_* (ledger de motoboy_earning), NÃO a
+            // tabela legada delivery_orders (que ficava vazia: entregas reais
+            // vivem em service_orders e o dinheiro em pay_ledger_entries).
+            // RPC SECURITY DEFINER resolve a carteira pay_* por auth.uid().
+            const { data, error } = await supabase.rpc(
+                'get_my_motoboy_delivery_history',
+                { p_since: startDate.toISOString() },
+            );
 
             if (error) throw error;
 
-            setDeliveries(data as MotoboyDeliveryRecord[]);
+            setDeliveries((data as MotoboyDeliveryRecord[]) || []);
         } catch (error) {
             console.error("Error fetching motoboy history:", error);
         } finally {

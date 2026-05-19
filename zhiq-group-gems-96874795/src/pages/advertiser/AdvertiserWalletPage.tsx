@@ -12,6 +12,7 @@ import { useMerchantWalletOverview } from "@/hooks/useMerchantPayViews";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { WalletTopupButton } from "@/components/merchant/WalletTopupButton";
 import {
   Wallet,
   RefreshCw,
@@ -264,6 +265,10 @@ export default function AdvertiserWalletPage() {
               <QrCode className="h-4 w-4 mr-1.5" />
               {pixData?.pix_chave ? "Editar PIX" : "Cadastrar PIX"}
             </Button>
+            <WalletTopupButton
+              onSuccess={loadWallet}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider"
+            />
             <Button
               variant="outline"
               onClick={() => navigate("/anunciante/creditos")}
@@ -318,11 +323,14 @@ export default function AdvertiserWalletPage() {
           <AlertCircle className="h-5 w-5 shrink-0" />
           <div>
             <p className="text-sm font-bold">Saldo zerado</p>
-            <p className="text-xs text-amber-300/70 mt-0.5">Compre um pacote de créditos para continuar anunciando.</p>
+            <p className="text-xs text-amber-300/70 mt-0.5">Recarregue em R$ para conseguir pagar o motoboy pelas entregas.</p>
           </div>
-          <Button size="sm" onClick={() => navigate("/anunciante/creditos")} className="ml-auto bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs shrink-0">
-            Comprar Créditos
-          </Button>
+          <div className="ml-auto shrink-0">
+            <WalletTopupButton
+              onSuccess={loadWallet}
+              className="bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs"
+            />
+          </div>
         </div>
       )}
 

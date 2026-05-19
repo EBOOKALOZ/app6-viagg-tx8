@@ -236,14 +236,13 @@ export default function AdvertiserDeliveriesPage() {
         estado: storeData.estado || null,
       });
 
-      // Fetch balance
+      // Fetch balance — fonte da verdade = carteira pay_* do merchant
+      // (mesma conta debitada ao pagar o motoboy). RPC SECURITY DEFINER
+      // contorna o mismatch de RLS (owner = store_id, não auth.uid()).
       setIsLoadingBalance(true);
-      const { data: account } = await supabase
-        .from("financial_accounts")
-        .select("available_balance")
-        .eq("owner_user_id", user!.id)
-        .maybeSingle();
-      setSaldoAtual(account?.available_balance ?? 0);
+      const { data: payWallet } = await supabase.rpc("get_my_merchant_pay_wallet");
+      const availableCents = Number((payWallet as any)?.available_cents ?? 0);
+      setSaldoAtual(availableCents / 100);
     } catch (e) {
       console.error("[openCreate]", e);
       toast.error("Erro ao carregar dados da loja");
@@ -432,6 +431,23 @@ export default function AdvertiserDeliveriesPage() {
   const brl = (v: number | null) =>
     v !== null ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v) : "—";
 
+  // Filtro da lista — DEVE ficar antes de qualquer return condicional
+  // (Rules of Hooks): a CREATE VIEW abaixo faz early return.
+  const filteredOrders = useMemo(() => {
+    const nameQ = searchName.trim().toLowerCase();
+    const dateQ = searchDate.trim();
+    return orders.filter(o => {
+      if (nameQ && !(o.customer_name ?? "").toLowerCase().includes(nameQ)) return false;
+      if (dateQ) {
+        const orderDate = format(new Date(o.created_at), "yyyy-MM-dd");
+        if (orderDate !== dateQ) return false;
+      }
+      return true;
+    });
+  }, [orders, searchName, searchDate]);
+
+  const hasFilters = searchName.trim() !== "" || searchDate.trim() !== "";
+
   /* ══════════════════════════════════════
      CREATE VIEW
   ══════════════════════════════════════ */
@@ -601,22 +617,6 @@ export default function AdvertiserDeliveriesPage() {
   /* ══════════════════════════════════════
      LIST VIEW
   ══════════════════════════════════════ */
-
-  const filteredOrders = useMemo(() => {
-    const nameQ = searchName.trim().toLowerCase();
-    const dateQ = searchDate.trim();
-    return orders.filter(o => {
-      if (nameQ && !(o.customer_name ?? "").toLowerCase().includes(nameQ)) return false;
-      if (dateQ) {
-        const orderDate = format(new Date(o.created_at), "yyyy-MM-dd");
-        if (orderDate !== dateQ) return false;
-      }
-      return true;
-    });
-  }, [orders, searchName, searchDate]);
-
-
-  const hasFilters = searchName.trim() !== "" || searchDate.trim() !== "";
 
   const renderCard = (order: DeliveryOrder) => {
     const cfg = STATUS_CONFIG[order.status] ?? { label: order.status, badgeClass: "bg-slate-100 text-slate-600 border-slate-200", icon: Package };

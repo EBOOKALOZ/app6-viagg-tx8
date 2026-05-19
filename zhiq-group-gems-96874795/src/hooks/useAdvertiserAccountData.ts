@@ -56,10 +56,12 @@ export function useAdvertiserAccountData() {
       if (!user) return null;
 
       // 1. Fetch Advertiser Account
+      // A linha de advertiser_accounts tem PK própria (id) + user_id; o
+      // vínculo correto com o usuário logado é user_id (id pode divergir).
       let { data: account, error: accountError } = await supabase
         .from("advertiser_accounts")
         .select("*")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .maybeSingle();
 
       // If account doesn't exist, try to ensure it
@@ -74,7 +76,7 @@ export function useAdvertiserAccountData() {
         const { data: retryAccount } = await supabase
           .from("advertiser_accounts")
           .select("*")
-          .eq("id", user.id)
+          .eq("user_id", user.id)
           .maybeSingle();
         
         account = retryAccount;

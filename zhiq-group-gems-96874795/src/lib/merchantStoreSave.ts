@@ -140,8 +140,11 @@ export async function loadMerchantStore(): Promise<{
   const { data: authData } = await supabase.auth.getUser();
   if (!authData?.user) return { exists: false, data: null, error: 'Não autenticado' };
 
+  // 'id' e 'endereco_formatado' não estão em MERCHANT_STORE_SELECT_COLUMNS
+  // (esse array é compartilhado com o path de escrita). Sem 'id' o
+  // store.id fica undefined e quebra create_delivery_order (p_store_id).
   const { data, error } = await (supabase.from('merchant_stores') as any)
-    .select(MERCHANT_STORE_SELECT_COLUMNS)
+    .select(`id, endereco_formatado, ${MERCHANT_STORE_SELECT_COLUMNS}`)
     .eq('user_id', authData.user.id)
     .maybeSingle();
 

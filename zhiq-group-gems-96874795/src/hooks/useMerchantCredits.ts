@@ -298,19 +298,30 @@ export function useMerchantCredits() {
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
         const monthStart = threeMonthsAgo.toISOString().slice(0, 10);
+        // Schema real: period_date (date), period_type, credits_spent,
+        // purchase_intentions_received, store_clicks/product_clicks/buy_clicks,
+        // estimated_revenue_generated. (Não existem colunas module/period_month.)
         const { data: metricsData } = await (supabase.from("merchant_credit_result_metrics") as any)
           .select("*")
           .eq("store_id", storeId)
-          .gte("period_month", monthStart);
+          .gte("period_date", monthStart);
 
         resultMetrics = (metricsData || []).map((m: any) => ({
-          module: m.module,
-          period_month: m.period_month,
-          credits_spent: m.credits_spent,
-          events_generated: m.events_generated,
-          revenue_generated_cents: m.revenue_generated_cents,
-          intentions_received: m.intentions_received,
-          clicks_generated: m.clicks_generated,
+          module: m.period_type ?? "geral",
+          period_month: m.period_date,
+          credits_spent: Number(m.credits_spent ?? 0),
+          events_generated:
+            Number(m.store_clicks ?? 0) +
+            Number(m.product_clicks ?? 0) +
+            Number(m.buy_clicks ?? 0) +
+            Number(m.auction_interactions ?? 0) +
+            Number(m.arremate_interactions ?? 0),
+          revenue_generated_cents: Math.round(Number(m.estimated_revenue_generated ?? 0) * 100),
+          intentions_received: Number(m.purchase_intentions_received ?? 0),
+          clicks_generated:
+            Number(m.store_clicks ?? 0) +
+            Number(m.product_clicks ?? 0) +
+            Number(m.buy_clicks ?? 0),
         }));
       }
 

@@ -64,7 +64,7 @@ const logDeliveryData = (label: string, data: any) => {
 
 export function useDeliveryOrder() {
   const { user } = useAuth();
-  const { completeDelivery, cancelDelivery: cancelDeliveryPay } = usePaymentsOrchestrator();
+  const { cancelDelivery: cancelDeliveryPay } = usePaymentsOrchestrator();
   const [activeOrder, setActiveOrder] = useState<DeliveryOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
@@ -368,24 +368,25 @@ export function useDeliveryOrder() {
         throw completeError;
       }
 
-      // LIBERAR PAGAMENTO pay_*: escrow → motoboy_wallet (líquido) +
-      // plataforma (comissão). O motoboy recebe em R$ na carteira pay_*
-      // (owner = auth user id, igual a useMotoboyPayWallet). commissionRate
-      // vem em PERCENTUAL (ex.: 25), então /100 p/ obter a fração.
+      // LIBERAR PAGAMENTO pay_* (fonte da verdade): liquidação ATÔMICA e
+      // IDEMPOTENTE loja → motoboy (líquido) + plataforma (comissão) via
+      // RPC server-side `pay_settle_delivery`. Substitui a orquestração
+      // client-side antiga (requestDelivery/completeDelivery) que falhava
+      // calada e deixava o motoboy sem receber. Seguro chamar mais de uma
+      // vez: a RPC faz replay idempotente por pedido (chave delivery_settle).
       try {
-        const grossCents = Math.round(Number(fullOrderData?.total_price ?? 0) * 100);
-        const feeCents = Math.round((grossCents * commissionRate) / 100);
-        if (grossCents > 0) {
-          await completeDelivery({
-            motoboy_owner_id: user.id,
-            credits_cost_cents: grossCents,
-            platform_fee_cents: feeCents,
-            delivery_id: deliveryId,
-          });
+        const { data: settleRes, error: settleErr } = await supabase.rpc(
+          'pay_settle_delivery',
+          { p_order_id: deliveryId, p_commission_percent: commissionRate },
+        );
+        if (settleErr) throw settleErr;
+        if ((settleRes as any)?.success === false) {
+          throw new Error((settleRes as any)?.error || 'pay_settle_delivery falhou');
         }
+        console.log('[validateCode] pay_settle_delivery OK:', settleRes);
       } catch (payErr: any) {
         // Estado da entrega já mudou; não reverter. Loga p/ conciliação.
-        console.error('[validateCode] completeDelivery (pay_*) falhou:', payErr);
+        console.error('[validateCode] pay_settle_delivery falhou:', payErr);
       }
 
       // Criar registro no histórico com lojaNome já resolvido
