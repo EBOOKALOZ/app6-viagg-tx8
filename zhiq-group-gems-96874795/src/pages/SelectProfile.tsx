@@ -156,11 +156,6 @@ export default function SelectProfile() {
         ? getProfileRoute(selected)
         : (ONBOARDING_ROUTES[selected] || getProfileRoute(selected));
 
-      // Forçar Lojista para o painel de anunciante como entrada principal
-      if (selected === "merchant") {
-        target = "/anunciante/painel";
-      }
-
       navigationTarget.current = target;
 
       if (isAnimatedProfile) {
