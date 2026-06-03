@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -77,8 +77,7 @@ export default function SelectProfile() {
   }
 
   if (!user) {
-    window.location.replace("/auth");
-    return null;
+    return <Navigate to="/auth" replace />;
   }
 
   /* ================================

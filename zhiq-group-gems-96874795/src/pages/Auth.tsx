@@ -297,7 +297,7 @@ export default function Auth() {
       "flex min-h-screen flex-col selection:text-white font-sans",
       isAdvertiserMode ? "bg-[#F7E7CE] selection:bg-orange-200" : "bg-black selection:bg-[#FF6A00]"
     )}>
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-12 relative overflow-hidden">
+      <div className="flex flex-1 items-center justify-center p-3 sm:p-12 relative overflow-hidden">
         {/* Animated Background Orbs */}
         <div className={cn(
           "absolute top-0 right-0 w-[700px] h-[700px] rounded-full blur-[150px] -translate-y-1/2 translate-x-1/3 transition-colors duration-1000",
@@ -318,7 +318,7 @@ export default function Auth() {
                />
             </div>
           )}
-          <div className="text-center mb-10 space-y-6">
+          <div className="text-center mb-4 sm:mb-10 space-y-3 sm:space-y-6">
              <div className={cn(
                "inline-flex items-center gap-2 px-6 py-2.5 rounded-full border shadow-lg transition-all duration-500",
                isAdvertiserMode 
@@ -332,15 +332,10 @@ export default function Auth() {
              </div>
              <div className="space-y-4 px-4 text-center">
                 <h1 className={cn("text-[42px] md:text-5xl font-black uppercase tracking-tighter leading-[0.95]", isAdvertiserMode ? "text-[#3B1F14]" : "text-white")}>
-                   {isAdvertiserMode 
+                   {isAdvertiserMode
                      ? (isSignUp ? "Cadastro de Parceiro" : "Portal do Anunciante")
                      : (isSignUp ? "Crie Sua Conta" : "Acesse Seu Painel")}
                 </h1>
-                <p className={cn("text-sm font-medium leading-relaxed max-w-[320px] mx-auto", isAdvertiserMode ? "text-[#3B1F14]/70" : "text-zinc-400/80")}>
-                   {isAdvertiserMode 
-                     ? "Gerencie seus imóveis, produtos e campanhas com performance Living Gold."
-                     : "Identidade Living Gold: Amarelo vibrante com performance laranja."}
-                </p>
              </div>
           </div>
 
