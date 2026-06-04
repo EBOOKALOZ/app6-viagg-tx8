@@ -68,6 +68,13 @@ export default function LoadingTransition() {
             return;
           }
 
+          if (authEntry === "motoboy") {
+            // Usuário veio do botão "MOTOBOY" → direto pro cadastro/onboarding
+            localStorage.removeItem("viagg_auth_entry");
+            navigate("/motoboy/completar", { replace: true });
+            return;
+          }
+
           if (returnTo) {
             sessionStorage.removeItem('returnTo');
             navigate(returnTo, { replace: true });

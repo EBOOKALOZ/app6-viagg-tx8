@@ -59,7 +59,8 @@ export function MarketLayout({
     const handleMotoboyClick = () => {
         if (!user) {
             localStorage.setItem("viagg_auth_entry", "motoboy");
-            navigate("/auth?entry=motoboy");
+            // Usuário anônimo vai direto pro cadastro (signup mode já pré-selecionado)
+            navigate("/auth?entry=motoboy&signup=1");
             return;
         }
         if (availableProfiles?.includes("motoboy")) {
@@ -95,23 +96,20 @@ export function MarketLayout({
                             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-lg object-contain shadow-sm" />
                         </div>
 
-                        <div className="flex-1 flex items-center justify-around lg:flex-none lg:justify-start lg:gap-3 px-2 lg:px-0">
+                        <div className="flex-1 flex items-center justify-center gap-2 lg:flex-none lg:justify-start lg:gap-3 px-2 lg:px-0">
                             {/* MOTOBOY — esquerda */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
-                                className="group flex h-11 w-11 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-white text-[#FF6A00] rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
+                                className="group flex h-10 w-[92px] lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
                                 title="Motoboy"
                             >
-                                <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-[#FF6A00]/10 group-hover:bg-[#FF6A00]/20 transition-colors">
-                                    <HardHat className="h-4 w-4 text-[#FF6A00]" />
-                                </div>
-                                <span className="hidden lg:inline text-xs font-black whitespace-nowrap uppercase tracking-wide text-zinc-800">Motoboy</span>
+                                <span className="text-[11px] lg:text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
                             </button>
 
                             {/* CESTA — centro */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                className="relative flex h-11 w-11 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"
+                                className="relative flex h-10 w-16 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"
                                 title="Cesta"
                             >
                                 <ShoppingCart className="h-5 w-5" />
@@ -128,13 +126,10 @@ export function MarketLayout({
                             {/* LOJISTA — direita */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleVendedorClick(); }}
-                                className="group flex h-11 w-11 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-white text-emerald-600 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-emerald-200/50"
+                                className="group flex h-10 w-[92px] lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-emerald-200/50"
                                 title="Sou Lojista"
                             >
-                                <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-emerald-600/10 group-hover:bg-emerald-600/20 transition-colors">
-                                    <Store className="h-4 w-4 text-emerald-600" />
-                                </div>
-                                <span className="hidden lg:inline text-xs font-black whitespace-nowrap uppercase tracking-wide text-zinc-800">Lojista</span>
+                                <span className="text-[11px] lg:text-xs font-black whitespace-nowrap uppercase tracking-wide text-emerald-600">Lojista</span>
                             </button>
 
                             {/* Desktop Logo (hidden on mobile) */}

@@ -65,14 +65,24 @@ export default function Auth() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const entry = searchParams.get("entry");
+  const wantsSignup = searchParams.get("signup") === "1" || searchParams.get("mode") === "signup";
   const isAdvertiserMode = entry === "advertiser";
+  const isMotoboyMode = entry === "motoboy";
 
   useEffect(() => {
     if (isAdvertiserMode) {
       console.log("[Auth] Setting viagg_auth_entry to advertiser");
       localStorage.setItem("viagg_auth_entry", "advertiser");
     }
-  }, [isAdvertiserMode]);
+    if (isMotoboyMode) {
+      console.log("[Auth] Setting viagg_auth_entry to motoboy");
+      localStorage.setItem("viagg_auth_entry", "motoboy");
+    }
+  }, [isAdvertiserMode, isMotoboyMode]);
+
+  useEffect(() => {
+    if (wantsSignup) setIsSignUp(true);
+  }, [wantsSignup]);
 
   const isSubmittingRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
