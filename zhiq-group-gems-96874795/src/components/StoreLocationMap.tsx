@@ -10,8 +10,13 @@ interface StoreLocationMapProps {
     onLocationSelect: (lat: number, lng: number) => void;
     /** Disparado quando o usuário clica no marker (modo readOnly). Útil para abrir captcha. */
     onMarkerClick?: () => void;
+    /** Texto exibido no balão acima do pino. Padrão: "👆 Clique aqui para mudar o endereço" */
+    markerLabel?: string;
     className?: string;
     readOnly?: boolean;
+    /** Se false, o pino estático NÃO é mostrado (mesmo em readOnly).
+     *  Útil pra abrir o mapa numa região como dica sem fingir que há residência salva. */
+    hasConfirmedLocation?: boolean;
 }
 
 export function StoreLocationMap({
@@ -19,9 +24,11 @@ export function StoreLocationMap({
     initialLng,
     onLocationSelect,
     onMarkerClick,
+    markerLabel = "👆 Clique aqui para mudar o endereço",
     addressLabel,
     className = "",
     readOnly = false,
+    hasConfirmedLocation = true,
 }: StoreLocationMapProps) {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -275,41 +282,16 @@ export function StoreLocationMap({
                     // Disparamos manualmente aqui, já que omitimos programáticos no moveend
                     onLocationSelectRef.current(lat, lng);
                 });
-            } else if (initialLat !== undefined && initialLng !== undefined) {
-                // Modo Apenas-Leitura ou Estático: Crio e colo um marcador nativo e trava lá
-                const el = document.createElement("div");
-                el.innerHTML = `
-                  <button type="button" data-store-marker-label style="cursor:pointer;background:#FFD814;color:#111;border:none;padding:6px 12px;border-radius:14px;font-weight:800;font-size:11px;letter-spacing:0.05em;box-shadow:0 6px 18px rgba(0,0,0,0.25);white-space:nowrap;margin-bottom:6px;text-transform:uppercase;display:flex;align-items:center;gap:4px;">
-                    👆 Clique aqui para mudar o endereço
-                  </button>
-                  <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);border:3px solid #fff;box-shadow:0 8px 32px rgba(16,185,129,0.4);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                  </div>
-                  <div style="width:0;height:0;margin-top:-2px;margin-left:auto;margin-right:auto;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid #fff;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.2)); z-index: 2;"></div>
-                `;
-                el.style.display = "flex";
-                el.style.flexDirection = "column";
-                el.style.alignItems = "center";
-
-                const labelBtn = el.querySelector('[data-store-marker-label]') as HTMLButtonElement | null;
-                if (labelBtn) {
-                    labelBtn.addEventListener('click', (ev) => {
-                        ev.preventDefault();
-                        ev.stopPropagation();
-                        onMarkerClickRef.current?.();
-                    });
-                }
-
-                staticMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom", draggable: false })
-                    .setLngLat([initialLng, initialLat])
-                    .addTo(map);
             }
+            /* Marker estático (readOnly) é gerenciado em um useEffect separado abaixo,
+               reativo a initialLat/initialLng — não pode ficar preso por closure aqui. */
 
             return () => {
                 map.remove();
                 mapRef.current = null;
                 staticMarkerRef.current = null; // Clean up static marker
                 isInitializing.current = false;
+                setIsMapLoaded(false); // força o useEffect do marker a re-disparar quando o novo mapa carregar
             };
         } catch (err) {
             console.error("Erro ao carregar Mapbox:", err);
@@ -318,27 +300,68 @@ export function StoreLocationMap({
         }
     }, [MAPBOX_TOKEN, readOnly]); // Adicionado readOnly como dependência para recriar o mapa com o modo correto
 
-    // Mover tela se a coordenada for atualizada via Buscar ou Colar Coordenada externalmente
+    // Cria / atualiza / remove o marker estático conforme readOnly e initialLat/initialLng mudam
     useEffect(() => {
-        if (!mapRef.current || !isMapLoaded || initialLat === undefined || initialLng === undefined) return;
+        const map = mapRef.current;
+        if (!map || !isMapLoaded) return;
 
-        const currentCenter = mapRef.current.getCenter();
-        const distApprox = Math.abs(currentCenter.lat - initialLat) + Math.abs(currentCenter.lng - initialLng);
-
-        if (distApprox > 0.0001) {
-            const numLng = Number(initialLng);
-            const numLat = Number(initialLat);
-            mapRef.current.flyTo({
-                center: [numLng, numLat],
-                zoom: Math.max(mapRef.current.getZoom(), 15),
-                essential: true
-            });
-            // If in readOnly mode, update the static marker's position
-            if (readOnly && staticMarkerRef.current) {
-                staticMarkerRef.current.setLngLat([numLng, numLat]);
+        // Se saiu de readOnly, perdeu as coords, ou não há residência confirmada → remove o marker
+        if (!readOnly || !hasConfirmedLocation || initialLat === undefined || initialLng === undefined) {
+            if (staticMarkerRef.current) {
+                staticMarkerRef.current.remove();
+                staticMarkerRef.current = null;
             }
+            return;
         }
-    }, [initialLat, initialLng, isMapLoaded, readOnly]);
+
+        const numLng = Number(initialLng);
+        const numLat = Number(initialLat);
+
+        // Sempre garante que o mapa esteja olhando para o marker (acima da margem)
+        const c = map.getCenter();
+        const mapOffTarget = Math.abs(c.lat - numLat) + Math.abs(c.lng - numLng) > 0.0001;
+        if (mapOffTarget) {
+            map.flyTo({
+                center: [numLng, numLat],
+                zoom: Math.max(map.getZoom(), 15),
+                essential: true,
+            });
+        }
+
+        // Já existe → apenas atualiza a posição
+        if (staticMarkerRef.current) {
+            staticMarkerRef.current.setLngLat([numLng, numLat]);
+            return;
+        }
+
+        // Cria do zero
+        const el = document.createElement("div");
+        el.innerHTML = `
+          <button type="button" data-store-marker-label style="cursor:pointer;background:#FFD814;color:#111;border:none;padding:6px 12px;border-radius:14px;font-weight:800;font-size:11px;letter-spacing:0.05em;box-shadow:0 6px 18px rgba(0,0,0,0.25);white-space:nowrap;margin-bottom:6px;text-transform:uppercase;display:flex;align-items:center;gap:4px;">
+            ${markerLabel.replace(/[<>]/g, '')}
+          </button>
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);border:3px solid #fff;box-shadow:0 8px 32px rgba(16,185,129,0.4);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          </div>
+          <div style="width:0;height:0;margin-top:-2px;margin-left:auto;margin-right:auto;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid #fff;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.2)); z-index: 2;"></div>
+        `;
+        el.style.display = "flex";
+        el.style.flexDirection = "column";
+        el.style.alignItems = "center";
+
+        const labelBtn = el.querySelector('[data-store-marker-label]') as HTMLButtonElement | null;
+        if (labelBtn) {
+            labelBtn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                onMarkerClickRef.current?.();
+            });
+        }
+
+        staticMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom", draggable: false })
+            .setLngLat([numLng, numLat])
+            .addTo(map);
+    }, [initialLat, initialLng, isMapLoaded, readOnly, markerLabel, hasConfirmedLocation]);
 
     // O useEffect para addressLabel não é mais necessário, pois o label é renderizado diretamente no JSX do marcador central.
     // useEffect(() => {
@@ -376,21 +399,25 @@ export function StoreLocationMap({
                 </div>
             )}
 
-            {/* Marcador Central Fixo Estilo Uber/Ultra Moderno */}
+            {/* Marcador Central Fixo Estilo Uber/Ultra Moderno
+                Ponta da seta alinhada EXATAMENTE ao centro geográfico do mapa
+                (corpo 44px + triângulo 10px - margem -2px = 52px acima do centro) */}
             {!readOnly && isMapLoaded && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[45px] pointer-events-none flex flex-col items-center justify-center" style={{ zIndex: 20 }}>
-                    {/* Ring ping em volta */}
-                    <div className="absolute top-[8px] w-12 h-12 rounded-full border-2 border-emerald-500/50 animate-ping" style={{ zIndex: 1 }}></div>
-
-                    {/* Corpo principal do marcador */}
-                    <div className="w-[44px] h-[44px] rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 border-4 border-white shadow-[0_8px_32px_rgba(16,185,129,0.5)] flex items-center justify-center relative z-10 transition-transform duration-200">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 20 }}>
+                    {/* Conjunto pino: bottom=0 da âncora => ponta no centro do mapa */}
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-0 flex flex-col items-center">
+                        {/* Ring ping em volta */}
+                        <div className="absolute top-[8px] w-12 h-12 rounded-full border-2 border-emerald-500/50 animate-ping" style={{ zIndex: 1 }}></div>
+                        {/* Corpo principal do marcador */}
+                        <div className="w-[44px] h-[44px] rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 border-4 border-white shadow-[0_8px_32px_rgba(16,185,129,0.5)] flex items-center justify-center relative z-10 transition-transform duration-200">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                        </div>
+                        {/* Ponta da setinha para baixo — bottom termina em 0 (centro geográfico) */}
+                        <div className="w-0 h-0 -mt-[2px] border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-white drop-shadow-md z-10"></div>
                     </div>
-                    {/* Ponta da setinha para baixo */}
-                    <div className="w-0 h-0 -mt-[2px] border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-white drop-shadow-md z-10"></div>
 
-                    {/* Tooltip ultra moderno exibindo o endereço dinâmico */}
-                    <div className="mt-2 px-4 py-2 bg-slate-900/90 backdrop-blur-xl border border-white/15 text-white text-xs font-semibold rounded-full whitespace-nowrap shadow-[0_8px_32px_rgba(0,0,0,0.25)] max-w-[300px] overflow-hidden text-ellipsis uppercase tracking-wider animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {/* Tooltip ultra moderno exibindo o endereço dinâmico — posicionado ABAIXO da ponta */}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-2 px-4 py-2 bg-slate-900/90 backdrop-blur-xl border border-white/15 text-white text-xs font-semibold rounded-full whitespace-nowrap shadow-[0_8px_32px_rgba(0,0,0,0.25)] max-w-[300px] overflow-hidden text-ellipsis uppercase tracking-wider animate-in fade-in slide-in-from-bottom-2 duration-300">
                         {addressLabel || "Carregando..."}
                     </div>
                 </div>

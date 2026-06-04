@@ -34,7 +34,7 @@ const PROFILE_HERO_IMAGES: Record<string, string> = {
 
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
   motoboy: "Entregas rápidas de moto",
-  merchant: "Gerencie sua loja, solicite motoboys e acompanhe seus pedidos",
+  merchant: "Aqui você gerencia sua loja, vende seus produtos e solicita aqui sua entrega",
 };
 
 const CARD_ORDER = ["motoboy", "merchant"];
@@ -300,7 +300,7 @@ export default function SelectProfile() {
 
                   {/* Text content */}
                   <div className={cn(
-                    "absolute inset-x-0 bottom-0 p-4 text-white transition-opacity duration-300",
+                    "absolute inset-x-0 bottom-0 p-4 text-white text-center transition-opacity duration-300",
                     isSel ? "opacity-0 pointer-events-none" : "opacity-100"
                   )}>
                     <h3 className="font-bold">{profile.label}</h3>
@@ -316,7 +316,7 @@ export default function SelectProfile() {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleContinue(); }}
                       disabled={isSaving || progressActive}
-                      className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-500 hover:bg-emerald-400 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                      className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-zhiq-teal hover:opacity-90 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
                     >
                       {progressActive && (
                         <span
@@ -392,7 +392,7 @@ export default function SelectProfile() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleContinue(); }}
                   disabled={isSaving || progressActive}
-                  className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-500 hover:bg-emerald-400 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-zhiq-teal hover:opacity-90 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
                 >
                   {progressActive && (
                     <span

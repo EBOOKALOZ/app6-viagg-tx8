@@ -1,6 +1,14 @@
-import { Home, History, User, Megaphone, Users, Wallet } from "lucide-react";
+import { Home, History, User, Megaphone, Users, Wallet, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+
+type NavItem = {
+  icon: typeof Home;
+  label: string;
+  path?: string;
+  onClick?: () => void;
+  variant?: "default" | "danger";
+};
 
 export default function MotoboyBottomNav() {
   const navigate = useNavigate();
@@ -10,35 +18,41 @@ export default function MotoboyBottomNav() {
   // Base path based on active profile
   const basePath = activeProfile === 'mototaxi' ? '/mototaxi' : '/motoboy';
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { icon: Home, label: "Início", path: basePath },
     { icon: Users, label: "Grupos", path: `${basePath}/grupos` },
     { icon: History, label: "Histórico", path: `${basePath}/historico` },
     { icon: Wallet, label: "Carteira", path: `${basePath}/wallet` },
     { icon: Megaphone, label: "Postador", path: `${basePath}/campanhas` },
     { icon: User, label: "Perfil", path: `${basePath}/profile` },
+    { icon: LogOut, label: "Sair", onClick: () => navigate('/select-profile'), variant: "danger" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-footer-motoboy backdrop-blur-md border-t-2 border-footer-motoboy-border px-4 py-2 pb-safe">
-      <div className="flex items-center justify-around max-w-md mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-footer-motoboy backdrop-blur-md border-t-2 border-footer-motoboy-border px-1 py-1.5 pb-safe">
+      <div className="flex items-stretch justify-between max-w-md mx-auto gap-0.5">
         {navItems.map((item) => {
-          // Check if current path matches this nav item
-          const isActive = location.pathname === item.path ||
-            (item.path === basePath && location.pathname === basePath);
+          const isActive = !!item.path && (
+            location.pathname === item.path ||
+            (item.path === basePath && location.pathname === basePath)
+          );
+          const danger = item.variant === "danger";
           return (
             <button
               key={item.label}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${isActive
-                ? "text-white"
-                : "text-white/70 hover:text-white"
-                }`}
+              onClick={() => (item.onClick ? item.onClick() : item.path && navigate(item.path))}
+              className={`flex flex-1 min-w-0 flex-col items-center gap-0.5 px-0.5 py-1 rounded-lg transition-all ${
+                isActive
+                  ? "text-white"
+                  : danger
+                  ? "text-red-200 hover:text-red-100"
+                  : "text-white/70 hover:text-white"
+              }`}
             >
-              <div className={`p-2 rounded-xl transition-all ${isActive ? "bg-white/20" : ""}`}>
-                <item.icon className="h-5 w-5" />
+              <div className={`p-1 rounded-lg transition-all ${isActive ? "bg-white/20" : ""}`}>
+                <item.icon className="h-[18px] w-[18px]" />
               </div>
-              <span className="text-xs font-medium">
+              <span className="text-[10px] font-medium leading-none truncate w-full text-center">
                 {item.label}
               </span>
             </button>

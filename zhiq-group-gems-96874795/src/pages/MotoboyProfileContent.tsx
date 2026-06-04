@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +10,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
-import { CreditCard, Calendar, User as UserIcon, Check, Phone, Bike, MapPin } from 'lucide-react';
+import { CreditCard, Calendar, User as UserIcon, Check, Phone, Bike, MapPin, Lock, Home } from 'lucide-react';
 import { brazilianStates } from '@/lib/brazilianStates';
 import { isProfileRegistrationComplete } from '@/lib/profileValidation';
 import { MathCaptchaDialog } from '@/components/ui/math-captcha-dialog';
+import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { parseCoordinates } from '@/lib/coordinateParser';
+import { Search, Clipboard } from 'lucide-react';
 
 const CAPACITY_OPTIONS = [
   { value: 'pequeno', label: 'Pequena (até 35L)' },
@@ -64,6 +67,10 @@ interface MotoboyProfileData {
   cpf: string;
   data_nascimento: string;
   avatar_url: string;
+  // Residência / Localização de Atuação
+  latitude_residencia: number | null;
+  longitude_residencia: number | null;
+  endereco_residencia: string;
 }
 
 /**
@@ -94,7 +101,101 @@ export default function MotoboyProfileContent() {
     cpf: '',
     data_nascimento: '',
     avatar_url: '',
+    latitude_residencia: null,
+    longitude_residencia: null,
+    endereco_residencia: '',
   });
+
+  const [confirmResidenceCaptchaOpen, setConfirmResidenceCaptchaOpen] = useState(false);
+  const [pendingResidence, setPendingResidence] = useState<{ lat: number; lng: number; endereco?: string } | null>(null);
+  /** Coordenadas atuais do mapa enquanto o motoboy arrasta. Só vira pendingResidence quando ele clicar em "Confirmar". */
+  const [draftMapCoords, setDraftMapCoords] = useState<{ lat: number; lng: number } | null>(null);
+  /** Pino travado (true = readOnly + balão "Minha Localização"; false = editável com botão Confirmar) */
+  const [residenceLocked, setResidenceLocked] = useState(true);
+  /** Aceites legais obrigatórios para salvar */
+  const [aceiteCnhEpi, setAceiteCnhEpi] = useState(false);
+  const [aceitePrestadorServicos, setAceitePrestadorServicos] = useState(false);
+  const [searchAddressInput, setSearchAddressInput] = useState('');
+  const [coordsInput, setCoordsInput] = useState('');
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+
+  const handleSearchResidenceAddress = async () => {
+    if (!searchAddressInput.trim()) {
+      toast.error('Digite um endereço para buscar');
+      return;
+    }
+    const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+    if (!token) {
+      toast.error('Mapbox não configurado.');
+      return;
+    }
+    setIsSearchingAddress(true);
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchAddressInput)}.json?access_token=${token}&country=br&language=pt&limit=1`
+      );
+      const data = await res.json();
+      if (data.features?.[0]?.center) {
+        const [lng, lat] = data.features[0].center;
+        const endereco = data.features[0].place_name;
+        setPendingResidence({ lat, lng, endereco });
+        setConfirmResidenceCaptchaOpen(true);
+      } else {
+        toast.error('Endereço não encontrado. Tente ser mais específico.');
+      }
+    } catch (err) {
+      console.error('Erro na busca de endereço:', err);
+      toast.error('Erro ao buscar endereço');
+    } finally {
+      setIsSearchingAddress(false);
+    }
+  };
+
+  const handlePasteResidenceCoords = () => {
+    if (!coordsInput.trim()) {
+      toast.error('Cole coordenadas do WhatsApp / Google Maps');
+      return;
+    }
+    const result = parseCoordinates(coordsInput.trim());
+    if (!result.success || !result.coordinates) {
+      toast.error(result.error || 'Formato de coordenadas não reconhecido');
+      return;
+    }
+    const { latitude: lat, longitude: lng } = result.coordinates;
+    setPendingResidence({ lat, lng });
+    setCoordsInput('');
+    setConfirmResidenceCaptchaOpen(true);
+  };
+  const cityGeocodedRef = useRef(false);
+  /** Centro da cidade do motoboy — usado APENAS para abrir o mapa numa posição plausível
+   *  quando a residência ainda não foi confirmada. NÃO entra em state.latitude_residencia
+   *  (senão o usuário acha que salvou e o banco fica com NULL). */
+  const [cityCenter, setCityCenter] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (cityGeocodedRef.current) return;
+    if (!motoboyData.cidade || !motoboyData.estado) return;
+    // Se já temos coords salvas reais, nem precisamos do centro da cidade.
+    if (motoboyData.latitude_residencia && motoboyData.longitude_residencia) return;
+    const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+    if (!token) return;
+    cityGeocodedRef.current = true;
+    (async () => {
+      try {
+        const query = `${motoboyData.cidade}, ${motoboyData.estado}, Brasil`;
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&country=br&language=pt&limit=1`
+        );
+        const data = await res.json();
+        if (data.features?.[0]?.center) {
+          const [lng, lat] = data.features[0].center;
+          setCityCenter({ lat, lng });
+        }
+      } catch (err) {
+        console.warn('[Motoboy] Geocode da cidade falhou:', err);
+      }
+    })();
+  }, [motoboyData.cidade, motoboyData.estado, motoboyData.latitude_residencia, motoboyData.longitude_residencia]);
 
   const hydrateMotoboyData = (motoboy: any, profile?: any) => {
     if (!motoboy) return;
@@ -116,6 +217,9 @@ export default function MotoboyProfileContent() {
       cpf: profile?.cpf || '',
       data_nascimento: profile?.data_nascimento || '',
       avatar_url: profile?.avatar_url || '',
+      latitude_residencia: motoboy.latitude_residencia ?? null,
+      longitude_residencia: motoboy.longitude_residencia ?? null,
+      endereco_residencia: motoboy.endereco_residencia || '',
     });
   };
 
@@ -126,7 +230,7 @@ export default function MotoboyProfileContent() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data: motoboy } = await supabase
+        const { data: motoboy, error: motoboyErr } = await supabase
           .from('motoboy_profiles')
           .select('*')
           .eq('user_id', user.id)
@@ -137,6 +241,12 @@ export default function MotoboyProfileContent() {
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
+
+        // DEBUG — remover depois
+        console.log('[FETCH] motoboy_profiles row:', motoboy);
+        console.log('[FETCH] latitude_residencia:', (motoboy as any)?.latitude_residencia);
+        console.log('[FETCH] longitude_residencia:', (motoboy as any)?.longitude_residencia);
+        if (motoboyErr) console.error('[FETCH] erro:', motoboyErr);
 
         if (cancelled) return;
         hydrateMotoboyData(motoboy, profile);
@@ -154,10 +264,14 @@ export default function MotoboyProfileContent() {
 
   const handleSave = async () => {
     if (!user?.id) return;
+    if (!aceiteCnhEpi || !aceitePrestadorServicos) {
+      toast.error('Você precisa marcar os dois termos legais para salvar.');
+      return;
+    }
 
     setIsSaving(true);
     try {
-      const motoboyFields = {
+      const motoboyFields: any = {
         whatsapp: motoboyData.whatsapp,
         cpf_cnpj: motoboyData.cpf_cnpj,
         cidade: motoboyData.cidade,
@@ -170,6 +284,9 @@ export default function MotoboyProfileContent() {
         veiculo_cor: motoboyData.veiculo_cor || null,
         capacidade_bag: normalizeCapacity(motoboyData.capacidade_bag) || null,
         capacidade_garupa: normalizeCapacity(motoboyData.capacidade_garupa) || null,
+        latitude_residencia: motoboyData.latitude_residencia,
+        longitude_residencia: motoboyData.longitude_residencia,
+        endereco_residencia: motoboyData.endereco_residencia || null,
       };
 
       // 1. Atualizar Perfil Pessoal via RPC (para evitar RLS issues) ou direto
@@ -189,26 +306,37 @@ export default function MotoboyProfileContent() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      let savedMotoboy: any = null;
-      if (existingRow) {
-        const { data, error } = await supabase
-          .from('motoboy_profiles')
-          .update(motoboyFields)
-          .eq('user_id', user.id)
-          .select('*')
-          .maybeSingle();
-        if (error) throw error;
-        savedMotoboy = data;
-      } else {
+      // Tenta salvar com os novos campos; se a migration ainda não foi aplicada, retenta sem eles.
+      const tryPersist = async (fields: any) => {
+        if (existingRow) {
+          return await supabase
+            .from('motoboy_profiles')
+            .update(fields)
+            .eq('user_id', user.id)
+            .select('*')
+            .maybeSingle();
+        }
         const regionId = 'fe784974-f428-45a0-8d67-c09bdb33c5ca';
-        const { data, error } = await supabase
+        return await supabase
           .from('motoboy_profiles')
-          .insert({ ...motoboyFields, user_id: user.id, region_id: regionId })
+          .insert({ ...fields, user_id: user.id, region_id: regionId })
           .select('*')
           .maybeSingle();
-        if (error) throw error;
-        savedMotoboy = data;
+      };
+
+      let { data: savedMotoboy, error } = await tryPersist(motoboyFields);
+      if (error && /column|schema cache|endereco_residencia|latitude_residencia|longitude_residencia/i.test(error.message || '')) {
+        console.error('[Motoboy] Save bateu em erro de coluna. Detalhes COMPLETOS:', JSON.stringify(error, null, 2));
+        toast.error(
+          `Localização NÃO salvou. Erro: ${error.message || 'desconhecido'} | code=${(error as any).code || 'n/a'}`,
+          { duration: 20000 }
+        );
+        const { latitude_residencia: _a, longitude_residencia: _b, endereco_residencia: _c, ...legacyFields } = motoboyFields;
+        const retry = await tryPersist(legacyFields);
+        savedMotoboy = retry.data;
+        error = retry.error;
       }
+      if (error) throw error;
 
       const { data: updatedProfile } = await supabase
         .from('profiles')
@@ -364,24 +492,180 @@ export default function MotoboyProfileContent() {
         </CardContent>
       </Card>
 
-      {/* Localização Parcial (baseada no cadastro) */}
-      {(motoboyData.cidade || motoboyData.estado || motoboyData.bairro) && (
-        <Card className="bg-white border-l-4 border-l-green-500">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                <MapPin className="h-5 w-5 text-green-600" />
+      {/* Localização da Residência (mapa) */}
+      <Card className="bg-white border-l-4 border-l-green-500">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Home className="h-4 w-4 text-green-600" />
+            Localização da Residência
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(motoboyData.cidade || motoboyData.estado || motoboyData.bairro) && (
+            <div className="flex items-center gap-3 bg-green-50 rounded-lg p-3 border border-green-100">
+              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <MapPin className="h-4 w-4 text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-green-700 uppercase tracking-wider">Localização de Atuação</p>
+                <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wider">Endereço atual</p>
                 <p className="text-sm font-bold text-foreground truncate">
-                  {[motoboyData.bairro, motoboyData.cidade, motoboyData.estado].filter(Boolean).join(' · ')}
+                  {motoboyData.endereco_residencia
+                    || [motoboyData.bairro, motoboyData.cidade, motoboyData.estado].filter(Boolean).join(' · ')
+                    || 'Defina sua localização no mapa abaixo'}
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+
+          {/* Digite endereço */}
+          <div className="space-y-2">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Search className="h-3.5 w-3.5 text-green-600" />
+              Digite o endereço da sua residência
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={searchAddressInput}
+                onChange={(e) => setSearchAddressInput(e.target.value)}
+                placeholder="Rua, número, bairro, cidade"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSearchResidenceAddress(); } }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handleSearchResidenceAddress}
+                disabled={isSearchingAddress}
+                className="bg-green-600 hover:bg-green-500 text-white shrink-0"
+              >
+                {isSearchingAddress ? 'Buscando...' : 'Buscar'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Cole coordenadas WhatsApp */}
+          <div className="space-y-2">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Clipboard className="h-3.5 w-3.5 text-green-600" />
+              Ou cole as coordenadas do WhatsApp / Google Maps
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={coordsInput}
+                onChange={(e) => setCoordsInput(e.target.value)}
+                placeholder="-23.5505, -46.6333  ou  link do Google Maps"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handlePasteResidenceCoords(); } }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                onClick={handlePasteResidenceCoords}
+                variant="outline"
+                className="shrink-0 border-green-300 text-green-700 hover:bg-green-50"
+              >
+                Aplicar
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground ml-1">
+              Aceita DMS, decimal, ou link compartilhado direto do WhatsApp.
+            </p>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-200"></div></div>
+            <div className="relative flex justify-center"><span className="bg-white px-3 text-[10px] uppercase tracking-widest text-zinc-400 font-bold">Ou no mapa</span></div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            {residenceLocked
+              ? '🔒 Pino travado. Clique em "Editar localização" para mudar.'
+              : '📍 Arraste o mapa para posicionar o pino. Quando estiver certo, clique em "Confirmar esta localização".'}
+          </p>
+
+          {/* DEBUG: mostra o que tá em state. Remover quando estiver tudo OK. */}
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-mono text-amber-900 break-all">
+            <div><strong>DEBUG state.lat:</strong> {String(motoboyData.latitude_residencia)}</div>
+            <div><strong>DEBUG state.lng:</strong> {String(motoboyData.longitude_residencia)}</div>
+            <div><strong>DEBUG state.endereco:</strong> {String(motoboyData.endereco_residencia)}</div>
+            <div><strong>DEBUG initialLat passado pro mapa:</strong> {String(motoboyData.latitude_residencia ?? undefined)}</div>
+            <div><strong>DEBUG residenceLocked:</strong> {String(residenceLocked)}</div>
+          </div>
+
+          <StoreLocationMap
+            key={residenceLocked ? 'res-locked' : 'res-edit'}
+            initialLat={motoboyData.latitude_residencia ?? cityCenter?.lat ?? undefined}
+            initialLng={motoboyData.longitude_residencia ?? cityCenter?.lng ?? undefined}
+            hasConfirmedLocation={motoboyData.latitude_residencia != null && motoboyData.longitude_residencia != null}
+            addressLabel={motoboyData.endereco_residencia || '📍 Minha Localização'}
+            markerLabel="📍 Minha Localização"
+            readOnly={residenceLocked}
+            onLocationSelect={(lat, lng) => {
+              // Apenas guarda a posição enquanto arrasta. Captcha SÓ abre no botão "Confirmar".
+              setDraftMapCoords({ lat, lng });
+            }}
+            className="w-full h-[320px] rounded-lg overflow-hidden"
+          />
+
+          {residenceLocked ? (
+            <Button
+              type="button"
+              onClick={() => { setResidenceLocked(false); setDraftMapCoords(null); }}
+              className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-bold"
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Editar localização
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => { setResidenceLocked(true); setDraftMapCoords(null); }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!draftMapCoords) {
+                    toast.info('Mexa o mapa para ajustar a posição do pino antes de confirmar.');
+                    return;
+                  }
+                  setPendingResidence(draftMapCoords);
+                  setConfirmResidenceCaptchaOpen(true);
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Confirmar esta localização
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Captcha — confirma que tem certeza da residência selecionada */}
+      <MathCaptchaDialog
+        open={confirmResidenceCaptchaOpen}
+        onOpenChange={setConfirmResidenceCaptchaOpen}
+        onConfirmed={() => {
+          if (pendingResidence) {
+            setMotoboyData(prev => ({
+              ...prev,
+              latitude_residencia: pendingResidence.lat,
+              longitude_residencia: pendingResidence.lng,
+              endereco_residencia: pendingResidence.endereco || prev.endereco_residencia,
+            }));
+            setPendingResidence(null);
+            setDraftMapCoords(null);
+            setSearchAddressInput('');
+            setResidenceLocked(true);
+            toast.success('Residência confirmada. ⚠️ Agora clique em "Salvar Perfil Operacional" no fim da página para gravar!', { duration: 8000 });
+          }
+        }}
+        title="Tem certeza da sua residência?"
+        description="Resolva a soma para confirmar este local como sua residência."
+      />
 
       {/* Vehicle Info */}
       <Card className="bg-white">
@@ -481,15 +765,95 @@ export default function MotoboyProfileContent() {
         </CardContent>
       </Card>
 
+      {/* Aceites Legais Obrigatórios */}
+      <Card className="bg-white border-l-4 border-l-amber-500">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Check className="h-4 w-4 text-amber-600" />
+            Termos legais obrigatórios
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Aceite 1 — CNH + EPI */}
+          <label
+            htmlFor="aceite-cnh-epi"
+            className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+              aceiteCnhEpi
+                ? 'bg-emerald-50 border-emerald-400'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
+            }`}
+          >
+            <input
+              id="aceite-cnh-epi"
+              type="checkbox"
+              checked={aceiteCnhEpi}
+              onChange={(e) => setAceiteCnhEpi(e.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 accent-emerald-600 cursor-pointer"
+            />
+            <div className="text-xs leading-relaxed text-zinc-800 space-y-1.5">
+              <p>
+                <strong>Declaro possuir CNH categoria A vigente</strong>, conforme exigência do art. 140 do Código de Trânsito Brasileiro (Lei nº 9.503/1997) e da Resolução CONTRAN nº 168/2004.
+              </p>
+              <p>
+                Comprometo-me a portar e utilizar os Equipamentos de Proteção Individual (EPI) obrigatórios para motociclistas — incluindo capacete certificado pelo INMETRO, viseira ou óculos de proteção, calça e jaqueta apropriadas — conforme NR-6 do Ministério do Trabalho e art. 244 do CTB.
+              </p>
+              <p>
+                Estou ciente de que conduzir veículo sem CNH, sem habilitação compatível ou sem EPI configura infração gravíssima (art. 162 e 244 do CTB) e me responsabilizo civil e criminalmente por descumprir tais exigências durante as entregas pela plataforma.
+              </p>
+            </div>
+          </label>
+
+          {/* Aceite 2 — Prestador de Serviços Autônomo */}
+          <label
+            htmlFor="aceite-prestador"
+            className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+              aceitePrestadorServicos
+                ? 'bg-emerald-50 border-emerald-400'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
+            }`}
+          >
+            <input
+              id="aceite-prestador"
+              type="checkbox"
+              checked={aceitePrestadorServicos}
+              onChange={(e) => setAceitePrestadorServicos(e.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 accent-emerald-600 cursor-pointer"
+            />
+            <div className="text-xs leading-relaxed text-zinc-800 space-y-1.5">
+              <p>
+                <strong>Declaro atuar como prestador de serviços autônomo</strong>, nos termos do art. 442-B da Consolidação das Leis do Trabalho (incluído pela Lei nº 13.467/2017 — Reforma Trabalhista), sem qualquer vínculo empregatício, subordinação, exclusividade ou pessoalidade com a plataforma Viagg-TX8.
+              </p>
+              <p>
+                Reconheço minha responsabilidade pelo recolhimento de contribuições previdenciárias (INSS como contribuinte individual / MEI), tributos municipais (ISS) e demais obrigações fiscais aplicáveis à minha atividade, conforme Lei Complementar nº 123/2006 e Lei nº 8.212/1991.
+              </p>
+              <p>
+                Assumo integralmente os riscos e responsabilidades inerentes ao exercício da atividade de entrega — incluindo danos a terceiros, perda ou avaria de mercadorias por culpa exclusiva, e qualquer obrigação trabalhista, previdenciária ou tributária que decorra da minha atuação como autônomo.
+              </p>
+            </div>
+          </label>
+        </CardContent>
+      </Card>
+
       {/* Save Button */}
       <Button
-        onClick={() => setCaptchaOpen(true)}
-        disabled={isSaving}
-        className="w-full bg-motoboy hover:bg-motoboy-hover text-white"
+        onClick={() => {
+          if (!aceiteCnhEpi || !aceitePrestadorServicos) {
+            toast.error('Marque os dois aceites legais antes de salvar.');
+            return;
+          }
+          setCaptchaOpen(true);
+        }}
+        disabled={isSaving || !aceiteCnhEpi || !aceitePrestadorServicos}
+        className="w-full bg-motoboy hover:bg-motoboy-hover text-white disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Check className="h-4 w-4 mr-2" />
         {isSaving ? 'Salvando...' : 'Salvar Perfil Operacional'}
       </Button>
+      {(!aceiteCnhEpi || !aceitePrestadorServicos) && (
+        <p className="text-center text-xs text-amber-600 font-medium">
+          ⚠️ Marque os dois termos acima para liberar o salvamento.
+        </p>
+      )}
 
       <MathCaptchaDialog
         open={captchaOpen}
