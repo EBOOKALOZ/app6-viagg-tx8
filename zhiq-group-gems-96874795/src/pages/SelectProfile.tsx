@@ -230,29 +230,32 @@ export default function SelectProfile() {
               const isHighlighted = isMotoboy || isMerchant;
 
               return (
-                <button
+                <div
                   key={profile.id}
-                  type="button"
-                  onClick={() => handleCardClick(profile.id)}
-                  disabled={isComingSoon}
+                  role="button"
+                  tabIndex={isComingSoon ? -1 : 0}
+                  onClick={() => !isComingSoon && handleCardClick(profile.id)}
+                  onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !isComingSoon) handleCardClick(profile.id); }}
+                  aria-disabled={isComingSoon}
                   className={cn(
                     "group relative w-full overflow-hidden rounded-2xl aspect-[3/4] transition-all duration-300 select-none",
                     isComingSoon
                       ? "cursor-not-allowed"
-                      : isSel
-                        ? cn(
-                          "scale-[1.03] ring-[5px]",
-                          isMotoboy
-                            ? "ring-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.5)]"
-                            : isMerchant
-                              ? "ring-yellow-400 shadow-[0_0_24px_rgba(234,179,8,0.5)]"
-                              : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
-                        )
-                        : cn(
-                          "ring-1 ring-white/15",
-                          isMotoboy && "hover:ring-orange-400/50 hover:shadow-[0_0_12px_rgba(249,115,22,0.2)]",
-                          isMerchant && "hover:ring-yellow-300/50 hover:shadow-[0_0_12px_rgba(234,179,8,0.2)]",
-                        ),
+                      : "cursor-pointer",
+                    !isComingSoon && (isSel
+                      ? cn(
+                        "scale-[1.03] ring-[5px]",
+                        isMotoboy
+                          ? "ring-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.5)]"
+                          : isMerchant
+                            ? "ring-yellow-400 shadow-[0_0_24px_rgba(234,179,8,0.5)]"
+                            : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
+                      )
+                      : cn(
+                        "ring-1 ring-white/15",
+                        isMotoboy && "hover:ring-orange-400/50 hover:shadow-[0_0_12px_rgba(249,115,22,0.2)]",
+                        isMerchant && "hover:ring-yellow-300/50 hover:shadow-[0_0_12px_rgba(234,179,8,0.2)]",
+                      )),
                   )}
                 >
                   {/* Background layer */}
@@ -296,23 +299,49 @@ export default function SelectProfile() {
                   )}
 
                   {/* Text content */}
-                  <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+                  <div className={cn(
+                    "absolute inset-x-0 bottom-0 p-4 text-white transition-opacity duration-300",
+                    isSel ? "opacity-0 pointer-events-none" : "opacity-100"
+                  )}>
                     <h3 className="font-bold">{profile.label}</h3>
                     <p className={cn(
                       "text-xs",
                       isHighlighted && isSel ? "text-white/80" : "text-white/70",
                     )}>{PROFILE_DESCRIPTIONS[profile.id]}</p>
                   </div>
-                </button>
+
+                  {/* Continuar overlay — visível só quando esse card está selecionado */}
+                  {isSel && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleContinue(); }}
+                      disabled={isSaving || progressActive}
+                      className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-500 hover:bg-emerald-400 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                    >
+                      {progressActive && (
+                        <span
+                          aria-hidden
+                          className="absolute inset-y-0 left-0 bg-blue-500 transition-[width] duration-100 ease-linear"
+                          style={{ width: `${percent}%` }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {progressActive ? `${percent}%` : (isSaving ? "Iniciando…" : "Continuar")}
+                      </span>
+                    </button>
+                  )}
+                </div>
               );
             })}
 
             {/* Quero Vender — Purple Premium Entry integrada ao estado */}
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => handleCardClick("quero_vender")}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardClick("quero_vender"); }}
               className={cn(
-                "group relative w-full overflow-hidden rounded-2xl aspect-[3/4] transition-all duration-500 select-none border border-white/5 hover:scale-[1.02]",
+                "group relative w-full overflow-hidden rounded-2xl aspect-[3/4] transition-all duration-500 select-none border border-white/5 hover:scale-[1.02] cursor-pointer",
                 selected === "quero_vender"
                   ? "ring-[4px] ring-[#B06CFF] shadow-[0_0_40px_rgba(123,63,228,0.4)] scale-[1.03]"
                   : "hover:shadow-[0_20px_50px_rgba(123,63,228,0.25)]"
@@ -347,28 +376,47 @@ export default function SelectProfile() {
                   <p className="text-[11px] text-white/85 font-medium leading-tight px-4">Anuncie seus produtos ou imóveis na plataforma</p>
                 </div>
                 
-                <div 
-                   className={cn(
-                     "text-white text-[10px] font-bold uppercase tracking-[0.2em] py-3 px-8 rounded-full transition-all duration-300",
-                     selected === "quero_vender" 
-                       ? "bg-[#B06CFF] shadow-[0_0_20px_rgba(176,108,255,0.6)]" 
-                       : "shadow-[0_8px_20px_rgba(123,63,228,0.3)] group-hover:shadow-[0_12px_25px_rgba(123,63,228,0.4)]"
-                   )}
-                   style={{ background: 'linear-gradient(135deg, #7B3FE4, #B06CFF)' }}
-                >
-                   {selected === "quero_vender" ? "SELECIONADO" : "ANUNCIANTE"}
-                </div>
+                {selected !== "quero_vender" && (
+                  <div
+                     className="text-white text-[10px] font-bold uppercase tracking-[0.2em] py-3 px-8 rounded-full transition-all duration-300 shadow-[0_8px_20px_rgba(123,63,228,0.3)] group-hover:shadow-[0_12px_25px_rgba(123,63,228,0.4)]"
+                     style={{ background: 'linear-gradient(135deg, #7B3FE4, #B06CFF)' }}
+                  >
+                    ANUNCIANTE
+                  </div>
+                )}
               </div>
-            </button>
+
+              {/* Continuar overlay — Quero Vender selecionado */}
+              {selected === "quero_vender" && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleContinue(); }}
+                  disabled={isSaving || progressActive}
+                  className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-500 hover:bg-emerald-400 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                >
+                  {progressActive && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 bg-blue-500 transition-[width] duration-100 ease-linear"
+                      style={{ width: `${percent}%` }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {progressActive ? `${percent}%` : (isSaving ? "Iniciando…" : "Continuar")}
+                  </span>
+                </button>
+              )}
+            </div>
 
           </div>
 
+          {/* Botão global Continuar removido — agora aparece dentro do card selecionado */}
           <button
             type="button"
             onClick={handleContinue}
             disabled={isSaving || !selected || progressActive}
             className={cn(
-              "relative w-full h-14 sm:h-16 rounded-xl font-bold text-lg disabled:cursor-not-allowed transition-all duration-500 overflow-hidden shadow-2xl",
+              "hidden",
               !selected && !progressActive && "bg-neutral-900 text-neutral-600 opacity-40",
               selected === "motoboy" && !isSaving
                 ? "bg-orange-500 text-white hover:bg-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.4)]"
