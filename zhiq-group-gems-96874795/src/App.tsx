@@ -28,18 +28,12 @@ import { advertiserRoutes } from "@/routes/advertiserRoutes";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Dados expiram na hora, forçando atualização real
+      staleTime: 30 * 1000,
       gcTime: 10 * 60 * 1000,
-      refetchOnWindowFocus: true, // Atualiza quando usuário volta pra aba
-      refetchInterval: 10000, // Sempre atualizar a cada 10 segundos
+      refetchOnWindowFocus: false,
+      refetchInterval: false,
       retry: 1,
     },
-    mutations: {
-      onSuccess: () => {
-        // Ao cadastrar, editar ou excluir, atualizar a página automaticamente
-        queryClient.invalidateQueries();
-      }
-    }
   },
 });
 

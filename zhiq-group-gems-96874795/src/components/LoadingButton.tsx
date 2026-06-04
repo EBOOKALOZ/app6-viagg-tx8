@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const TOTAL_SEGMENTS = 24;
-const DURATION_MS = 2200;
+const DURATION_MS = 6000;
 
 type IconVariant = "spinner" | "clock" | "dots" | "none";
 type ColorVariant = "motoboy" | "merchant" | "quero_vender" | "default";
@@ -66,27 +66,17 @@ const ICONS: Record<IconVariant, () => JSX.Element> = {
   none: () => <></>,
 };
 
+const GREEN_PALETTE = {
+  active: "bg-emerald-500",
+  inactive: "bg-white/[0.06]",
+  icon: "text-emerald-400",
+};
+
 const COLOR_MAP: Record<ColorVariant, { active: string; inactive: string; icon: string }> = {
-  motoboy: {
-    active: "bg-orange-500",
-    inactive: "bg-white/[0.06]",
-    icon: "text-orange-400",
-  },
-  merchant: {
-    active: "bg-emerald-500",
-    inactive: "bg-white/[0.06]",
-    icon: "text-emerald-400",
-  },
-  quero_vender: {
-    active: "bg-[#7B3FE4]",
-    inactive: "bg-white/[0.06]",
-    icon: "text-[#B06CFF]",
-  },
-  default: {
-    active: "bg-white/80",
-    inactive: "bg-white/[0.06]",
-    icon: "text-white/70",
-  },
+  motoboy: GREEN_PALETTE,
+  merchant: GREEN_PALETTE,
+  quero_vender: GREEN_PALETTE,
+  default: GREEN_PALETTE,
 };
 
 /* ── Main Component ── */

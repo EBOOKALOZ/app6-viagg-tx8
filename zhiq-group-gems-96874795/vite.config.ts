@@ -11,10 +11,6 @@ export default defineConfig(({ mode }) => ({
     headers: {
       "Access-Control-Allow-Origin": "*",
     },
-    hmr: {
-      clientPort: 8080,
-      protocol: "ws",
-    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

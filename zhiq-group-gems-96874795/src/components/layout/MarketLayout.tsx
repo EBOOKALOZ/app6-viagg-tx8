@@ -13,6 +13,8 @@ import {
     Home,
     LogIn,
     Gavel,
+    HardHat,
+    Store,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -52,7 +54,33 @@ export function MarketLayout({
     hideCart = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, availableProfiles } = useAuth();
+
+    const handleMotoboyClick = () => {
+        if (!user) {
+            localStorage.setItem("viagg_auth_entry", "motoboy");
+            navigate("/auth?entry=motoboy");
+            return;
+        }
+        if (availableProfiles?.includes("motoboy")) {
+            navigate("/motoboy/dashboard");
+        } else {
+            navigate("/motoboy/completar");
+        }
+    };
+
+    const handleVendedorClick = () => {
+        if (!user) {
+            localStorage.setItem("viagg_auth_entry", "advertiser");
+            navigate("/auth?entry=advertiser");
+            return;
+        }
+        if (availableProfiles?.includes("merchant")) {
+            navigate("/loja/minha-loja");
+        } else {
+            navigate("/auth?entry=advertiser");
+        }
+    };
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
 
@@ -62,71 +90,51 @@ export function MarketLayout({
             <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
                     <div className="flex items-center gap-4 h-[72px] relative w-full">
-                        {<div className="lg:hidden">
-    <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-            <button
-                type="button"
-                aria-label="Abrir menu"
-                className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 hover:bg-white/25 text-white shrink-0 transition-colors outline-none"
-            >
-                <Menu className="w-6 h-6" />
-            </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={8} className="w-[260px] bg-white rounded-xl shadow-xl border border-zinc-100 p-2 lg:hidden">
-            <DropdownMenuItem onClick={() => navigate("/mercado")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                <Home className="w-5 h-5 text-[#FF6A00]" />
-                <span className="font-bold text-[15px]">Início</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/mercado?view=produtos")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                <ShoppingBag className="w-5 h-5 text-[#FF6A00]" />
-                <span className="font-bold text-[15px]">Mercado</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/imoveis")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                <Building2 className="w-5 h-5 text-[#FF6A00]" />
-                <span className="font-bold text-[15px]">Imóveis</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/automoveis")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                <Car className="w-5 h-5 text-[#FF6A00]" />
-                <span className="font-bold text-[15px]">Veículos</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/mercado/leiloes")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                <Gavel className="w-5 h-5 text-[#FF6A00]" />
-                <span className="font-bold text-[15px]">Leilões</span>
-            </DropdownMenuItem>
+                        {/* Mobile logo — esquerda */}
+                        <div className="lg:hidden flex items-center cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
+                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-lg object-contain shadow-sm" />
+                        </div>
 
-            {!user && !isLoading && (
-                <>
-                    <div className="h-px bg-zinc-100 my-2 mx-2" />
-                    <DropdownMenuItem onClick={() => navigate("/auth?entry=advertiser")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                        <Megaphone className="w-5 h-5 text-[#FF6A00]" />
-                        <span className="font-bold text-[15px]">Área do Anunciante</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/auth")} className="flex items-center gap-3 px-4 py-3 cursor-pointer rounded-lg hover:bg-zinc-50 focus:bg-zinc-50 text-zinc-800">
-                        <LogIn className="w-5 h-5 text-[#FF6A00]" />
-                        <span className="font-bold text-[15px]">Entrar / Cadastrar</span>
-                    </DropdownMenuItem>
-                </>
-            )}
-        </DropdownMenuContent>
-    </DropdownMenu>
-</div>}
+                        <div className="flex-1 flex items-center justify-around lg:flex-none lg:justify-start lg:gap-3 px-2 lg:px-0">
+                            {/* MOTOBOY — esquerda */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
+                                className="group flex h-11 w-11 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-white text-[#FF6A00] rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
+                                title="Motoboy"
+                            >
+                                <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-[#FF6A00]/10 group-hover:bg-[#FF6A00]/20 transition-colors">
+                                    <HardHat className="h-4 w-4 text-[#FF6A00]" />
+                                </div>
+                                <span className="hidden lg:inline text-xs font-black whitespace-nowrap uppercase tracking-wide text-zinc-800">Motoboy</span>
+                            </button>
 
-                        <div className="flex items-center gap-4 shrink-0 absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
-                            {/* The dark cart button next to logo, ALWAYS FIXED */}
+                            {/* CESTA — centro */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                className="relative flex items-center gap-2 bg-[#F5E62B] text-gray-900 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-lg hover:brightness-95 hover:scale-105 active:scale-95 transition-all outline-none"
+                                className="relative flex h-11 w-11 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"
+                                title="Cesta"
                             >
                                 <ShoppingCart className="h-5 w-5" />
-                                <span className="text-sm font-black whitespace-nowrap">
-                                    <span className="hidden sm:inline">Cesta — </span>{globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
+                                <span className="hidden lg:inline text-sm font-black whitespace-nowrap">
+                                    Cesta — {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
                                 </span>
                                 {globalCart.totalItems > 0 && (
                                     <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
                                         {globalCart.totalItems}
                                     </span>
                                 )}
+                            </button>
+
+                            {/* LOJISTA — direita */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleVendedorClick(); }}
+                                className="group flex h-11 w-11 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-white text-emerald-600 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-emerald-200/50"
+                                title="Sou Lojista"
+                            >
+                                <div className="flex items-center justify-center h-6 w-6 rounded-lg bg-emerald-600/10 group-hover:bg-emerald-600/20 transition-colors">
+                                    <Store className="h-4 w-4 text-emerald-600" />
+                                </div>
+                                <span className="hidden lg:inline text-xs font-black whitespace-nowrap uppercase tracking-wide text-zinc-800">Lojista</span>
                             </button>
 
                             {/* Desktop Logo (hidden on mobile) */}
@@ -196,17 +204,11 @@ export function MarketLayout({
                             </div>
                         )}
 
-                        {/* Spacer for mobile to push cart to the right */}
-                        <div className="flex-1 lg:hidden" />
+                        {/* Spacer (apenas desktop, mobile usa flex-1 no container dos botões) */}
 
                         <div className="flex items-center gap-3 text-white shrink-0">
                             {headerRight}
 
-                            {/* Mobile Logo (hidden on desktop) */}
-                            <div className="lg:hidden flex items-center gap-2 cursor-pointer" onClick={() => navigate("/mercado")}>
-                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-lg object-contain shadow-sm" />
-                            </div>
-                            
                             {!user && !isLoading && !hideHeaderAuth && (
                               <div className="flex items-center gap-2">
                                 <Button

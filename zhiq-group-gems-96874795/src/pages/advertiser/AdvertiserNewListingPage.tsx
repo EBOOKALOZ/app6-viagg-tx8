@@ -72,56 +72,14 @@ export default function AdvertiserNewListingPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
          
-         {/* -- IMÓVEL -- */}
-         <CategoryCard 
-            title="IMÓVEL"
-            desc="Casas, apartamentos e terrenos."
-            icon={<Building2 className="w-10 h-10 text-orange-500" />}
-            accentColor="orange"
-            files={selectedFiles.imovel}
-            onFileAdd={() => fileInputRefs.imovel.current?.click()}
-            onFileRemove={(idx, e) => removeFile('imovel', idx, e)}
-            onAction={() => handleStartListing('imovel', '/anunciante/anuncios/novo/imovel')}
-            buttonText="Começar Agora"
-          >
-            <input 
-              type="file" 
-              ref={fileInputRefs.imovel} 
-              multiple 
-              className="hidden" 
-              onChange={(e) => handleFileChange('imovel', e)} 
-              accept="image/*"
-            />
-          </CategoryCard>
-
-          {/* -- VEÍCULO -- */}
-          <CategoryCard 
-            title="VEÍCULO"
-            desc="Carros, motos e barcos."
-            icon={<Car className="w-10 h-10 text-blue-500" />}
-            accentColor="blue"
-            files={selectedFiles.veiculo}
-            onFileAdd={() => fileInputRefs.veiculo.current?.click()}
-            onFileRemove={(idx, e) => removeFile('veiculo', idx, e)}
-            onAction={() => handleStartListing('veiculo', '/anunciante/anuncios/novo/veiculo')}
-            buttonText="Anunciar Veículo"
-          >
-             <input 
-              type="file" 
-              ref={fileInputRefs.veiculo} 
-              multiple 
-              className="hidden" 
-              onChange={(e) => handleFileChange('veiculo', e)} 
-              accept="image/*"
-            />
-          </CategoryCard>
+         {/* Cards IMÓVEL e VEÍCULO ocultados */}
 
           {/* -- PRODUTO -- */}
           <CategoryCard 
             title="PRODUTOS"
             desc="Eletrônicos, móveis e variados."
-            icon={<Package className="w-10 h-10 text-emerald-500" />}
-            accentColor="emerald"
+            icon={<Package className="w-10 h-10 text-yellow-500" />}
+            accentColor="yellow"
             files={selectedFiles.produto}
             onFileAdd={() => fileInputRefs.produto.current?.click()}
             onFileRemove={(idx, e) => removeFile('produto', idx, e)}
@@ -165,7 +123,8 @@ function CategoryCard({
   const colors: any = {
     orange: "bg-orange-600 hover:bg-orange-700 shadow-orange-600/20 text-orange-500 hover:shadow-orange-200/40",
     blue: "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20 text-blue-500 hover:shadow-blue-200/40",
-    emerald: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 text-emerald-500 hover:shadow-emerald-200/40"
+    emerald: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 text-emerald-500 hover:shadow-emerald-200/40",
+    yellow: "bg-yellow-400 hover:bg-yellow-300 shadow-yellow-400/30 text-yellow-500 hover:shadow-yellow-200/40"
   };
 
   const colorKey = colors[accentColor].split(" ");
@@ -225,8 +184,12 @@ function CategoryCard({
            )}
         </div>
 
-        <Button 
-          className={cn("w-full font-black uppercase text-[10px] tracking-widest h-14 rounded-2xl transition-all shadow-xl", colorKey[0], colorKey[1], colorKey[2])}
+        <Button
+          className={cn(
+            "w-full font-black uppercase text-[10px] tracking-widest h-14 rounded-2xl transition-all shadow-xl",
+            colorKey[0], colorKey[1], colorKey[2],
+            accentColor === 'yellow' && '!text-zinc-900'
+          )}
         >
            {buttonText}
         </Button>

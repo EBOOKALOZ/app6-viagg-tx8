@@ -15,6 +15,7 @@ import { User, Mail, Calendar, Building, CreditCard, MapPin, Loader2, Phone, Hea
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { brazilianStates } from '@/lib/brazilianStates';
 import { MerchantRecentEvents } from '@/components/merchant/MerchantRecentEvents';
+import { MathCaptchaDialog } from '@/components/ui/math-captcha-dialog';
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 const formatCPF = (v: string) => {
@@ -61,6 +62,7 @@ export default function MerchantProfileContent() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
 
   /* fetch */
   useEffect(() => {
@@ -94,8 +96,7 @@ export default function MerchantProfileContent() {
   }, [user]);
 
   /* save */
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     const birth = base.data_nascimento ? new Date(base.data_nascimento) : null;
     if (birth && birth > new Date()) {
       toast.error('Data de nascimento não pode ser futura');
@@ -189,7 +190,7 @@ export default function MerchantProfileContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); setCaptchaOpen(true); }} className="space-y-4">
 
               {/* E-mail full width */}
               <div className="space-y-2">
@@ -318,6 +319,14 @@ export default function MerchantProfileContent() {
             </form>
           </CardContent>
         </Card>
+
+        <MathCaptchaDialog
+          open={captchaOpen}
+          onOpenChange={setCaptchaOpen}
+          onConfirmed={handleSave}
+          title="Confirme para salvar seus dados"
+          description="Por segurança, resolva a soma abaixo antes de alterar seus dados pessoais."
+        />
 
       </div>
     </div>

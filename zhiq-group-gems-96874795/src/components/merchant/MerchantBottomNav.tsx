@@ -22,8 +22,7 @@ export function MerchantBottomNav() {
     { icon: ClipboardList, label: "Pedidos", path: "/merchant/pedidos", action: undefined, module: "orders" },
     { icon: TrendingUp, label: "Conversões", path: "/merchant/conversoes", action: undefined, module: "conversions" },
     { icon: Coins, label: "Créditos", path: "/merchant/creditos", action: undefined, module: "credits" },
-    { icon: Gavel, label: "Leilão", path: "/merchant/leiloes", action: undefined, module: "auction" },
-    { icon: Tag, label: "Arremate", path: "/merchant/arremates", action: undefined, module: "arremate" },
+    // Leilão e Arremate ocultados
     { icon: BarChart3, label: "M1", path: "/merchant/m1", action: undefined, module: "m1" },
     { icon: Megaphone, label: "Campanhas", path: "/merchant/campanhas", action: undefined, module: "campaigns" },
     { icon: Wallet, label: "Carteira", path: "/merchant/billing", action: undefined, module: "wallet" },

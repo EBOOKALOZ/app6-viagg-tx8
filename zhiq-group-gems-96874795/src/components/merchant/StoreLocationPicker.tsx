@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Search, Clipboard, Loader2, CheckCircle, AlertCircle, Globe, Navigation } from 'lucide-react';
+import { MapPin, Search, Clipboard, Loader2, CheckCircle, AlertCircle, Globe, Navigation, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseCoordinates, formatCoordinates } from '@/lib/coordinateParser';
 import { supabase } from '@/integrations/supabase/client';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { MathCaptchaDialog } from '@/components/ui/math-captcha-dialog';
 
 export interface ValidAddressDetails {
   cep?: string;
@@ -111,6 +112,8 @@ export function StoreLocationPicker({
   const [activeTab, setActiveTab] = useState<string>('map');
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(true);
+  const [mapUnlocked, setMapUnlocked] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
   const hasValidLocation = latitude !== null && longitude !== null;
   const isDragging = false;
 
@@ -295,17 +298,56 @@ export function StoreLocationPicker({
           </TabsList>
 
           <TabsContent value="map" forceMount className={`mt-4 ${activeTab !== 'map' ? 'hidden' : ''}`}>
-            <p className="text-sm text-muted-foreground mb-3">
-              Clique no mapa ou arraste o marcador para definir a localização exata.
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                {mapUnlocked
+                  ? "Clique no mapa para definir a localização exata."
+                  : "Pino travado. Toque em desbloquear para mover."}
+              </p>
+              {mapUnlocked ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMapUnlocked(false)}
+                  className="gap-1.5"
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  Travar
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCaptchaOpen(true)}
+                  className="gap-1.5"
+                >
+                  <Unlock className="h-3.5 w-3.5" />
+                  Desbloquear
+                </Button>
+              )}
+            </div>
+            {mapUnlocked && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMapUnlocked(false);
+                  toast.success('Endereço travado.');
+                }}
+                className="mb-2 w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black uppercase text-sm tracking-wider px-4 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2"
+              >
+                <Lock className="h-4 w-4" />
+                Clique para travar endereço
+              </button>
+            )}
             <StoreLocationMap
+              key={mapUnlocked ? 'edit' : 'locked'}
               initialLat={latitude || undefined}
               initialLng={longitude || undefined}
               addressLabel={endereco_formatado || "Carregando endereço do pino..."}
+              readOnly={!mapUnlocked}
+              onMarkerClick={() => setCaptchaOpen(true)}
               onLocationSelect={async (lat, lng) => {
-                // Ao clicar/arrastar pino (ação originada dentro do Mapbox child component),
-                // o child envia as coordenadas cruas. Aqui nós resolvemos o endereço
-                // estruturado e já passamos para o Form principal com extração de Bairro/Rua.
+                if (!mapUnlocked) return;
                 await reverseGeocode(lat, lng);
               }}
               className="w-full h-[420px] shadow-inner"
@@ -385,6 +427,17 @@ export function StoreLocationPicker({
           </div>
         )}
       </CardContent>
+
+      <MathCaptchaDialog
+        open={captchaOpen}
+        onOpenChange={setCaptchaOpen}
+        onConfirmed={() => {
+          setMapUnlocked(true);
+          toast.success('Mapa desbloqueado. Toque no mapa para mover o pino.');
+        }}
+        title="Confirme para mover o pino"
+        description="Por segurança, resolva a soma abaixo antes de alterar a localização da loja."
+      />
     </Card>
   );
 }

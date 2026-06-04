@@ -17,6 +17,7 @@ import { getProfileConfig } from '@/lib/profileTypes';
 import { SoundtrackToggle } from '@/components/SoundtrackToggle';
 import { useStoreCategories } from '@/hooks/useStoreCategories';
 import { StoreLocationPicker } from '@/components/merchant/StoreLocationPicker';
+import { MathCaptchaDialog } from '@/components/ui/math-captcha-dialog';
 import { cn } from '@/lib/utils';
 import type { CategoryGroup } from '@/hooks/useStoreCategories';
 
@@ -194,6 +195,8 @@ export default function Profile() {
   const [merchantExistingId, setMerchantExistingId] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isSavingMerchant, setIsSavingMerchant] = useState(false);
+  const [captchaPersonalOpen, setCaptchaPersonalOpen] = useState(false);
+  const [captchaMerchantOpen, setCaptchaMerchantOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -483,8 +486,7 @@ export default function Profile() {
     return date <= today;
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     if (!user) return;
 
     if (!validateBirthDate(baseData.data_nascimento)) {
@@ -620,7 +622,7 @@ export default function Profile() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSave} className="space-y-5">
+            <form onSubmit={(e) => { e.preventDefault(); setCaptchaPersonalOpen(true); }} className="space-y-5">
               {/* Email - Read Only */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="flex items-center gap-2">
@@ -1141,7 +1143,7 @@ export default function Profile() {
             {/* Salvar Loja */}
             <div className="pb-6">
               <Button
-                onClick={handleSaveMerchant}
+                onClick={() => setCaptchaMerchantOpen(true)}
                 className="w-full bg-merchant hover:bg-merchant-hover text-white"
                 size="lg"
                 disabled={isSavingMerchant}
@@ -1152,6 +1154,21 @@ export default function Profile() {
             </div>
           </>
         )}
+
+        <MathCaptchaDialog
+          open={captchaPersonalOpen}
+          onOpenChange={setCaptchaPersonalOpen}
+          onConfirmed={handleSave}
+          title="Confirme para salvar seu perfil"
+          description="Por segurança, resolva a soma abaixo antes de alterar seus dados pessoais e endereço."
+        />
+        <MathCaptchaDialog
+          open={captchaMerchantOpen}
+          onOpenChange={setCaptchaMerchantOpen}
+          onConfirmed={handleSaveMerchant}
+          title="Confirme para salvar configurações da loja"
+          description="Por segurança, resolva a soma abaixo antes de alterar dados da loja."
+        />
 
         {/* Account Info */}
         <Card className="bg-secondary/50">

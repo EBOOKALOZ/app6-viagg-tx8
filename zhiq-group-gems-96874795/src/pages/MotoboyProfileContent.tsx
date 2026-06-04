@@ -13,6 +13,7 @@ import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { CreditCard, Calendar, User as UserIcon, Check, Phone, Bike, MapPin } from 'lucide-react';
 import { brazilianStates } from '@/lib/brazilianStates';
 import { isProfileRegistrationComplete } from '@/lib/profileValidation';
+import { MathCaptchaDialog } from '@/components/ui/math-captcha-dialog';
 
 const CAPACITY_OPTIONS = [
   { value: 'pequeno', label: 'Pequena (até 35L)' },
@@ -74,6 +75,7 @@ export default function MotoboyProfileContent() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
 
   const [motoboyData, setMotoboyData] = useState<MotoboyProfileData>({
     whatsapp: '',
@@ -480,14 +482,22 @@ export default function MotoboyProfileContent() {
       </Card>
 
       {/* Save Button */}
-      <Button 
-        onClick={handleSave} 
+      <Button
+        onClick={() => setCaptchaOpen(true)}
         disabled={isSaving}
         className="w-full bg-motoboy hover:bg-motoboy-hover text-white"
       >
         <Check className="h-4 w-4 mr-2" />
         {isSaving ? 'Salvando...' : 'Salvar Perfil Operacional'}
       </Button>
+
+      <MathCaptchaDialog
+        open={captchaOpen}
+        onOpenChange={setCaptchaOpen}
+        onConfirmed={handleSave}
+        title="Confirme para salvar seu perfil"
+        description="Por segurança, resolva a soma abaixo antes de alterar seus dados pessoais."
+      />
     </MotoboyPageTemplate>
   );
 }

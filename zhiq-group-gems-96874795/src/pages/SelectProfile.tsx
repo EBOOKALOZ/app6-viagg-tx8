@@ -54,8 +54,38 @@ export default function SelectProfile() {
   const [progressActive, setProgressActive] = useState(false);
   /** Backend confirmed success — controls LoadingButton readiness */
   const [backendReady, setBackendReady] = useState(false);
+  /** 0–100 progress fill for the Continue button */
+  const [percent, setPercent] = useState(0);
   /** Where to navigate after loading completes */
   const navigationTarget = useRef<string | null>(null);
+  const navigatedRef = useRef(false);
+
+  useEffect(() => {
+    if (!progressActive) {
+      setPercent(0);
+      navigatedRef.current = false;
+      return;
+    }
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const p = Math.min(elapsed / 6000, 1);
+      setPercent(Math.round(p * 100));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [progressActive]);
+
+  useEffect(() => {
+    if (!progressActive || navigatedRef.current) return;
+    if (percent >= 100 && backendReady) {
+      navigatedRef.current = true;
+      const target = navigationTarget.current;
+      if (target) navigate(target, { replace: true });
+    }
+  }, [percent, backendReady, progressActive, navigate]);
 
   const profileList = useMemo(() => CARD_ORDER.map((id) => PROFILE_TYPES[id]).filter(Boolean), []);
 
@@ -96,7 +126,7 @@ export default function SelectProfile() {
     setBackendReady(false);
 
     const isQueroVender = selected === "quero_vender";
-    const isAnimatedProfile = selected === "motoboy" || selected === "merchant" || isQueroVender;
+    const isAnimatedProfile = true;
 
     if (isAnimatedProfile) {
       setProgressActive(true);
@@ -190,7 +220,7 @@ export default function SelectProfile() {
             <p className="text-sm text-white/50">Escolha como deseja usar a plataforma</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {profileList.map((profile) => {
               const isComingSoon = profile.id === "passenger" && !isPassengerEnabled;
               const isSel = selected === profile.id && !isComingSoon;
@@ -215,13 +245,13 @@ export default function SelectProfile() {
                           isMotoboy
                             ? "ring-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.5)]"
                             : isMerchant
-                              ? "ring-emerald-600 shadow-[0_0_24px_rgba(5,150,105,0.5)]"
+                              ? "ring-yellow-400 shadow-[0_0_24px_rgba(234,179,8,0.5)]"
                               : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                         )
                         : cn(
                           "ring-1 ring-white/15",
                           isMotoboy && "hover:ring-orange-400/50 hover:shadow-[0_0_12px_rgba(249,115,22,0.2)]",
-                          isMerchant && "hover:ring-emerald-500/50 hover:shadow-[0_0_12px_rgba(5,150,105,0.2)]",
+                          isMerchant && "hover:ring-yellow-300/50 hover:shadow-[0_0_12px_rgba(234,179,8,0.2)]",
                         ),
                   )}
                 >
@@ -229,7 +259,7 @@ export default function SelectProfile() {
                   {isMotoboy && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700" />
                   ) : isMerchant && isSel ? (
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-800" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600" />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-black/60" />
                   )}
@@ -254,7 +284,7 @@ export default function SelectProfile() {
                     isMotoboy && isSel
                       ? "bg-gradient-to-t from-orange-900/70 via-transparent to-transparent"
                       : isMerchant && isSel
-                        ? "bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent"
+                        ? "bg-gradient-to-t from-yellow-900/70 via-transparent to-transparent"
                         : "bg-gradient-to-t from-black/80 to-transparent",
                   )} />
 
@@ -333,41 +363,33 @@ export default function SelectProfile() {
 
           </div>
 
-          {progressActive ? (
-            <LoadingButton
-              icon="none"
-              color={selected === "motoboy" ? "motoboy" : selected === "merchant" ? "merchant" : selected === "quero_vender" ? "quero_vender" : "default"}
-              label=""
-              ready={backendReady}
-              onComplete={() => {
-                const target = navigationTarget.current;
-                if (target) {
-                  navigate(target, { replace: true });
-                }
-              }}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={handleContinue}
-              disabled={isSaving || !selected}
-              className={cn(
-                "relative w-full h-14 sm:h-16 rounded-xl font-bold text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-500 overflow-hidden shadow-2xl",
-                !selected && "bg-neutral-900 text-neutral-600",
-                selected === "motoboy" && !isSaving
-                  ? "bg-orange-500 text-white hover:bg-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.4)]"
-                  : selected === "merchant" && !isSaving
-                    ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)]"
-                    : selected === "quero_vender" && !isSaving
-                      ? "bg-gradient-to-r from-[#7B3FE4] to-[#B06CFF] text-white hover:opacity-90 shadow-[0_0_30px_rgba(123,63,228,0.4)]"
-                      : "bg-black text-white",
-              )}
-            >
-              <span className="relative z-10 transition-transform duration-300 group-active:scale-95">
-                {isSaving ? "Iniciando…" : "Continuar"}
-              </span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={isSaving || !selected || progressActive}
+            className={cn(
+              "relative w-full h-14 sm:h-16 rounded-xl font-bold text-lg disabled:cursor-not-allowed transition-all duration-500 overflow-hidden shadow-2xl",
+              !selected && !progressActive && "bg-neutral-900 text-neutral-600 opacity-40",
+              selected === "motoboy" && !isSaving
+                ? "bg-orange-500 text-white hover:bg-orange-400 shadow-[0_0_30px_rgba(249,115,22,0.4)]"
+                : selected === "merchant" && !isSaving
+                  ? "bg-yellow-400 text-black hover:bg-yellow-300 shadow-[0_0_30px_rgba(234,179,8,0.45)]"
+                  : selected === "quero_vender" && !isSaving
+                    ? "bg-gradient-to-r from-[#7B3FE4] to-[#B06CFF] text-white hover:opacity-90 shadow-[0_0_30px_rgba(123,63,228,0.4)]"
+                    : "bg-black text-white",
+            )}
+          >
+            {progressActive && (
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 bg-emerald-500 transition-[width] duration-100 ease-linear"
+                style={{ width: `${percent}%` }}
+              />
+            )}
+            <span className="relative z-10 transition-transform duration-300 group-active:scale-95 flex items-center justify-center gap-3">
+              {progressActive ? `${percent}%` : (isSaving ? "Iniciando…" : "Continuar")}
+            </span>
+          </button>
 
           <Button
             variant="ghost"

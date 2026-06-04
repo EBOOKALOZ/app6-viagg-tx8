@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import themeMusic from "@/assets/viagg_search_loop.mp3";
+import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -318,20 +319,18 @@ export default function Auth() {
                />
             </div>
           )}
-          <div className="text-center mb-4 sm:mb-10 space-y-3 sm:space-y-6">
-             <div className={cn(
-               "inline-flex items-center gap-2 px-6 py-2.5 rounded-full border shadow-lg transition-all duration-500",
-               isAdvertiserMode 
-                 ? "bg-orange-500/10 border-[#D6A75C]/30 shadow-orange-500/5" 
-                 : "bg-yellow-400/30 border-yellow-400/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]"
-             )}>
-                <Building2 className={cn("w-4 h-4", isAdvertiserMode ? "text-[#EA580C]" : "text-yellow-600")} />
-                <span className={cn("text-[10px] font-black uppercase tracking-[0.25em]", isAdvertiserMode ? "text-[#3B1F14]" : "text-yellow-600")}>
-                  {isAdvertiserMode ? "Acesso Comercial Restrito" : "Acesso Restrito Viagg"}
-                </span>
-             </div>
-             <div className="space-y-4 px-4 text-center">
-                <h1 className={cn("text-[42px] md:text-5xl font-black uppercase tracking-tighter leading-[0.95]", isAdvertiserMode ? "text-[#3B1F14]" : "text-white")}>
+          <div className="text-center mb-3 sm:mb-7 space-y-2 sm:space-y-4">
+             {!isAdvertiserMode && (
+               <div className="flex justify-center">
+                 <img
+                   src={logoImage}
+                   alt="Viagg-Tx8"
+                   className="h-20 w-auto rounded-2xl drop-shadow-[0_0_30px_rgba(234,179,8,0.45)]"
+                 />
+               </div>
+             )}
+             <div className="space-y-2 px-4 text-center">
+                <h1 className={cn("text-[28px] md:text-[38px] font-black uppercase tracking-tighter leading-[0.95]", isAdvertiserMode ? "text-[#3B1F14]" : "text-white")}>
                    {isAdvertiserMode
                      ? (isSignUp ? "Cadastro de Parceiro" : "Portal do Anunciante")
                      : (isSignUp ? "Crie Sua Conta" : "Acesse Seu Painel")}
@@ -340,41 +339,41 @@ export default function Auth() {
           </div>
 
           <Card className={cn(
-            "border overflow-hidden rounded-[48px] backdrop-blur-[60px] transition-all duration-500 relative",
-            isAdvertiserMode 
-              ? "border-[#D6A75C]/40 shadow-[0_48px_160px_-16px_rgba(59,31,20,0.5)] bg-[#3B1F14] text-[#FFF4E6]" 
+            "border overflow-hidden rounded-[36px] backdrop-blur-[60px] transition-all duration-500 relative",
+            isAdvertiserMode
+              ? "border-[#D6A75C]/40 shadow-[0_48px_160px_-16px_rgba(59,31,20,0.5)] bg-[#3B1F14] text-[#FFF4E6]"
               : "border-yellow-400/60 shadow-[0_0_128px_rgba(234,179,8,0.3)] bg-yellow-400/[0.42]"
           )}>
-            <CardContent className={cn("relative p-8 space-y-8", isAdvertiserMode ? "md:p-10" : "md:p-12 space-y-10")}>
+            <CardContent className={cn("relative p-5 space-y-5", isAdvertiserMode ? "md:p-7" : "md:p-9 space-y-7")}>
               <div className={cn(
                 "absolute top-0 left-0 w-full h-full bg-gradient-to-br pointer-events-none",
                 isAdvertiserMode ? "from-orange-500/5 via-transparent to-transparent" : "from-yellow-400/20 via-transparent to-transparent"
               )} />
-              
-              <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/10 shadow-inner relative z-10">
-                <button onClick={() => { setAuthMethod("password"); setErrorMessage(""); }} className={cn("flex-1 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all duration-500", authMethod === "password" ? (isAdvertiserMode ? "bg-[#EA580C] text-[#FFF4E6] shadow-xl" : "bg-[#FF6A00] text-white shadow-xl") : (isAdvertiserMode ? "text-[#FFF4E6]/40 hover:text-[#FFF4E6]" : "text-white/60 hover:text-white"))}>Com Senha</button>
-                <button onClick={() => { setAuthMethod("magic"); setErrorMessage(""); }} className={cn("flex-1 py-3.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all duration-500", authMethod === "magic" ? (isAdvertiserMode ? "bg-[#EA580C] text-[#FFF4E6] shadow-xl" : "bg-[#FF6A00] text-white shadow-xl") : (isAdvertiserMode ? "text-[#FFF4E6]/40 hover:text-[#FFF4E6]" : "text-white/60 hover:text-white"))}>Sem Senha</button>
+
+              <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 shadow-inner relative z-10">
+                <button onClick={() => { setAuthMethod("password"); setErrorMessage(""); }} className={cn("flex-1 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg transition-all duration-500", authMethod === "password" ? (isAdvertiserMode ? "bg-[#EA580C] text-[#FFF4E6] shadow-xl" : "bg-[#FF6A00] text-white shadow-xl") : (isAdvertiserMode ? "text-[#FFF4E6]/40 hover:text-[#FFF4E6]" : "text-white/60 hover:text-white"))}>Com Senha</button>
+                <button onClick={() => { setAuthMethod("magic"); setErrorMessage(""); }} className={cn("flex-1 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] rounded-lg transition-all duration-500", authMethod === "magic" ? (isAdvertiserMode ? "bg-[#EA580C] text-[#FFF4E6] shadow-xl" : "bg-[#FF6A00] text-white shadow-xl") : (isAdvertiserMode ? "text-[#FFF4E6]/40 hover:text-[#FFF4E6]" : "text-white/60 hover:text-white"))}>Sem Senha</button>
               </div>
 
-              <div className="space-y-6 relative z-10">
-                <div className="space-y-3">
+              <div className="space-y-4 relative z-10">
+                <div className="space-y-2">
                   <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-2", isAdvertiserMode ? "text-[#FFF4E6]/90" : "text-white/80")}>Identificação Comercial</label>
                   <div className="relative group">
-                      <Mail className={cn("absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 transition-colors", isAdvertiserMode ? "group-focus-within:text-[#EA580C]" : "group-focus-within:text-[#FF6A00]")} />
-                      <Input type="email" placeholder="comercial@suaempresa.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={authState === "sending"} required className={cn("h-16 pl-14 text-white placeholder:text-white/20 focus:ring-[#EA580C]/40 focus:border-[#EA580C]/70 rounded-2xl font-black transition-all", isAdvertiserMode ? "bg-[#422618] border-[#D6A75C]/30" : "bg-black/30 border-white/10")} />
+                      <Mail className={cn("absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 transition-colors", isAdvertiserMode ? "group-focus-within:text-[#EA580C]" : "group-focus-within:text-[#FF6A00]")} />
+                      <Input type="email" placeholder="comercial@suaempresa.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={authState === "sending"} required className={cn("h-12 pl-11 text-white placeholder:text-white/20 focus:ring-[#EA580C]/40 focus:border-[#EA580C]/70 rounded-xl font-black transition-all", isAdvertiserMode ? "bg-[#422618] border-[#D6A75C]/30" : "bg-black/30 border-white/10")} />
                   </div>
                 </div>
 
                 {authMethod === "password" && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between ml-2">
                        <label className={cn("text-[10px] font-black uppercase tracking-[0.3em]", isAdvertiserMode ? "text-[#FFF4E6]/90" : "text-white/80")}>Senha de Acesso</label>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         disabled={forgotLoading}
-                        onClick={handleForgotPassword} 
+                        onClick={handleForgotPassword}
                         className={cn(
-                          "text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-2", 
+                          "text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-2",
                           isAdvertiserMode ? "text-[#D6A75C] hover:text-[#EA580C]" : "text-white hover:text-orange-400",
                           forgotLoading && "opacity-50 cursor-not-allowed"
                         )}
@@ -384,41 +383,41 @@ export default function Auth() {
                       </button>
                     </div>
                     <div className="relative group">
-                      <Lock className={cn("absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 transition-colors", isAdvertiserMode ? "group-focus-within:text-[#EA580C]" : "group-focus-within:text-[#FF6A00]")} />
-                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={authState === "sending"} required className={cn("h-16 pl-14 text-white placeholder:text-white/20 focus:ring-[#EA580C]/40 focus:border-[#EA580C]/70 rounded-2xl font-black transition-all", isAdvertiserMode ? "bg-[#422618] border-[#D6A75C]/30" : "bg-black/30 border-white/10")} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-6 top-1/2 -translate-y-1/2 text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-colors">{showPassword ? "Ocultar" : "Mostrar"}</button>
+                      <Lock className={cn("absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 transition-colors", isAdvertiserMode ? "group-focus-within:text-[#EA580C]" : "group-focus-within:text-[#FF6A00]")} />
+                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={authState === "sending"} required className={cn("h-12 pl-11 text-white placeholder:text-white/20 focus:ring-[#EA580C]/40 focus:border-[#EA580C]/70 rounded-xl font-black transition-all", isAdvertiserMode ? "bg-[#422618] border-[#D6A75C]/30" : "bg-black/30 border-white/10")} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-colors">{showPassword ? "Ocultar" : "Mostrar"}</button>
                     </div>
                   </div>
                 )}
 
-                <Button 
-                  onClick={authMethod === "magic" ? handleMagicLink : handlePasswordAuth} 
-                  disabled={authState === "sending" || (authMethod === "magic" && cooldown > 0)} 
+                <Button
+                  onClick={authMethod === "magic" ? handleMagicLink : handlePasswordAuth}
+                  disabled={authState === "sending" || (authMethod === "magic" && cooldown > 0)}
                   className={cn(
-                    "w-full h-16 text-[#FFF4E6] shadow-2xl rounded-2xl font-black uppercase text-sm tracking-[0.3em] group transition-all",
+                    "w-full h-12 text-[#FFF4E6] shadow-2xl rounded-xl font-black uppercase text-xs tracking-[0.25em] group transition-all",
                     isAdvertiserMode ? "bg-[#EA580C] hover:bg-orange-600 shadow-orange-950/40" : "bg-[#FF6A00] hover:bg-orange-600 shadow-[0_12px_32px_rgba(255,106,0,0.3)]"
                   )}
                 >
-                  {authState === "sending" ? <Loader2 className="h-6 w-6 animate-spin" /> : authMethod === "magic" && cooldown > 0 ? `Reenviar em ${cooldown}s` : <div className="flex items-center gap-3">{authMethod === "magic" ? "Enviar Link de Acesso" : (isSignUp ? "Criar Painel" : "Acessar Painel")} <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" /></div>}
+                  {authState === "sending" ? <Loader2 className="h-5 w-5 animate-spin" /> : authMethod === "magic" && cooldown > 0 ? `Reenviar em ${cooldown}s` : <div className="flex items-center gap-2">{authMethod === "magic" ? "Enviar Link de Acesso" : (isSignUp ? "Criar Painel" : "Acessar Painel")} <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" /></div>}
                 </Button>
 
                 {errorMessage && (
-                  <div className="text-white text-sm text-center font-black mt-4 bg-black/40 p-5 rounded-2xl border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-300">
+                  <div className="text-white text-xs text-center font-black mt-2 bg-black/40 p-3 rounded-xl border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-300">
                     {errorMessage}
                   </div>
                 )}
 
-                <div className="flex flex-col gap-6 pt-2">
+                <div className="flex flex-col gap-3 pt-1">
                   <div className="relative">
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
                       <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em] leading-none"><span className={cn("bg-transparent px-4 font-black", isAdvertiserMode ? "text-[#FFF4E6]/50" : "text-white")}>Acesso Externo</span></div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => signInWithGoogle()} 
-                        disabled={googleLoading} 
-                        className="h-14 bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-2xl text-[9px] font-black uppercase tracking-[0.15em] transition-all px-0 shadow-inner group relative overflow-hidden"
+                  <div className="flex flex-col gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => signInWithGoogle()}
+                        disabled={googleLoading}
+                        className="h-12 bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all px-0 shadow-inner group relative overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-center justify-center gap-2 relative z-10">
@@ -455,24 +454,28 @@ export default function Auth() {
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-center justify-center gap-2 relative z-10">
-                          <Twitter className="w-4 h-4 group-hover:scale-110 transition-transform" /> 
+                          <Twitter className="w-4 h-4 group-hover:scale-110 transition-transform" />
                           <span>X</span>
                         </div>
                       </Button>
                   </div>
                 </div>
 
-                <p className={cn("text-center text-[10px] font-black mt-6 uppercase tracking-[0.15em]", isAdvertiserMode ? "text-[#FFF4E6]/70" : "text-white/60")}>
-                  {isSignUp ? "Já possui acesso?" : "Ainda não tem acesso comercial?"}{" "}
-                  <button onClick={() => setIsSignUp(!isSignUp)} className={cn("font-black transition-colors ml-1", isAdvertiserMode ? "text-[#EA580C] hover:text-[#D6A75C]" : "text-[#FF6A00] hover:text-orange-400")}>
+                <p className="relative z-10 flex items-center justify-center flex-wrap gap-2 text-center text-[11px] font-black uppercase tracking-[0.15em] text-white">
+                  <span>{isSignUp ? "Já possui acesso?" : "Ainda não tem acesso comercial?"}</span>
+                  <button
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="inline-flex items-center px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-[0.15em] shadow-md transition-colors"
+                  >
                     {isSignUp ? "Acessar Agora" : "Cadastrar Agora"}
                   </button>
                 </p>
+
               </div>
             </CardContent>
           </Card>
           
-          <div className={cn("mt-12 flex items-center justify-center gap-10", isAdvertiserMode ? "opacity-60" : "opacity-40")}>
+          <div className={cn("mt-3 flex items-center justify-center gap-6", isAdvertiserMode ? "opacity-60" : "opacity-40")}>
             <div className="flex items-center gap-3 hover:opacity-100 transition-opacity cursor-default">
                 <ShieldCheck className={cn("w-5 h-5", isAdvertiserMode ? "text-[#EA580C]" : "text-yellow-500")} />
                 <span className={cn("text-[10px] font-black uppercase tracking-[0.2em]", isAdvertiserMode ? "text-[#3B1F14]" : "text-white")}>Criptografia SSL</span>

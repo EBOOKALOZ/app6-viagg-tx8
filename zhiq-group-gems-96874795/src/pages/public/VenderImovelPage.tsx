@@ -763,26 +763,25 @@ export default function VenderImovelPage() {
                                                 <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
                                             </div>
                                         ) : (
-                                            (!creditPackages || creditPackages.length === 0) ? (
+                                            true ? (
                                                 <div className="col-span-full py-20 text-center space-y-6 bg-white border-2 border-dashed border-zinc-200 rounded-[32px] animate-in fade-in zoom-in duration-500">
-                                                    <div className="h-16 w-16 bg-zinc-50 rounded-2xl flex items-center justify-center mx-auto ring-8 ring-zinc-50/50">
-                                                        <Building2 className="h-8 w-8 text-zinc-300" />
+                                                    <div className="h-16 w-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto ring-8 ring-emerald-50/50">
+                                                        <Building2 className="h-8 w-8 text-emerald-500" />
                                                     </div>
                                                     <div className="space-y-2 max-w-sm mx-auto">
-                                                        <h3 className="font-black text-zinc-900 tracking-tight uppercase">Nenhum plano disponível</h3>
-                                                        <p className="text-sm text-zinc-500 font-medium">No momento não existem planos de visibilidade ativos. <br /> Continue seu cadastro e entraremos em contato.</p>
+                                                        <h3 className="font-black text-zinc-900 tracking-tight uppercase">Anúncio gratuito</h3>
+                                                        <p className="text-sm text-zinc-500 font-medium">Publique seu imóvel sem custo. Você só paga quando alguém entrar em contato.</p>
                                                     </div>
-                                                    <Button 
+                                                    <Button
                                                         onClick={() => {
                                                             setSelectedPackageId(null);
                                                             saveListing(null);
-                                                        }} 
-                                                        variant="outline" 
+                                                        }}
                                                         disabled={isSavingListing}
-                                                        className="h-12 px-8 rounded-xl font-bold border-2 hover:bg-zinc-50 transition-all"
+                                                        className="h-12 px-8 rounded-xl font-black bg-emerald-600 hover:bg-emerald-500 text-white transition-all"
                                                     >
                                                         {isSavingListing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                                                        Continuar sem plano
+                                                        Publicar Anúncio
                                                     </Button>
                                                 </div>
                                             ) : (

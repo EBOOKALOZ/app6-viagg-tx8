@@ -69,9 +69,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
-    { name: "Leilão", href: "/anunciante/leiloes", icon: Gavel },
-    { name: "Arremate", href: "/anunciante/arremates", icon: Tag },
-    { name: "Nova Entrega", href: "/anunciante/entrega/nova", icon: Truck },
+    // Leilão / Arremate / Nova Entrega ocultados
     { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     { name: "Créditos", href: "/anunciante/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },

@@ -55,14 +55,23 @@ import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 
 // ─── Helpers ────────────────────────────
+const STORAGE_BUCKET_CANDIDATES = ['marketing-materials', 'merchant-products', 'product-images', 'merchant-marketing'];
+
 function normalizeImageUrl(url: string | null | undefined): string | null {
     if (!url || typeof url !== "string") return null;
     const trimmed = url.trim();
     if (!trimmed) return null;
     const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (driveMatch) return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    if (!/^https?:\/\//i.test(trimmed)) return null;
-    return trimmed;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith('data:')) return trimmed;
+    // Try treating as a Supabase Storage path — use first bucket candidate as default
+    try {
+        const bucket = STORAGE_BUCKET_CANDIDATES[0];
+        const { data } = supabase.storage.from(bucket).getPublicUrl(trimmed);
+        if (data?.publicUrl) return data.publicUrl;
+    } catch { /* noop */ }
+    return null;
 }
 
 interface CategoriaLoja {
@@ -269,7 +278,16 @@ const [auctionModalOpen, setAuctionModalOpen] = useState(false);
                 if (advData && advData.length > 0) {
                     // Mapeia para o mesmo formato de MarketProduct
                     advertiserProducts = advData.map((item: any) => {
-                        const mediaFallback = item.advertiser_listing_media?.[0]?.media_url ?? null;
+                        const mediaPath = item.advertiser_listing_media?.[0]?.media_url ?? null;
+                        let mediaFallback: string | null = null;
+                        if (mediaPath) {
+                            if (/^https?:\/\//i.test(mediaPath)) {
+                                mediaFallback = mediaPath;
+                            } else {
+                                const { data: pub } = supabase.storage.from('marketing-materials').getPublicUrl(mediaPath);
+                                mediaFallback = pub?.publicUrl ?? null;
+                            }
+                        }
                         return {
                             id: item.id,
                             title: item.title || "Sem título",
@@ -826,8 +844,8 @@ const scrollToProducts = () => {
 
                 <InstitutionalSafetyBanner />
 
-            {/* ═══ REAL ESTATE SECTION ═══ */}
-            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
+            {/* ═══ REAL ESTATE SECTION (ocultada) ═══ */}
+            {false && !productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
                 <div className="w-full px-4 lg:px-6 py-12 bg-white">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -881,8 +899,8 @@ const scrollToProducts = () => {
                 </div>
             )}
 
-            {/* ═══ AUTOMOTIVE SECTION ═══ */}
-            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Automóveis") && (
+            {/* ═══ AUTOMOTIVE SECTION (ocultada) ═══ */}
+            {false && !productsOnly && (categoryFilter === "all" || categoryFilter === "Automóveis") && (
                 <div className="w-full px-4 lg:px-6 py-12 bg-blue-50/50">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">

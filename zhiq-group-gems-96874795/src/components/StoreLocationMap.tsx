@@ -8,6 +8,8 @@ interface StoreLocationMapProps {
     initialLng?: number;
     addressLabel?: string;
     onLocationSelect: (lat: number, lng: number) => void;
+    /** Disparado quando o usuário clica no marker (modo readOnly). Útil para abrir captcha. */
+    onMarkerClick?: () => void;
     className?: string;
     readOnly?: boolean;
 }
@@ -16,6 +18,7 @@ export function StoreLocationMap({
     initialLat,
     initialLng,
     onLocationSelect,
+    onMarkerClick,
     addressLabel,
     className = "",
     readOnly = false,
@@ -30,6 +33,10 @@ export function StoreLocationMap({
     useEffect(() => {
         onLocationSelectRef.current = onLocationSelect;
     }, [onLocationSelect]);
+    const onMarkerClickRef = useRef(onMarkerClick);
+    useEffect(() => {
+        onMarkerClickRef.current = onMarkerClick;
+    }, [onMarkerClick]);
 
     const [mapboxError, setMapboxError] = useState<string | null>(null);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -154,6 +161,90 @@ export function StoreLocationMap({
                     "space-color": "rgb(180, 200, 230)",
                     "star-intensity": 0.0,
                 });
+
+                // Destaque POIs (Hospital, Farmácia, Hotel)
+                const highlightedPoiFilter = [
+                    "in",
+                    ["get", "class"],
+                    ["literal", ["hospital", "pharmacy", "lodging"]],
+                ] as any;
+
+                // Halo colorido por trás do ícone
+                if (!map.getLayer("poi-highlight-circle")) {
+                    map.addLayer({
+                        id: "poi-highlight-circle",
+                        type: "circle",
+                        source: "composite",
+                        "source-layer": "poi_label",
+                        minzoom: 12,
+                        filter: highlightedPoiFilter,
+                        paint: {
+                            "circle-radius": [
+                                "interpolate", ["linear"], ["zoom"],
+                                12, 6,
+                                16, 14,
+                                20, 22,
+                            ],
+                            "circle-color": [
+                                "match",
+                                ["get", "class"],
+                                "hospital", "#ef4444",
+                                "pharmacy", "#10b981",
+                                "lodging", "#3b82f6",
+                                "#999999",
+                            ],
+                            "circle-stroke-color": "#ffffff",
+                            "circle-stroke-width": 2,
+                            "circle-opacity": 0.92,
+                        },
+                    });
+                }
+
+                // Ícone branco em cima do halo
+                if (!map.getLayer("poi-highlight-icon")) {
+                    map.addLayer({
+                        id: "poi-highlight-icon",
+                        type: "symbol",
+                        source: "composite",
+                        "source-layer": "poi_label",
+                        minzoom: 12,
+                        filter: highlightedPoiFilter,
+                        layout: {
+                            "icon-image": [
+                                "match",
+                                ["get", "class"],
+                                "hospital", "hospital-15",
+                                "pharmacy", "pharmacy-15",
+                                "lodging", "lodging-15",
+                                "marker-15",
+                            ],
+                            "icon-size": [
+                                "interpolate", ["linear"], ["zoom"],
+                                12, 0.9,
+                                16, 1.4,
+                                20, 1.8,
+                            ],
+                            "icon-allow-overlap": true,
+                            "text-field": ["get", "name"],
+                            "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+                            "text-size": [
+                                "interpolate", ["linear"], ["zoom"],
+                                13, 0,
+                                14, 10,
+                                18, 13,
+                            ],
+                            "text-anchor": "top",
+                            "text-offset": [0, 1.1],
+                            "text-optional": true,
+                        },
+                        paint: {
+                            "icon-color": "#ffffff",
+                            "text-color": "#1f2937",
+                            "text-halo-color": "#ffffff",
+                            "text-halo-width": 1.5,
+                        },
+                    });
+                }
             });
 
             map.on("error", (e) => {
@@ -188,6 +279,9 @@ export function StoreLocationMap({
                 // Modo Apenas-Leitura ou Estático: Crio e colo um marcador nativo e trava lá
                 const el = document.createElement("div");
                 el.innerHTML = `
+                  <button type="button" data-store-marker-label style="cursor:pointer;background:#FFD814;color:#111;border:none;padding:6px 12px;border-radius:14px;font-weight:800;font-size:11px;letter-spacing:0.05em;box-shadow:0 6px 18px rgba(0,0,0,0.25);white-space:nowrap;margin-bottom:6px;text-transform:uppercase;display:flex;align-items:center;gap:4px;">
+                    👆 Clique aqui para mudar o endereço
+                  </button>
                   <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);border:3px solid #fff;box-shadow:0 8px 32px rgba(16,185,129,0.4);display:flex;align-items:center;justify-content:center;position:relative;z-index:2;">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                   </div>
@@ -196,6 +290,15 @@ export function StoreLocationMap({
                 el.style.display = "flex";
                 el.style.flexDirection = "column";
                 el.style.alignItems = "center";
+
+                const labelBtn = el.querySelector('[data-store-marker-label]') as HTMLButtonElement | null;
+                if (labelBtn) {
+                    labelBtn.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        onMarkerClickRef.current?.();
+                    });
+                }
 
                 staticMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom", draggable: false })
                     .setLngLat([initialLng, initialLat])

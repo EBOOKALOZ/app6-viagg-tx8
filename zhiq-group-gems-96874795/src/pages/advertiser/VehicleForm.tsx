@@ -394,13 +394,7 @@ export const VehicleForm = () => {
                     <CreditInfoBanner />
                   </Card>
 
-                  {/* Pacotes */}
-                  <div className="mt-8">
-                    <VehicleAutoPackages
-                      onSelect={handleSelectPackage}
-                      selectedId={selectedPackage?.id || null}
-                    />
-                  </div>
+                  {/* Pacotes ocultados — anúncio é publicado gratuitamente */}
                 </section>
               </div>
             )}

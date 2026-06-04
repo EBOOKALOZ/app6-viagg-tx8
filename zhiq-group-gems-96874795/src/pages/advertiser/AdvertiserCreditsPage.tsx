@@ -193,8 +193,7 @@ export default function AdvertiserCreditsPage() {
         </div>
       ) : (
         <div className="space-y-24">
-          {renderSection("Pacotes Imóveis", "Classificados Imobiliários", "ADQUIRA CRÉDITOS E ECONOMIZE NAS VENDAS", Building2, realEstatePkgs)}
-          {renderSection("Pacotes Veículos", "Classificados Automotivos", null, CarFront, vehiclePkgs)}
+          {/* Pacotes Imóveis e Veículos ocultados */}
           {renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
         </div>
       )}
