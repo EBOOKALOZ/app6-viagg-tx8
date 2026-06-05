@@ -21,6 +21,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 
 import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StorePremiumCard, StoreProduct } from "@/components/public/store/StorePremiumCard";
+import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
 
 type TabValue = "home" | "all" | "promo";
@@ -45,6 +46,7 @@ export default function StorePublicPage() {
     const [recentlyAdded, setRecentlyAdded] = useState<Record<string, boolean>>({});
     const [activeTab, setActiveTab] = useState<TabValue>("home");
     const [activeCategory, setActiveCategory] = useState<string>("all");
+    const [inquiryProduct, setInquiryProduct] = useState<StoreProduct | null>(null);
 
     // Fetchers
     const cart = useStoreCart(storeId);
@@ -342,16 +344,11 @@ export default function StorePublicPage() {
     };
 
     const handleAskQuestion = (product: StoreProduct) => {
-        const phone = paySettings?.store_whatsapp || store?.whatsapp;
-        if (!phone) {
-            toast.error("O lojista não configurou um número de WhatsApp.");
-            return;
-        }
-        
-        const cleanPhone = phone.replace(/\D/g, "");
-        const formattedPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
-        const text = encodeURIComponent(`Olá! Gostaria de saber mais sobre o produto *${product.title}* que vi na sua loja na Plataforma Viagg.`);
-        window.open(`https://wa.me/${formattedPhone}?text=${text}`, "_blank");
+        // Abre o modal: o visitante escreve a pergunta, registramos no painel
+        // do vendedor (advertiser_contact_intentions) e só depois oferecemos o
+        // WhatsApp. Antes ia direto pro WhatsApp e a mensagem nunca chegava
+        // ao painel /anunciante/mensagens.
+        setInquiryProduct(product);
     };
 
     if (loadingStore || loadingProducts) {
@@ -680,6 +677,19 @@ export default function StorePublicPage() {
                 </div>
 
             </div>
+
+            <ProductInquiryModal
+                open={!!inquiryProduct}
+                onClose={() => setInquiryProduct(null)}
+                product={inquiryProduct ? {
+                    id: inquiryProduct.id,
+                    title: inquiryProduct.title,
+                    image_url: inquiryProduct.image_url,
+                    price_label: inquiryProduct.price ? String(inquiryProduct.price) : null,
+                    store_name: store?.store_name || null,
+                    city: store?.city || null,
+                } : null}
+            />
         </MarketLayout>
     );
 }

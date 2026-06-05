@@ -482,10 +482,10 @@ export async function getAdminUserDetails(userId: string) {
   return {
     data: {
       profile: profile as UserProfile,
-      groups: legacyGroups as WhatsAppGroup[],
-      driverGroups: driverGroups,
-      motoboyGroups: motoboyGroups,
-      merchantGroups: merchantGroups,
+      groups: (legacyGroups ?? []) as WhatsAppGroup[],
+      driverGroups: driverGroups ?? [],
+      motoboyGroups: motoboyGroups ?? [],
+      merchantGroups: merchantGroups ?? [],
       override: override as CommissionOverride | null,
       groupCount: legacyGroupCount,
       totalDriverGroups,

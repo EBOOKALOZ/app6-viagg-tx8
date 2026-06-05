@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +46,93 @@ import {
   Link as LinkIcon, TrendingUp, Target, Activity, Check, XCircle,
   ChevronDown, Shield, Image as ImageIcon, Calendar, Mail, BarChart3,
   Zap, Award, FileText, Coins as CoinsIcon, ArrowUpCircle, ArrowDownCircle,
+  Wallet, MousePointerClick, Store as StoreIcon,
 } from 'lucide-react';
+
+const fmtBRL = (v: number) =>
+  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function useUserEngagement(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['admin-user-engagement', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+
+      const { data: stores } = await (supabase.from('merchant_stores') as any)
+        .select('id, store_name, nome_loja, created_at')
+        .eq('user_id', userId);
+
+      const storeList: any[] = stores || [];
+      if (storeList.length === 0) {
+        return { stores: [], totals: null, clicksTotal: 0, clicksByStore: {} as Record<string, number> };
+      }
+
+      const finances = await Promise.all(
+        storeList.map(async (s) => {
+          const { data } = await (supabase.rpc as any)('admin_get_store_finances', { p_store_id: s.id });
+          return { storeId: s.id, data };
+        })
+      );
+
+      const ids = storeList.map((s) => s.id);
+      const { data: clicks } = await (supabase.from('marketplace_product_click_events') as any)
+        .select('store_id, status, credits_charged, visitor_user_id, anon_id')
+        .in('store_id', ids);
+
+      const clicksRows: any[] = clicks || [];
+      const clicksByStore: Record<string, number> = {};
+      let chargedClicks = 0;
+      let creditsBurned = 0;
+      const uniqueVisitors = new Set<string>();
+      for (const r of clicksRows) {
+        clicksByStore[r.store_id] = (clicksByStore[r.store_id] || 0) + 1;
+        if (r.status === 'charged') {
+          chargedClicks += 1;
+          creditsBurned += r.credits_charged || 0;
+        }
+        const visitor = r.visitor_user_id || r.anon_id;
+        if (visitor) uniqueVisitors.add(visitor);
+      }
+
+      let saldoR = 0,
+        recarregadoR = 0,
+        gastoR = 0,
+        availableCredits = 0,
+        consumedCredits = 0;
+      for (const f of finances) {
+        const w = f.data?.wallet || {};
+        const c = f.data?.credits?.balance || {};
+        saldoR += Number(w.saldo_total || 0);
+        recarregadoR += Number(w.pay_recharged || 0);
+        gastoR += Number(w.pay_spent || 0);
+        availableCredits += Number(c.available_credits || 0);
+        consumedCredits += Number(c.consumed_credits || 0);
+      }
+
+      return {
+        stores: storeList.map((s) => ({
+          ...s,
+          finances: finances.find((f) => f.storeId === s.id)?.data || null,
+          clicks: clicksByStore[s.id] || 0,
+        })),
+        totals: {
+          saldoR,
+          recarregadoR,
+          gastoR,
+          availableCredits,
+          consumedCredits,
+          chargedClicks,
+          creditsBurned,
+          totalEvents: clicksRows.length,
+          uniqueVisitors: uniqueVisitors.size,
+        },
+        clicksTotal: clicksRows.length,
+        clicksByStore,
+      };
+    },
+    enabled: !!userId,
+  });
+}
 
 // ─── Types ───────────────────────────────────────────────────────
 interface GroupWithStatus {
@@ -193,6 +281,13 @@ export default function AdminUserDetails() {
   const [customRate, setCustomRate] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [updatingGroupId, setUpdatingGroupId] = useState<string | null>(null);
+  const [pendingActive, setPendingActive] = useState<boolean | null>(null);
+  const [savingActive, setSavingActive] = useState(false);
+  const { data: engagement } = useUserEngagement(id);
+
+  // Estado efetivo mostrado no switch (pending se foi alterado, senão o salvo)
+  const displayActive = pendingActive ?? isActive;
+  const hasPendingChange = pendingActive !== null && pendingActive !== isActive;
 
   const fetchUserData = async () => {
     if (!id) return;
@@ -207,13 +302,25 @@ export default function AdminUserDetails() {
 
   useEffect(() => { fetchUserData(); }, [id]);
 
-  const handleToggleActive = async (checked: boolean) => {
-    if (!id) return;
-    setIsActive(checked);
-    const { error } = await updateUserActiveStatus(id, checked);
-    if (error) { toast.error('Erro ao atualizar status'); setIsActive(!checked); }
-    else { toast.success(checked ? 'Usuário ativado' : 'Usuário desativado'); }
+  const handleToggleActive = (checked: boolean) => {
+    setPendingActive(checked);
   };
+
+  const handleSaveActive = async () => {
+    if (!id || pendingActive === null) return;
+    setSavingActive(true);
+    const { error } = await updateUserActiveStatus(id, pendingActive);
+    if (error) {
+      toast.error(`Erro ao atualizar status: ${(error as any).message || 'desconhecido'}`);
+    } else {
+      setIsActive(pendingActive);
+      setPendingActive(null);
+      toast.success(pendingActive ? 'Usuário ativado' : 'Usuário desativado');
+    }
+    setSavingActive(false);
+  };
+
+  const handleCancelActive = () => setPendingActive(null);
 
   const handleSetOverride = async () => {
     if (!id || !adminUser || !customRate) return;
@@ -317,12 +424,30 @@ export default function AdminUserDetails() {
                 )}
               </div>
 
-              {/* Status toggle */}
-              <div className="flex items-center gap-3 mt-5 pt-4 border-t border-border/40 w-full justify-center">
-                <Badge variant={isActive ? 'default' : 'destructive'}>
-                  {isActive ? 'Ativo' : 'Inativo'}
-                </Badge>
-                <Switch checked={isActive} onCheckedChange={handleToggleActive} />
+              {/* Status toggle + Salvar */}
+              <div className="mt-5 pt-4 border-t border-border/40 w-full flex flex-col items-center gap-3">
+                <div className="flex items-center gap-3">
+                  <Badge variant={displayActive ? 'default' : 'destructive'}>
+                    {displayActive ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                  <Switch checked={displayActive} onCheckedChange={handleToggleActive} />
+                  {hasPendingChange && (
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600">
+                      não salvo
+                    </span>
+                  )}
+                </div>
+                {hasPendingChange && (
+                  <div className="flex items-center gap-2 w-full">
+                    <Button onClick={handleSaveActive} disabled={savingActive} size="sm" className="flex-1 gap-1.5">
+                      <Save className="h-3.5 w-3.5" />
+                      {savingActive ? 'Salvando...' : 'Salvar'}
+                    </Button>
+                    <Button onClick={handleCancelActive} disabled={savingActive} variant="outline" size="sm">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -369,6 +494,56 @@ export default function AdminUserDetails() {
 
             {/* ── TAB: Highlights ── */}
             <TabsContent value="highlights" className="mt-4 space-y-4">
+              {/* Engajamento atual */}
+              {engagement && engagement.stores.length > 0 && engagement.totals && (
+                <Card className="border-emerald-300/60 bg-emerald-50/30 dark:bg-emerald-950/10">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-emerald-600" /> Engajamento atual
+                      <Badge variant="outline" className="text-[10px]">{engagement.stores.length} loja{engagement.stores.length > 1 ? 's' : ''}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <MiniKpi icon={<Wallet className="h-4 w-4" />} label="Saldo R$" value={fmtBRL(engagement.totals.saldoR)} color="text-emerald-600" />
+                      <MiniKpi icon={<ArrowDownCircle className="h-4 w-4" />} label="Recarregado" value={fmtBRL(engagement.totals.recarregadoR)} color="text-emerald-500" />
+                      <MiniKpi icon={<ArrowUpCircle className="h-4 w-4" />} label="Gasto (motoboy etc.)" value={fmtBRL(engagement.totals.gastoR)} color="text-red-500" />
+                      <MiniKpi icon={<CoinsIcon className="h-4 w-4" />} label="Saldo créditos" value={engagement.totals.availableCredits.toLocaleString('pt-BR')} color="text-amber-600" />
+                      <MiniKpi icon={<MousePointerClick className="h-4 w-4" />} label="Cliques cobrados" value={engagement.totals.chargedClicks} color="text-orange-600" />
+                      <MiniKpi icon={<Activity className="h-4 w-4" />} label="Eventos totais" value={engagement.totals.totalEvents} color="text-zinc-700 dark:text-zinc-300" />
+                      <MiniKpi icon={<User className="h-4 w-4" />} label="Visitantes únicos" value={engagement.totals.uniqueVisitors} color="text-blue-600" />
+                      <MiniKpi icon={<CoinsIcon className="h-4 w-4" />} label="Créditos consumidos" value={engagement.totals.consumedCredits.toLocaleString('pt-BR')} color="text-red-500" />
+                    </div>
+
+                    <div className="border-t border-emerald-200/40 pt-3 space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <StoreIcon className="h-3 w-3" /> Lojas vinculadas
+                      </p>
+                      {engagement.stores.map((s: any) => (
+                        <RouterLink
+                          key={s.id}
+                          to={`/admin/lojas/${s.id}`}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-card px-3 py-2 hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">{s.store_name || s.nome_loja || 'Sem nome'}</p>
+                            <p className="text-[10px] font-mono text-muted-foreground truncate">{s.id}</p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 text-xs">
+                            <span className="text-emerald-600 font-semibold">{fmtBRL(Number(s.finances?.wallet?.saldo_total || 0))}</span>
+                            <span className="text-amber-600 font-semibold">{Number(s.finances?.credits?.balance?.available_credits || 0).toLocaleString('pt-BR')} cr</span>
+                            <span className="text-orange-600 font-semibold flex items-center gap-1">
+                              <MousePointerClick className="h-3 w-3" /> {s.clicks}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </RouterLink>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* KPI row */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <KpiCard icon={<Percent className="h-4 w-4" />} label="Taxa Atual" value={`${userData.commissionRate}%`}
@@ -494,9 +669,9 @@ export default function AdminUserDetails() {
               <GroupListSection title="Grupos do Lojista" icon={<MessageSquare className="h-4 w-4 text-emerald-500" />}
                 groups={userData.merchantGroups} type="merchant" iconColor="bg-emerald-500/20"
                 updatingGroupId={updatingGroupId} onUpdateStatus={handleUpdateGroupStatus} />
-              {userData.groups.length > 0 && (
+              {(userData.groups?.length ?? 0) > 0 && (
                 <GroupListSection title="Grupos Legados" icon={<MessageSquare className="h-4 w-4 text-muted-foreground" />}
-                  groups={userData.groups.map(g => ({ ...g, user_id: g.user_id, cidade: g.name, estado: '', tipo: '', status: '', updated_at: g.created_at }))}
+                  groups={(userData.groups ?? []).map(g => ({ ...g, user_id: g.user_id, cidade: g.name, estado: '', tipo: '', status: '', updated_at: g.created_at }))}
                   type="legacy" iconColor="bg-muted"
                   updatingGroupId={updatingGroupId} onUpdateStatus={handleUpdateGroupStatus} />
               )}
@@ -633,6 +808,18 @@ function KpiCard({ icon, label, value, accent, bgSoft, border, extra }: {
         {extra && <span className="text-[10px] text-muted-foreground">{extra}</span>}
       </CardContent>
     </Card>
+  );
+}
+
+function MiniKpi({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-border/40 bg-card px-3 py-2">
+      <div className={color}>{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{label}</p>
+        <p className={`text-sm font-bold ${color} truncate`}>{value}</p>
+      </div>
+    </div>
   );
 }
 

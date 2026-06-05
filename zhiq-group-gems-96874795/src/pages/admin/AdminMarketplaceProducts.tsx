@@ -1,15 +1,150 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, supabaseAdmin } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { AdminCreditsPackages } from "@/components/admin/credits/AdminCreditsPackages";
 import { useAdminCredits, AdminCreditProduct } from "@/hooks/useAdminCredits";
-import { 
-  Loader2, Coins, RefreshCw, TrendingUp, ShoppingBag, Store, 
+import {
+  Loader2, Coins, RefreshCw, TrendingUp, ShoppingBag, Store,
   BarChart3, PieChart, Clock, CalendarDays, DollarSign, Users,
   ArrowUpRight, ArrowDownRight, CheckCircle2, Zap, Star,
   MousePointer2, Eye, ShoppingCart, MessageSquare, Target,
-  Filter, ChevronDown, Activity
+  Filter, ChevronDown, Activity, Package, ExternalLink,
 } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
+
+// ── Hook: lista de produtos cadastrados + métricas ─────────────────
+function useAdminAllProducts() {
+  return useQuery({
+    queryKey: ["admin-marketplace-all-products"],
+    queryFn: async () => {
+      // 1. Vitrine (merchant_marketing_products)
+      const { data: vitrine } = await (supabase.from("merchant_marketing_products") as any)
+        .select("id, title, short_description, image_url, price_label, category, condition, is_active, created_at, merchant_store_id")
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+      // 2. Anúncios de anunciantes (advertiser_listings)
+      let advertiserRows: any[] = [];
+      try {
+        const { data: adv } = await (supabase.from("advertiser_listings") as any)
+          .select("id, title, description, cover_image_url, price, category, condition, listing_status, created_at, advertiser_account_id, advertiser_accounts!inner(user_id)")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        advertiserRows = (adv as any[]) || [];
+      } catch (e) {
+        console.warn("[admin products] advertiser_listings query falhou", e);
+      }
+
+      // Resolve store_id dos anunciantes via merchant_stores.user_id
+      const advUserIds = [...new Set(advertiserRows.map((r) => r.advertiser_accounts?.user_id).filter(Boolean))] as string[];
+      const advUserToStore: Record<string, string> = {};
+      if (advUserIds.length > 0) {
+        const { data: advStores } = await (supabase.from("merchant_stores") as any)
+          .select("id, user_id")
+          .in("user_id", advUserIds);
+        (advStores || []).forEach((s: any) => { advUserToStore[s.user_id] = s.id; });
+      }
+
+      // Normaliza tudo no mesmo formato
+      const vitrineNorm = ((vitrine as any[]) || []).map((p: any) => ({
+        id: p.id,
+        source: "vitrine" as const,
+        title: p.title,
+        image_url: p.image_url,
+        price_label: p.price_label,
+        category: p.category,
+        condition: p.condition,
+        is_active: p.is_active,
+        created_at: p.created_at,
+        store_id: p.merchant_store_id,
+      }));
+      const advertiserNorm = advertiserRows.map((p: any) => ({
+        id: p.id,
+        source: "advertiser" as const,
+        title: p.title || "Sem título",
+        image_url: p.cover_image_url,
+        price_label: p.price ? String(p.price) : null,
+        category: p.category,
+        condition: p.condition,
+        is_active: ["active", "published"].includes(String(p.listing_status || "").toLowerCase()),
+        created_at: p.created_at,
+        store_id: advUserToStore[p.advertiser_accounts?.user_id] || null,
+      }));
+
+      const rows = [...vitrineNorm, ...advertiserNorm];
+      if (rows.length === 0) return { rows: [], summary: undefined };
+
+      const storeIds = [...new Set(rows.map((r) => r.store_id).filter(Boolean))] as string[];
+      let stores: Record<string, any> = {};
+      if (storeIds.length > 0) {
+        const { data: s } = await (supabase.from("merchant_stores") as any)
+          .select("id, store_name, nome_loja, city, cidade, user_id")
+          .in("id", storeIds);
+        (s || []).forEach((st: any) => { stores[st.id] = st; });
+      }
+
+      const ids = rows.map((r) => r.id);
+      const visitsByProduct: Record<string, { events: number; charged: number; credits: number }> = {};
+      const { data: clicks } = await (supabase.from("marketplace_product_click_events") as any)
+        .select("product_id, status, credits_charged")
+        .in("product_id", ids);
+      (clicks || []).forEach((c: any) => {
+        const bucket = visitsByProduct[c.product_id] || { events: 0, charged: 0, credits: 0 };
+        bucket.events += 1;
+        if (c.status === "charged") {
+          bucket.charged += 1;
+          bucket.credits += c.credits_charged || 0;
+        }
+        visitsByProduct[c.product_id] = bucket;
+      });
+
+      const salesByProduct: Record<string, { count: number; total: number }> = {};
+      try {
+        const { data: intentions } = await (supabase.from("purchase_intentions") as any)
+          .select("product_id, total_amount_cents, status")
+          .in("product_id", ids);
+        (intentions || []).forEach((i: any) => {
+          if (!i.product_id) return;
+          const bucket = salesByProduct[i.product_id] || { count: 0, total: 0 };
+          bucket.count += 1;
+          bucket.total += Number(i.total_amount_cents || 0);
+          salesByProduct[i.product_id] = bucket;
+        });
+      } catch { /* ignore */ }
+
+      const enriched = rows.map((p: any) => {
+        const store = stores[p.merchant_store_id] || {};
+        const v = visitsByProduct[p.id] || { events: 0, charged: 0, credits: 0 };
+        const s = salesByProduct[p.id] || { count: 0, total: 0 };
+        return {
+          ...p,
+          store_id: p.merchant_store_id,
+          store_name: store.store_name || store.nome_loja || "—",
+          city: store.city || store.cidade || null,
+          visits_events: v.events,
+          visits_charged: v.charged,
+          visits_credits: v.credits,
+          sales_count: s.count,
+          sales_total_cents: s.total,
+        };
+      });
+
+      const summary = {
+        total: enriched.length,
+        active: enriched.filter((p: any) => p.is_active).length,
+        stores: new Set(enriched.map((p: any) => p.store_id).filter(Boolean)).size,
+        events: enriched.reduce((s: number, p: any) => s + p.visits_events, 0),
+        charged: enriched.reduce((s: number, p: any) => s + p.visits_charged, 0),
+        credits: enriched.reduce((s: number, p: any) => s + p.visits_credits, 0),
+        sales: enriched.reduce((s: number, p: any) => s + p.sales_count, 0),
+        revenue: enriched.reduce((s: number, p: any) => s + p.sales_total_cents, 0),
+      };
+
+      return { rows: enriched, summary };
+    },
+    staleTime: 30_000,
+  });
+}
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -33,13 +168,6 @@ import { useConversionFunnel } from "@/hooks/useConversionFunnel";
 import { FunnelDashboard } from "@/components/admin/FunnelDashboard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePickerWithRange } from "@/components/ui/date-picker";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 
 // Custom hook merging admin credits data
@@ -79,7 +207,7 @@ function useMarketplaceProductsData() {
 export default function AdminMarketplaceProducts() {
   const data = useMarketplaceProductsData();
   const funnelData = useConversionFunnel();
-  const [activeTab, setActiveTab] = useState("packages");
+  const [activeTab, setActiveTab] = useState("products");
 
   // Computed metrics
   const totalRevenue = data.salesSummary.reduce((sum, s) => sum + (s.total_revenue_cents || 0), 0);
@@ -181,7 +309,10 @@ export default function AdminMarketplaceProducts() {
 
       {/* MAIN TABS */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7 h-auto p-1 bg-muted/50 rounded-xl">
+        <TabsList className="grid w-full grid-cols-8 h-auto p-1 bg-muted/50 rounded-xl">
+          <TabsTrigger value="products" className="py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
+            <Package className="w-4 h-4 mr-2" /> Produtos
+          </TabsTrigger>
           <TabsTrigger value="packages" className="py-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg">
             <ShoppingBag className="w-4 h-4 mr-2" /> Pacotes
           </TabsTrigger>
@@ -204,6 +335,11 @@ export default function AdminMarketplaceProducts() {
             <Clock className="w-4 h-4 mr-2" /> Horários
           </TabsTrigger>
         </TabsList>
+
+        {/* TAB: PRODUTOS — todos os cadastrados pelos lojistas */}
+        <TabsContent value="products" className="space-y-4">
+          <AdminProductsList />
+        </TabsContent>
 
         {/* TAB: PACOTES (CRUD) */}
         <TabsContent value="packages">
@@ -544,5 +680,180 @@ export default function AdminMarketplaceProducts() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AdminProductsList — todos os produtos cadastrados pelos lojistas
+// ═══════════════════════════════════════════════════════════════
+function AdminProductsList() {
+  const { data, isLoading } = useAdminAllProducts();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const rows = data?.rows ?? [];
+  const summary = data?.summary;
+
+  const filtered = rows.filter((p: any) => {
+    if (statusFilter === "active" && !p.is_active) return false;
+    if (statusFilter === "inactive" && p.is_active) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (
+        !(p.title || "").toLowerCase().includes(q) &&
+        !(p.store_name || "").toLowerCase().includes(q) &&
+        !(p.category || "").toLowerCase().includes(q) &&
+        !(p.city || "").toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
+  return (
+    <>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-blue-700">Produtos</p>
+            <p className="text-2xl font-black text-blue-900">{summary?.total ?? 0}</p>
+            <p className="text-[9px] text-blue-600/70 font-bold">{summary?.active ?? 0} ativos</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-700">Lojas</p>
+            <p className="text-2xl font-black text-emerald-900">{summary?.stores ?? 0}</p>
+            <p className="text-[9px] text-emerald-600/70 font-bold">com produtos</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 border-orange-200">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-orange-700">Visitas (eventos)</p>
+            <p className="text-2xl font-black text-orange-900">{summary?.events ?? 0}</p>
+            <p className="text-[9px] text-orange-600/70 font-bold">total</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">Cliques cobrados</p>
+            <p className="text-2xl font-black text-amber-900">{summary?.charged ?? 0}</p>
+            <p className="text-[9px] text-amber-600/70 font-bold">{summary?.credits ?? 0} cr</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-violet-50 to-violet-100/50 border-violet-200">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-violet-700">Vendas</p>
+            <p className="text-2xl font-black text-violet-900">{summary?.sales ?? 0}</p>
+            <p className="text-[9px] text-violet-600/70 font-bold">pedidos</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-50 to-rose-100/50 border-rose-200">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-black uppercase tracking-wider text-rose-700">Receita</p>
+            <p className="text-2xl font-black text-rose-900">{formatCurrencyBRL((summary?.revenue ?? 0) / 100)}</p>
+            <p className="text-[9px] text-rose-600/70 font-bold">total</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <Input
+          placeholder="Buscar produto, loja, categoria ou cidade..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-9 text-sm md:col-span-2"
+        />
+        <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="active">Apenas ativos</SelectItem>
+            <SelectItem value="inactive">Apenas inativos</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Package className="h-4 w-4 text-blue-500" />
+            Produtos cadastrados ({filtered.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left p-3 font-semibold text-xs text-muted-foreground">Produto</th>
+                  <th className="text-left p-3 font-semibold text-xs text-muted-foreground">Loja</th>
+                  <th className="text-left p-3 font-semibold text-xs text-muted-foreground">Categoria</th>
+                  <th className="text-right p-3 font-semibold text-xs text-muted-foreground">Preço</th>
+                  <th className="text-right p-3 font-semibold text-xs text-muted-foreground">Visitas</th>
+                  <th className="text-right p-3 font-semibold text-xs text-muted-foreground">Cobrados</th>
+                  <th className="text-right p-3 font-semibold text-xs text-muted-foreground">Vendas</th>
+                  <th className="text-right p-3 font-semibold text-xs text-muted-foreground">Receita</th>
+                  <th className="text-center p-3 font-semibold text-xs text-muted-foreground">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr><td colSpan={9} className="text-center p-8 text-muted-foreground">Carregando...</td></tr>
+                )}
+                {!isLoading && filtered.length === 0 && (
+                  <tr><td colSpan={9} className="text-center p-8 text-muted-foreground">Nenhum produto encontrado.</td></tr>
+                )}
+                {filtered.map((p: any) => (
+                  <tr key={p.id} className="border-b hover:bg-muted/20">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {p.image_url ? (
+                          <img src={p.image_url} alt="" className="h-9 w-9 rounded object-cover" />
+                        ) : (
+                          <div className="h-9 w-9 rounded bg-gray-100 flex items-center justify-center">
+                            <ShoppingBag className="h-4 w-4 text-gray-300" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate max-w-[200px]">{p.title}</p>
+                          <p className="text-[10px] text-muted-foreground">{p.condition || '—'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      {p.store_id ? (
+                        <RouterLink to={`/admin/lojas/${p.store_id}`} className="text-blue-600 hover:underline text-sm flex items-center gap-1">
+                          {p.store_name} <ExternalLink className="h-3 w-3" />
+                        </RouterLink>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">{p.store_name}</span>
+                      )}
+                      <p className="text-[10px] text-muted-foreground">{p.city || '—'}</p>
+                    </td>
+                    <td className="p-3 text-xs">{p.category || '—'}</td>
+                    <td className="p-3 text-right font-mono text-sm font-bold">
+                      {p.price_label ? `R$ ${p.price_label}` : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="p-3 text-right font-mono text-sm">{p.visits_events}</td>
+                    <td className="p-3 text-right font-mono text-sm text-orange-600 font-semibold">{p.visits_charged}</td>
+                    <td className="p-3 text-right font-mono text-sm">{p.sales_count}</td>
+                    <td className="p-3 text-right font-mono text-sm text-emerald-600 font-semibold">
+                      {p.sales_total_cents > 0 ? formatCurrencyBRL(p.sales_total_cents / 100) : '—'}
+                    </td>
+                    <td className="p-3 text-center">
+                      {p.is_active ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">Ativo</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-[10px]">Inativo</Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   );
 }

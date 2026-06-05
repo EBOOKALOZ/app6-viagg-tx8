@@ -125,37 +125,40 @@ export default function AdvertiserLeadsPage() {
     }
   };
 
-  // Lojista só pode ler mensagens se já comprou ao menos um pacote (status 'paid').
-  // Grants administrativos sem compra real NÃO contam.
+  // Lojista tem acesso quando JÁ comprou pacote OU já tem créditos no saldo
+  // (cobre tanto compras pendentes/processadas quanto grants administrativos).
   const hasPaidPackage = purchaseHistory.some(p => p.payment_status === 'paid');
+  const hasCreditsOrPackage = hasPaidPackage || (balance.available_credits ?? 0) > 0;
 
   const handleUnlock = async (id: string) => {
-    // Gate 1: precisa ter comprado um pacote em algum momento
-    if (!hasPaidPackage) {
-      toast.error('Adquira um pacote de créditos pra liberar a leitura de mensagens.', { duration: 3500 });
-      setTimeout(() => navigate('/anunciante/creditos'), 800);
-      return;
-    }
-    // Gate 2: saldo atual precisa cobrir
-    if ((balance.available_credits ?? 0) <= 0) {
-      toast.error('Você não tem créditos. Redirecionando pra compra de pacotes…', { duration: 3000 });
+    const currentBalance = balance.available_credits ?? 0;
+    // Gate único: precisa ter pacote OU créditos no saldo, e pelo menos 13 créditos
+    if (!hasCreditsOrPackage || currentBalance < 13) {
+      toast.error(
+        currentBalance < 13 && hasCreditsOrPackage
+          ? `Saldo insuficiente: você tem ${currentBalance} créd., precisa de 13. Redirecionando…`
+          : 'Adquira um pacote de créditos pra liberar a leitura de mensagens.',
+        { duration: 3500 }
+      );
       setTimeout(() => navigate('/anunciante/creditos'), 800);
       return;
     }
     try {
+      // Feedback imediato: já avisa que começou a descontar
+      toast.loading('Descontando 13 créditos do seu saldo…', { id: `unlock-${id}`, duration: 2000 });
       const result = await unlockIntention(id, 13);
       if (result.success) {
-        toast.success(`Contato desbloqueado com sucesso! Foram descontados ${result.credits_charged} créditos.`);
+        toast.success(`Contato desbloqueado! ${result.credits_charged} créditos debitados do seu pacote.`, { id: `unlock-${id}` });
       } else {
         if (result.buy_credits_cta) {
-          toast.error(`Saldo insuficiente. Você tem ${result.available}, precisa de ${result.required}. Redirecionando pra compra…`, { duration: 3000 });
+          toast.error(`Saldo insuficiente: ${result.available} créd., precisa ${result.required}. Redirecionando…`, { id: `unlock-${id}`, duration: 3000 });
           setTimeout(() => navigate('/anunciante/creditos'), 800);
         } else {
-          toast.error("Erro ao desbloquear contato: " + result.error);
+          toast.error("Erro ao desbloquear contato: " + result.error, { id: `unlock-${id}` });
         }
       }
     } catch (err: any) {
-      toast.error("Erro inesperado ao desbloquear contato.");
+      toast.error("Erro inesperado ao desbloquear contato.", { id: `unlock-${id}` });
     }
   };
 
@@ -211,7 +214,7 @@ export default function AdvertiserLeadsPage() {
       </div>
 
       {/* ── Gate de acesso: aviso vermelho se nunca comprou pacote ── */}
-      {!isLoadingHistory && !hasPaidPackage && (
+      {!isLoadingHistory && !hasCreditsOrPackage && (
         <Card className="border-2 border-red-500/50 bg-gradient-to-br from-red-950/40 to-orange-950/30 overflow-hidden">
           <CardContent className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0">
@@ -252,9 +255,9 @@ export default function AdvertiserLeadsPage() {
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 px-4 py-1.5 rounded-lg text-center">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
-              <p className="text-lg font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[10px] text-emerald-300">créd.</span></p>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 px-7 py-3 rounded-xl text-center shadow-lg shadow-emerald-500/10">
+              <p className="text-[17px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
+              <p className="text-[34px] font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[19px] text-emerald-300">créd.</span></p>
             </div>
           </div>
         </CardHeader>
@@ -496,8 +499,13 @@ export default function AdvertiserLeadsPage() {
                             }}
                           />
                         ) : (
-                          <div className="w-full h-40 flex items-center justify-center bg-zinc-900">
+                          <div className="w-full h-40 flex flex-col items-center justify-center gap-2 bg-zinc-900 px-4">
                             <ModuleIcon className="w-10 h-10 text-zinc-700" />
+                            {!lead.listing_title ? (
+                              <p className="text-[10px] text-zinc-500 text-center leading-tight">
+                                Anúncio removido pelo autor
+                              </p>
+                            ) : null}
                           </div>
                         )}
                         <div className="flex items-start gap-2 px-3 py-2 border-t border-zinc-800">
@@ -541,7 +549,7 @@ export default function AdvertiserLeadsPage() {
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-emerald-400 font-mono bg-emerald-400/10 p-2.5 rounded-lg border border-emerald-400/20">
+                        <div className="flex items-center gap-2 text-[#FF6A00] font-mono bg-[#FF6A00]/10 p-2.5 rounded-lg border border-[#FF6A00]/30">
                           <Phone className="w-4 h-4" />
                           {lead.visitor_phone || "Não informado"}
                         </div>
@@ -563,16 +571,35 @@ export default function AdvertiserLeadsPage() {
                   <div className="mt-auto pt-4 border-t border-zinc-900/20">
                     {!isUnlocked ? (
                       <div className="space-y-2">
-                        <Button
-                          onClick={() => handleUnlock(lead.id)}
-                          className="w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-sm sm:text-base tracking-wider h-14 shadow-lg shadow-[#FF6A00]/20 gap-2 px-3 whitespace-nowrap"
-                        >
-                          <Unlock className="w-5 h-5 shrink-0" />
-                          <span className="truncate">Desbloquear (13 Créditos)</span>
-                        </Button>
-                        <div className="text-center text-sm sm:text-base font-black text-zinc-700 uppercase tracking-wider mt-1">
-                          Saldo Atual: <span className={balance.available_credits >= 13 ? "text-emerald-700" : "text-red-600"}>{balance.available_credits} Créditos</span>
-                        </div>
+                        {(() => {
+                          const hasEnoughCredits = (balance.available_credits ?? 0) >= 13;
+                          const firstName = lead.visitor_name?.trim().split(/\s+/)[0] || "cliente";
+                          // Mostra primeiro nome mascarado pro contexto, mas o lojista sabe quem é só após desbloquear
+                          const maskedName = firstName.slice(0, 2) + "***";
+                          return (
+                            <>
+                              <Button
+                                onClick={() => handleUnlock(lead.id)}
+                                className={
+                                  hasEnoughCredits
+                                    ? "w-full bg-zhiq-teal hover:opacity-90 text-white font-black uppercase text-sm sm:text-base tracking-wider h-auto min-h-14 py-2 shadow-lg shadow-emerald-900/30 gap-2 px-3 flex-col"
+                                    : "w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-sm sm:text-base tracking-wider h-auto min-h-14 py-2 shadow-lg shadow-[#FF6A00]/20 gap-2 px-3 flex-col"
+                                }
+                              >
+                                <span className="flex items-center gap-2 leading-tight">
+                                  <Unlock className="w-5 h-5 shrink-0" />
+                                  Falar com {maskedName}
+                                </span>
+                                <span className="text-[10px] font-bold tracking-widest opacity-90">
+                                  custo: 13 créditos
+                                </span>
+                              </Button>
+                              <div className="text-center text-sm sm:text-base font-black text-zinc-700 uppercase tracking-wider mt-1">
+                                Saldo Atual: <span className={hasEnoughCredits ? "text-emerald-700" : "text-red-600"}>{balance.available_credits} Créditos</span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <Button

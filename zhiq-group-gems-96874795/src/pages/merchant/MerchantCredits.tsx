@@ -51,6 +51,7 @@ const MODULE_ICONS: Record<string, typeof Eye> = {
   M1: Zap,
   LEILAO: Zap,
   ARREMATE: Award,
+  MARKETPLACE: MousePointerClick,
 };
 
 const MODULE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
@@ -58,12 +59,14 @@ const MODULE_COLORS: Record<string, { text: string; bg: string; border: string }
   M1: { text: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" },
   LEILAO: { text: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200" },
   ARREMATE: { text: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" },
+  MARKETPLACE: { text: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" },
 };
 
 const REASON_LABELS: Record<string, string> = {
   purchase_intention_received: "Intenção de compra recebida",
   m1_buy_click: "Adicionar cada produto cesta (M1)",
   m1_product_click: "clique produto na plataforma (M1)",
+  marketplace_product_click: "Entrada na loja via /mercado (3 cr.)",
   bid_received: "Lance recebido",
   arremate_confirmed: "Oferta aceita no arremate",
   subscription_activation: "Ativação de assinatura",
@@ -1042,6 +1045,7 @@ export default function MerchantCredits() {
                 : entry.reason_code?.includes("purchase_intention") ? "CESTA1"
                 : entry.reason_code?.includes("bid") ? "LEILÃO"
                 : entry.reason_code?.includes("arremate") ? "ARREMATE"
+                : entry.reason_code?.includes("marketplace") ? "MARKETPLACE"
                 : null;
               if (mod && entry.entry_type === "debit") {
                 if (!moduleBreakdown[mod]) moduleBreakdown[mod] = { debits: 0, credits: 0, count: 0 };

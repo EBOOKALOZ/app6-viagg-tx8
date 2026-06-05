@@ -93,7 +93,12 @@ export function useContactIntentions() {
   const { data: intentions = [], isLoading } = useQuery({
     queryKey: ["contact-intentions", user?.id],
     enabled: !!user?.id,
-    refetchInterval: 60_000,
+    // Polling de 10s + revalida ao voltar pra aba, sem precisar de F5.
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    staleTime: 0,
     queryFn: async () => {
       const { data, error } = await (supabase.from("advertiser_contact_intentions") as any)
         .select("*")
@@ -162,26 +167,42 @@ export function useContactIntentions() {
 
       // ── Produtos do /mercado (merchant_marketing_products + advertiser_listings) ──
       if (productIds.length > 0) {
-        // 1. merchant_marketing_products — tenta todos os campos de imagem conhecidos
+        // Helper: normaliza path do storage → URL pública
+        const resolveStorageUrl = (raw: string | null | undefined, bucket = "marketing-materials"): string | null => {
+          if (!raw) return null;
+          if (/^https?:\/\//i.test(raw) || raw.startsWith("data:")) return raw;
+          try {
+            const { data } = supabase.storage.from(bucket).getPublicUrl(raw);
+            return data?.publicUrl ?? null;
+          } catch {
+            return null;
+          }
+        };
+
+        // 1. merchant_marketing_products
         const { data: mmpRows } = await (supabase.from("merchant_marketing_products") as any)
           .select("*")
           .in("id", productIds);
         (mmpRows || []).forEach((p: any) => {
           const title = p.title || p.name || p.nome || null;
           if (title) titleMap.set(p.id, title);
-          const img = p.image_url || p.cover_image_url || p.imagem_url || p.thumbnail_url || null;
+          const rawImg = p.image_url || p.cover_image_url || p.imagem_url || p.thumbnail_url || null;
+          const img = resolveStorageUrl(rawImg);
           if (img) imageMap.set(p.id, img);
         });
-        // 2. fallback: advertiser_listings
-        const missing = productIds.filter(id => !titleMap.has(id));
+
+        // 2. advertiser_listings — completa o que faltar (título OU imagem)
+        const missing = productIds.filter(id => !titleMap.has(id) || !imageMap.has(id));
         if (missing.length > 0) {
           const { data: alRows } = await (supabase.from("advertiser_listings") as any)
             .select("id, title, cover_image_url, advertiser_listing_media(media_url)")
             .in("id", missing);
           (alRows || []).forEach((p: any) => {
-            if (p.title) titleMap.set(p.id, p.title);
-            const mediaUrl = p.cover_image_url || p.advertiser_listing_media?.[0]?.media_url;
-            if (mediaUrl) imageMap.set(p.id, mediaUrl);
+            if (p.title && !titleMap.has(p.id)) titleMap.set(p.id, p.title);
+            if (imageMap.has(p.id)) return;
+            const mediaPath = p.cover_image_url || p.advertiser_listing_media?.[0]?.media_url || null;
+            const url = resolveStorageUrl(mediaPath);
+            if (url) imageMap.set(p.id, url);
           });
         }
       }

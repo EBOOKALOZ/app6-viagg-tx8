@@ -465,20 +465,33 @@ export const ProductForm = () => {
               )}
             </Section>
 
-            {/* 4 — Fotos */}
-            {!isDigital && (
-              <Section step={4} title="Adicione fotos" description="A primeira foto será a capa do anúncio. Use imagens nítidas, em fundo claro." icon={Camera} done={completion.photos}>
-                <ProductImageUpload maxImages={6} onFilesSelected={(files) => setProductImages(files)} />
-                <div className="flex items-start gap-2 text-xs text-zinc-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                  <ImageIcon className="h-4 w-4 text-[#3483FA] shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="text-zinc-700">Dica:</strong> anúncios com 4 ou mais fotos vendem até 3× mais. Mínimo: 1 foto.
-                  </div>
+            {/* 4 — Fotos (físico e digital) */}
+            <Section
+              step={4}
+              title={isDigital ? 'Capa do produto digital' : 'Adicione fotos'}
+              description={isDigital
+                ? 'Imagem de vitrine do seu produto digital (ex.: capa do e-book, mockup do curso). A primeira será a capa do anúncio.'
+                : 'A primeira foto será a capa do anúncio. Use imagens nítidas, em fundo claro.'}
+              icon={Camera}
+              done={completion.photos}
+            >
+              <ProductImageUpload
+                maxImages={isDigital ? 4 : 6}
+                listingId={currentId ?? undefined}
+                onFilesSelected={(files) => setProductImages(files)}
+              />
+              <div className="flex items-start gap-2 text-xs text-zinc-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <ImageIcon className="h-4 w-4 text-[#3483FA] shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-zinc-700">Dica:</strong>{' '}
+                  {isDigital
+                    ? 'use uma capa atraente. Você pode trocar ou excluir as imagens existentes a qualquer momento.'
+                    : 'anúncios com 4 ou mais fotos vendem até 3× mais. Mínimo: 1 foto.'}
                 </div>
-              </Section>
-            )}
+              </div>
+            </Section>
 
-            {/* 4 (digital) — Link de download */}
+            {/* 4b (digital) — Link de download */}
             {isDigital && (
               <Section step={4} title="Link do produto digital" description="O comprador receberá esse link após o pagamento." icon={LinkIcon} done={completion.digital}>
                 <div className="space-y-2">

@@ -228,11 +228,21 @@ export function AdminSidebar() {
       {/* Navigation */}
       <ScrollArea className="flex-1">
         <nav className="p-3 space-y-5">
-          {filteredSections.map((section, sectionIdx) => (
-            <div key={section.title}>
-              {sectionIdx > 0 && <Separator className="mb-4" />}
+          {filteredSections.map((section, sectionIdx) => {
+            const isGestao = section.title === "Gestão";
+            return (
+            <div
+              key={section.title}
+              className={cn(isGestao && "bg-[#FFE600] rounded-xl p-2 -mx-1")}
+            >
+              {sectionIdx > 0 && !isGestao && <Separator className="mb-4" />}
               <div className="mb-2 px-2">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.15em] flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "text-[10px] font-bold uppercase tracking-[0.15em] flex items-center gap-1.5",
+                    isGestao ? "text-zinc-900" : "text-muted-foreground"
+                  )}
+                >
                   {section.emoji && <span className="text-xs">{section.emoji}</span>}
                   {section.title}
                 </span>
@@ -248,6 +258,8 @@ export function AdminSidebar() {
                         "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all",
                         isActive
                           ? "bg-primary text-primary-foreground shadow-md"
+                          : isGestao
+                          ? "text-zinc-800 hover:bg-yellow-300"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
@@ -263,7 +275,8 @@ export function AdminSidebar() {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </nav>
       </ScrollArea>
 

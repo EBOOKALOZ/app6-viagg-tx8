@@ -267,7 +267,7 @@ export default function AdminUsers() {
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Override</Badge>
                       )}
                     </div>
-                    <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
+                    <Button size="sm" className="h-8 text-xs bg-orange-500 hover:bg-orange-600 text-white border-0" asChild>
                       <Link to={`/admin/users/${user.id}`}>
                         <Eye className="h-3.5 w-3.5 mr-1.5" />
                         Detalhes

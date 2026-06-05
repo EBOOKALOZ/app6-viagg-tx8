@@ -6,6 +6,26 @@ export function useAdminFinancialStats() {
     return useQuery({
         queryKey: ["admin", "financial-stats"],
         queryFn: async () => {
+            // Fonte da verdade = RPC admin_get_global_finances (pay_*).
+            // A leitura legada em ledger_entries permanece como fallback abaixo.
+            try {
+                const { data: rpc } = await (supabase.rpc as any)("admin_get_global_finances");
+                if (rpc?.stats) {
+                    const s = rpc.stats;
+                    return {
+                        saldoPlataforma: Number(s.saldoPlataforma || 0),
+                        transacionadoHoje: Number(s.transacionadoHoje || 0),
+                        receitaPlataforma: Number(s.receitaPlataforma || 0),
+                        saldoMotoboys: Number(s.saldoMotoboys || 0),
+                        saldoLojistas: Number(s.saldoLojistas || 0),
+                        saquesPendentesQtd: Number(s.saquesPendentesQtd || 0),
+                        saquesPendentesValor: Number(s.saquesPendentesValor || 0),
+                    };
+                }
+            } catch (e) {
+                console.warn("[useAdminFinancialStats] RPC indisponível, caindo no legado", e);
+            }
+
             // 1. & 4. & 5. Contas Financeiras (Agregado via ledger_entries)
             // @ts-ignore: bypass outdated types.ts missing direction and profile_type
             const { data: rawLedgers } = await (supabase.from("ledger_entries") as any)

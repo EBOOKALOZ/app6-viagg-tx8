@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, CheckCircle2, AlertCircle, Loader2, X, Image as ImageIcon, Camera } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, Loader2, X, Image as ImageIcon, Camera, Trash2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProductImageUploadProps {
@@ -130,7 +130,10 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [uploadedImages, setUploadedImages] = useState<{id: string, path: string}[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<{id: string, path: string, storage_path: string | null}[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const [replacingId, setReplacingId] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<{file: File, preview: string}[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [generatingPreviews, setGeneratingPreviews] = useState(false);
@@ -157,7 +160,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
              }
              return true;
            });
-           setUploadedImages(validImages.map(img => ({ id: img.id, path: img.media_url })));
+           setUploadedImages(validImages.map(img => ({ id: img.id, path: img.media_url, storage_path: img.storage_path ?? null })));
          }
        };
        fetchImages();
@@ -327,7 +330,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
 
         if (mediaError) throw mediaError;
 
-        const newImage = { id: mediaData.id, path: publicUrl };
+        const newImage = { id: mediaData.id, path: publicUrl, storage_path: filePath };
         setUploadedImages(prev => [...prev, newImage]);
         if (onUploadComplete) onUploadComplete(newImage.id, newImage.path);
 
@@ -343,6 +346,65 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
       setUploading(false);
       setProgress(0);
     }
+  };
+
+  const deleteUploadedImage = async (img: {id: string, path: string, storage_path: string | null}) => {
+    if (!window.confirm('Excluir esta foto definitivamente?')) return;
+    setDeletingId(img.id);
+    try {
+      if (img.storage_path) {
+        const { error: storageErr } = await supabase.storage
+          .from('marketing-materials')
+          .remove([img.storage_path]);
+        if (storageErr) console.warn('Falha ao remover do storage:', storageErr);
+      }
+
+      const { error: dbErr } = await supabase
+        .from('advertiser_listing_media')
+        .delete()
+        .eq('id', img.id);
+      if (dbErr) throw dbErr;
+
+      if (listingId) {
+        const { data: listing } = await supabase
+          .from('advertiser_listings' as any)
+          .select('cover_image_url')
+          .eq('id', listingId)
+          .maybeSingle();
+        if (listing && (listing as any).cover_image_url === img.path) {
+          const remaining = uploadedImages.filter(u => u.id !== img.id);
+          await supabase
+            .from('advertiser_listings' as any)
+            .update({ cover_image_url: remaining[0]?.path ?? null })
+            .eq('id', listingId);
+        }
+      }
+
+      setUploadedImages(prev => prev.filter(u => u.id !== img.id));
+      toast.success('Foto excluída.');
+    } catch (err: any) {
+      console.error('delete error:', err);
+      toast.error(`Erro ao excluir: ${err.message}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleReplaceClick = (imgId: string) => {
+    setReplacingId(imgId);
+    replaceInputRef.current?.click();
+  };
+
+  const handleReplaceChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const targetId = replacingId;
+    event.target.value = '';
+    setReplacingId(null);
+    if (!file || !targetId) return;
+    const target = uploadedImages.find(u => u.id === targetId);
+    if (!target) return;
+    await deleteUploadedImage(target);
+    await uploadFiles([file]);
   };
 
   const removeSelectedFile = (index: number) => {
@@ -485,6 +547,15 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         </div>
       )}
 
+      {/* Input oculto para substituir foto */}
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.tif,.webp,.jfif,.dib"
+        onChange={handleReplaceChange}
+        className="hidden"
+      />
+
       {/* Grid de Imagens Já Uploadadas */}
       {uploadedImages.length > 0 && (
         <div className="space-y-4">
@@ -492,15 +563,41 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
             <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Imagens na Galeria ({uploadedImages.length})
           </h5>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-           {uploadedImages.map((img) => (
+           {uploadedImages.map((img) => {
+             const isBusy = deletingId === img.id || replacingId === img.id;
+             return (
                <div key={img.id} className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-emerald-50 shadow-sm group">
                  <img src={img.path} className="absolute inset-0 w-full h-full object-cover" alt="product" />
+
+                 {/* Botões de ação */}
+                 <div className="absolute top-2 right-2 flex gap-1.5">
+                   <button
+                     type="button"
+                     onClick={() => handleReplaceClick(img.id)}
+                     disabled={isBusy || uploading}
+                     title="Trocar foto"
+                     className="p-1.5 bg-white/95 backdrop-blur-md rounded-xl text-zinc-600 hover:text-blue-500 shadow-lg transition-all disabled:opacity-40"
+                   >
+                     <RefreshCw className={cn("w-4 h-4", replacingId === img.id && "animate-spin")} />
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => deleteUploadedImage(img)}
+                     disabled={isBusy || uploading}
+                     title="Excluir foto"
+                     className="p-1.5 bg-white/95 backdrop-blur-md rounded-xl text-zinc-600 hover:text-red-500 shadow-lg transition-all disabled:opacity-40"
+                   >
+                     {deletingId === img.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                   </button>
+                 </div>
+
                  <div className="absolute inset-x-0 bottom-0 bg-zinc-900/40 p-2 flex justify-between items-end backdrop-blur-[2px]">
                    <CheckCircle2 className="w-4 h-4 text-emerald-400 drop-shadow-md" />
                    <span className="text-[8px] font-black text-white uppercase tracking-widest">Enviada</span>
                  </div>
                </div>
-             ))}
+             );
+           })}
           </div>
         </div>
       )}
