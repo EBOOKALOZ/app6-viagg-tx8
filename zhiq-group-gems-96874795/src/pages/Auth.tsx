@@ -422,12 +422,12 @@ export default function Auth() {
                       <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
                       <div className="relative flex justify-center text-[9px] font-black uppercase tracking-[0.4em] leading-none"><span className={cn("bg-transparent px-4 font-black", isAdvertiserMode ? "text-[#FFF4E6]/50" : "text-white")}>Acesso Externo</span></div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col gap-2">
                       <Button
                         variant="outline"
                         onClick={() => signInWithGoogle()}
                         disabled={googleLoading}
-                        className="h-10 bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.1em] transition-all px-0 shadow-inner group relative overflow-hidden"
+                        className="h-11 w-full bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all shadow-inner group relative overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-center justify-center gap-2 relative z-10">
@@ -441,11 +441,11 @@ export default function Auth() {
                         </div>
                       </Button>
                       
-                      <Button 
-                        variant="outline" 
-                        onClick={() => signInWithFacebook()} 
-                        disabled={facebookLoading} 
-                        className="h-10 bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.1em] transition-all px-0 shadow-inner group relative overflow-hidden"
+                      <Button
+                        variant="outline"
+                        onClick={() => signInWithFacebook()}
+                        disabled={facebookLoading}
+                        className="h-11 w-full bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all shadow-inner group relative overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-center justify-center gap-2 relative z-10">
@@ -456,11 +456,11 @@ export default function Auth() {
                         </div>
                       </Button>
                       
-                      <Button 
-                        variant="outline" 
-                        onClick={() => signInWithTwitter()} 
-                        disabled={twitterLoading} 
-                        className="h-10 bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-[9px] font-black uppercase tracking-[0.1em] transition-all px-0 shadow-inner group relative overflow-hidden"
+                      <Button
+                        variant="outline"
+                        onClick={() => signInWithTwitter()}
+                        disabled={twitterLoading}
+                        className="h-11 w-full bg-black/20 border-white/10 hover:bg-white/[0.05] hover:border-white/20 text-white rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all shadow-inner group relative overflow-hidden"
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         <div className="flex items-center justify-center gap-2 relative z-10">

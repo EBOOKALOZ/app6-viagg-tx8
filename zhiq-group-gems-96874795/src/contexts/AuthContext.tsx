@@ -381,9 +381,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-    } finally {
-      resetState();
+    } catch (err) {
+      console.warn('[signOut] supabase.auth.signOut() falhou — limpando local mesmo assim:', err);
     }
+    // Limpeza defensiva: se signOut falha (offline / token expirado), tokens persistem no
+    // localStorage e o onAuthStateChange volta a hidratar o usuário no próximo render.
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('sb-') || k.includes('supabase'))) toRemove.push(k);
+        }
+        toRemove.forEach(k => localStorage.removeItem(k));
+      }
+    } catch (err) {
+      console.warn('[signOut] limpeza de localStorage falhou:', err);
+    }
+    resetState();
   };
 
   /* ================================

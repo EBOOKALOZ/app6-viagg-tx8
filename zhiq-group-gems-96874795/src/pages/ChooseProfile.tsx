@@ -36,7 +36,7 @@ export default function ChooseProfile() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const handleContinue = async () => {
     if (!selected || !user) return;
@@ -58,8 +58,9 @@ export default function ChooseProfile() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth", { replace: true });
+    await signOut();
+    // Hard reload pra garantir que React state + listeners do auth sumam de vez
+    window.location.replace("/auth");
   };
 
   return (
