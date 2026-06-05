@@ -185,7 +185,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
+            <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl bg-white text-gray-800">
                 {submitted ? (
                     /* ── Success State ── */
                     <div className="p-8 text-center space-y-4">
@@ -352,7 +352,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                                 ) : (
                                     <Percent className="h-4 w-4" />
                                 )}
-                                {submitting ? "Enviando..." : "Enviar Pedido"}
+                                {submitting ? "Enviando..." : "Enviar Oferta"}
                             </button>
                         </div>
                     </>

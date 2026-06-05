@@ -105,6 +105,7 @@ export const ProductForm = () => {
   const [currentId, setCurrentId] = useState<string | null>(listingId || productId || null);
   const [openCategory, setOpenCategory] = useState(false);
   const [productImages, setProductImages] = useState<File[]>([]);
+  const [hasExistingMedia, setHasExistingMedia] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -135,7 +136,7 @@ export const ProductForm = () => {
     title: formData.title.trim().length >= 5,
     category: !!formData.category,
     condition: !!formData.condition,
-    photos: isDigital || productImages.length > 0,
+    photos: isDigital || productImages.length > 0 || hasExistingMedia,
     description: formData.description.trim().length >= 20,
     price: !!formData.price_brl,
     contact: !!contactData.contact_name && !!contactData.whatsapp_e164,
@@ -146,7 +147,9 @@ export const ProductForm = () => {
   const totalChecks = Object.keys(completion).length;
   const progressPct = Math.round((completedCount / totalChecks) * 100);
 
-  const canSubmit = completion.title && completion.category && completion.price && completion.contact && completion.photos && completion.digital;
+  const canSubmit = currentId
+    ? completion.title
+    : completion.title && completion.category && completion.price && completion.contact && completion.photos && completion.digital;
 
   const handleSave = async () => {
     if (!canSubmit) {
@@ -265,9 +268,19 @@ export const ProductForm = () => {
   };
 
   useEffect(() => {
-    if (user && !contactData.contact_name) {
-      setContactData(prev => ({ ...prev, contact_name: user.email?.split('@')[0] || '' }));
-    }
+    if (!user) return;
+    (async () => {
+      const { data: profile } = await supabase
+        .from('profiles' as any)
+        .select('full_name, name, telefone, whatsapp')
+        .eq('id', user.id)
+        .maybeSingle();
+      setContactData(prev => ({
+        contact_name: prev.contact_name || (profile as any)?.full_name || (profile as any)?.name || user.email?.split('@')[0] || '',
+        whatsapp_e164: prev.whatsapp_e164 || formatPhone(((profile as any)?.whatsapp || (profile as any)?.telefone || '')),
+        phone_e164: prev.phone_e164 || formatPhone(((profile as any)?.telefone || '')),
+      }));
+    })();
   }, [user]);
 
   useEffect(() => {
@@ -275,10 +288,13 @@ export const ProductForm = () => {
       const fetchListing = async () => {
         const { data, error } = await supabase
           .from('advertiser_listings' as any)
-          .select('*')
+          .select('*, advertiser_listing_media(id)')
           .eq('id', listingId)
           .single();
         if (data && !error) {
+          setHasExistingMedia(
+            !!data.cover_image_url || (data.advertiser_listing_media?.length ?? 0) > 0
+          );
           let cleanDesc = data.description || '';
           let exBrand = '';
           let exModel = '';
@@ -624,7 +640,7 @@ export const ProductForm = () => {
                   "h-12 px-8 font-bold text-base order-1 sm:order-2 shadow-md",
                   canSubmit
                     ? "bg-[#3483FA] hover:bg-[#2968c8] text-white"
-                    : "bg-zinc-200 text-zinc-400 cursor-not-allowed hover:bg-zinc-200"
+                    : "bg-zinc-400 text-white cursor-not-allowed hover:bg-zinc-400 opacity-80"
                 )}
               >
                 {loading ? 'Publicando...' : (currentId ? 'Salvar Alterações' : 'Publicar Anúncio')}

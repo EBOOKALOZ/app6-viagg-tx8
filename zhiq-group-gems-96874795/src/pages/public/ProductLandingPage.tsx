@@ -139,7 +139,7 @@ export default function ProductLandingPage() {
             // Fallback: advertiser_listings
             if (!data) {
                 const { data: advData, error: advErr } = await (supabase.from("advertiser_listings") as any)
-                    .select("id, title, description, cover_image_url, price, advertiser_account_id, category, condition")
+                    .select("id, title, description, cover_image_url, price, advertiser_account_id, category, condition, advertiser_listing_media(media_url)")
                     .eq("id", id)
                     .maybeSingle();
 
@@ -154,11 +154,18 @@ export default function ProductLandingPage() {
                         .eq("id", advData.advertiser_account_id)
                         .maybeSingle();
 
+                    // Resolve image: cover_image_url → first media row; convert storage path to public URL
+                    const mediaFallback = advData.advertiser_listing_media?.[0]?.media_url ?? null;
+                    let resolvedImg: string | null = advData.cover_image_url || mediaFallback;
+                    if (resolvedImg && !/^https?:\/\//i.test(resolvedImg)) {
+                        resolvedImg = supabase.storage.from('marketing-materials').getPublicUrl(resolvedImg).data.publicUrl;
+                    }
+
                     data = {
                         id: advData.id,
                         title: advData.title,
                         short_description: advData.description,
-                        image_url: advData.cover_image_url,
+                        image_url: resolvedImg,
                         video_url: null,
                         external_link: null,
                         price_label: advData.price?.toString(),

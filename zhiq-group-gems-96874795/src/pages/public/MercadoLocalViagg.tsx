@@ -34,6 +34,7 @@ import {
     SlidersHorizontal,
     MessageCircle,
     Info,
+    Percent,
 } from "lucide-react";
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import { Input } from "@/components/ui/input";
@@ -1476,11 +1477,30 @@ const scrollToProducts = () => {
                                                         }
                                                     }} />
                                             </div>
-                                        ) : (
-                                            <div className="w-full aspect-square flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                                                <ShoppingBag className="h-8 w-8 text-gray-200" />
-                                            </div>
-                                        )}
+                                        ) : (() => {
+                                            const initial = (product.title?.trim()[0] || "?").toUpperCase();
+                                            const palette = [
+                                                "from-orange-400 to-pink-500",
+                                                "from-blue-400 to-indigo-500",
+                                                "from-emerald-400 to-teal-500",
+                                                "from-purple-400 to-fuchsia-500",
+                                                "from-amber-400 to-orange-500",
+                                                "from-rose-400 to-red-500",
+                                                "from-cyan-400 to-blue-500",
+                                            ];
+                                            const idx = (product.id?.charCodeAt(0) ?? 0) % palette.length;
+                                            if (typeof window !== "undefined" && !(window as any).__loggedMissingImg?.[product.id]) {
+                                                (window as any).__loggedMissingImg = (window as any).__loggedMissingImg || {};
+                                                (window as any).__loggedMissingImg[product.id] = true;
+                                                console.warn(`[MercadoLocal] Produto SEM image_url no banco: "${product.title}" (id: ${product.id})`);
+                                            }
+                                            return (
+                                                <div className={`w-full aspect-square flex flex-col items-center justify-center bg-gradient-to-br ${palette[idx]} text-white`}>
+                                                    <span className="text-6xl font-black drop-shadow-md">{initial}</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-80">Sem foto</span>
+                                                </div>
+                                            );
+                                        })()}
                                         {/* WhatsApp Share */}
                                         <button
                                             onClick={(e) => {
@@ -1590,6 +1610,25 @@ const scrollToProducts = () => {
                                                     Adicionar Cesta
                                                 </button>
                                             )}
+
+                                            {/* Botão "Minha Oferta é..." — abre modal de proposta de desconto */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    trackProductEvent({
+                                                        product_id: product.id,
+                                                        store_id: product.merchant_store_id,
+                                                        event_type: "click",
+                                                        city: product.city,
+                                                        source: "minha_oferta",
+                                                    });
+                                                    setDiscountProduct(product);
+                                                }}
+                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] transition-all duration-200 shadow-sm"
+                                            >
+                                                <Percent className="h-3.5 w-3.5" />
+                                                Minha Oferta é...
+                                            </button>
 
                                             {/* Botão "Saber mais" — abre modal de pergunta direto pro vendedor */}
                                             <button
