@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Store, PackageSearch, Megaphone, Menu } from "lucide-react";
+import { Home, Store, MessageSquare, Megaphone } from "lucide-react";
 
 export function StoreBottomNav() {
   const location = useLocation();
@@ -8,7 +8,7 @@ export function StoreBottomNav() {
     {
       label: "Início",
       icon: <Home className="w-5 h-5 mb-1" />,
-      path: "/home",
+      path: "/mercado",
     },
     {
       label: "Minha Loja",
@@ -16,19 +16,19 @@ export function StoreBottomNav() {
       path: "/loja/minha-loja",
     },
     {
-      label: "Pedidos",
-      icon: <PackageSearch className="w-5 h-5 mb-1" />,
-      path: "/loja/pedidos",
+      label: "Mensagens",
+      icon: <MessageSquare className="w-5 h-5 mb-1" />,
+      path: "/anunciante/mensagens",
     },
     {
-      label: "Campanhas",
+      label: "Anunciar",
       icon: <Megaphone className="w-5 h-5 mb-1" />,
       path: "/loja/campanhas",
     },
     {
         label: "Mais",
-        icon: <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-5 h-5 mb-1" />, 
-        path: "/loja/menu",
+        icon: <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-5 h-5 mb-1" />,
+        path: "/anunciante/painel",
       },
   ];
 

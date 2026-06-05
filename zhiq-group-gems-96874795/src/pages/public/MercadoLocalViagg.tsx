@@ -33,7 +33,9 @@ import {
     Menu,
     SlidersHorizontal,
     MessageCircle,
+    Info,
 } from "lucide-react";
+import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
@@ -188,6 +190,9 @@ export default function MercadoLocalViagg() {
     // ── Auction modal state ──
 const [selectedAuction, setSelectedAuction] = useState<any>(null);
 const [auctionModalOpen, setAuctionModalOpen] = useState(false);
+// ── Product inquiry modal ("Saber mais") ──
+const [inquiryProduct, setInquiryProduct] = useState<any>(null);
+const [inquiryOpen, setInquiryOpen] = useState(false);
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
     const { trackSearch, trackCategoryView } = useMarketplaceTracking();
@@ -1586,6 +1591,26 @@ const scrollToProducts = () => {
                                                 </button>
                                             )}
 
+                                            {/* Botão "Saber mais" — abre modal de pergunta direto pro vendedor */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    trackProductEvent({
+                                                        product_id: product.id,
+                                                        store_id: product.merchant_store_id,
+                                                        event_type: "click",
+                                                        city: product.city,
+                                                        source: "saber_mais",
+                                                    });
+                                                    setInquiryProduct(product);
+                                                    setInquiryOpen(true);
+                                                }}
+                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all duration-200 shadow-sm"
+                                            >
+                                                <Info className="h-3.5 w-3.5" />
+                                                Saber mais
+                                            </button>
+
                                              {/* WhatsApp Direct Button */}
                                              {product.whatsapp && (
                                                  <button
@@ -1669,6 +1694,13 @@ const scrollToProducts = () => {
             />
 
             <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />
+
+            {/* Modal "Saber mais" — visitante manda pergunta direto pro vendedor */}
+            <ProductInquiryModal
+                open={inquiryOpen}
+                onClose={() => { setInquiryOpen(false); setInquiryProduct(null); }}
+                product={inquiryProduct}
+            />
         </MarketLayout>
     );
 }

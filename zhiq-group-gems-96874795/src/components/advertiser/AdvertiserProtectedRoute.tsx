@@ -74,7 +74,7 @@ export function AdvertiserProtectedRoute({ children }: AdvertiserProtectedRouteP
   }
 
   if (!user) {
-    return <Navigate to="/auth?entry=advertiser" state={{ from: location }} replace />;
+    return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
   if (hasAdvertiserAccount === false) {
@@ -97,7 +97,7 @@ export function AdvertiserProtectedRoute({ children }: AdvertiserProtectedRouteP
               Tentar Novamente
            </button>
            <button 
-             onClick={() => window.location.href = '/auth?entry=advertiser'}
+             onClick={() => window.location.href = '/auth'}
              className="h-12 bg-zinc-900 text-zinc-400 rounded-2xl font-bold text-xs uppercase hover:text-white transition-all"
            >
               Voltar ao Login

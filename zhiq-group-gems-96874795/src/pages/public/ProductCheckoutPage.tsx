@@ -16,10 +16,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
+import { useAuth } from "@/contexts/AuthContext";
 
 type CheckoutStep = "details" | "payment" | "confirmed" | "failed";
 
@@ -27,6 +30,7 @@ export default function ProductCheckoutPage() {
     const { productId } = useParams();
     const navigate = useNavigate();
 
+    const { user } = useAuth();
     const [product, setProduct] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -34,6 +38,10 @@ export default function ProductCheckoutPage() {
     const [activeOrder, setActiveOrder] = useState<any>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [isExpired, setIsExpired] = useState(false);
+    // Campos de visitante (preenchidos só quando não logado)
+    const [guestName, setGuestName] = useState("");
+    const [guestPhone, setGuestPhone] = useState("");
+    const [guestEmail, setGuestEmail] = useState("");
 
     // 1. Fetch Product
     useEffect(() => {
@@ -109,42 +117,42 @@ export default function ProductCheckoutPage() {
 
     const handleGeneratePayment = async () => {
         if (!product || isProcessing) return;
+
+        // Visitante (não logado) precisa preencher nome + whatsapp pra o lojista poder retornar
+        const isGuest = !user;
+        if (isGuest) {
+            if (!guestName.trim() || !guestPhone.trim()) {
+                toast.error("Preencha nome e WhatsApp para continuar.");
+                return;
+            }
+            if (guestPhone.replace(/\D/g, "").length < 10) {
+                toast.error("WhatsApp inválido. Digite com DDD.");
+                return;
+            }
+        }
+
         setIsProcessing(true);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                toast.error("Você precisa estar logado para comprar.");
-                navigate("/auth");
-                return;
-            }
+            const customerName  = isGuest ? guestName.trim() : (user!.email?.split('@')[0] || 'Cliente');
+            const customerPhone = isGuest ? guestPhone.replace(/\D/g, "") : '000000000';
+            const customerEmail = isGuest ? (guestEmail.trim() || null) : user!.email;
+            const customerUserId = isGuest ? null : user!.id;
 
-            // Create Purchase Intention via RPC
-            const { data, error } = await supabase.rpc('submit_purchase_intention', {
-                p_cart_id: null, // Individual purchase doesn't need a persistent cart ID usually, but the RPC expects it. 
-                // Wait, if I don't have a cart, I might need a different flow or a dummy cart.
-                // For simplicity here, I'll use direct insert since the RPC is mostly for multi-item carts.
-                p_checkout_mode: 'online_payment',
-                p_customer_name: user.email?.split('@')[0] || 'Cliente',
-                p_customer_whatsapp: '000000000',
-                p_customer_email: user.email
-            });
-
-            // Actually, for a single product checkout, direct insert is more reliable if RPC is complex.
-            // Let's create the intention directly to ensure all fields are set.
+            // Create Purchase Intention diretamente (RPC é pra carrinho multi-item).
             const { data: intention, error: insError } = await supabase
                 .from('purchase_intentions')
                 .insert({
-                    store_id: product.owner_user_id, // Store owner
-                    customer_name: user.email?.split('@')[0] || 'Cliente',
-                    customer_whatsapp: '000000000',
-                    customer_email: user.email,
+                    store_id: product.owner_user_id,
+                    customer_name: customerName,
+                    customer_whatsapp: customerPhone,
+                    customer_email: customerEmail,
                     subtotal: product.price,
                     total_items: 1,
                     status: 'new',
                     checkout_mode: 'online_payment',
                     payment_status: 'pending',
-                    customer_user_id: user.id
+                    customer_user_id: customerUserId,
                 })
                 .select()
                 .single();
@@ -240,7 +248,33 @@ export default function ProductCheckoutPage() {
                             {step === "details" && (
                                 <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
                                     <h2 className="text-2xl font-black text-zinc-900 uppercase tracking-tight">Finalizar Compra</h2>
-                                    <Button 
+
+                                    {/* Formulário do visitante — só aparece se NÃO estiver logado */}
+                                    {!user && (
+                                        <div className="space-y-3 rounded-3xl bg-white p-5 border border-zinc-100 shadow-sm">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                                                Seus dados (pra o lojista te contatar)
+                                            </p>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="guest-name" className="text-xs font-bold text-zinc-700">Nome *</Label>
+                                                <Input id="guest-name" value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Seu nome" className="h-11" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="guest-phone" className="text-xs font-bold text-zinc-700">WhatsApp *</Label>
+                                                <Input id="guest-phone" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} placeholder="(00) 00000-0000" inputMode="tel" className="h-11" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor="guest-email" className="text-xs font-bold text-zinc-700">E-mail (opcional)</Label>
+                                                <Input id="guest-email" type="email" value={guestEmail} onChange={(e) => setGuestEmail(e.target.value)} placeholder="seu@email.com" className="h-11" />
+                                            </div>
+                                            <p className="text-[9px] text-zinc-400 leading-relaxed pt-1">
+                                                Quer salvar seus dados pra próximas compras?
+                                                <button type="button" onClick={() => navigate('/auth')} className="text-emerald-600 font-bold ml-1 hover:underline">Crie uma conta</button>
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <Button
                                         onClick={handleGeneratePayment}
                                         disabled={isProcessing}
                                         className="w-full h-20 rounded-[28px] bg-zinc-900 hover:bg-zinc-800 text-white font-black uppercase text-sm tracking-[0.2em] shadow-2xl transition-all"

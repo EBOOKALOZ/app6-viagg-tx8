@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { FooterNeutral } from "@/components/FooterNeutral";
+import { StoreBottomNav } from "@/components/store/StoreBottomNav";
 import {
     Search,
     ShoppingBag,
@@ -54,7 +55,8 @@ export function MarketLayout({
     hideCart = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
-    const { user, isLoading, availableProfiles } = useAuth();
+    const { user, isLoading, availableProfiles, activeProfile } = useAuth();
+    const isMerchant = activeProfile === 'merchant';
 
     const handleMotoboyClick = () => {
         if (!user) {
@@ -251,12 +253,14 @@ export function MarketLayout({
             </div>
 
             {/* ═══ MAIN CONTENT ═══ */}
-            <main className={cn("flex-1", mainClassName)}>
+            <main className={cn("flex-1", isMerchant && "pb-20", mainClassName)}>
                 {children}
             </main>
 
-            {/* ═══ FOOTER ═══ */}
-            <FooterNeutral />
+            {/* ═══ FOOTER / BOTTOM NAV ═══
+                Lojista vê o StoreBottomNav fixo (consistente com as demais telas).
+                Demais perfis e visitantes mantêm o FooterNeutral em fluxo. */}
+            {isMerchant ? <StoreBottomNav /> : <FooterNeutral />}
 
             {/* ── Drawers/Modals ── */}
             {!hideCart && <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />}

@@ -31,7 +31,7 @@ import { playLeadNotificationSound } from "@/lib/notificationSound";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-export type ListingModule = "real_estate" | "vehicles";
+export type ListingModule = "real_estate" | "vehicles" | "product";
 
 export type InterestType =
   | "whatsapp_click"
@@ -109,6 +109,7 @@ export function useContactIntentions() {
       // ── Enriquecer com título/imagem do anúncio ───────────────────────────
       const realEstateIds = Array.from(new Set(rows.filter(r => r.listing_module === "real_estate").map(r => r.listing_id)));
       const vehicleIds = Array.from(new Set(rows.filter(r => r.listing_module === "vehicles").map(r => r.listing_id)));
+      const productIds = Array.from(new Set(rows.filter(r => r.listing_module === "product").map(r => r.listing_id)));
 
       const titleMap = new Map<string, string>();
       const imageMap = new Map<string, string>();
@@ -155,6 +156,32 @@ export function useContactIntentions() {
               ? path
               : supabase.storage.from("real-estate-original").getPublicUrl(path).data.publicUrl;
             if (url) imageMap.set(m.listing_id, url);
+          });
+        }
+      }
+
+      // ── Produtos do /mercado (merchant_marketing_products + advertiser_listings) ──
+      if (productIds.length > 0) {
+        // 1. merchant_marketing_products — tenta todos os campos de imagem conhecidos
+        const { data: mmpRows } = await (supabase.from("merchant_marketing_products") as any)
+          .select("*")
+          .in("id", productIds);
+        (mmpRows || []).forEach((p: any) => {
+          const title = p.title || p.name || p.nome || null;
+          if (title) titleMap.set(p.id, title);
+          const img = p.image_url || p.cover_image_url || p.imagem_url || p.thumbnail_url || null;
+          if (img) imageMap.set(p.id, img);
+        });
+        // 2. fallback: advertiser_listings
+        const missing = productIds.filter(id => !titleMap.has(id));
+        if (missing.length > 0) {
+          const { data: alRows } = await (supabase.from("advertiser_listings") as any)
+            .select("id, title, cover_image_url, advertiser_listing_media(media_url)")
+            .in("id", missing);
+          (alRows || []).forEach((p: any) => {
+            if (p.title) titleMap.set(p.id, p.title);
+            const mediaUrl = p.cover_image_url || p.advertiser_listing_media?.[0]?.media_url;
+            if (mediaUrl) imageMap.set(p.id, mediaUrl);
           });
         }
       }

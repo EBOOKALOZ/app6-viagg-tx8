@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { FloatingMessageButton } from "./FloatingMessageButton";
+import { StoreBottomNav } from "@/components/store/StoreBottomNav";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -198,6 +199,9 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
 
       {/* Botão flutuante para Mensagens */}
       <FloatingMessageButton />
+
+      {/* Bottom nav consistente em todas as telas do lojista */}
+      <StoreBottomNav />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MerchantPanelHeader } from "@/components/merchant/MerchantPanelHeader";
-import { MerchantBottomNav } from "@/components/merchant/MerchantBottomNav";
+import { StoreBottomNav } from "@/components/store/StoreBottomNav";
 import { MerchantWeatherCard } from "@/components/merchant/MerchantWeatherCard";
 import { FooterProfile } from "@/components/FooterProfile";
 import { FloatingMessageButton } from "@/components/advertiser/FloatingMessageButton";
@@ -99,7 +99,7 @@ export function MerchantLayout() {
       </main>
 
       <FooterProfile profile="merchant" />
-      <MerchantBottomNav />
+      <StoreBottomNav />
       <FloatingMessageButton />
     </div>
   );

@@ -125,15 +125,25 @@ export default function AdvertiserLeadsPage() {
     }
   };
 
+  // Lojista só pode ler mensagens se já comprou ao menos um pacote (status 'paid').
+  // Grants administrativos sem compra real NÃO contam.
+  const hasPaidPackage = purchaseHistory.some(p => p.payment_status === 'paid');
+
   const handleUnlock = async (id: string) => {
-    // Pré-checagem: se o saldo já é zero, encaminha direto pra compra
+    // Gate 1: precisa ter comprado um pacote em algum momento
+    if (!hasPaidPackage) {
+      toast.error('Adquira um pacote de créditos pra liberar a leitura de mensagens.', { duration: 3500 });
+      setTimeout(() => navigate('/anunciante/creditos'), 800);
+      return;
+    }
+    // Gate 2: saldo atual precisa cobrir
     if ((balance.available_credits ?? 0) <= 0) {
       toast.error('Você não tem créditos. Redirecionando pra compra de pacotes…', { duration: 3000 });
       setTimeout(() => navigate('/anunciante/creditos'), 800);
       return;
     }
     try {
-      const result = await unlockIntention(id, 9);
+      const result = await unlockIntention(id, 13);
       if (result.success) {
         toast.success(`Contato desbloqueado com sucesso! Foram descontados ${result.credits_charged} créditos.`);
       } else {
@@ -200,6 +210,33 @@ export default function AdvertiserLeadsPage() {
         </div>
       </div>
 
+      {/* ── Gate de acesso: aviso vermelho se nunca comprou pacote ── */}
+      {!isLoadingHistory && !hasPaidPackage && (
+        <Card className="border-2 border-red-500/50 bg-gradient-to-br from-red-950/40 to-orange-950/30 overflow-hidden">
+          <CardContent className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0">
+              <Lock className="w-6 h-6 text-red-300" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-black text-red-100 mb-1">
+                Mensagens bloqueadas
+              </h3>
+              <p className="text-sm text-red-200/90 leading-snug">
+                Pra ler as mensagens dos clientes, você precisa adquirir ao menos
+                um pacote de créditos. Sem pacote, os contatos ficam ocultos
+                mesmo que cheguem.
+              </p>
+            </div>
+            <Button
+              onClick={() => navigate('/anunciante/creditos')}
+              className="bg-red-500 hover:bg-red-400 text-white font-black uppercase text-xs tracking-widest h-11 px-5 shrink-0 w-full sm:w-auto shadow-lg shadow-red-500/30"
+            >
+              Adquirir Pacote
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── Pacotes Adquiridos: histórico de compras + saldo atual ── */}
       <Card className="bg-[#0F1419] border-[#2A3038] overflow-hidden">
         <CardHeader className="border-b border-[#2A3038] py-4 px-5 flex flex-row items-center justify-between gap-3 flex-wrap">
@@ -214,17 +251,11 @@ export default function AdvertiserLeadsPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+          <div className="flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 px-4 py-1.5 rounded-lg text-center">
               <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
               <p className="text-lg font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[10px] text-emerald-300">créd.</span></p>
             </div>
-            <Button
-              onClick={() => navigate('/anunciante/creditos')}
-              className="h-9 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[10px] tracking-widest px-3"
-            >
-              + Comprar
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
@@ -236,9 +267,11 @@ export default function AdvertiserLeadsPage() {
               <p className="text-sm text-[#A7B0BE]">Você ainda não comprou nenhum pacote de créditos.</p>
               <Button
                 onClick={() => navigate('/anunciante/creditos')}
-                className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-bold uppercase text-xs tracking-widest"
+                className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-bold uppercase text-[11px] tracking-wider h-auto py-3 px-5 leading-tight whitespace-normal text-center max-w-[280px] mx-auto"
               >
-                Adquirir primeiro pacote
+                Adquira pacotes<br className="sm:hidden" />
+                <span className="hidden sm:inline"> </span>
+                e feche suas vendas
               </Button>
             </div>
           ) : (
@@ -444,46 +477,56 @@ export default function AdvertiserLeadsPage() {
 
                 <CardContent className="p-5 pt-2 flex flex-col flex-1 space-y-4">
                   {/* Anúncio de interesse */}
-                  <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
-                    {lead.listing_image_url ? (
-                      <img
-                        src={lead.listing_image_url}
-                        alt={lead.listing_title || "Anúncio"}
-                        className="w-full h-40 object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-40 flex items-center justify-center bg-zinc-900">
-                        {lead.listing_module === "real_estate" ? (
-                          <Building2 className="w-10 h-10 text-zinc-700" />
+                  {(() => {
+                    const isRE = lead.listing_module === "real_estate";
+                    const isProd = lead.listing_module === "product";
+                    const ModuleIcon = isRE ? Building2 : isProd ? Package : Car;
+                    const moduleLabel = isRE ? "Imóvel" : isProd ? "Produto" : "Veículo";
+                    return (
+                      <div className="bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden">
+                        {lead.listing_image_url ? (
+                          <img
+                            src={lead.listing_image_url}
+                            alt={lead.listing_title || "Anúncio"}
+                            className="w-full h-40 object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              // Esconde a img quebrada e deixa o fallback aparecer no próximo render
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
                         ) : (
-                          <Car className="w-10 h-10 text-zinc-700" />
+                          <div className="w-full h-40 flex items-center justify-center bg-zinc-900">
+                            <ModuleIcon className="w-10 h-10 text-zinc-700" />
+                          </div>
                         )}
-                      </div>
-                    )}
-                    <div className="flex items-start gap-2 px-3 py-2 border-t border-zinc-800">
-                      {lead.listing_module === "real_estate" ? (
-                        <Building2 className="w-4 h-4 text-[#FF6A00] shrink-0 mt-0.5" />
-                      ) : (
-                        <Car className="w-4 h-4 text-[#FF6A00] shrink-0 mt-0.5" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
-                          Interesse em
-                        </div>
-                        <div className="text-[13px] font-bold text-[#F5F7FA] line-clamp-2 leading-tight">
-                          {lead.listing_title || (lead.listing_module === "real_estate" ? "Imóvel" : "Veículo")}
+                        <div className="flex items-start gap-2 px-3 py-2 border-t border-zinc-800">
+                          <ModuleIcon className="w-4 h-4 text-[#FF6A00] shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+                              Interesse em
+                            </div>
+                            <div className="text-[13px] font-bold text-[#F5F7FA] line-clamp-2 leading-tight">
+                              {lead.listing_title || moduleLabel}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-3 border-b border-zinc-900/20 pb-3 mb-3">
                       <h4 className="text-zinc-900 font-black text-lg line-clamp-1">
                         {isUnlocked
                           ? lead.visitor_name
-                          : (lead.visitor_name?.trim().split(/\s+/)[0] || "Mensagem de anonimo")}
+                          : (() => {
+                              const firstName = lead.visitor_name?.trim().split(/\s+/)[0];
+                              if (!firstName) return "Mensagem anônima";
+                              // Mostra só as 2 primeiras letras + ***  (ex: "Júlia" → "Jú***")
+                              const visible = firstName.slice(0, 2);
+                              return `${visible}***`;
+                            })()}
                       </h4>
                       <svg className="w-10 h-10 shrink-0 fill-[#25D366] drop-shadow-lg" viewBox="0 0 24 24">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
@@ -522,13 +565,13 @@ export default function AdvertiserLeadsPage() {
                       <div className="space-y-2">
                         <Button
                           onClick={() => handleUnlock(lead.id)}
-                          className="w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[18px] tracking-widest h-16 shadow-lg shadow-[#FF6A00]/20 gap-3"
+                          className="w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-sm sm:text-base tracking-wider h-14 shadow-lg shadow-[#FF6A00]/20 gap-2 px-3 whitespace-nowrap"
                         >
-                          <Unlock className="w-6 h-6" /> 
-                          Desbloquear (9 Créditos)
+                          <Unlock className="w-5 h-5 shrink-0" />
+                          <span className="truncate">Desbloquear (13 Créditos)</span>
                         </Button>
-                        <div className="text-center text-[18px] font-black text-zinc-700 uppercase tracking-widest mt-1">
-                          Saldo Atual: <span className={balance.available_credits >= 9 ? "text-emerald-700" : "text-red-600"}>{balance.available_credits} Créditos</span>
+                        <div className="text-center text-sm sm:text-base font-black text-zinc-700 uppercase tracking-wider mt-1">
+                          Saldo Atual: <span className={balance.available_credits >= 13 ? "text-emerald-700" : "text-red-600"}>{balance.available_credits} Créditos</span>
                         </div>
                       </div>
                     ) : (

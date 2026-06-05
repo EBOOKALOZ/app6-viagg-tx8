@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { FooterProfile } from "@/components/FooterProfile";
 import MotoboyBottomNav from "@/components/motoboy/MotoboyBottomNav";
 import BottomNav from "@/components/passenger/BottomNav";
+import { StoreBottomNav } from "@/components/store/StoreBottomNav";
 import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import { Home, History, User, Store, Wallet, Settings, Truck } from "lucide-react";
 
@@ -154,7 +155,7 @@ export function AppLayout() {
       case "passenger":
         return <BottomNav />;
       case "merchant":
-        return <MerchantBottomNav />;
+        return <StoreBottomNav />;
       case "driver":
       case "freteiro":
         return <DriverBottomNav />;
