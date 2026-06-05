@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
+import { fetchOrderPayContext } from '@/lib/payments/deliveryPay';
 
 interface DeliveryTrackingCardProps {
   delivery: {
@@ -77,6 +79,7 @@ function canBeCancelled(status: string): boolean {
 
 export function DeliveryTrackingCard({ delivery, onCancelled }: DeliveryTrackingCardProps) {
   const [isCancelling, setIsCancelling] = useState(false);
+  const { cancelDelivery: cancelDeliveryPay } = usePaymentsOrchestrator();
   const currentStep = getStepIndex(delivery.status);
   const isAccepted = currentStep >= 1;
   const isCompleted = currentStep >= 4;
@@ -92,7 +95,23 @@ export function DeliveryTrackingCard({ delivery, onCancelled }: DeliveryTracking
 
       if (error) throw error;
 
-      toast.success('Entrega cancelada com sucesso');
+      // Estorno pay_*: devolve o valor reservado no escrow pra carteira do lojista
+      try {
+        const ctx = await fetchOrderPayContext(delivery.id);
+        if (ctx?.storeId && ctx.amountCents > 0) {
+          await cancelDeliveryPay({
+            merchant_owner_id: ctx.storeId,
+            credits_cost_cents: ctx.amountCents,
+            delivery_id: delivery.id,
+            reason: 'Cancelada pelo lojista',
+          });
+        }
+      } catch (payErr: any) {
+        // Não derruba o cancelamento; loga e segue
+        console.error('[DeliveryTrackingCard] estorno pay_* falhou:', payErr);
+      }
+
+      toast.success('Entrega cancelada e valor estornado');
       onCancelled?.();
     } catch (error: any) {
       console.error('[DeliveryTrackingCard] Erro ao cancelar:', error);

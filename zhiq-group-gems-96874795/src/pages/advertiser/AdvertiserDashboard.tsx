@@ -219,45 +219,44 @@ export default function AdvertiserDashboard() {
       )}
 
       {/* Premium Welcome Hero */}
-      <section className="relative overflow-hidden rounded-[32px] bg-[#0D0F12] p-12 text-white shadow-2xl shadow-black/40 border border-[#2A3038]/60">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-orange-600/10 blur-[120px] rounded-full -mr-64 -mt-64 animate-pulse duration-5000" />
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
-          <div className="space-y-6 max-w-2xl">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-12 bg-orange-500 rounded-full" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-orange-500">Administrativo Premium</span>
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-[32px] bg-[#0D0F12] p-5 sm:p-8 lg:p-12 text-white shadow-2xl shadow-black/40 border border-[#2A3038]/60">
+        <div className="absolute top-0 right-0 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-orange-600/10 blur-[120px] rounded-full -mr-32 sm:-mr-64 -mt-32 sm:-mt-64 animate-pulse duration-5000" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-10">
+          <div className="space-y-4 sm:space-y-6 max-w-2xl min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-1.5 sm:h-2 w-8 sm:w-12 bg-orange-500 rounded-full shrink-0" />
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] text-orange-500">Administrativo Premium</span>
             </div>
             <div className="space-y-2">
-              <h1 className="text-5xl font-black tracking-tighter leading-none">
-                BEM-VINDO AO NOVO PAINEL, <span className="text-orange-500">{displayName.toUpperCase()}</span>!
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight sm:tracking-tighter leading-tight sm:leading-none break-words">
+                Seja bem vindo lojista{' '}
+                <span className="text-orange-500 break-all">{displayName}</span>
               </h1>
-              <p className="text-zinc-400 font-medium text-lg leading-relaxed">
-                Transforme seus imóveis e produtos em vendas reais. Gerencie sua presença digital com a tecnologia mais avançada da região.
-              </p>
             </div>
-            <div className="flex flex-wrap gap-4 pt-4">
-              <Button 
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 pt-2 sm:pt-4">
+              <Button
                 onClick={() => navigate("/anunciante/anuncios/novo")}
-                className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest h-14 px-10 rounded-2xl shadow-xl shadow-[#FF6A00]/20 gap-3 group transition-all"
+                className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] sm:text-xs tracking-wider sm:tracking-widest h-12 sm:h-14 px-5 sm:px-10 rounded-xl sm:rounded-2xl shadow-xl shadow-[#FF6A00]/20 gap-2 sm:gap-3 group transition-all w-full sm:w-auto"
               >
-                <Plus className="w-5 h-5 transition-transform group-hover:rotate-90 duration-300" /> Criar Primeiro Anúncio
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:rotate-90 duration-300 shrink-0" />
+                <span className="truncate">Criar Primeiro Anúncio</span>
               </Button>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => navigate("/anunciante/conta")}
-                className="border-white/10 bg-white/5 hover:bg-white/10 text-white font-black uppercase text-xs tracking-widest h-14 px-8 rounded-2xl backdrop-blur-md transition-all border-none"
+                className="bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[11px] sm:text-xs tracking-wider sm:tracking-widest h-12 sm:h-14 px-5 sm:px-8 rounded-xl sm:rounded-2xl backdrop-blur-md transition-all border-none w-full sm:w-auto"
               >
                 Completar Perfil
               </Button>
             </div>
           </div>
-          
-          <div className="hidden lg:block">
+
+          <div className="hidden lg:block shrink-0">
              <div className="w-64 h-64 rounded-[50px] bg-gradient-to-br from-zinc-800 to-zinc-900 border border-white/10 flex items-center justify-center relative shadow-inner overflow-hidden">
                 <div className="absolute inset-0 bg-orange-500/5 blur-3xl rounded-full" />
-                <img 
-                  src="/assets/brand/logo-advertiser.jpg" 
-                  alt="Viagg-Tx8" 
+                <img
+                  src="/assets/brand/logo-advertiser.jpg"
+                  alt="Viagg-Tx8"
                   className="w-56 h-auto max-h-[85%] rounded-[32px] opacity-90 filter brightness-110 saturate-[1.2] shadow-2xl transition-all duration-500 hover:scale-105 object-contain"
                 />
              </div>

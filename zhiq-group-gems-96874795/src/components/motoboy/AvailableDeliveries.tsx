@@ -279,33 +279,56 @@ export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesPro
         .eq('id', deliveryId)
         .single();
 
-      if (deliveryData?.merchant_id && deliveryData?.total_price) {
-        const storeId = await resolveMerchantStoreId(deliveryData.merchant_id);
-        if (!storeId) {
-          console.error('[AvailableDeliveries] merchant_store não resolvido p/', deliveryData.merchant_id);
-        } else {
-          try {
-            await requestDelivery({
-              merchant_owner_id: storeId,
-              motoboy_owner_id: motoboyId,
-              credits_cost_cents: Math.round(Number(deliveryData.total_price) * 100),
-              delivery_id: deliveryId,
-              description: `Reserva entrega ${deliveryId}`,
-            });
-          } catch (payErr: any) {
-            // Não derruba a entrega já aceita: registra e avisa. O lojista
-            // pode estar sem saldo pay_* migrado durante a transição.
-            console.error('[AvailableDeliveries] requestDelivery (pay_*) falhou:', payErr);
-            toast.warning('Entrega aceita, mas a reserva de saldo do lojista falhou', {
-              description: payErr?.message || 'Verifique o saldo da carteira do lojista.',
-            });
-          }
-        }
+      /* RESERVA ATÔMICA: se a reserva pay_* falhar (típico: saldo do lojista
+         insuficiente), REVERTE o aceite — devolve a entrega pra fila e
+         devolve o card pro motoboy. Princípio: ou aceita e reserva, ou
+         nada acontece. */
+      const revertAcceptance = async (reason: string) => {
+        console.warn('[AvailableDeliveries] Revertendo aceite:', reason);
+        await supabase
+          .from('service_orders')
+          .update({ status: 'pending', motoboy_id: null, professional_id: null, accepted_at: null })
+          .eq('id', deliveryId);
+        fetchDeliveries();
+      };
+
+      if (!deliveryData?.merchant_id || !deliveryData?.total_price) {
+        await revertAcceptance('dados do pedido incompletos');
+        toast.error('Não foi possível aceitar: dados do pedido incompletos.');
+        return;
       }
-      
+
+      const storeId = await resolveMerchantStoreId(deliveryData.merchant_id);
+      if (!storeId) {
+        await revertAcceptance('merchant_store não resolvido');
+        toast.error('Não foi possível aceitar: lojista sem carteira configurada.');
+        return;
+      }
+
+      try {
+        await requestDelivery({
+          merchant_owner_id: storeId,
+          motoboy_owner_id: motoboyId,
+          credits_cost_cents: Math.round(Number(deliveryData.total_price) * 100),
+          delivery_id: deliveryId,
+          description: `Reserva entrega ${deliveryId}`,
+        });
+      } catch (payErr: any) {
+        await revertAcceptance(`reserva pay_* falhou: ${payErr?.message}`);
+        const msg = payErr?.message || '';
+        const semSaldo = /saldo|insufficient|insuficiente|funds/i.test(msg);
+        toast.error(semSaldo ? 'Lojista sem saldo' : 'Falha na reserva de pagamento', {
+          description: semSaldo
+            ? 'A carteira do lojista não tem saldo pra cobrir essa entrega. A entrega voltou pra fila.'
+            : (msg || 'Tente novamente. Se persistir, contate o suporte.'),
+          duration: 6000,
+        });
+        return;
+      }
+
       // BROADCAST IMEDIATO
       broadcastDeliveryAcceptedGlobal(deliveryId, motoboyId);
-      
+
       toast.success('Entrega aceita! Redirecionando...');
       onAccept?.();
       navigate('/motoboy/rides');

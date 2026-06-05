@@ -8,6 +8,9 @@ import {
   ExternalLink, Clock, Bike, Package, AlertCircle, Key
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
+import { useMotoboyCommission } from '@/hooks/useMotoboyCommission';
 
 const RouteMapCanvas = lazy(() => import('@/components/motoboy/RouteMapCanvas'));
 
@@ -41,6 +44,9 @@ export default function MotoboyAwaitingRide() {
   const navigate    = useNavigate();
   const [sp]        = useSearchParams();
   const offerId     = sp.get('id');
+  const { user }    = useAuth();
+  const { completeDelivery } = usePaymentsOrchestrator();
+  const { commissionRate } = useMotoboyCommission(user?.id);
 
   const [offerRow,   setOfferRow]   = useState<any>(null);
   const [orderRow,   setOrderRow]   = useState<any>(null);
@@ -163,6 +169,33 @@ export default function MotoboyAwaitingRide() {
     } finally { setValidatingCode(false); }
   }, [pickupCode, orderRow]);
 
+  /* Após a RPC complete_delivery_order marcar a entrega concluída, libera
+     o dinheiro reservado: escrow → motoboy (líquido) + plataforma (fee).
+     Comissão calculada a partir do tier atual do motoboy via useMotoboyCommission. */
+  const settleEscrowToMotoboy = useCallback(async () => {
+    if (!user?.id || !orderRow?.id || !orderRow?.total_price) {
+      console.warn('[settleEscrowToMotoboy] dados ausentes — pulando liberação');
+      return;
+    }
+    const grossCents = Math.round(Number(orderRow.total_price) * 100);
+    const feeCents = Math.round((grossCents * (commissionRate ?? 25)) / 100);
+    try {
+      await completeDelivery({
+        motoboy_owner_id: user.id,
+        credits_cost_cents: grossCents,
+        platform_fee_cents: feeCents,
+        delivery_id: orderRow.id,
+      });
+    } catch (err: any) {
+      // Não derruba o UX da finalização — a entrega já foi marcada como
+      // concluída. Loga e avisa silencioso para o motoboy.
+      console.error('[settleEscrowToMotoboy] falhou:', err);
+      toast.warning('Entrega finalizada, mas a liberação do pagamento falhou', {
+        description: 'O suporte vai regularizar. Não tente refinalizar.',
+      });
+    }
+  }, [user?.id, orderRow, commissionRate, completeDelivery]);
+
   // ── Validar código de entrega + finalizar em um único passo ──────────────
   const handleValidateDelivery = useCallback(async () => {
     if (!orderRow?.id || advancing) return;
@@ -179,6 +212,8 @@ export default function MotoboyAwaitingRide() {
     try {
       const { error } = await supabase.rpc('complete_delivery_order', { p_order_id: orderRow.id });
       if (error) throw error;
+      // Libera o escrow do lojista pro motoboy ANTES de navegar (assim ele já vê o saldo subir)
+      await settleEscrowToMotoboy();
       setPhase('delivered');
       toast.success('🎉 Entrega finalizada!');
       setTimeout(() => navigate('/motoboy'), 2500);
@@ -190,7 +225,7 @@ export default function MotoboyAwaitingRide() {
     } finally {
       setAdvancing(false);
     }
-  }, [orderRow, deliveryCode, advancing, navigate]);
+  }, [orderRow, deliveryCode, advancing, navigate, settleEscrowToMotoboy]);
 
   // ── Finalizar entrega (fallback manual se necessário) ─────────────────────
   const handleFinalize = useCallback(async () => {
@@ -203,13 +238,14 @@ export default function MotoboyAwaitingRide() {
     try {
       const { error } = await supabase.rpc('complete_delivery_order', { p_order_id: orderRow.id });
       if (error) throw error;
+      await settleEscrowToMotoboy();
       setPhase('delivered');
       toast.success('🎉 Entrega finalizada!');
       setTimeout(() => navigate('/motoboy'), 2500);
     } catch (e: any) {
       toast.error(e.message || 'Erro ao finalizar.');
     } finally { setAdvancing(false); }
-  }, [orderRow, advancing, navigate, deliveryValidated]);
+  }, [orderRow, advancing, navigate, deliveryValidated, settleEscrowToMotoboy]);
 
   // ── Chegar na loja ─────────────────────────────────────────────────────────
   const handleArrivedAtStore = useCallback(() => {

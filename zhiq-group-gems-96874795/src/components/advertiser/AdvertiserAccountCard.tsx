@@ -2,6 +2,7 @@ import React from "react";
 import { User, Mail, Smartphone, Calendar, ShieldCheck, Edit3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 interface AdvertiserAccountCardProps {
@@ -15,6 +16,7 @@ interface AdvertiserAccountCardProps {
 }
 
 export function AdvertiserAccountCard({ account }: AdvertiserAccountCardProps) {
+  const { avatarUrl } = useAuth();
   const statusColors = {
     ativa: "bg-emerald-100 text-emerald-700 border-emerald-200",
     inativa: "bg-amber-100 text-amber-700 border-amber-200",
@@ -34,28 +36,37 @@ export function AdvertiserAccountCard({ account }: AdvertiserAccountCardProps) {
   });
 
   return (
-    <Card className="border-none shadow-2xl shadow-zinc-200/50 rounded-[32px] overflow-hidden bg-white group">
-      <CardHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-zinc-50">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-orange-500" />
-            IDENTIFICAÇÃO DA CONTA
+    <Card className="border-none shadow-2xl shadow-zinc-200/50 rounded-2xl sm:rounded-[32px] overflow-hidden bg-white group">
+      <CardHeader className="p-5 sm:p-8 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 border-b border-zinc-50">
+        <div className="space-y-1 min-w-0 flex-1">
+          <CardTitle className="text-base sm:text-xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0" />
+            <span className="truncate">IDENTIFICAÇÃO DA CONTA</span>
           </CardTitle>
-          <CardDescription className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Detalhes do seu perfil administrativo</CardDescription>
+          <CardDescription className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-widest">Detalhes do seu perfil administrativo</CardDescription>
         </div>
-        <Button variant="outline" className="rounded-2xl font-bold border-zinc-100 hover:bg-zinc-50 gap-2 h-10 px-4 group-hover:border-orange-200 transition-all">
+        <Button className="rounded-xl sm:rounded-2xl font-bold bg-yellow-400 hover:bg-yellow-300 text-black border-none gap-2 h-10 px-4 transition-all w-full sm:w-auto shrink-0 shadow-md shadow-yellow-400/30">
           <Edit3 className="w-4 h-4" /> Editar Conta
         </Button>
       </CardHeader>
       
-      <CardContent className="p-8 space-y-8">
-        <div className="flex flex-col md:flex-row gap-8 items-start">
+      <CardContent className="p-5 sm:p-8 space-y-6 sm:space-y-8">
+        <div className="flex flex-col md:flex-row gap-4 sm:gap-8 items-start">
           {/* Avatar / Icon */}
-          <div className="w-24 h-24 rounded-[40px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-100 flex items-center justify-center text-orange-600 shadow-inner group-hover:scale-105 transition-all duration-500">
-             <User className="w-10 h-10" />
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl sm:rounded-[40px] bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-100 flex items-center justify-center text-orange-600 shadow-inner overflow-hidden group-hover:scale-105 transition-all duration-500 shrink-0 self-center md:self-start">
+             {avatarUrl ? (
+               <img
+                 src={avatarUrl}
+                 alt={account.full_name || 'Avatar'}
+                 className="w-full h-full object-cover"
+                 onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+               />
+             ) : (
+               <User className="w-8 h-8 sm:w-10 sm:h-10" />
+             )}
           </div>
 
-          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 sm:gap-x-12 gap-y-4 sm:gap-y-6 w-full min-w-0">
              <div className="space-y-1">
                 <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-1.5">
                    <User className="w-3 h-3" /> Nome Completo

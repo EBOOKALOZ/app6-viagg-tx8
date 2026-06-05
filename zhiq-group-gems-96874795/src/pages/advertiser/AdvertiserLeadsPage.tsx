@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
+import { useAdvertiserPurchaseHistory } from "@/hooks/useAdvertiserCreditPurchase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Lock, Unlock, Phone, Clock, MapPin, AlertCircle, Building2, Car, Trash2, Volume2, VolumeX, User, Mail, Package, CheckCircle2 } from "lucide-react";
+import { MessageSquare, Lock, Unlock, Phone, Clock, MapPin, AlertCircle, Building2, Car, Trash2, Volume2, VolumeX, User, Mail, Package, CheckCircle2, ShoppingBag, XCircle, Hourglass } from "lucide-react";
 import { toast } from "sonner";
 import LoadingTransition from "@/pages/LoadingTransition";
 import { isLeadSoundEnabled, setLeadSoundEnabled, playLeadNotificationSound, stopLeadNotificationSound } from "@/lib/notificationSound";
@@ -38,6 +39,7 @@ export default function AdvertiserLeadsPage() {
   const { intentions, isLoading, pendingCount, unlockIntention, deleteIntention } = useContactIntentions();
   const { balance } = useAdvertiserCredits();
   const { data: accountData } = useAdvertiserAccountData();
+  const { data: purchaseHistory = [], isLoading: isLoadingHistory } = useAdvertiserPurchaseHistory();
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isLeadSoundEnabled());
 
   const { data: purchaseIntentions = [], refetch: refetchPurchases } = useQuery<PurchaseIntentionCard[]>({
@@ -124,13 +126,20 @@ export default function AdvertiserLeadsPage() {
   };
 
   const handleUnlock = async (id: string) => {
+    // Pré-checagem: se o saldo já é zero, encaminha direto pra compra
+    if ((balance.available_credits ?? 0) <= 0) {
+      toast.error('Você não tem créditos. Redirecionando pra compra de pacotes…', { duration: 3000 });
+      setTimeout(() => navigate('/anunciante/creditos'), 800);
+      return;
+    }
     try {
       const result = await unlockIntention(id, 9);
       if (result.success) {
         toast.success(`Contato desbloqueado com sucesso! Foram descontados ${result.credits_charged} créditos.`);
       } else {
         if (result.buy_credits_cta) {
-          toast.error(`Saldo insuficiente. Você precisa de ${result.required} créditos, mas possui apenas ${result.available}. Por favor, adquira um pacote de créditos.`);
+          toast.error(`Saldo insuficiente. Você tem ${result.available}, precisa de ${result.required}. Redirecionando pra compra…`, { duration: 3000 });
+          setTimeout(() => navigate('/anunciante/creditos'), 800);
         } else {
           toast.error("Erro ao desbloquear contato: " + result.error);
         }
@@ -190,6 +199,94 @@ export default function AdvertiserLeadsPage() {
           )}
         </div>
       </div>
+
+      {/* ── Pacotes Adquiridos: histórico de compras + saldo atual ── */}
+      <Card className="bg-[#0F1419] border-[#2A3038] overflow-hidden">
+        <CardHeader className="border-b border-[#2A3038] py-4 px-5 flex flex-row items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8A33] flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">PACOTES ADQUIRIDOS</h2>
+              <p className="text-[10px] sm:text-xs text-[#A7B0BE] uppercase tracking-widest">
+                Créditos usados pra ler mensagens e desbloquear leads
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
+              <p className="text-lg font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[10px] text-emerald-300">créd.</span></p>
+            </div>
+            <Button
+              onClick={() => navigate('/anunciante/creditos')}
+              className="h-9 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[10px] tracking-widest px-3"
+            >
+              + Comprar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoadingHistory ? (
+            <div className="p-6 text-center text-sm text-[#A7B0BE]">Carregando histórico…</div>
+          ) : purchaseHistory.length === 0 ? (
+            <div className="p-6 text-center space-y-3">
+              <Package className="w-10 h-10 text-[#A7B0BE]/40 mx-auto" />
+              <p className="text-sm text-[#A7B0BE]">Você ainda não comprou nenhum pacote de créditos.</p>
+              <Button
+                onClick={() => navigate('/anunciante/creditos')}
+                className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-bold uppercase text-xs tracking-widest"
+              >
+                Adquirir primeiro pacote
+              </Button>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#2A3038]">
+              {purchaseHistory.slice(0, 10).map((p) => {
+                const statusMap: Record<string, { label: string; icon: any; color: string }> = {
+                  paid: { label: 'Pago', icon: CheckCircle2, color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+                  pending: { label: 'Pendente', icon: Hourglass, color: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+                  processing: { label: 'Processando', icon: Hourglass, color: 'text-blue-400 bg-blue-500/10 border-blue-500/30' },
+                  failed: { label: 'Falhou', icon: XCircle, color: 'text-red-400 bg-red-500/10 border-red-500/30' },
+                  cancelled: { label: 'Cancelado', icon: XCircle, color: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/30' },
+                  expired: { label: 'Expirado', icon: XCircle, color: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/30' },
+                };
+                const cfg = statusMap[p.payment_status] || statusMap.pending;
+                const StatusIcon = cfg.icon;
+                const dateBR = new Date(p.paid_at || p.created_at).toLocaleDateString('pt-BR', {
+                  day: '2-digit', month: '2-digit', year: '2-digit',
+                });
+                return (
+                  <div key={p.id} className="px-5 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+                    <div className="shrink-0 w-9 h-9 rounded-lg bg-[#1B1F24] border border-[#2A3038] flex items-center justify-center">
+                      <Package className="w-4 h-4 text-[#FF6A00]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white">
+                        {p.credits_total} crédito{p.credits_total > 1 ? 's' : ''}
+                        <span className="text-[#A7B0BE] font-medium ml-2">· {p.amount_brl.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                      </p>
+                      <p className="text-[11px] text-[#A7B0BE]">
+                        {dateBR}{p.provider_name && ` · via ${p.provider_name}`}
+                      </p>
+                    </div>
+                    <div className={`shrink-0 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 ${cfg.color}`}>
+                      <StatusIcon className="w-3 h-3" />
+                      {cfg.label}
+                    </div>
+                  </div>
+                );
+              })}
+              {purchaseHistory.length > 10 && (
+                <div className="px-5 py-2 text-center text-[10px] text-[#A7B0BE]">
+                  Mostrando 10 mais recentes de {purchaseHistory.length} compras
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {purchaseIntentions.length > 0 && (
         <div className="space-y-4">
