@@ -77,11 +77,17 @@ export function StoreLocationMap({
                 style: "mapbox://styles/mapbox/streets-v12",
                 center: [defaultLng, defaultLat],
                 zoom: initialZoom,
+                maxZoom: 22, // permite zoom de rua bem detalhado
                 pitch: 45,
                 bearing: -17.6,
                 antialias: true,
-                pixelRatio: Math.min(window.devicePixelRatio, 2), // HiDPI crispness
+                /* Qualidade visual: usa o DPR real do device (cap 4 cobre 4K/retina extremo),
+                   preserveDrawingBuffer melhora composição, fadeDuration 0 = sem blur entre tiles. */
+                pixelRatio: Math.min(window.devicePixelRatio || 1, 4),
+                preserveDrawingBuffer: true,
+                fadeDuration: 0,
                 optimizeForTerrain: true,
+                localFontFamily: 'DM Sans, ui-sans-serif, system-ui, sans-serif',
             });
 
             mapRef.current = map;
@@ -157,7 +163,7 @@ export function StoreLocationMap({
                         tileSize: 512,
                         maxzoom: 14,
                     });
-                    map.setTerrain({ source: "mapbox-dem", exaggeration: 1.1 });
+                    map.setTerrain({ source: "mapbox-dem", exaggeration: 1.4 });
                 }
 
                 // Efeito Fog atmosférico e iluminação noturna superior

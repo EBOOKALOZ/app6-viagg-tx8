@@ -9,17 +9,19 @@ interface QuickMetricsRowProps {
   isLoading?: boolean;
 }
 
-// Commission tiers mapping (new model: 3 groups = 6%)
+// Commission tiers mapping — 6-tier ladder (5 grupos = VIP 6%)
 const COMMISSION_TIERS = [
   { groups: 0, rate: 25 },
-  { groups: 1, rate: 18 },
-  { groups: 2, rate: 11 },
-  { groups: 3, rate: 6 },
+  { groups: 1, rate: 20 },
+  { groups: 2, rate: 16 },
+  { groups: 3, rate: 12 },
+  { groups: 4, rate: 9 },
+  { groups: 5, rate: 6 },
 ];
 
 export function QuickMetricsRow({
   activeGroups,
-  maxGroups = 3,
+  maxGroups = 5,
   isOnline = true,
   isLoading = false,
 }: QuickMetricsRowProps) {

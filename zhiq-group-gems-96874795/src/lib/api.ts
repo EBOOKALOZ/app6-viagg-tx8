@@ -44,25 +44,31 @@ export interface DriverWhatsAppGroup {
 }
 
 // Commission rate calculation based on ACTIVE groups (driver + motoboy)
-// Updated: max 3 groups (simplified onboarding)
-// 0 groups → 25%
-// 1 group → 18%
-// 2 groups → 11%
-// 3+ groups → 6%
+// 6-tier ladder (Inicial → VIP):
+// 0 groups → 25% (Inicial)
+// 1 group  → 20% (Bronze)
+// 2 groups → 16% (Prata)
+// 3 groups → 12% (Ouro)
+// 4 groups → 9%  (Elite)
+// 5+ groups → 6% (VIP)
 export function calculateCommissionRate(activeGroupCount: number): number {
-  if (activeGroupCount >= 3) return 6;
-  if (activeGroupCount === 2) return 12;
-  if (activeGroupCount === 1) return 18;
+  if (activeGroupCount >= 5) return 6;
+  if (activeGroupCount === 4) return 9;
+  if (activeGroupCount === 3) return 12;
+  if (activeGroupCount === 2) return 16;
+  if (activeGroupCount === 1) return 20;
   return 25;
 }
 
 // Get next commission goal info
 export function getNextCommissionGoal(activeGroupCount: number): { groupsNeeded: number; nextRate: number } | null {
-  if (activeGroupCount >= 3) return null; // Already at max
+  if (activeGroupCount >= 5) return null; // Already at VIP (max)
   const goals = [
-    { threshold: 3, rate: 6 },
-    { threshold: 2, rate: 11 },
-    { threshold: 1, rate: 18 },
+    { threshold: 1, rate: 20 },
+    { threshold: 2, rate: 16 },
+    { threshold: 3, rate: 12 },
+    { threshold: 4, rate: 9 },
+    { threshold: 5, rate: 6 },
   ];
   const nextGoal = goals.find(g => g.threshold > activeGroupCount);
   if (!nextGoal) return null;

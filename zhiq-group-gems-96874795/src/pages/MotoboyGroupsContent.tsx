@@ -33,6 +33,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { SafeErrorBoundary } from '@/components/SafeErrorBoundary';
+import { TierLadderCard } from '@/components/motoboy/TierLadderCard';
+import { useTierPromotionToast } from '@/hooks/useTierPromotionToast';
 import { cn } from '@/lib/utils';
 
 // ==========================================
@@ -88,6 +90,9 @@ export default function MotoboyGroupsContent() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { commissionRate, activeGroups, validForCommission, isLoading: isCommissionLoading } = useMotoboyCommission(user?.id);
+
+  // Toast celebrativo quando sobe (ou alerta quando cai) de tier
+  useTierPromotionToast(user?.id, validForCommission);
   const [groups, setGroups] = useState<ProfileGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -207,6 +212,39 @@ export default function MotoboyGroupsContent() {
     };
   }, [user, fetchGroups, queryClient]);
 
+  const inactiveStatuses = ['inativo', 'bloqueado', 'expirado'];
+  const inactiveGroups = groups.filter(g => inactiveStatuses.includes(g.status));
+
+  const handleClearInactiveGroups = async () => {
+    if (!user) return;
+    if (inactiveGroups.length === 0) {
+      toast.info('Nenhum grupo inativo para limpar.');
+      return;
+    }
+    const confirmMsg =
+      inactiveGroups.length === 1
+        ? 'Excluir o grupo inativo? Esta ação remove o grupo do seu inventário permanentemente.'
+        : `Excluir os ${inactiveGroups.length} grupos inativos? Esta ação remove os grupos do seu inventário permanentemente.`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const ids = inactiveGroups.map(g => g.id);
+      const { error } = await (supabase
+        .from('whatsapp_groups') as any)
+        .delete()
+        .in('id', ids)
+        .eq('owner_user_id', user.id); // safety: só os do próprio motoboy
+
+      if (error) throw error;
+      toast.success(`${ids.length} grupo${ids.length > 1 ? 's' : ''} inativo${ids.length > 1 ? 's' : ''} removido${ids.length > 1 ? 's' : ''}.`);
+      fetchGroups();
+      queryClient.invalidateQueries({ queryKey: ['motoboy-commission', user.id] });
+    } catch (err: any) {
+      console.error('[clearInactive] error:', err);
+      toast.error(`Erro ao limpar inativos: ${err?.message || 'erro desconhecido'}`);
+    }
+  };
+
   const handleAddGroup = async () => {
     if (!user) return;
     if (!newGroupLink.trim() || !newGroupCidade) {
@@ -246,6 +284,13 @@ export default function MotoboyGroupsContent() {
         .select('id')
         .single();
 
+      // Trata violação de UNIQUE (código 23505) — defesa contra corrida concorrente
+      // que passou pela checagem JS acima.
+      if (error?.code === '23505' || /duplicate key|unique/i.test(error?.message || '')) {
+        setLinkDuplicateError('Este link já está cadastrado por outro motoboy. Cada grupo só pode ser vinculado uma vez.');
+        setIsSubmitting(false);
+        return;
+      }
       if (error) throw error;
       const created = !!data?.id;
 
@@ -393,7 +438,7 @@ export default function MotoboyGroupsContent() {
                       <div className="flex-1 w-full space-y-3 z-10">
                         <div className="flex justify-between items-end">
                           <span className={`text-xs font-medium ${subtitleColor} uppercase tracking-widest`}>Aproveitamento</span>
-                          <span className="text-sm font-bold text-white">{validGroupsCount}/3 Máx</span>
+                          <span className="text-sm font-bold text-white">{validGroupsCount}/5 Máx</span>
                         </div>
                         <div className={`relative h-3 rounded-full ${barBg} overflow-hidden border ${barBorder}`}>
                           <div
@@ -409,6 +454,9 @@ export default function MotoboyGroupsContent() {
               </Card>
             );
           })()}
+
+          {/* 1.5 ESCADA DE TIERS */}
+          <TierLadderCard validGroups={validGroupsCount} />
 
           {/* 2. DASHBOARD DE STATUS */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -461,9 +509,23 @@ export default function MotoboyGroupsContent() {
 
           {/* 3. LISTA DETALHADA: INVENTÁRIO DO ATIVO */}
           <div>
-            <div className="flex items-center gap-2 mb-3 px-1">
-              <ClipboardList className="h-5 w-5 text-motoboy" />
-              <h3 className="text-sm font-bold text-foreground tracking-wide">Inventário Operacional</h3>
+            <div className="flex items-center justify-between gap-2 mb-3 px-1">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-motoboy" />
+                <h3 className="text-sm font-bold text-foreground tracking-wide">Inventário Operacional</h3>
+              </div>
+              {inactiveGroups.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearInactiveGroups}
+                  className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400 h-8 px-3 text-xs font-semibold"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Limpar Inativos ({inactiveGroups.length})
+                </Button>
+              )}
             </div>
 
             {!groups.length ? (

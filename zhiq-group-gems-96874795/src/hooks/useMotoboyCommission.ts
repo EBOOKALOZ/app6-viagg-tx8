@@ -34,21 +34,25 @@ export interface MotoboyCommissionData {
 }
 
 const COMMISSION_TIERS = [
-  { min: 0, rate: 25 },
-  { min: 1, rate: 18 },
-  { min: 2, rate: 12 },
-  { min: 3, rate: 6 },
+  { min: 0, rate: 25, name: 'Inicial' },
+  { min: 1, rate: 20, name: 'Bronze' },
+  { min: 2, rate: 16, name: 'Prata' },
+  { min: 3, rate: 12, name: 'Ouro' },
+  { min: 4, rate: 9, name: 'Elite' },
+  { min: 5, rate: 6, name: 'VIP' },
 ];
 
 /**
  * Hook that calculates commission rate from REAL whatsapp_groups data.
  * Also computes detailed breakdowns for the premium groups dashboard.
  *
- * Commission tiers:
- *   0 groups → 25%
- *   1 group  → 18%
- *   2 groups → 12%
- *   3+ groups → 6%
+ * 6-tier ladder (Inicial → VIP):
+ *   0 groups → 25% (Inicial)
+ *   1 group  → 20% (Bronze)
+ *   2 groups → 16% (Prata)
+ *   3 groups → 12% (Ouro)
+ *   4 groups → 9%  (Elite)
+ *   5+ groups → 6% (VIP)
  */
 export function useMotoboyCommission(userId: string | undefined) {
   const queryClient = useQueryClient();
@@ -128,7 +132,7 @@ export function useMotoboyCommission(userId: string | undefined) {
 
       const commissionRate = calculateCommissionRate(validForCommission);
 
-      const cappedValid = Math.min(validForCommission, 3);
+      const cappedValid = Math.min(validForCommission, 5);
       const nextTier = COMMISSION_TIERS.find(t => t.min > cappedValid);
       const nextTierRate = nextTier?.rate ?? null;
       const groupsToNextTier = nextTier ? nextTier.min - validForCommission : 0;

@@ -2,12 +2,14 @@ import { useMemo } from 'react';
 import { ChevronUp, TrendingUp, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Commission rules based on active groups
+// Commission rules — 6-tier ladder (Inicial → VIP)
 const COMMISSION_RULES = [
   { groups: 0, percentage: 25 },
-  { groups: 1, percentage: 18 },
-  { groups: 2, percentage: 11 },
-  { groups: 3, percentage: 6 },
+  { groups: 1, percentage: 20 },
+  { groups: 2, percentage: 16 },
+  { groups: 3, percentage: 12 },
+  { groups: 4, percentage: 9 },
+  { groups: 5, percentage: 6 },
 ];
 
 interface EarningsComparisonTableProps {
@@ -34,7 +36,7 @@ export function EarningsComparisonTable({
       const isCurrent = currentPercentage !== undefined
         ? rule.percentage === currentPercentage
         : rule.groups === currentGroups;
-      const isBest = rule.groups === 3;
+      const isBest = rule.groups === 5;
       const isWorst = rule.groups === 0;
 
       return {
@@ -48,9 +50,9 @@ export function EarningsComparisonTable({
     });
   }, [grossValue, currentGroups, currentPercentage]);
 
-  // Calculate potential gain if user had 6 groups
+  // Calculate potential gain if user reached the VIP tier (5+ groups)
   const currentEarning = comparisons.find(c => c.isCurrent)?.netValue || comparisons[0].netValue;
-  const bestEarning = comparisons.find(c => c.isBest)?.netValue || comparisons[3].netValue;
+  const bestEarning = comparisons.find(c => c.isBest)?.netValue || comparisons[comparisons.length - 1].netValue;
   const potentialGain = bestEarning - currentEarning;
 
   return (
@@ -151,7 +153,7 @@ export function EarningsComparisonTable({
         {potentialGain > 0.01 && (
           <div className="mt-2 pt-2 border-t border-amber-500/20 text-center">
             <p className="text-[10px] text-muted-foreground">
-              Com 3 grupos você ganharia{' '}
+              Com 5 grupos (Tier VIP) você ganharia{' '}
               <span className="font-bold text-emerald-600 dark:text-emerald-400">
                 R$ {potentialGain.toFixed(2)} a mais
               </span>{' '}

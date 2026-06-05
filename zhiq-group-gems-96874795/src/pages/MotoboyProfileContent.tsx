@@ -230,7 +230,7 @@ export default function MotoboyProfileContent() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data: motoboy, error: motoboyErr } = await supabase
+        const { data: motoboy } = await supabase
           .from('motoboy_profiles')
           .select('*')
           .eq('user_id', user.id)
@@ -241,12 +241,6 @@ export default function MotoboyProfileContent() {
           .select('*')
           .eq('id', user.id)
           .maybeSingle();
-
-        // DEBUG — remover depois
-        console.log('[FETCH] motoboy_profiles row:', motoboy);
-        console.log('[FETCH] latitude_residencia:', (motoboy as any)?.latitude_residencia);
-        console.log('[FETCH] longitude_residencia:', (motoboy as any)?.longitude_residencia);
-        if (motoboyErr) console.error('[FETCH] erro:', motoboyErr);
 
         if (cancelled) return;
         hydrateMotoboyData(motoboy, profile);
@@ -580,15 +574,6 @@ export default function MotoboyProfileContent() {
               ? '🔒 Pino travado. Clique em "Editar localização" para mudar.'
               : '📍 Arraste o mapa para posicionar o pino. Quando estiver certo, clique em "Confirmar esta localização".'}
           </p>
-
-          {/* DEBUG: mostra o que tá em state. Remover quando estiver tudo OK. */}
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-[11px] font-mono text-amber-900 break-all">
-            <div><strong>DEBUG state.lat:</strong> {String(motoboyData.latitude_residencia)}</div>
-            <div><strong>DEBUG state.lng:</strong> {String(motoboyData.longitude_residencia)}</div>
-            <div><strong>DEBUG state.endereco:</strong> {String(motoboyData.endereco_residencia)}</div>
-            <div><strong>DEBUG initialLat passado pro mapa:</strong> {String(motoboyData.latitude_residencia ?? undefined)}</div>
-            <div><strong>DEBUG residenceLocked:</strong> {String(residenceLocked)}</div>
-          </div>
 
           <StoreLocationMap
             key={residenceLocked ? 'res-locked' : 'res-edit'}

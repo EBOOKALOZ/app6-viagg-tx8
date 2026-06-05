@@ -11,16 +11,16 @@ interface HeroCommissionCardProps {
 }
 
 const MIN_COMMISSION = 6;
-const MAX_GROUPS_TARGET = 3;
+const MAX_GROUPS_TARGET = 5; // 5 grupos = VIP 6% (Inicial/Bronze/Prata/Ouro/Elite/VIP)
 
 function getStatusMessage(hasCompletedFirstRide: boolean, activeGroups: number): string {
   if (!hasCompletedFirstRide) {
     return 'Primeira corrida liberada com comissão fixa de 25%.\nApós a primeira corrida, sua comissão reduz conforme grupos ativos.';
   }
-  if (activeGroups === 0) return 'Cadastre grupos válidos para reduzir sua comissão.';
-  if (activeGroups === 1) return 'Você está a 2 grupos de atingir a comissão mínima.';
-  if (activeGroups === 2) return 'Falta apenas 1 grupo para atingir a comissão mínima.';
-  return 'Parabéns! Você atingiu a comissão mínima de 6%.';
+  if (activeGroups >= MAX_GROUPS_TARGET) return 'Parabéns! Você atingiu o tier VIP (6%) — a menor taxa da plataforma.';
+  const faltam = MAX_GROUPS_TARGET - activeGroups;
+  if (activeGroups === 0) return 'Cadastre grupos válidos para subir do Grupo Inicial e reduzir sua comissão.';
+  return `Faltam ${faltam} grupo${faltam > 1 ? 's' : ''} para atingir o tier VIP (6%).`;
 }
 
 export function HeroCommissionCard({

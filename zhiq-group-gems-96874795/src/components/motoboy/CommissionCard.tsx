@@ -102,7 +102,7 @@ export function CommissionCard({
 
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <TrendingDown className="h-3 w-3" />
-              {Math.min(displayGroups, 3)}/3 grupos ativos
+              {Math.min(displayGroups, 5)}/5 grupos ativos
             </p>
           </div>
 

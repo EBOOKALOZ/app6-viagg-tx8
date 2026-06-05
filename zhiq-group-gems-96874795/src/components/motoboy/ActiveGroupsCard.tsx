@@ -12,7 +12,7 @@ interface ActiveGroupsCardProps {
 
 export function ActiveGroupsCard({
   activeGroups,
-  maxGroups = 3,
+  maxGroups = 5,
   isLoading = false,
   onClick,
 }: ActiveGroupsCardProps) {
@@ -20,8 +20,8 @@ export function ActiveGroupsCard({
   const groupsRemaining = Math.max(maxGroups - activeGroups, 0);
 
   const getProgressColor = () => {
-    if (activeGroups >= 3) return 'bg-primary';
-    if (activeGroups >= 2) return 'bg-accent';
+    if (activeGroups >= 5) return 'bg-primary';
+    if (activeGroups >= 3) return 'bg-accent';
     if (activeGroups >= 1) return 'bg-accent';
     return 'bg-destructive';
   };
