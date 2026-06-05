@@ -1,7 +1,7 @@
 import { formatCurrencyBRL } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Truck } from "lucide-react";
+import { ShoppingBag, Truck, Percent } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface StoreProduct {
@@ -28,6 +28,7 @@ interface StorePremiumCardProps {
     onAddToCart: (product: StoreProduct) => void;
     onClick: (product: StoreProduct) => void;
     onAskQuestion?: (product: StoreProduct) => void;
+    onMakeOffer?: (product: StoreProduct) => void;
 }
 
 function normalizeImageUrl(url: string | null | undefined): string | null {
@@ -40,7 +41,7 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
     return trimmed;
 }
 
-export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClick, onAskQuestion }: StorePremiumCardProps) {
+export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClick, onAskQuestion, onMakeOffer }: StorePremiumCardProps) {
     const imgSrc = normalizeImageUrl(product.image_url);
     const hasDiscount = (product.original_price || 0) > product.price;
     const discountPct = hasDiscount && product.original_price 
@@ -175,6 +176,20 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                         )}
                     </Button>
                     
+                    {onMakeOffer && (
+                        <Button
+                            variant="default"
+                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all bg-[#2563EB] text-white hover:bg-[#1D4ED8] border-none shadow-sm flex items-center justify-center gap-1.5"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onMakeOffer(product);
+                            }}
+                        >
+                            <Percent className="w-3.5 h-3.5" />
+                            Minha Oferta é...
+                        </Button>
+                    )}
+
                     {onAskQuestion && (
                         <Button
                             variant="default"

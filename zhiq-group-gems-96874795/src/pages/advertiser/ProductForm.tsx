@@ -28,6 +28,8 @@ import {
   MessageCircle,
   Image as ImageIcon,
   Sparkles,
+  Star,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductImageUpload } from '@/components/advertiser/ProductImageUpload';
@@ -235,20 +237,21 @@ export const ProductForm = () => {
         for (const [index, file] of productImages.entries()) {
           let fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
           if (fileExt === 'heic' || fileExt === 'heif') fileExt = 'jpg';
-          const fileName = `${listingIdResult}/${crypto.randomUUID()}.${fileExt}`;
+          // Path com prefixo user.id para casar com RLS do bucket marketing-materials
+          const fileName = `${user.id}/products/${listingIdResult}/${crypto.randomUUID()}.${fileExt}`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('marketing-materials')
             .upload(fileName, file);
           if (!uploadError && uploadData) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('marketing-materials')
+              .getPublicUrl(uploadData.path);
             await supabase.from('advertiser_listing_media' as any).insert({
               listing_id: listingIdResult,
-              media_url: uploadData.path,
+              media_url: publicUrl,
               storage_path: uploadData.path,
             });
             if (index === 0) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('marketing-materials')
-                .getPublicUrl(uploadData.path);
               await supabase.from('advertiser_listings' as any).update({
                 cover_image_url: publicUrl,
               }).eq('id', listingIdResult);
@@ -272,13 +275,16 @@ export const ProductForm = () => {
     (async () => {
       const { data: profile } = await supabase
         .from('profiles' as any)
-        .select('full_name, name, telefone, whatsapp')
+        .select('*')
         .eq('id', user.id)
         .maybeSingle();
+      const p = (profile ?? {}) as any;
+      const nameVal = p.full_name || p.nome_completo || p.nome || p.name || user.email?.split('@')[0] || '';
+      const phoneVal = p.telefone || p.whatsapp || p.phone || '';
       setContactData(prev => ({
-        contact_name: prev.contact_name || (profile as any)?.full_name || (profile as any)?.name || user.email?.split('@')[0] || '',
-        whatsapp_e164: prev.whatsapp_e164 || formatPhone(((profile as any)?.whatsapp || (profile as any)?.telefone || '')),
-        phone_e164: prev.phone_e164 || formatPhone(((profile as any)?.telefone || '')),
+        contact_name: prev.contact_name || nameVal,
+        whatsapp_e164: prev.whatsapp_e164 || (phoneVal ? formatPhone(phoneVal) : ''),
+        phone_e164: prev.phone_e164 || (phoneVal ? formatPhone(phoneVal) : ''),
       }));
     })();
   }, [user]);
@@ -431,29 +437,32 @@ export const ProductForm = () => {
             <Section step={3} title="Condição do produto" description="Como o produto será entregue ao comprador?" icon={Sparkles} done={completion.condition}>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { value: 'novo', label: 'Novo', desc: 'Lacrado, sem uso' },
-                  { value: 'seminovo', label: 'Seminovo', desc: 'Pouco uso, ótimo estado' },
-                  { value: 'usado', label: 'Usado', desc: 'Já utilizado' },
-                  { value: 'digital', label: 'Digital', desc: 'Download / link' },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, condition: opt.value }))}
-                    className={cn(
-                      "rounded-lg border-2 p-3 text-left transition-all",
-                      formData.condition === opt.value
-                        ? "border-[#3483FA] bg-blue-50 shadow-sm"
-                        : "border-zinc-200 bg-white hover:border-zinc-300"
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      {opt.value === 'digital' && <Download className="h-3.5 w-3.5 text-[#3483FA]" />}
-                      <div className="font-bold text-sm text-zinc-900">{opt.label}</div>
-                    </div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">{opt.desc}</div>
-                  </button>
-                ))}
+                  { value: 'novo', label: 'Novo', desc: 'Lacrado, sem uso', icon: Sparkles },
+                  { value: 'seminovo', label: 'Seminovo', desc: 'Pouco uso, ótimo estado', icon: Star },
+                  { value: 'usado', label: 'Usado', desc: 'Já utilizado', icon: RefreshCw },
+                  { value: 'digital', label: 'Digital', desc: 'Download / link', icon: Download },
+                ].map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, condition: opt.value }))}
+                      className={cn(
+                        "rounded-lg border-2 p-3 text-left transition-all",
+                        formData.condition === opt.value
+                          ? "border-[#3483FA] bg-blue-50 shadow-sm"
+                          : "border-zinc-200 bg-white hover:border-zinc-300"
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Icon className="h-3.5 w-3.5 text-[#3483FA]" />
+                        <div className="font-bold text-sm text-zinc-900">{opt.label}</div>
+                      </div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">{opt.desc}</div>
+                    </button>
+                  );
+                })}
               </div>
 
               {showElectronicsFields && (

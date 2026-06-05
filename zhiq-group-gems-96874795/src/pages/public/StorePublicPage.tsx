@@ -22,6 +22,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StorePremiumCard, StoreProduct } from "@/components/public/store/StorePremiumCard";
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
+import DiscountRequestModal from "@/components/public/DiscountRequestModal";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
 
 type TabValue = "home" | "all" | "promo";
@@ -47,6 +48,7 @@ export default function StorePublicPage() {
     const [activeTab, setActiveTab] = useState<TabValue>("home");
     const [activeCategory, setActiveCategory] = useState<string>("all");
     const [inquiryProduct, setInquiryProduct] = useState<StoreProduct | null>(null);
+    const [offerProduct, setOfferProduct] = useState<StoreProduct | null>(null);
 
     // Fetchers
     const cart = useStoreCart(storeId);
@@ -351,6 +353,10 @@ export default function StorePublicPage() {
         setInquiryProduct(product);
     };
 
+    const handleMakeOffer = (product: StoreProduct) => {
+        setOfferProduct(product);
+    };
+
     if (loadingStore || loadingProducts) {
         return (
             <MarketLayout>
@@ -535,6 +541,7 @@ export default function StorePublicPage() {
                                                 isRecentlyAdded={recentlyAdded[product.id]}
                                                 onAddToCart={handleAddToCart}
                                                 onAskQuestion={handleAskQuestion}
+                                                onMakeOffer={handleMakeOffer}
                                                 onClick={() => {
                                                     if (storeId) {
                                                         consumeMarketplaceProductClick({
@@ -568,6 +575,7 @@ export default function StorePublicPage() {
                                                 isRecentlyAdded={recentlyAdded[product.id]}
                                                 onAddToCart={handleAddToCart}
                                                 onAskQuestion={handleAskQuestion}
+                                                onMakeOffer={handleMakeOffer}
                                                 onClick={() => {
                                                     if (storeId) {
                                                         consumeMarketplaceProductClick({
@@ -629,6 +637,7 @@ export default function StorePublicPage() {
                                             isRecentlyAdded={recentlyAdded[product.id]}
                                             onAddToCart={handleAddToCart}
                                             onAskQuestion={handleAskQuestion}
+                                                onMakeOffer={handleMakeOffer}
                                             onClick={() => {
                                                 const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
                                                 navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
@@ -688,6 +697,20 @@ export default function StorePublicPage() {
                     price_label: inquiryProduct.price ? String(inquiryProduct.price) : null,
                     store_name: store?.store_name || null,
                     city: store?.city || null,
+                } : null}
+            />
+
+            <DiscountRequestModal
+                open={!!offerProduct}
+                onClose={() => setOfferProduct(null)}
+                product={offerProduct ? {
+                    id: offerProduct.id,
+                    title: offerProduct.title,
+                    image_url: offerProduct.image_url,
+                    price_label: offerProduct.price ? String(offerProduct.price) : null,
+                    store_name: store?.store_name || null,
+                    city: store?.city || null,
+                    merchant_store_id: storeId || null,
                 } : null}
             />
         </MarketLayout>

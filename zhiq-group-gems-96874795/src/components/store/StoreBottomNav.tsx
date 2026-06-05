@@ -1,8 +1,34 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Store, MessageSquare, Megaphone } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function StoreBottomNav() {
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Conta ofertas pendentes (discount_requests + arremate offers) para o anunciante atual
+  const { data: pendingOffers = 0 } = useQuery({
+    queryKey: ["bottom-nav-pending-offers", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const storeIds: string[] = [];
+      const { data: adv } = await (supabase.from("advertiser_accounts") as any)
+        .select("id").eq("user_id", user!.id).maybeSingle();
+      if ((adv as any)?.id) storeIds.push((adv as any).id);
+      const { data: ms } = await (supabase.from("merchant_stores") as any)
+        .select("id").eq("user_id", user!.id).maybeSingle();
+      if ((ms as any)?.id) storeIds.push((ms as any).id);
+      if (storeIds.length === 0) return 0;
+      const { count } = await (supabase.from("discount_requests") as any)
+        .select("id", { count: "exact", head: true })
+        .in("store_id", storeIds)
+        .eq("status", "pending");
+      return count || 0;
+    },
+  });
 
   const navItems = [
     {
@@ -41,11 +67,18 @@ export function StoreBottomNav() {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center w-full h-full text-xs font-medium transition-colors ${
+              className={`relative flex flex-col items-center justify-center w-full h-full text-xs font-medium transition-colors ${
                 isActive ? "text-yellow-500" : "hover:text-zinc-200"
               }`}
             >
-              {item.icon}
+              <div className="relative">
+                {item.icon}
+                {item.label === "Mensagens" && pendingOffers > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-lg animate-pulse">
+                    {pendingOffers > 99 ? "99+" : pendingOffers}
+                  </span>
+                )}
+              </div>
               <span className={isActive ? "text-yellow-500" : ""}>{item.label}</span>
               {isActive && (
                 <span className="absolute top-0 w-8 h-[2px] bg-yellow-500 rounded-b-full shadow-[0_0_8px_rgba(234,179,8,0.8)]" />

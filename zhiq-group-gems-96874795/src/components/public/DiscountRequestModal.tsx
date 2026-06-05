@@ -156,9 +156,6 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                 requested_price: priceNum,
                 message: message.trim() || "Tenho interesse neste produto. A loja aceita este valor?",
                 status: "pending",
-                city: store?.city || product.city,
-                neighborhood: store?.bairro,
-                source: "marketplace",
             });
 
             if (error) throw error;
@@ -177,7 +174,8 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
             toast.success("Pedido de desconto enviado!");
         } catch (err: any) {
             console.error("[DiscountRequestModal] error:", err);
-            toast.error("Erro ao enviar pedido. Tente novamente.");
+            const msg = err?.message || err?.error_description || err?.details || "Tente novamente";
+            toast.error(`Erro ao enviar: ${msg}`);
         } finally {
             setSubmitting(false);
         }

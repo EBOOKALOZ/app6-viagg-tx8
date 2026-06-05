@@ -135,6 +135,112 @@ export default function AdvertiserListingsPage() {
 
   const pendingOffersCount = receivedOffers.filter(o => o.status === 'pending').length;
 
+  // ── Query de discount_requests (Minha Oferta é...) ──
+  const discountRequestsQuery = useQuery({
+    queryKey: ['advertiser-discount-requests', user?.id],
+    enabled: !!user,
+    refetchInterval: 10000,
+    queryFn: async () => {
+      const { data: advAcc } = await supabase
+        .from('advertiser_accounts' as any)
+        .select('id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+
+      const storeIds: string[] = [];
+      if ((advAcc as any)?.id) storeIds.push((advAcc as any).id);
+
+      const { data: merchantStore } = await supabase
+        .from('merchant_stores' as any)
+        .select('id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if ((merchantStore as any)?.id) storeIds.push((merchantStore as any).id);
+
+      if (storeIds.length === 0) return [] as any[];
+
+      const { data, error } = await supabase
+        .from('discount_requests' as any)
+        .select('*')
+        .in('store_id', storeIds)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[discount_requests] error:', error);
+        return [] as any[];
+      }
+
+      // Buscar títulos + imagens dos produtos
+      const productIds = [...new Set((data || []).map((r: any) => r.product_id).filter(Boolean))];
+      const infoMap: Record<string, { title: string; image: string | null }> = {};
+
+      const resolveStorage = async (raw: string | null | undefined): Promise<string | null> => {
+        if (!raw) return null;
+        if (/^https?:\/\//i.test(raw)) {
+          // Tenta signed URL para URLs públicas que podem estar bloqueadas por RLS
+          const m = raw.match(/\/storage\/v1\/object\/(?:public|sign)\/marketing-materials\/([^?]+)/);
+          if (m?.[1]) {
+            try {
+              const { data: signed } = await supabase.storage.from('marketing-materials').createSignedUrl(m[1], 60 * 60);
+              if (signed?.signedUrl) return signed.signedUrl;
+            } catch { /* ignore */ }
+          }
+          return raw;
+        }
+        try {
+          const { data: signed } = await supabase.storage.from('marketing-materials').createSignedUrl(raw, 60 * 60);
+          if (signed?.signedUrl) return signed.signedUrl;
+        } catch { /* ignore */ }
+        return supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+      };
+
+      if (productIds.length > 0) {
+        const [adv, mkt, mediaRows] = await Promise.all([
+          supabase.from('advertiser_listings' as any).select('id, title, cover_image_url').in('id', productIds),
+          supabase.from('merchant_marketing_products' as any).select('id, title, image_url').in('id', productIds),
+          supabase.from('advertiser_listing_media' as any).select('listing_id, media_url, storage_path').in('listing_id', productIds),
+        ]);
+
+        // Mapa de fallbacks (primeiro media de cada listing)
+        const mediaByListing: Record<string, string> = {};
+        for (const m of (mediaRows.data ?? []) as any[]) {
+          if (!mediaByListing[m.listing_id]) {
+            mediaByListing[m.listing_id] = m.media_url || m.storage_path;
+          }
+        }
+
+        for (const row of (adv.data ?? []) as any[]) {
+          const candidate = row.cover_image_url || mediaByListing[row.id];
+          const img = await resolveStorage(candidate);
+          infoMap[row.id] = { title: row.title, image: img };
+        }
+        for (const row of (mkt.data ?? []) as any[]) {
+          if (!infoMap[row.id]) infoMap[row.id] = { title: row.title, image: row.image_url ?? null };
+        }
+      }
+      return (data || []).map((r: any) => ({
+        ...r,
+        product_title: infoMap[r.product_id]?.title ?? 'Produto',
+        product_image: infoMap[r.product_id]?.image ?? null,
+      }));
+    },
+  });
+  const discountRequests = (discountRequestsQuery.data ?? []) as any[];
+  const pendingDiscountCount = discountRequests.filter(r => r.status === 'pending').length;
+
+  const respondDiscountRequest = async (id: string, newStatus: 'accepted' | 'rejected') => {
+    const { error } = await supabase
+      .from('discount_requests' as any)
+      .update({ status: newStatus })
+      .eq('id', id);
+    if (error) {
+      toast.error(`Erro: ${error.message}`);
+      return;
+    }
+    toast.success(newStatus === 'accepted' ? 'Oferta aceita!' : 'Oferta recusada.');
+    queryClient.invalidateQueries({ queryKey: ['advertiser-discount-requests', user?.id] });
+  };
+
   // ── Query de listings ──
   const listingsQuery = useQuery({
     queryKey: ["advertiser-unified-listings", user?.id],
@@ -399,24 +505,9 @@ export default function AdvertiserListingsPage() {
           )}
         >
           Ofertas Recebidas
-          {pendingOffersCount > 0 && (
+          {(pendingOffersCount + pendingDiscountCount) > 0 && (
             <span className="w-5 h-5 rounded-full bg-[#E6E6FA] text-[#0D0F12] text-[9px] font-black flex items-center justify-center animate-bounce">
-              {pendingOffersCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('intentions')}
-          className={cn(
-            'px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2',
-            activeTab === 'intentions' ? 'bg-[#FF6A00] text-white shadow-sm shadow-[#FF6A00]/30' : 'text-[#A7B0BE] hover:text-[#F5F7FA]'
-          )}
-        >
-          <Users className="w-3.5 h-3.5" />
-          Interessados
-          {pendingCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-[#FF6A00] text-white text-[9px] font-black flex items-center justify-center animate-pulse">
-              {pendingCount > 9 ? '9+' : pendingCount}
+              {pendingOffersCount + pendingDiscountCount}
             </span>
           )}
         </button>
@@ -601,43 +692,167 @@ export default function AdvertiserListingsPage() {
       {/* ──────────────────────────────────────────────── */}
       {activeTab === 'offers' && (
         <div className="space-y-6">
-          <AdvertiserCommercialRuleCard />
-          {/* Banner de créditos dinâmico */}
-          <div className="flex items-center justify-between p-4 bg-violet-50 rounded-2xl border border-violet-100">
+          {/* Banner custo de aceite: ofertas dos compradores */}
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-2xl border border-blue-100">
             <div className="flex items-center gap-3">
-              <Coins className="w-5 h-5 text-violet-600" />
+              <Coins className="w-5 h-5 text-blue-600" />
               <div>
-                <p className="text-xs font-black text-violet-700 uppercase">
-                  Custo de aceite: {totalAcceptCost} créditos por oferta
+                <p className="text-xs font-black text-blue-700 uppercase">
+                  Custo de aceite: 9 créditos por oferta
                 </p>
-                <p className="text-[11px] text-violet-500">
-                  {contactCost} comunicação + {intentionCost} intenção • Saldo: {balance.available_credits} créditos
+                <p className="text-[11px] text-blue-500">
+                  Aceitar oferta do comprador • Saldo: {balance.available_credits} créditos
                 </p>
               </div>
             </div>
-            <span className="text-xs font-black text-violet-700 bg-violet-100 px-3 py-1 rounded-full">
-              {pendingOffersCount} pendente{pendingOffersCount !== 1 ? 's' : ''}
+            <span className="text-xs font-black text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
+              {pendingDiscountCount} pendente{pendingDiscountCount !== 1 ? 's' : ''}
             </span>
           </div>
 
-          {loadingOffers ? (
-            <div className="py-16 flex flex-col items-center gap-4">
-              <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-              <p className="text-xs font-black text-zinc-400 uppercase tracking-widest">Carregando ofertas...</p>
+          {/* ── Ofertas via "Minha Oferta é..." (discount_requests) ── */}
+          <div className="bg-[#1B1F24] rounded-2xl border border-[#2A3038] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-black text-[#F5F7FA] uppercase tracking-widest flex items-center gap-2">
+                <Tag className="w-4 h-4 text-[#2563EB]" />
+                Ofertas dos Compradores
+              </h2>
+              <span className="text-[10px] font-black text-[#A7B0BE] uppercase">
+                {discountRequests.length} no total · {pendingDiscountCount} pendente{pendingDiscountCount !== 1 ? 's' : ''}
+              </span>
             </div>
-          ) : receivedOffers.length === 0 ? (
-            <Card className="border-2 border-dashed border-violet-100 bg-violet-50/30 rounded-[40px]">
-              <CardContent className="p-16 flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-violet-100 flex items-center justify-center">
-                  <Inbox className="w-8 h-8 text-violet-400" />
-                </div>
-                <h3 className="text-xl font-black text-zinc-800 uppercase tracking-tight">Nenhuma oferta ainda</h3>
-                <p className="text-sm text-zinc-500 font-medium max-w-xs">
-                  Publique um produto no modo Arremate para começar a receber ofertas de compradores.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
+
+            {discountRequestsQuery.isLoading ? (
+              <div className="py-10 flex justify-center">
+                <Loader2 className="w-6 h-6 animate-spin text-[#2563EB]" />
+              </div>
+            ) : discountRequests.length === 0 ? (
+              <div className="py-10 text-center text-[#A7B0BE] text-xs font-bold uppercase tracking-widest">
+                Nenhuma oferta recebida ainda
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {discountRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className={cn(
+                      "p-4 rounded-xl border-2 transition-all",
+                      req.status === 'pending' ? 'bg-[#14171B] border-[#2563EB]/30' :
+                      req.status === 'accepted' ? 'bg-emerald-950/30 border-emerald-700/40' :
+                      'bg-[#14171B] border-[#2A3038] opacity-60'
+                    )}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="flex flex-1 min-w-0 gap-3">
+                        {/* Imagem do produto */}
+                        <div className="w-20 h-20 rounded-xl bg-[#14171B] border border-[#2A3038] overflow-hidden shrink-0 flex items-center justify-center">
+                          {req.product_image ? (
+                            <img
+                              src={req.product_image}
+                              alt={req.product_title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <Package className="w-6 h-6 text-[#2A3038]" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-black text-[#F5F7FA] uppercase tracking-tight">
+                              {req.customer_name || 'Comprador'}
+                            </span>
+                            <span className={cn(
+                              'text-[9px] font-black uppercase px-2 py-0.5 rounded-full',
+                              req.status === 'pending' ? 'bg-amber-500/20 text-amber-300' :
+                              req.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-300' :
+                              'bg-zinc-700 text-zinc-400'
+                            )}>
+                              {req.status === 'pending' ? 'Pendente' :
+                               req.status === 'accepted' ? 'Aceita' :
+                               req.status === 'rejected' ? 'Recusada' : req.status}
+                            </span>
+                            {req.status === 'accepted' && req.customer_phone && (
+                              <span className="text-[10px] text-emerald-300 font-bold bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                                📱 {req.customer_phone}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-[#A7B0BE] font-medium line-clamp-1">
+                            Produto: <span className="text-[#F5F7FA]">{req.product_title}</span>
+                          </p>
+                          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                            {req.product_price && (
+                              <div className="flex flex-col">
+                                <p className="text-lg font-black text-[#FF6A00] leading-none">
+                                  R$ {req.product_price}
+                                </p>
+                                <span className="text-[9px] text-[#A7B0BE] font-bold uppercase tracking-wider mt-0.5">preço do produto</span>
+                              </div>
+                            )}
+                            <div className="flex flex-col">
+                              <p className="text-2xl font-black text-emerald-400 leading-none">
+                                {formatCurrencyBRL(req.requested_price)}
+                              </p>
+                              <span className="text-[9px] text-[#A7B0BE] font-bold uppercase tracking-wider mt-0.5">oferta do comprador</span>
+                            </div>
+                          </div>
+                          {req.message && (
+                            <p className="text-xs text-[#A7B0BE] italic line-clamp-2">"{req.message}"</p>
+                          )}
+                          <p className="text-[10px] text-[#5B6571] flex items-center gap-1 mt-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(req.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            {' às '}
+                            {new Date(req.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {req.status === 'pending' && (
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              disabled={(balance.available_credits ?? 0) < 9}
+                              onClick={() => respondDiscountRequest(req.id, 'accepted')}
+                              className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-black text-[10px] uppercase tracking-wide gap-1"
+                            >
+                              <CheckCheck className="w-3 h-3" /> Aceitar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => respondDiscountRequest(req.id, 'rejected')}
+                              className="h-9 px-3 rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-red-400 hover:border-red-500/40 font-black text-[10px] uppercase gap-1"
+                            >
+                              <X className="w-3 h-3" /> Recusar
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2 text-[10.9px] font-bold">
+                            <span className="flex items-center gap-1 text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                              <Coins className="w-2.5 h-2.5" /> Saldo: {balance.available_credits ?? 0}
+                            </span>
+                            <span className="flex items-center gap-1 text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full">
+                              -9 ao aceitar
+                            </span>
+                          </div>
+                          {(balance.available_credits ?? 0) < 9 && (
+                            <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
+                              saldo insuficiente
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {receivedOffers.length > 0 && (
             <div className="space-y-3">
               {receivedOffers.map((offer) => (
                 <div
@@ -727,9 +942,9 @@ export default function AdvertiserListingsPage() {
       )}
 
       {/* ──────────────────────────────────────────────── */}
-      {/* TAB: INTERESSADOS                               */}
+      {/* TAB: INTERESSADOS (oculto)                      */}
       {/* ──────────────────────────────────────────────── */}
-      {activeTab === 'intentions' && (
+      {false && activeTab === 'intentions' && (
         <div className="space-y-6">
 
           {/* ── Stats cards ── */}

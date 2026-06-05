@@ -142,29 +142,84 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
 
    // Carregar imagens existentes se houver listingId
    useEffect(() => {
-     if (listingId) {
-       const fetchImages = async () => {
-         const { data, error } = await supabase
-           .from('advertiser_listing_media')
-           .select('id, media_url, storage_path')
-           .eq('listing_id', listingId);
+     if (!listingId) return;
 
-         if (!error && data) {
-           // Filtrar paths suspeitos (ex: "image.png", "test.jpg")
-           const validImages = data.filter(img => {
-             const path = img.storage_path || img.media_url || '';
-             // Ignora nomes simples sem barra (não estão no storage structure)
-             if (!path.includes('/') || path.split('/').length < 2) {
-               console.warn(`[ProductImageUpload] Ignorando path inválido: ${path}`);
-               return false;
-             }
-             return true;
-           });
-           setUploadedImages(validImages.map(img => ({ id: img.id, path: img.media_url, storage_path: img.storage_path ?? null })));
+     // Extrai o path do storage a partir de uma URL pública (se aplicável)
+     const extractStoragePath = (url: string): string | null => {
+       const m = url.match(/\/storage\/v1\/object\/(?:public|sign)\/marketing-materials\/([^?]+)/);
+       return m?.[1] ?? null;
+     };
+
+     const resolveUrl = async (raw: string | null | undefined): Promise<string | null> => {
+       if (!raw) return null;
+       const path = /^https?:\/\//i.test(raw) ? (extractStoragePath(raw) || null) : raw;
+       // Tenta signed URL primeiro (funciona mesmo se o bucket não for público para esse path)
+       if (path) {
+         try {
+           const { data: signed } = await supabase.storage
+             .from('marketing-materials')
+             .createSignedUrl(path, 60 * 60);
+           if (signed?.signedUrl) return signed.signedUrl;
+         } catch { /* fall back */ }
+       }
+       // Fallback: URL pública direta
+       if (/^https?:\/\//i.test(raw)) return raw;
+       try {
+         return supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+       } catch {
+         return null;
+       }
+     };
+
+     const fetchImages = async () => {
+       console.log(`[ProductImageUpload] === Buscando imagens para listing ${listingId} ===`);
+       const { data, error } = await supabase
+         .from('advertiser_listing_media')
+         .select('id, media_url, storage_path')
+         .eq('listing_id', listingId);
+
+       console.log(`[ProductImageUpload] advertiser_listing_media retornou ${data?.length ?? 0} registros`, { data, error });
+
+       const collected: { id: string; path: string; storage_path: string | null }[] = [];
+
+       if (!error && data) {
+         for (const img of data) {
+           const candidate = img.media_url || img.storage_path || '';
+           console.log(`[ProductImageUpload] Avaliando registro ${img.id}: media_url="${img.media_url}", storage_path="${img.storage_path}"`);
+           if (!candidate) { console.warn(`[ProductImageUpload] Pulando: ambos campos vazios`); continue; }
+           const isUrl = /^https?:\/\//i.test(candidate);
+           if (!isUrl && (!candidate.includes('/') || candidate.split('/').length < 2)) {
+             console.warn(`[ProductImageUpload] Ignorando path inválido: ${candidate}`);
+             continue;
+           }
+           const resolved = (await resolveUrl(candidate)) || (await resolveUrl(img.storage_path));
+           if (!resolved) { console.warn(`[ProductImageUpload] Não foi possível resolver URL`); continue; }
+           console.log(`[ProductImageUpload] ✓ Resolvido: ${resolved}`);
+           collected.push({ id: img.id, path: resolved, storage_path: img.storage_path ?? null });
          }
-       };
-       fetchImages();
-     }
+       }
+
+       // Fallback: nenhuma mídia → tenta cover_image_url da listing
+       if (collected.length === 0) {
+         console.log(`[ProductImageUpload] Nenhuma mídia encontrada. Tentando cover_image_url...`);
+         const { data: listing } = await supabase
+           .from('advertiser_listings' as any)
+           .select('cover_image_url')
+           .eq('id', listingId)
+           .maybeSingle();
+         const cover = (listing as any)?.cover_image_url;
+         console.log(`[ProductImageUpload] cover_image_url da listing: "${cover}"`);
+         const resolvedCover = await resolveUrl(cover);
+         if (resolvedCover) {
+           console.log(`[ProductImageUpload] ✓ Capa resolvida: ${resolvedCover}`);
+           collected.push({ id: `cover-${listingId}`, path: resolvedCover, storage_path: null });
+         }
+       }
+
+       console.log(`[ProductImageUpload] === FINAL: ${collected.length} imagem(ns) ===`, collected);
+       setUploadedImages(collected);
+     };
+     fetchImages();
    }, [listingId]);
 
   const processFiles = async (files: FileList | File[]) => {
@@ -331,6 +386,13 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         if (mediaError) throw mediaError;
 
         const newImage = { id: mediaData.id, path: publicUrl, storage_path: filePath };
+        // Atualiza cover_image_url do anúncio para a primeira nova imagem
+        if (uploadedImages.length === 0 && i === 0) {
+          await supabase
+            .from('advertiser_listings' as any)
+            .update({ cover_image_url: publicUrl })
+            .eq('id', listingId);
+        }
         setUploadedImages(prev => [...prev, newImage]);
         if (onUploadComplete) onUploadComplete(newImage.id, newImage.path);
 
@@ -357,6 +419,17 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
           .from('marketing-materials')
           .remove([img.storage_path]);
         if (storageErr) console.warn('Falha ao remover do storage:', storageErr);
+      }
+
+      // Caso especial: id sintético "cover-<listingId>" vindo do fallback de cover_image_url
+      if (img.id.startsWith('cover-') && listingId) {
+        await supabase
+          .from('advertiser_listings' as any)
+          .update({ cover_image_url: null })
+          .eq('id', listingId);
+        setUploadedImages(prev => prev.filter(u => u.id !== img.id));
+        toast.success('Capa removida.');
+        return;
       }
 
       const { error: dbErr } = await supabase
@@ -567,7 +640,23 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
              const isBusy = deletingId === img.id || replacingId === img.id;
              return (
                <div key={img.id} className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-emerald-50 shadow-sm group">
-                 <img src={img.path} className="absolute inset-0 w-full h-full object-cover" alt="product" />
+                 <img
+                   src={img.path}
+                   className="absolute inset-0 w-full h-full object-cover"
+                   alt="product"
+                   onError={(e) => {
+                     console.warn(`[ProductImageUpload] Arquivo no storage não encontrado, escondendo preview:`, img.path);
+                     const wrapper = (e.currentTarget.parentElement as HTMLElement);
+                     if (wrapper) {
+                       wrapper.classList.add('opacity-40');
+                       const overlay = document.createElement('div');
+                       overlay.className = 'absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-600 text-[10px] font-bold text-center p-2';
+                       overlay.textContent = 'Arquivo perdido — exclua e suba outra';
+                       wrapper.appendChild(overlay);
+                     }
+                     e.currentTarget.style.display = 'none';
+                   }}
+                 />
 
                  {/* Botões de ação */}
                  <div className="absolute top-2 right-2 flex gap-1.5">

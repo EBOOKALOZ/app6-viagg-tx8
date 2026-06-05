@@ -42,6 +42,51 @@ export default function AdvertiserLeadsPage() {
   const { data: purchaseHistory = [], isLoading: isLoadingHistory } = useAdvertiserPurchaseHistory();
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isLeadSoundEnabled());
 
+  const { data: discountRequests = [], refetch: refetchDiscountRequests } = useQuery<any[]>({
+    queryKey: ["advertiser-discount-requests-messages", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const storeIds: string[] = [];
+      const { data: adv } = await (supabase.from("advertiser_accounts") as any)
+        .select("id").eq("user_id", user!.id).maybeSingle();
+      if ((adv as any)?.id) storeIds.push((adv as any).id);
+      const { data: ms } = await (supabase.from("merchant_stores") as any)
+        .select("id").eq("user_id", user!.id).maybeSingle();
+      if ((ms as any)?.id) storeIds.push((ms as any).id);
+      if (storeIds.length === 0) return [];
+
+      const { data } = await (supabase.from("discount_requests") as any)
+        .select("*")
+        .in("store_id", storeIds)
+        .order("created_at", { ascending: false });
+
+      const list = (data || []) as any[];
+      const productIds = [...new Set(list.map(r => r.product_id).filter(Boolean))];
+      const titleMap: Record<string, string> = {};
+      if (productIds.length > 0) {
+        const [adv2, mkt] = await Promise.all([
+          (supabase.from("advertiser_listings") as any).select("id, title").in("id", productIds),
+          (supabase.from("merchant_marketing_products") as any).select("id, title").in("id", productIds),
+        ]);
+        for (const row of (adv2.data ?? []) as any[]) titleMap[row.id] = row.title;
+        for (const row of (mkt.data ?? []) as any[]) if (!titleMap[row.id]) titleMap[row.id] = row.title;
+      }
+      return list.map(r => ({ ...r, product_title: titleMap[r.product_id] ?? "Produto" }));
+    },
+  });
+
+  const respondDiscount = async (id: string, status: 'accepted' | 'rejected') => {
+    const { error } = await (supabase.from("discount_requests") as any)
+      .update({ status })
+      .eq("id", id);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success(status === 'accepted' ? "Oferta aceita!" : "Oferta recusada.");
+    refetchDiscountRequests();
+  };
+
+  const pendingDiscountRequests = discountRequests.filter(r => r.status === 'pending');
+
   const { data: purchaseIntentions = [], refetch: refetchPurchases } = useQuery<PurchaseIntentionCard[]>({
     queryKey: ["advertiser-purchase-intentions", user?.id],
     enabled: !!user?.id,
@@ -212,6 +257,106 @@ export default function AdvertiserLeadsPage() {
           )}
         </div>
       </div>
+
+      {/* ── Ofertas via "Minha Oferta é..." ── */}
+      <Card className="bg-[#0F1419] border-[#2A3038] overflow-hidden">
+        <CardHeader className="border-b border-[#2A3038] py-4 px-5 flex flex-row items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] flex items-center justify-center shrink-0">
+              <MessageSquare className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">OFERTAS DOS COMPRADORES</h2>
+              <p className="text-[10px] sm:text-xs text-[#A7B0BE] uppercase tracking-widest">
+                Propostas de preço enviadas via "Minha Oferta é..."
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-black text-[#A7B0BE] uppercase">
+            {discountRequests.length} total · {pendingDiscountRequests.length} pendente{pendingDiscountRequests.length !== 1 ? 's' : ''}
+          </span>
+        </CardHeader>
+        <CardContent className="p-5">
+          {discountRequests.length === 0 ? (
+            <div className="py-8 text-center text-[#A7B0BE] text-xs font-bold uppercase tracking-widest">
+              Nenhuma oferta recebida ainda
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {discountRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    req.status === 'pending' ? 'bg-[#14171B] border-[#2563EB]/30' :
+                    req.status === 'accepted' ? 'bg-emerald-950/30 border-emerald-700/40' :
+                    'bg-[#14171B] border-[#2A3038] opacity-60'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-[#F5F7FA] uppercase tracking-tight">
+                          {req.customer_name || 'Comprador'}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          req.status === 'pending' ? 'bg-amber-500/20 text-amber-300' :
+                          req.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-300' :
+                          'bg-zinc-700 text-zinc-400'
+                        }`}>
+                          {req.status === 'pending' ? 'Pendente' :
+                           req.status === 'accepted' ? 'Aceita' :
+                           req.status === 'rejected' ? 'Recusada' : req.status}
+                        </span>
+                        {req.status === 'accepted' && req.customer_phone && (
+                          <span className="text-[10px] text-emerald-300 font-bold bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                            📱 {req.customer_phone}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-[#A7B0BE] font-medium">
+                        Produto: <span className="text-[#F5F7FA]">{req.product_title}</span>
+                        {req.product_price && (
+                          <span className="ml-2 line-through opacity-60">R$ {req.product_price}</span>
+                        )}
+                      </p>
+                      <p className="text-2xl font-black text-[#2563EB]">
+                        {formatCurrency(Number(req.requested_price))}
+                        <span className="text-[10px] text-[#A7B0BE] font-bold ml-2 uppercase">oferta</span>
+                      </p>
+                      {req.message && (
+                        <p className="text-xs text-[#A7B0BE] italic line-clamp-2">"{req.message}"</p>
+                      )}
+                      <p className="text-[10px] text-[#5B6571]">
+                        {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+
+                    {req.status === 'pending' && (
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => respondDiscount(req.id, 'accepted')}
+                          className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wide gap-1"
+                        >
+                          <CheckCircle2 className="w-3 h-3" /> Aceitar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => respondDiscount(req.id, 'rejected')}
+                          className="h-9 px-3 rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-red-400 hover:border-red-500/40 font-black text-[10px] uppercase gap-1"
+                        >
+                          <XCircle className="w-3 h-3" /> Recusar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Gate de acesso: aviso vermelho se nunca comprou pacote ── */}
       {!isLoadingHistory && !hasCreditsOrPackage && (
