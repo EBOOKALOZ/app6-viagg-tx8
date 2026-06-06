@@ -124,25 +124,34 @@ export function useAdvertiserAccountData() {
         }
       }
 
-      // 4. Fetch Stats (Listings & Credits)
-      const { data: listings } = await supabase
-        .from("real_estate_listings")
-        .select("visibility_status")
-        .eq("owner_user_id", user.id);
+      // 4. Fetch Stats (Listings & Credits) — soma TODAS as tabelas de anúncio
+      const [reList, vList, advList, balData] = await Promise.all([
+        supabase.from("real_estate_listings").select("visibility_status").eq("owner_user_id", user.id),
+        (supabase.from("vehicle_listings" as any).select("visibility_status").eq("owner_user_id", user.id)) as any,
+        safeAccount.id
+          ? (supabase.from("advertiser_listings" as any).select("listing_status").eq("advertiser_account_id", safeAccount.id)) as any
+          : { data: [] as any[] },
+        safeAccount.id
+          ? (supabase.from("advertiser_credit_balances" as any).select("available_credits, consumed_credits").eq("advertiser_account_id", safeAccount.id).maybeSingle()) as any
+          : { data: null },
+      ]);
 
-      const { data: balance } = await supabase
-        .from("real_estate_credit_balances")
-        .select("available_credits")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
+      const allListings: { status: string }[] = [];
+      for (const r of (reList?.data ?? []) as any[]) allListings.push({ status: String(r?.visibility_status ?? '').toLowerCase() });
+      for (const v of (vList?.data ?? []) as any[]) allListings.push({ status: String(v?.visibility_status ?? '').toLowerCase() });
+      for (const a of (advList?.data ?? []) as any[]) allListings.push({ status: String(a?.listing_status ?? '').toLowerCase() });
+
+      const isActive = (s: string) => s === 'published' || s === 'active';
+      const isPaused = (s: string) => s === 'paused' || s === 'draft';
+      const isExpired = (s: string) => s === 'expired';
 
       const stats = {
-        total_listings: listings?.length || 0,
-        active_listings: listings?.filter(l => l.visibility_status === 'published').length || 0,
-        paused_listings: listings?.filter(l => l.visibility_status === 'paused' || l.visibility_status === 'draft').length || 0,
-        expired_listings: listings?.filter(l => l.visibility_status === 'expired').length || 0,
-        available_credits: balance?.available_credits || 0,
-        contacts_unlocked: !!planDetails?.is_premium
+        total_listings: allListings.length,
+        active_listings: allListings.filter(l => isActive(l.status)).length,
+        paused_listings: allListings.filter(l => isPaused(l.status)).length,
+        expired_listings: allListings.filter(l => isExpired(l.status)).length,
+        available_credits: (balData?.data as any)?.available_credits ?? 0,
+        contacts_unlocked: !!planDetails?.is_premium || ((balData?.data as any)?.available_credits ?? 0) > 0,
       };
 
       const defaultSettings = {
@@ -166,6 +175,9 @@ export function useAdvertiserAccountData() {
         stats
       } as AdvertiserAccountData;
     },
-    staleTime: 1000 * 60, // 1 minute
+    staleTime: 0,
+    refetchInterval: 15_000,           // revalida a cada 15s
+    refetchOnWindowFocus: true,        // revalida ao voltar pra aba
+    refetchOnMount: "always",
   });
 }

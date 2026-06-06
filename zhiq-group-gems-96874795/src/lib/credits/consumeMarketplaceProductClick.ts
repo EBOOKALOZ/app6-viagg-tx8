@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { trackProductEvent } from "@/skills/growth/trackProductEvent";
 
 const ANON_ID_KEY = "viagg_anon_id";
 
@@ -42,6 +43,16 @@ export async function consumeMarketplaceProductClick(
   args: ConsumeProductClickArgs
 ): Promise<ConsumeProductClickResult | null> {
   if (!args.productId || !args.storeId) return null;
+
+  // Registra evento de "click" pra alimentar o card de Visualizações do dashboard
+  trackProductEvent({
+    product_id: args.productId,
+    store_id: args.storeId,
+    event_type: "click",
+    source: args.source || "card",
+    city: args.city,
+    neighborhood: args.neighborhood,
+  });
 
   try {
     const { data, error } = await (supabase.rpc as any)("consume_marketplace_product_click", {

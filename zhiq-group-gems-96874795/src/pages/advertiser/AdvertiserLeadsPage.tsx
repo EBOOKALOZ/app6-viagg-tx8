@@ -65,16 +65,54 @@ export default function AdvertiserLeadsPage() {
 
       const list = (data || []) as any[];
       const productIds = [...new Set(list.map(r => r.product_id).filter(Boolean))];
-      const titleMap: Record<string, string> = {};
+      const infoMap: Record<string, { title: string; image: string | null }> = {};
+
+      const resolveStorage = async (raw: string | null | undefined): Promise<string | null> => {
+        if (!raw) return null;
+        if (/^https?:\/\//i.test(raw)) {
+          const m = raw.match(/\/storage\/v1\/object\/(?:public|sign)\/marketing-materials\/([^?]+)/);
+          if (m?.[1]) {
+            try {
+              const { data: signed } = await supabase.storage.from('marketing-materials').createSignedUrl(m[1], 60 * 60);
+              if (signed?.signedUrl) return signed.signedUrl;
+            } catch { /* ignore */ }
+          }
+          return raw;
+        }
+        try {
+          const { data: signed } = await supabase.storage.from('marketing-materials').createSignedUrl(raw, 60 * 60);
+          if (signed?.signedUrl) return signed.signedUrl;
+        } catch { /* ignore */ }
+        return supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+      };
+
       if (productIds.length > 0) {
-        const [adv2, mkt] = await Promise.all([
-          (supabase.from("advertiser_listings") as any).select("id, title").in("id", productIds),
-          (supabase.from("merchant_marketing_products") as any).select("id, title").in("id", productIds),
+        const [adv2, mkt, mediaRows] = await Promise.all([
+          (supabase.from("advertiser_listings") as any).select("id, title, cover_image_url").in("id", productIds),
+          (supabase.from("merchant_marketing_products") as any).select("id, title, image_url").in("id", productIds),
+          (supabase.from("advertiser_listing_media") as any).select("listing_id, media_url, storage_path").in("listing_id", productIds),
         ]);
-        for (const row of (adv2.data ?? []) as any[]) titleMap[row.id] = row.title;
-        for (const row of (mkt.data ?? []) as any[]) if (!titleMap[row.id]) titleMap[row.id] = row.title;
+
+        const mediaByListing: Record<string, string> = {};
+        for (const m of (mediaRows?.data ?? []) as any[]) {
+          if (!mediaByListing[m.listing_id]) mediaByListing[m.listing_id] = m.media_url || m.storage_path;
+        }
+
+        for (const row of (adv2.data ?? []) as any[]) {
+          const candidate = row.cover_image_url || mediaByListing[row.id];
+          const img = await resolveStorage(candidate);
+          infoMap[row.id] = { title: row.title, image: img };
+        }
+        for (const row of (mkt.data ?? []) as any[]) {
+          if (!infoMap[row.id]) infoMap[row.id] = { title: row.title, image: row.image_url ?? null };
+        }
       }
-      return list.map(r => ({ ...r, product_title: titleMap[r.product_id] ?? "Produto" }));
+
+      return list.map(r => ({
+        ...r,
+        product_title: infoMap[r.product_id]?.title ?? "Produto",
+        product_image: infoMap[r.product_id]?.image ?? null,
+      }));
     },
   });
 
@@ -108,6 +146,23 @@ export default function AdvertiserLeadsPage() {
       return new Set(JSON.parse(raw));
     } catch { return new Set(); }
   });
+
+  const [unlockedOrders, setUnlockedOrders] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("unlocked-orders");
+      if (!raw) return new Set();
+      return new Set(JSON.parse(raw));
+    } catch { return new Set(); }
+  });
+
+  const markOrderUnlocked = (id: string) => {
+    setUnlockedOrders(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      try { localStorage.setItem("unlocked-orders", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
 
   const markAsCalled = (id: string) => {
     setCalledOffers(prev => {
@@ -335,7 +390,20 @@ export default function AdvertiserLeadsPage() {
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                    <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex flex-1 min-w-0 gap-3">
+                      <div className="w-20 h-20 rounded-xl bg-[#14171B] border border-[#2A3038] overflow-hidden shrink-0 flex items-center justify-center">
+                        {req.product_image ? (
+                          <img
+                            src={req.product_image}
+                            alt={req.product_title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-[#2A3038]" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-black text-[#F5F7FA] uppercase tracking-tight">
                           {req.customer_name || 'Comprador'}
@@ -371,6 +439,7 @@ export default function AdvertiserLeadsPage() {
                       <p className="text-[10px] text-[#5B6571]">
                         {new Date(req.created_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
+                      </div>
                     </div>
 
                     {req.status === 'pending' && (
@@ -435,33 +504,6 @@ export default function AdvertiserLeadsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Acesso gratuito: enquanto ainda não comprou nenhum pacote ── */}
-      {!isLoadingHistory && !hasPaidPackage && (
-        <Card className="border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/40 to-teal-950/30 overflow-hidden">
-          <CardContent className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
-              <Unlock className="w-6 h-6 text-emerald-300" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-black text-emerald-100 mb-1">
-                🎁 Acesso gratuito ativo
-              </h3>
-              <p className="text-sm text-emerald-200/90 leading-snug">
-                Você ainda não adquiriu nenhum pacote de créditos. Por isso,
-                <strong> todas as mensagens estão visíveis sem custo</strong>.
-                Ao comprar seu primeiro pacote, novas mensagens passam a custar
-                13 créditos por desbloqueio.
-              </p>
-            </div>
-            <Button
-              onClick={() => navigate('/anunciante/creditos')}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white font-black uppercase text-xs tracking-widest h-11 px-5 shrink-0 w-full sm:w-auto shadow-lg shadow-emerald-500/30"
-            >
-              Ver Pacotes
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {/* ── Pacotes Adquiridos: histórico de compras + saldo atual ── */}
       <Card className="bg-[#0F1419] border-[#2A3038] overflow-hidden">
@@ -556,10 +598,19 @@ export default function AdvertiserLeadsPage() {
             {purchaseIntentions.map((pi) => (
               <Card key={pi.id} className="bg-yellow-50 border-2 border-yellow-300 shadow-lg overflow-hidden flex flex-col relative">
                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-yellow-400 to-amber-500" />
-                <div className="px-4 pt-4">
+                <div className="px-4 pt-4 flex items-center justify-between gap-2 flex-wrap">
                   <div className="inline-flex items-center gap-2 bg-yellow-500 text-zinc-900 text-[16px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow">
                     <Package className="w-5 h-5" /> Pedido vindo de Marketplace
                   </div>
+                  {unlockedOrders.has(pi.id) ? (
+                    <span className="inline-flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow">
+                      <Unlock className="w-3 h-3" /> Desbloqueado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 bg-zinc-700 text-zinc-200 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow">
+                      <Lock className="w-3 h-3" /> Bloqueado
+                    </span>
+                  )}
                 </div>
                 <CardHeader className="p-5 pt-3 pb-2">
                   <div className="flex justify-between items-start gap-2">
@@ -646,19 +697,16 @@ export default function AdvertiserLeadsPage() {
                         </span>
                       </div>
                       <Button
-                        disabled={hasPaidPackage && (balance.available_credits ?? 0) < 5}
+                        disabled={(balance.available_credits ?? 0) < 5}
                         onClick={() => {
-                          const msg = hasPaidPackage
-                            ? `Chamar este cliente vai descontar 5 créditos do seu saldo (${balance.available_credits ?? 0} disponíveis). Continuar?`
-                            : `🎁 Acesso gratuito: este 1º chamado é por nossa conta (você ainda não comprou nenhum pacote). Continuar?`;
-                          if (!window.confirm(msg)) return;
                           window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank");
+                          markOrderUnlocked(pi.id);
                         }}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 disabled:text-zinc-500 text-white font-black uppercase text-[11px] tracking-widest h-11 gap-2"
                       >
                         <MessageSquare className="w-4 h-4" /> Chamar Cliente no WhatsApp (-5 cr)
                       </Button>
-                      {hasPaidPackage && (balance.available_credits ?? 0) < 5 && (
+                      {(balance.available_credits ?? 0) < 5 && (
                         <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider text-center">
                           saldo insuficiente
                         </p>

@@ -456,11 +456,9 @@ export default function AdvertiserPromotionPage() {
   /* ── Build slots array (always 6) ── */
   const slots: (CatalogItem | null)[] = Array.from({ length: MAX_PROMO_SLOTS }, (_, i) => selectedItems[i] ?? null);
 
-  /* ── Picker tabs ── */
+  /* ── Picker tabs (Imóveis/Veículos ocultos) ── */
   const pickerTabs: { key: CategoryTab; label: string; icon: React.ElementType }[] = [
     { key: "produtos", label: "Produtos", icon: Package },
-    { key: "imoveis", label: "Imóveis", icon: Building2 },
-    { key: "veiculos", label: "Veículos", icon: Car },
   ];
 
   /* ─────────────────────────────────────────────

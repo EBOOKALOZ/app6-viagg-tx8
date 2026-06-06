@@ -29,9 +29,14 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrencyBRL } from "@/lib/utils";
 import { AdvertiserAccountCard } from "@/components/advertiser/AdvertiserAccountCard";
+import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
 import { AdvertiserOverviewCards } from "@/components/advertiser/AdvertiserOverviewCards";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import LoadingTransition from "@/pages/LoadingTransition";
 
@@ -39,6 +44,47 @@ export default function AdvertiserDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchingOrder, setSearchingOrder] = useState<any | null>(null);
+
+  // Modal "Chamar Consultor"
+  const [consultorOpen, setConsultorOpen] = useState(false);
+  const [consultorSubject, setConsultorSubject] = useState("");
+  const [consultorMessage, setConsultorMessage] = useState("");
+  const [consultorSubmitting, setConsultorSubmitting] = useState(false);
+
+  const submitConsultor = async () => {
+    if (!consultorSubject.trim() || !consultorMessage.trim()) {
+      toast.error("Preencha assunto e mensagem.");
+      return;
+    }
+    setConsultorSubmitting(true);
+    try {
+      const { error } = await (supabase.from("support_tickets" as any)).insert({
+        user_id: user?.id,
+        subject: consultorSubject.trim(),
+        message: consultorMessage.trim(),
+        category: "consultoria",
+        status: "open",
+        source: "advertiser_dashboard",
+      });
+      if (error) throw error;
+      toast.success("Pedido enviado! Um consultor entrará em contato em breve.");
+      setConsultorOpen(false);
+      setConsultorSubject("");
+      setConsultorMessage("");
+    } catch (err: any) {
+      // Fallback: abre WhatsApp se a tabela não existir ou der erro
+      const msg = encodeURIComponent(
+        `Olá! Sou anunciante da Viagg-TX8.\n\nAssunto: ${consultorSubject}\n\n${consultorMessage}${user?.email ? `\n\nE-mail: ${user.email}` : ""}`
+      );
+      window.open(`https://wa.me/5547999999999?text=${msg}`, "_blank");
+      toast.info("Abrindo WhatsApp com seu pedido...");
+      setConsultorOpen(false);
+      setConsultorSubject("");
+      setConsultorMessage("");
+    } finally {
+      setConsultorSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -72,34 +118,53 @@ export default function AdvertiserDashboard() {
     return () => { supabase.removeChannel(ch); };
   }, [user?.id]);
 
-  const { data: account, isLoading } = useQuery({
-    queryKey: ["advertiser-account", user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from("advertiser_accounts")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user,
-  });
+  const { data: accountFull, isLoading } = useAdvertiserAccountData();
+  // Adapta o retorno do hook completo para o formato esperado pelo AdvertiserAccountCard
+  const account = accountFull ? {
+    id: accountFull.id,
+    full_name: accountFull.full_name || accountFull.profile?.name || null,
+    email: accountFull.email || null,
+    whatsapp: accountFull.whatsapp || accountFull.profile?.phone || null,
+    account_status: accountFull.account_status || accountFull.status || 'active',
+    created_at: accountFull.created_at,
+  } : null;
 
   // ── Query de listings unificadas para o painel ──
   const { data: recentListings, isLoading: isLoadingListings } = useQuery({
     queryKey: ["dashboard-simplified-listings", user?.id],
     enabled: !!user,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    staleTime: 0,
     queryFn: async () => {
       const { data: advertiserData } = await supabase.from('advertiser_accounts' as any).select('id').eq('user_id', user?.id).maybeSingle();
       const rePromise = supabase.from("real_estate_listings").select(`id, title, city, state, price_brl, visibility_status, property_type, created_at, real_estate_media(public_masked_storage_path, original_storage_path)`).eq("owner_user_id", user?.id);
       const vPromise = supabase.from("vehicle_listings" as any).select(`id, title, city, state, price, status, vehicle_type, cover_image_url, created_at`).eq("owner_user_id", user?.id);
-      const pPromise = supabase.from("advertiser_listings" as any).select(`id, title, category, listing_status, cover_image_url, created_at, price, city`).eq("advertiser_account_id", advertiserData?.id);
+      const pPromise = supabase.from("advertiser_listings" as any).select(`id, title, category, listing_status, cover_image_url, created_at, price, city, advertiser_listing_media(media_url, storage_path)`).eq("advertiser_account_id", advertiserData?.id);
 
       const [reRes, vRes, pRes] = await Promise.all([rePromise, vPromise, pPromise]);
       const normalized: any[] = [];
+
+      // Helper: resolve storage path → signed URL (válido por 1h)
+      const resolveProductImg = async (raw: string | null | undefined): Promise<string | null> => {
+        if (!raw) return null;
+        if (/^https?:\/\//i.test(raw)) {
+          const m = raw.match(/\/storage\/v1\/object\/(?:public|sign)\/marketing-materials\/([^?]+)/);
+          if (m?.[1]) {
+            try {
+              const { data: signed } = await supabase.storage.from('marketing-materials').createSignedUrl(m[1], 60 * 60);
+              if (signed?.signedUrl) return signed.signedUrl;
+            } catch { /* ignore */ }
+          }
+          return raw;
+        }
+        try {
+          const { data: signed } = await supabase.storage.from('marketing-materials').createSignedUrl(raw, 60 * 60);
+          if (signed?.signedUrl) return signed.signedUrl;
+        } catch { /* ignore */ }
+        return supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+      };
 
       (reRes.data || []).forEach(item => normalized.push({
         id: item.id, title: item.title, category: 'imovel', city: item.city, state: item.state, price: item.price_brl || 0,
@@ -112,14 +177,128 @@ export default function AdvertiserDashboard() {
         status: item.status, image: item.cover_image_url, storageBucket: null, typeLabel: item.vehicle_type || 'Veículo', created_at: item.created_at
       }));
 
-      (pRes.data || []).forEach(item => normalized.push({
-        id: item.id, title: item.title, category: 'produto', city: item.city || '', state: 'SP',
-        price: item.price || 0, status: item.listing_status, image: item.cover_image_url, storageBucket: null,
-        typeLabel: item.category || 'Produto', created_at: item.created_at
-      }));
+      // Produtos: cover_image_url OU primeira mídia em advertiser_listing_media, resolvendo via signed URL
+      for (const item of ((pRes.data || []) as any[])) {
+        const mediaFirst = item.advertiser_listing_media?.[0];
+        const candidate = item.cover_image_url || mediaFirst?.media_url || mediaFirst?.storage_path;
+        const resolvedImg = await resolveProductImg(candidate);
+        normalized.push({
+          id: item.id, title: item.title, category: 'produto', city: item.city || '', state: 'SP',
+          price: item.price || 0, status: item.listing_status, image: resolvedImg, storageBucket: null,
+          typeLabel: item.category || 'Produto', created_at: item.created_at
+        });
+      }
 
       return normalized.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
+  });
+
+  // ── Stats do dashboard ──
+  const { data: dashStats, refetch: refetchStats, isFetching: isFetchingStats } = useQuery({
+    queryKey: ['advertiser-dashboard-stats', user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    staleTime: 0,
+    queryFn: async () => {
+      // 1. Anúncios ativos (3 tabelas)
+      const { data: adv } = await (supabase.from('advertiser_accounts' as any).select('id').eq('user_id', user!.id).maybeSingle()) as any;
+      const accId = (adv as any)?.id;
+      const { data: ms } = await (supabase.from('merchant_stores' as any).select('id').eq('user_id', user!.id).maybeSingle()) as any;
+      const storeId = (ms as any)?.id;
+
+      const [reActive, vActive, pActive] = await Promise.all([
+        (supabase.from('real_estate_listings' as any).select('id', { count: 'exact', head: true }).eq('owner_user_id', user!.id).in('visibility_status', ['published','active'])) as any,
+        (supabase.from('vehicle_listings' as any).select('id', { count: 'exact', head: true }).eq('owner_user_id', user!.id).in('visibility_status', ['published','active'])) as any,
+        accId ? (supabase.from('advertiser_listings' as any).select('id', { count: 'exact', head: true }).eq('advertiser_account_id', accId).in('listing_status', ['published','active'])) as any : { count: 0 },
+      ]);
+      const totalAds = (reActive?.count ?? 0) + (vActive?.count ?? 0) + (pActive?.count ?? 0);
+
+      // 2. IDs de todos os produtos do anunciante (pra filtrar eventos)
+      const productIds: string[] = [];
+      if (accId) {
+        const { data: ownProducts } = await (supabase.from('advertiser_listings' as any).select('id').eq('advertiser_account_id', accId)) as any;
+        for (const p of ((ownProducts as any[]) || [])) productIds.push(p.id);
+      }
+      if (storeId) {
+        const { data: mktProducts } = await (supabase.from('merchant_marketing_products' as any).select('id').eq('merchant_store_id', storeId)) as any;
+        for (const p of ((mktProducts as any[]) || [])) productIds.push(p.id);
+      }
+
+      // 3. Visualizações (soma de várias fontes)
+      let totalViews = 0;
+      const storeIdsAll = [...new Set([accId, storeId].filter(Boolean) as string[])];
+
+      // a) product_interest_events — match por product_id OU store_id
+      if (productIds.length > 0 || storeIdsAll.length > 0) {
+        const queries: Promise<any>[] = [];
+        if (productIds.length > 0) {
+          queries.push((supabase.from('product_interest_events' as any)
+            .select('id', { count: 'exact', head: true })
+            .in('product_id', productIds)) as any);
+        }
+        if (storeIdsAll.length > 0) {
+          queries.push((supabase.from('product_interest_events' as any)
+            .select('id', { count: 'exact', head: true })
+            .in('store_id', storeIdsAll)) as any);
+        }
+        const results = await Promise.all(queries);
+        for (const r of results) totalViews += r?.count ?? 0;
+      }
+
+      // b) m1_billing_events — match por merchant_store_id OU product_id
+      if (productIds.length > 0 || storeIdsAll.length > 0) {
+        const queries: Promise<any>[] = [];
+        if (storeIdsAll.length > 0) {
+          queries.push((supabase.from('m1_billing_events' as any)
+            .select('id', { count: 'exact', head: true })
+            .in('merchant_store_id', storeIdsAll)
+            .in('event_type', ['product_click', 'store_view'])) as any);
+        }
+        if (productIds.length > 0) {
+          queries.push((supabase.from('m1_billing_events' as any)
+            .select('id', { count: 'exact', head: true })
+            .in('product_id', productIds)
+            .in('event_type', ['product_click', 'store_view'])) as any);
+        }
+        const results = await Promise.all(queries);
+        for (const r of results) totalViews += r?.count ?? 0;
+      }
+
+      // c) Visualizações de imóveis e veículos (próprios) — somam view_count direto da listing
+      const [reViewsRes, vViewsRes] = await Promise.all([
+        (supabase.from('real_estate_listings' as any).select('view_count').eq('owner_user_id', user!.id)) as any,
+        (supabase.from('vehicle_listings' as any).select('view_count').eq('owner_user_id', user!.id)) as any,
+      ]);
+      for (const r of ((reViewsRes?.data as any[]) || [])) totalViews += Number(r?.view_count ?? 0);
+      for (const v of ((vViewsRes?.data as any[]) || [])) totalViews += Number(v?.view_count ?? 0);
+
+      console.log('[Dashboard Stats] views/products', { productIds, storeIdsAll, totalViews, totalAds });
+
+      // 4. Leads/Mensagens (contact_intentions + discount_requests + purchase_intentions)
+      const storeIds: string[] = [];
+      if (accId) storeIds.push(accId);
+      if (storeId) storeIds.push(storeId);
+
+      const [contactCount, discountCount, purchaseCount] = await Promise.all([
+        (supabase.from('advertiser_contact_intentions' as any).select('id', { count: 'exact', head: true }).eq('advertiser_user_id', user!.id).neq('status','cancelled')) as any,
+        storeIds.length > 0
+          ? ((supabase.from('discount_requests' as any).select('id', { count: 'exact', head: true }).in('store_id', storeIds)) as any)
+          : { count: 0 },
+        storeId
+          ? ((supabase.from('purchase_intentions' as any).select('id', { count: 'exact', head: true }).eq('store_id', storeId)) as any)
+          : { count: 0 },
+      ]);
+      const totalLeads = (contactCount?.count ?? 0) + (discountCount?.count ?? 0) + (purchaseCount?.count ?? 0);
+
+      // 5. Taxa de conversão
+      const conversionRate = totalViews > 0 ? Math.round((totalLeads / totalViews) * 100) : 0;
+
+      return { totalAds, totalViews, totalLeads, conversionRate };
+    },
   });
 
   const getStatusBadge = (status: string) => {
@@ -140,10 +319,34 @@ export default function AdvertiserDashboard() {
   const isProfileComplete = !!account?.full_name;
 
   const stats = [
-    { label: "Anúncios Ativos", value: "0", icon: Package, color: "text-[#FF6A00]", trend: "+0%" },
-    { label: "Visualizações", value: "0", icon: Eye, color: "text-[#A7B0BE]", trend: "+0%" },
-    { label: "Leads / Mensagens", value: "0", icon: MessageSquare, color: "text-[#22C55E]", trend: "+0%" },
-    { label: "Taxa de Conversão", value: "0%", icon: TrendingUp, color: "text-[#FF6A00]", trend: "+0%" },
+    {
+      label: "Anúncios Ativos",
+      value: String(dashStats?.totalAds ?? 0),
+      icon: Package, color: "text-[#FF6A00]",
+      trend: (dashStats?.totalAds ?? 0) > 0 ? "ativo" : "+0%",
+      onClick: () => navigate('/anunciante/meus-anuncios'),
+    },
+    {
+      label: "Visualizações",
+      value: String(dashStats?.totalViews ?? 0),
+      icon: Eye, color: "text-[#A7B0BE]",
+      trend: (dashStats?.totalViews ?? 0) > 0 ? `${dashStats?.totalViews} views` : "+0%",
+      onClick: () => navigate('/anunciante/meus-anuncios'),
+    },
+    {
+      label: "Leads / Mensagens",
+      value: String(dashStats?.totalLeads ?? 0),
+      icon: MessageSquare, color: "text-[#22C55E]",
+      trend: (dashStats?.totalLeads ?? 0) > 0 ? "novos" : "+0%",
+      onClick: () => navigate('/anunciante/mensagens'),
+    },
+    {
+      label: "Taxa de Conversão",
+      value: `${dashStats?.conversionRate ?? 0}%`,
+      icon: TrendingUp, color: "text-[#FF6A00]",
+      trend: (dashStats?.conversionRate ?? 0) > 0 ? `${dashStats?.conversionRate}%` : "+0%",
+      onClick: () => navigate('/anunciante/mensagens'),
+    },
   ];
 
   const ACCEPTED_STATUSES = ['accepted', 'assigned', 'in_progress', 'a_caminho', 'entregando', 'buscando'];
@@ -265,9 +468,27 @@ export default function AdvertiserDashboard() {
       </section>
 
       {/* Stats Grid - Ultra Premium Look */}
+      <section className="space-y-3">
+      <div className="flex items-center justify-end gap-2">
+        <span className="text-[10px] font-bold text-[#A7B0BE] uppercase tracking-widest">
+          {isFetchingStats ? "Atualizando..." : "Sincronizado"}
+        </span>
+        <button
+          onClick={() => refetchStats()}
+          disabled={isFetchingStats}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1B1F24] border border-[#2A3038] hover:border-[#FF6A00]/40 text-[10px] font-black text-[#A7B0BE] hover:text-[#FF6A00] uppercase tracking-widest transition-all disabled:opacity-50"
+        >
+          <ArrowUpRight className={cn("w-3 h-3", isFetchingStats && "animate-spin")} />
+          Atualizar
+        </button>
+      </div>
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {stats.map((stat) => (
-          <Card key={stat.label} className="border border-[#2A3038] shadow-lg shadow-black/20 rounded-[28px] overflow-hidden group hover:shadow-xl hover:shadow-black/30 transition-all duration-500 bg-[#1B1F24]">
+          <Card
+            key={stat.label}
+            onClick={stat.onClick}
+            className="border border-[#2A3038] shadow-lg shadow-black/20 rounded-[28px] overflow-hidden group hover:shadow-xl hover:shadow-black/30 transition-all duration-500 bg-[#1B1F24] cursor-pointer hover:border-[#FF6A00]/40 hover:scale-[1.02]"
+          >
             <CardContent className="p-10 space-y-6">
               <div className="flex items-center justify-between">
                 <div className={cn("p-4 rounded-2xl bg-[#14171B] shadow-inner group-hover:scale-110 transition-transform duration-500", stat.color)}>
@@ -284,6 +505,7 @@ export default function AdvertiserDashboard() {
             </CardContent>
           </Card>
         ))}
+      </section>
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -323,7 +545,10 @@ export default function AdvertiserDashboard() {
                   </div>
                 ))}
               </div>
-              <Button className="mt-auto w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest h-14 rounded-2xl transition-all border-none shadow-lg shadow-[#FF6A00]/20">
+              <Button
+                onClick={() => setConsultorOpen(true)}
+                className="mt-auto w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest h-14 rounded-2xl transition-all border-none shadow-lg shadow-[#FF6A00]/20"
+              >
                 Chamar Consultor
               </Button>
            </CardContent>
@@ -430,6 +655,61 @@ export default function AdvertiserDashboard() {
           </div>
         )}
       </section>
+
+      {/* Modal: Chamar Consultor */}
+      <Dialog open={consultorOpen} onOpenChange={setConsultorOpen}>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-zinc-900 flex items-center gap-2">
+              <span className="w-8 h-8 rounded-full bg-[#FF6A00] flex items-center justify-center text-white">💬</span>
+              Chamar Consultor
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              Conte rapidamente o que você precisa. Um consultor da Viagg-TX8 retornará pelo seu e-mail/WhatsApp cadastrado.
+            </p>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-zinc-600 uppercase tracking-widest">Assunto</label>
+              <Input
+                placeholder="Ex.: Quero divulgar em mais grupos"
+                value={consultorSubject}
+                onChange={(e) => setConsultorSubject(e.target.value)}
+                maxLength={120}
+                className="h-11 bg-zinc-50 border-zinc-200 focus-visible:ring-orange-400"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-zinc-600 uppercase tracking-widest">Mensagem</label>
+              <Textarea
+                placeholder="Descreva sua necessidade ou dúvida..."
+                value={consultorMessage}
+                onChange={(e) => setConsultorMessage(e.target.value)}
+                maxLength={1000}
+                rows={5}
+                className="resize-none bg-zinc-50 border-zinc-200 focus-visible:ring-orange-400"
+              />
+              <p className="text-[10px] text-zinc-400 text-right">{consultorMessage.length}/1000</p>
+            </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setConsultorOpen(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={submitConsultor}
+                disabled={consultorSubmitting}
+                className="flex-1 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase tracking-widest text-xs"
+              >
+                {consultorSubmitting ? "Enviando..." : "Enviar Pedido"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

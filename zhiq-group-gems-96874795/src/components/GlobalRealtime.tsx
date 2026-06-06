@@ -30,11 +30,14 @@ export function GlobalRealtime() {
       "purchase_intentions",
       "purchase_intention_items",
       "contact_intentions",
+      "advertiser_contact_intentions",
       "real_estate_listings",
       "vehicle_listings",
       "auction_listings",
       "store_credit_wallet",
       "credit_transactions",
+      "product_interest_events",
+      "m1_billing_events",
     ];
 
     const channel = supabase.channel(`global-realtime-${user.id}`);

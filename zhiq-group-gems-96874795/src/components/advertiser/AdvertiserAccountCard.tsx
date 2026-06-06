@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { User, Mail, Smartphone, Calendar, ShieldCheck, Edit3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,23 +18,32 @@ interface AdvertiserAccountCardProps {
 
 export function AdvertiserAccountCard({ account }: AdvertiserAccountCardProps) {
   const { avatarUrl } = useAuth();
+  const navigate = useNavigate();
   const statusColors = {
     ativa: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    active: "bg-emerald-100 text-emerald-700 border-emerald-200",
     inativa: "bg-amber-100 text-amber-700 border-amber-200",
+    inactive: "bg-amber-100 text-amber-700 border-amber-200",
     bloqueada: "bg-red-100 text-red-700 border-red-200",
+    blocked: "bg-red-100 text-red-700 border-red-200",
   };
 
   const statusLabel = {
-    ativa: "Ativa",
-    inativa: "Inativa",
-    bloqueada: "Bloqueada",
+    ativa: "Ativo",
+    active: "Ativo",
+    inativa: "Inativo",
+    inactive: "Inativo",
+    bloqueada: "Bloqueado",
+    blocked: "Bloqueado",
   };
 
-  const formattedDate = new Date(account.created_at).toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const formatDateBR = (raw: string | null | undefined): string => {
+    if (!raw) return "—";
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  };
+  const formattedDate = formatDateBR(account.created_at);
 
   return (
     <Card className="border-none shadow-2xl shadow-zinc-200/50 rounded-2xl sm:rounded-[32px] overflow-hidden bg-white group">
@@ -45,7 +55,10 @@ export function AdvertiserAccountCard({ account }: AdvertiserAccountCardProps) {
           </CardTitle>
           <CardDescription className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-widest">Detalhes do seu perfil administrativo</CardDescription>
         </div>
-        <Button className="rounded-xl sm:rounded-2xl font-bold bg-yellow-400 hover:bg-yellow-300 text-black border-none gap-2 h-10 px-4 transition-all w-full sm:w-auto shrink-0 shadow-md shadow-yellow-400/30">
+        <Button
+          onClick={() => navigate('/anunciante/conta')}
+          className="rounded-xl sm:rounded-2xl font-bold bg-yellow-400 hover:bg-yellow-300 text-black border-none gap-2 h-10 px-4 transition-all w-full sm:w-auto shrink-0 shadow-md shadow-yellow-400/30"
+        >
           <Edit3 className="w-4 h-4" /> Editar Conta
         </Button>
       </CardHeader>

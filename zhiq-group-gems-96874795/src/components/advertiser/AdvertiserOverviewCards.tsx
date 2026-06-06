@@ -1,62 +1,94 @@
 import React from "react";
-import { 
-  Building2, 
-  Package, 
-  PlusCircle, 
-  UserCircle, 
-  CreditCard, 
-  TrendingUp, 
+import {
+  Package,
+  PlusCircle,
+  UserCircle,
+  CreditCard,
   ArrowRight,
-  Plus,
   MessageSquare
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-const actions = [
-  {
-    title: "MEUS ANÚNCIOS",
-    description: "Gerencie suas ofertas ativas e pausadas.",
-    icon: Package,
-    color: "bg-orange-500",
-    href: "/anunciante/meus-anuncios",
-    stats: "0 Ativos",
-  },
-  {
-    title: "CRIAR NOVO ANÚNCIO",
-    description: "Publique um novo imóvel ou produto agora.",
-    icon: PlusCircle,
-    color: "bg-[#FF6A00]",
-    href: "/anunciante/anuncios/novo",
-    isPrimary: true,
-  },
-  {
-    title: "MINHA CONTA",
-    description: "Edite seus dados e preferências.",
-    icon: UserCircle,
-    color: "bg-[#2A3038]",
-    href: "/anunciante/conta",
-  },
-  {
-    title: "CRÉDITOS / PLANOS",
-    description: "Acompanhe seus créditos e assinaturas.",
-    icon: CreditCard,
-    color: "bg-emerald-600",
-    href: "/anunciante/creditos",
-    stats: "R$ 0,00",
-  },
-  {
-    title: "MENSAGENS / LEADS",
-    description: "Gerencie perguntas e intenções de contato.",
-    icon: MessageSquare,
-    color: "bg-[#2A3038]",
-    href: "/anunciante/mensagens",
-    stats: "Perguntas de Visitantes",
-  },
-];
+import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AdvertiserOverviewCards() {
+  const { data: account } = useAdvertiserAccountData();
+  const { user } = useAuth();
+
+  // Mensagens pendentes (leads + ofertas + pedidos)
+  const { data: messagesCount = 0 } = useQuery({
+    queryKey: ["overview-messages-count", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const storeIds: string[] = [];
+      const { data: adv } = await (supabase.from("advertiser_accounts" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      if ((adv as any)?.id) storeIds.push((adv as any).id);
+      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      if ((ms as any)?.id) storeIds.push((ms as any).id);
+
+      const [contactCount, discountCount, purchaseCount] = await Promise.all([
+        (supabase.from("advertiser_contact_intentions" as any).select("id", { count: "exact", head: true }).eq("advertiser_user_id", user!.id).neq("status", "cancelled")) as any,
+        storeIds.length > 0
+          ? ((supabase.from("discount_requests" as any).select("id", { count: "exact", head: true }).in("store_id", storeIds)) as any)
+          : { count: 0 },
+        (ms as any)?.id
+          ? ((supabase.from("purchase_intentions" as any).select("id", { count: "exact", head: true }).eq("store_id", (ms as any).id)) as any)
+          : { count: 0 },
+      ]);
+      return (contactCount?.count ?? 0) + (discountCount?.count ?? 0) + (purchaseCount?.count ?? 0);
+    },
+  });
+
+  const activeListings = account?.stats?.active_listings ?? 0;
+  const credits = account?.stats?.available_credits ?? 0;
+
+  const actions = [
+    {
+      title: "MEUS ANÚNCIOS",
+      description: "Gerencie suas ofertas ativas e pausadas.",
+      icon: Package,
+      color: "bg-orange-500",
+      href: "/anunciante/meus-anuncios",
+      stats: `${activeListings} Ativo${activeListings !== 1 ? 's' : ''}`,
+    },
+    {
+      title: "CRIAR NOVO ANÚNCIO",
+      description: "Publique um novo imóvel ou produto agora.",
+      icon: PlusCircle,
+      color: "bg-[#FF6A00]",
+      href: "/anunciante/anuncios/novo",
+      isPrimary: true,
+    },
+    {
+      title: "MINHA CONTA",
+      description: "Edite seus dados e preferências.",
+      icon: UserCircle,
+      color: "bg-[#2A3038]",
+      href: "/anunciante/conta",
+    },
+    {
+      title: "CRÉDITOS / PLANOS",
+      description: "Acompanhe seus créditos e assinaturas.",
+      icon: CreditCard,
+      color: "bg-emerald-600",
+      href: "/anunciante/creditos",
+      stats: `${credits.toLocaleString('pt-BR')} créditos`,
+    },
+    {
+      title: "MENSAGENS / LEADS",
+      description: "Gerencie perguntas e intenções de contato.",
+      icon: MessageSquare,
+      color: "bg-[#2A3038]",
+      href: "/anunciante/mensagens",
+      stats: messagesCount > 0 ? `${messagesCount} mensage${messagesCount !== 1 ? 'ns' : 'm'}` : "Sem mensagens",
+    },
+  ];
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
       {actions.map((action) => (

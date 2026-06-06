@@ -115,6 +115,10 @@ export default function StorePublicPage() {
 
     const { data: products = [], isLoading: loadingProducts } = useQuery<StoreProduct[]>({
         queryKey: ["public-store-products", storeId],
+        refetchInterval: 15_000,
+        refetchOnWindowFocus: true,
+        refetchOnMount: "always",
+        staleTime: 0,
         queryFn: async () => {
             const { data: oldProducts } = await (supabase.from("merchant_marketing_products") as any)
                 .select("*")
@@ -140,8 +144,16 @@ export default function StorePublicPage() {
                 created_at: p.created_at
             }));
 
+            // Resolve userId: tenta merchant_stores → advertiser_accounts como fallback
             const { data: storeInfo } = await supabase.from("merchant_stores").select("user_id").eq("id", storeId!).maybeSingle();
-            const userId = storeInfo?.user_id;
+            let userId: string | null | undefined = storeInfo?.user_id;
+            if (!userId) {
+                const { data: advAcc } = await (supabase.from("advertiser_accounts") as any)
+                    .select("user_id")
+                    .eq("id", storeId!)
+                    .maybeSingle();
+                userId = (advAcc as any)?.user_id;
+            }
 
             if (userId) {
                 const [pRes, rRes, vRes, advAccRes] = await Promise.all([
@@ -639,6 +651,13 @@ export default function StorePublicPage() {
                                             onAskQuestion={handleAskQuestion}
                                                 onMakeOffer={handleMakeOffer}
                                             onClick={() => {
+                                                if (storeId) {
+                                                    consumeMarketplaceProductClick({
+                                                        productId: product.id,
+                                                        storeId,
+                                                        source: "store_page",
+                                                    });
+                                                }
                                                 const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
                                                 navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
                                             }}
