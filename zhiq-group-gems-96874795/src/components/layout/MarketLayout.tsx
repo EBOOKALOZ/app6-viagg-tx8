@@ -75,13 +75,13 @@ export function MarketLayout({
     const handleVendedorClick = () => {
         if (!user) {
             localStorage.setItem("viagg_auth_entry", "advertiser");
-            navigate("/auth?entry=advertiser");
+            navigate("/auth");
             return;
         }
         if (availableProfiles?.includes("merchant")) {
             navigate("/loja/minha-loja");
         } else {
-            navigate("/auth?entry=advertiser");
+            navigate("/auth");
         }
     };
     const [cartOpen, setCartOpen] = useState(false);
@@ -143,38 +143,6 @@ export function MarketLayout({
                             </div>
                         </div>
 
-                        {/* Real Estate Quick Link */}
-                        <div 
-                          className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full cursor-pointer border border-white/20 transition-all text-white font-bold text-sm"
-                          onClick={() => navigate("/imoveis")}
-                        >
-                          <Building2 className="w-4 h-4" />
-                          Imóveis
-                        </div>
-                        {/* Vehicles Quick Link */}
-                        <div 
-                          className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full cursor-pointer border border-white/20 transition-all text-white font-bold text-sm"
-                          onClick={() => navigate("/automoveis")}
-                        >
-                          <Car className="w-4 h-4" />
-                          Veículos
-                        </div>
-                        {/* Auctions Quick Link */}
-                        <div 
-                          className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[#FF6A00]/20 hover:bg-[#FF6A00]/30 rounded-full cursor-pointer border border-[#FF6A00]/40 transition-all text-white font-bold text-sm"
-                          onClick={() => navigate("/mercado/leiloes")}
-                        >
-                          <Gavel className="w-4 h-4" />
-                          Leilões
-                        </div>
-                        {/* Mercado Quick Link */}
-                        <div 
-                          className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full cursor-pointer border border-white/20 transition-all text-white font-bold text-sm"
-                          onClick={() => navigate("/mercado?view=produtos")}
-                        >
-                          <ShoppingBag className="w-4 h-4" />
-                          Mercado
-                        </div>
 
                         {/* Search (desktop inline) */}
                         {showSearch && (
@@ -209,7 +177,7 @@ export function MarketLayout({
                             {!user && !isLoading && !hideHeaderAuth && (
                               <div className="flex items-center gap-2">
                                 <Button
-                                    onClick={() => navigate('/auth?entry=advertiser')}
+                                    onClick={() => navigate('/auth')}
                                     variant="ghost"
                                     className="text-[#FF6A00] bg-white hover:bg-zinc-100 font-black text-xs h-[44px] px-6 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap hidden md:flex items-center gap-2"
                                 >

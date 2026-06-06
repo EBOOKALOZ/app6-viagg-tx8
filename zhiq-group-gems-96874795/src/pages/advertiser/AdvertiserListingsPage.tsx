@@ -228,6 +228,43 @@ export default function AdvertiserListingsPage() {
   const discountRequests = (discountRequestsQuery.data ?? []) as any[];
   const pendingDiscountCount = discountRequests.filter(r => r.status === 'pending').length;
 
+  const [calledOffers, setCalledOffers] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('called-offers');
+      if (!raw) return new Set();
+      return new Set(JSON.parse(raw));
+    } catch { return new Set(); }
+  });
+
+  const markAsCalled = (id: string) => {
+    setCalledOffers(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      try { localStorage.setItem('called-offers', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  const deleteDiscountRequest = async (id: string) => {
+    if (!window.confirm('Excluir esta oferta?')) return;
+    const { error } = await supabase
+      .from('discount_requests' as any)
+      .delete()
+      .eq('id', id);
+    if (error) {
+      toast.error(`Erro: ${error.message}`);
+      return;
+    }
+    toast.success('Oferta excluída.');
+    setCalledOffers(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      try { localStorage.setItem('called-offers', JSON.stringify([...next])); } catch {}
+      return next;
+    });
+    queryClient.invalidateQueries({ queryKey: ['advertiser-discount-requests', user?.id] });
+  };
+
   const respondDiscountRequest = async (id: string, newStatus: 'accepted' | 'rejected') => {
     const { error } = await supabase
       .from('discount_requests' as any)
@@ -370,6 +407,10 @@ export default function AdvertiserListingsPage() {
       queryClient.invalidateQueries({ queryKey: ["advertiser-unified-listings", user.id] });
     };
 
+    const invalidateDiscount = () => {
+      queryClient.invalidateQueries({ queryKey: ['advertiser-discount-requests', user.id] });
+    };
+
     const channel = supabase
       .channel(`advertiser-listings-realtime-${user.id}`)
       .on("postgres_changes", {
@@ -383,6 +424,14 @@ export default function AdvertiserListingsPage() {
       .on("postgres_changes", {
         event: "*", schema: "public", table: "advertiser_listings",
       }, invalidate)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "discount_requests",
+      }, (payload) => {
+        invalidateDiscount();
+        if (payload.eventType === 'INSERT') {
+          toast.success('Nova oferta recebida!', { duration: 4000 });
+        }
+      })
       .subscribe();
 
     return () => {
@@ -843,6 +892,48 @@ export default function AdvertiserListingsPage() {
                               saldo insuficiente
                             </span>
                           )}
+                        </div>
+                      )}
+
+                      {req.status === 'accepted' && (
+                        <div className="flex flex-col gap-2 items-end shrink-0">
+                          {req.customer_phone && (
+                            <Button
+                              onClick={() => {
+                                const clean = String(req.customer_phone).replace(/\D/g, '').replace(/^55/, '');
+                                const msg = encodeURIComponent(
+                                  `Olá ${req.customer_name || ''}! Sou da loja e aceitei sua oferta de ${formatCurrencyBRL(req.requested_price)} para o produto "${req.product_title}". Vamos combinar a entrega?`
+                                );
+                                window.open(`https://wa.me/55${clean}?text=${msg}`, '_blank');
+                                markAsCalled(req.id);
+                              }}
+                              className="h-11 px-5 rounded-xl bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[11px] uppercase tracking-widest gap-2 shadow-lg shadow-orange-500/40 animate-pulse"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              Chamar Ofertante
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteDiscountRequest(req.id)}
+                            className="h-8 px-3 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 font-black text-[10px] uppercase gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </Button>
+                        </div>
+                      )}
+
+                      {req.status === 'rejected' && (
+                        <div className="shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deleteDiscountRequest(req.id)}
+                            className="h-9 px-3 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 font-black text-[10px] uppercase gap-1"
+                          >
+                            <Trash2 className="w-3 h-3" /> Excluir
+                          </Button>
                         </div>
                       )}
                     </div>

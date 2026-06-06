@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
@@ -27,6 +28,7 @@ interface PurchaseIntentionCard {
   items: Array<{
     id: string;
     product_title: string | null;
+    product_image_url: string | null;
     quantity: number;
     unit_price: number | null;
     subtotal: number | null;
@@ -85,6 +87,46 @@ export default function AdvertiserLeadsPage() {
     refetchDiscountRequests();
   };
 
+  const deleteDiscount = async (id: string) => {
+    if (!window.confirm("Excluir esta oferta?")) return;
+    const { error } = await (supabase.from("discount_requests") as any).delete().eq("id", id);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success("Oferta excluída.");
+    setCalledOffers(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      try { localStorage.setItem("called-offers", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+    refetchDiscountRequests();
+  };
+
+  const [calledOffers, setCalledOffers] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("called-offers");
+      if (!raw) return new Set();
+      return new Set(JSON.parse(raw));
+    } catch { return new Set(); }
+  });
+
+  const markAsCalled = (id: string) => {
+    setCalledOffers(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      try { localStorage.setItem("called-offers", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  const callOfferer = (req: any) => {
+    const clean = String(req.customer_phone).replace(/\D/g, "").replace(/^55/, "");
+    const msg = encodeURIComponent(
+      `Olá ${req.customer_name || ''}! Sou da loja e aceitei sua oferta de ${formatCurrency(Number(req.requested_price))} para o produto "${req.product_title}". Vamos combinar a entrega?`
+    );
+    window.open(`https://wa.me/55${clean}?text=${msg}`, "_blank");
+    markAsCalled(req.id);
+  };
+
   const pendingDiscountRequests = discountRequests.filter(r => r.status === 'pending');
 
   const { data: purchaseIntentions = [], refetch: refetchPurchases } = useQuery<PurchaseIntentionCard[]>({
@@ -109,7 +151,7 @@ export default function AdvertiserLeadsPage() {
 
       const ids = piList.map((p) => p.id);
       const { data: items } = await (supabase.from("purchase_intention_items") as any)
-        .select("id, intention_id, product_title, quantity, unit_price, subtotal")
+        .select("id, intention_id, product_title, product_image_url, quantity, unit_price, subtotal")
         .in("intention_id", ids);
 
       const itemsByIntention = new Map<string, any[]>();
@@ -350,6 +392,41 @@ export default function AdvertiserLeadsPage() {
                         </Button>
                       </div>
                     )}
+
+                    {req.status === 'accepted' && (
+                      <div className="flex flex-col gap-2 items-end shrink-0">
+                        {req.customer_phone && (
+                          <Button
+                            onClick={() => callOfferer(req)}
+                            className="h-11 px-5 rounded-xl bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[11px] uppercase tracking-widest gap-2 shadow-lg shadow-orange-500/40 animate-pulse"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Chamar Ofertante
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteDiscount(req.id)}
+                          className="h-8 px-3 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 font-black text-[10px] uppercase gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Excluir
+                        </Button>
+                      </div>
+                    )}
+
+                    {req.status === 'rejected' && (
+                      <div className="shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => deleteDiscount(req.id)}
+                          className="h-9 px-3 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 font-black text-[10px] uppercase gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Excluir
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -358,28 +435,29 @@ export default function AdvertiserLeadsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Gate de acesso: aviso vermelho se nunca comprou pacote ── */}
-      {!isLoadingHistory && !hasCreditsOrPackage && (
-        <Card className="border-2 border-red-500/50 bg-gradient-to-br from-red-950/40 to-orange-950/30 overflow-hidden">
+      {/* ── Acesso gratuito: enquanto ainda não comprou nenhum pacote ── */}
+      {!isLoadingHistory && !hasPaidPackage && (
+        <Card className="border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-950/40 to-teal-950/30 overflow-hidden">
           <CardContent className="p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center shrink-0">
-              <Lock className="w-6 h-6 text-red-300" />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+              <Unlock className="w-6 h-6 text-emerald-300" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base font-black text-red-100 mb-1">
-                Mensagens bloqueadas
+              <h3 className="text-base font-black text-emerald-100 mb-1">
+                🎁 Acesso gratuito ativo
               </h3>
-              <p className="text-sm text-red-200/90 leading-snug">
-                Pra ler as mensagens dos clientes, você precisa adquirir ao menos
-                um pacote de créditos. Sem pacote, os contatos ficam ocultos
-                mesmo que cheguem.
+              <p className="text-sm text-emerald-200/90 leading-snug">
+                Você ainda não adquiriu nenhum pacote de créditos. Por isso,
+                <strong> todas as mensagens estão visíveis sem custo</strong>.
+                Ao comprar seu primeiro pacote, novas mensagens passam a custar
+                13 créditos por desbloqueio.
               </p>
             </div>
             <Button
               onClick={() => navigate('/anunciante/creditos')}
-              className="bg-red-500 hover:bg-red-400 text-white font-black uppercase text-xs tracking-widest h-11 px-5 shrink-0 w-full sm:w-auto shadow-lg shadow-red-500/30"
+              className="bg-emerald-500 hover:bg-emerald-400 text-white font-black uppercase text-xs tracking-widest h-11 px-5 shrink-0 w-full sm:w-auto shadow-lg shadow-emerald-500/30"
             >
-              Adquirir Pacote
+              Ver Pacotes
             </Button>
           </CardContent>
         </Card>
@@ -400,9 +478,9 @@ export default function AdvertiserLeadsPage() {
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
-            <div className="bg-emerald-500/10 border border-emerald-500/30 px-7 py-3 rounded-xl text-center shadow-lg shadow-emerald-500/10">
-              <p className="text-[17px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
-              <p className="text-[34px] font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[19px] text-emerald-300">créd.</span></p>
+            <div className="bg-emerald-500/10 border border-emerald-500/30 px-[30.5px] py-[13px] rounded-xl text-center shadow-lg shadow-emerald-500/10">
+              <p className="text-[18.5px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
+              <p className="text-[37px] font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[20.7px] text-emerald-300">créd.</span></p>
             </div>
           </div>
         </CardHeader>
@@ -476,33 +554,33 @@ export default function AdvertiserLeadsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {purchaseIntentions.map((pi) => (
-              <Card key={pi.id} className="bg-emerald-50 border-2 border-emerald-200 shadow-lg overflow-hidden flex flex-col relative">
-                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-500" />
+              <Card key={pi.id} className="bg-yellow-50 border-2 border-yellow-300 shadow-lg overflow-hidden flex flex-col relative">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-yellow-400 to-amber-500" />
                 <div className="px-4 pt-4">
-                  <div className="inline-flex items-center gap-2 bg-emerald-600 text-white text-[16px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow">
+                  <div className="inline-flex items-center gap-2 bg-yellow-500 text-zinc-900 text-[16px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow">
                     <Package className="w-5 h-5" /> Pedido vindo de Marketplace
                   </div>
                 </div>
                 <CardHeader className="p-5 pt-3 pb-2">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                        <CheckCircle2 className="w-4 h-4 text-yellow-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-emerald-700">Dados confirmados</p>
-                        <p className="text-[10px] text-emerald-500">Mini-cadastro ativo</p>
+                        <p className="text-sm font-bold text-yellow-800">Dados confirmados</p>
+                        <p className="text-[10px] text-yellow-600">Mini-cadastro ativo</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-emerald-700/70 font-bold flex items-center gap-1">
+                      <span className="text-[10px] text-yellow-800/70 font-bold flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {new Date(pi.created_at).toLocaleString("pt-BR")}
                       </span>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-emerald-600/60 hover:text-red-600 hover:bg-red-500/10 rounded-full"
+                        className="h-6 w-6 text-yellow-700/60 hover:text-red-600 hover:bg-red-500/10 rounded-full"
                         onClick={() => handleDeletePurchase(pi.id)}
                         title="Excluir mensagem"
                       >
@@ -512,7 +590,7 @@ export default function AdvertiserLeadsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-5 pt-2 flex flex-col flex-1 space-y-3">
-                  <div className="space-y-1.5 text-sm text-emerald-800">
+                  <div className="space-y-1.5 text-sm text-yellow-900">
                     <p className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> {pi.customer_name || "Anônimo"}</p>
 
                     {(pi.customer_bairro || pi.customer_city) && (
@@ -523,35 +601,69 @@ export default function AdvertiserLeadsPage() {
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-emerald-200/70">
+                  <div className="pt-3 border-t border-yellow-300/70">
                     <div className="flex justify-between mb-2">
-                      <span className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-yellow-800 flex items-center gap-1.5">
                         <Package className="w-3.5 h-3.5" /> Itens do Pedido
                       </span>
-                      <span className="text-xs font-bold text-emerald-700">{pi.total_items ?? 0} item(ns)</span>
+                      <span className="text-xs font-bold text-yellow-800">{pi.total_items ?? 0} item(ns)</span>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {pi.items.map((it) => (
-                        <div key={it.id} className="flex justify-between gap-2 text-xs text-emerald-700">
-                          <span className="line-clamp-1 flex-1">• {it.quantity}x {it.product_title || "Produto"}</span>
+                        <div key={it.id} className="flex items-center gap-2 text-xs text-yellow-800">
+                          <div className="w-[99px] h-[99px] rounded-lg bg-white border border-yellow-300 overflow-hidden shrink-0 flex items-center justify-center">
+                            {it.product_image_url ? (
+                              <img
+                                src={it.product_image_url}
+                                alt={it.product_title || "Produto"}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                              />
+                            ) : (
+                              <Package className="w-10 h-10 text-yellow-400" />
+                            )}
+                          </div>
+                          <span className="line-clamp-2 flex-1">{it.quantity}x {it.product_title || "Produto"}</span>
                           <span className="font-bold shrink-0">{formatCurrency(it.subtotal ?? (it.unit_price ?? 0) * it.quantity)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="flex justify-between pt-3 border-t border-emerald-200/70">
-                    <span className="text-sm font-black text-emerald-800">Total Geral</span>
-                    <span className="text-sm font-black text-emerald-800">{formatCurrency(pi.subtotal)}</span>
+                  <div className="flex justify-between pt-3 border-t border-yellow-300/70">
+                    <span className="text-sm font-black text-yellow-900">Total Geral</span>
+                    <span className="text-sm font-black text-yellow-900">{formatCurrency(pi.subtotal)}</span>
                   </div>
 
                   {pi.customer_whatsapp && (
-                    <Button
-                      onClick={() => window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank")}
-                      className="w-full mt-auto bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-[11px] tracking-widest h-11 gap-2"
-                    >
-                      <MessageSquare className="w-4 h-4" /> Chamar Cliente no WhatsApp
-                    </Button>
+                    <div className="mt-auto space-y-2">
+                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-yellow-100 border border-yellow-400">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800 flex items-center gap-1">
+                          ⚠️ Custa 5 créditos ao chamar
+                        </span>
+                        <span className="text-[10px] font-bold text-yellow-800">
+                          Saldo: {balance.available_credits ?? 0}
+                        </span>
+                      </div>
+                      <Button
+                        disabled={hasPaidPackage && (balance.available_credits ?? 0) < 5}
+                        onClick={() => {
+                          const msg = hasPaidPackage
+                            ? `Chamar este cliente vai descontar 5 créditos do seu saldo (${balance.available_credits ?? 0} disponíveis). Continuar?`
+                            : `🎁 Acesso gratuito: este 1º chamado é por nossa conta (você ainda não comprou nenhum pacote). Continuar?`;
+                          if (!window.confirm(msg)) return;
+                          window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank");
+                        }}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 disabled:text-zinc-500 text-white font-black uppercase text-[11px] tracking-widest h-11 gap-2"
+                      >
+                        <MessageSquare className="w-4 h-4" /> Chamar Cliente no WhatsApp (-5 cr)
+                      </Button>
+                      {hasPaidPackage && (balance.available_credits ?? 0) < 5 && (
+                        <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider text-center">
+                          saldo insuficiente
+                        </p>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -573,7 +685,10 @@ export default function AdvertiserLeadsPage() {
       ) : intentions.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {intentions.map((lead) => {
-            const isUnlocked = lead.status === "unlocked";
+            // Acesso gratuito: enquanto o lojista NÃO comprou nenhum pacote,
+            // todas as mensagens aparecem desbloqueadas. Após a primeira compra,
+            // só desbloqueia mediante crédito (lead.status === 'unlocked').
+            const isUnlocked = lead.status === "unlocked" || !hasPaidPackage;
 
             return (
               <Card key={lead.id} className="bg-[#F5E62B] border border-[#E0D020] shadow-lg overflow-hidden flex flex-col relative group">

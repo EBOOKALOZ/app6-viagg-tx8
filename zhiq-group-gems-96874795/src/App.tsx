@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { GlobalCallProvider } from "@/contexts/GlobalCallContext";
 import { SoundSettingsProvider } from "@/contexts/SoundSettingsContext";
 import { FloatingCartButton } from "@/components/public/FloatingCartButton";
+import { GlobalRealtime } from "@/components/GlobalRealtime";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageFallback from "@/components/PageFallback";
 import { Index, NotFound } from "@/routes/lazyPages";
@@ -48,6 +49,7 @@ export default function App() {
           <SoundSettingsProvider>
             <GlobalCallProvider>
               <TooltipProvider>
+                <GlobalRealtime />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                     {/* ── Rotas públicas / auth / legal ── */}
