@@ -1,6 +1,8 @@
-import { useMemo, useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapboxPremiumMap, PremiumMapMarker, MapErrorBoundary } from "@/components/map/MapboxPremiumMap";
+import { parseCoordinates } from "@/lib/coordinateParser";
+import { toast } from "sonner";
 
 interface StoreCoords {
   latitude: number;
@@ -27,9 +29,28 @@ interface DeliveryMapSectionProps {
   destDetails?: { bairro: string; cidade: string; estado: string } | null;
   customerName?: string;
   customerPhone?: string;
+  productName?: string | null;
+  productImage?: string | null;
+  onPasteCoords?: (lat: number, lng: number) => void;
 }
 
-export function DeliveryMapSection({ store, destCoords, routeInfo, onMarkerDragEnd, isDesktopFullHeight, isMapSelectMode, tempDestCoords, onMapMouseMove, destDetails, customerName, customerPhone }: DeliveryMapSectionProps) {
+export function DeliveryMapSection({ store, destCoords, routeInfo, onMarkerDragEnd, isDesktopFullHeight, isMapSelectMode, tempDestCoords, onMapMouseMove, destDetails, customerName, customerPhone, productName, productImage, onPasteCoords }: DeliveryMapSectionProps) {
+  // Handler global pra colar coordenadas a partir do input dentro do balão (popup é HTML)
+  useEffect(() => {
+    (window as any).__viaggPasteClientCoords = (raw: string) => {
+      const text = String(raw || '').trim();
+      if (!text) return;
+      const parsed = parseCoordinates(text);
+      if (!parsed.success || !parsed.coordinates) {
+        toast.error(parsed.error || 'Coordenadas inválidas. Cole um link do WhatsApp/Google Maps ou "lat, lng".');
+        return;
+      }
+      const { latitude, longitude } = parsed.coordinates;
+      if (onPasteCoords) onPasteCoords(latitude, longitude);
+      toast.success(`Destino atualizado: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+    };
+    return () => { delete (window as any).__viaggPasteClientCoords; };
+  }, [onPasteCoords]);
   const lastCenterRef = useRef<{ lat: number; lng: number }>({ lat: store.latitude, lng: store.longitude });
 
   const markers: PremiumMapMarker[] = useMemo(() => {
@@ -83,6 +104,26 @@ export function DeliveryMapSection({ store, destCoords, routeInfo, onMarkerDragE
                             </div>
                         </div>` : `
                         <div style="font-size: 11px; color: rgba(255,255,255,0.6); font-style: italic;">Telefone não informado</div>`}
+
+                        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2);">
+                            <div style="font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">📍 Colar coordenadas do WhatsApp</div>
+                            <input
+                              type="text"
+                              placeholder="Cole o link ou lat, lng aqui..."
+                              onpaste="setTimeout(() => { if (window.__viaggPasteClientCoords) window.__viaggPasteClientCoords(event.target.value || event.clipboardData?.getData('text') || ''); }, 50)"
+                              onchange="if (window.__viaggPasteClientCoords) window.__viaggPasteClientCoords(this.value)"
+                              style="width: 100%; padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); background: rgba(0,0,0,0.25); color: #FFFFFF; font-size: 11px; outline: none; box-sizing: border-box;"
+                            />
+                        </div>
+
+                        ${productName || productImage ? `
+                        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 8px;">
+                            ${productImage ? `<img src="${productImage}" alt="Produto" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; border: 1.5px solid rgba(255,255,255,0.5); flex-shrink: 0; background: #fff;" />` : ''}
+                            <div style="flex: 1; min-width: 0;">
+                              <div style="font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.05em;">Produto</div>
+                              <div style="font-size: 12px; font-weight: 800; color: #FFFFFF; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${productName || ''}</div>
+                            </div>
+                        </div>` : ''}
 
                         ${destDetails ? `
                         <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.15);">

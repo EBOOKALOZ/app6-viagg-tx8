@@ -357,12 +357,38 @@ export default function MerchantDeliveryView() {
   }, [order?.pickup_lat, order?.pickup_lng, order?.destination_lat, order?.destination_lng]);
 
   /* ── Copy pickup code ── */
-  const copyCode = () => {
+  const copyCode = async () => {
     if (!order?.pickup_code) return;
-    navigator.clipboard.writeText(order.pickup_code);
-    setCopied(true);
-    toast.success("Código copiado!");
-    setTimeout(() => setCopied(false), 2000);
+    const text = order.pickup_code;
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch { /* ignore */ }
+    if (!ok) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch { /* ignore */ }
+    }
+    if (ok) {
+      setCopied(true);
+      toast.success("Código copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error("Não foi possível copiar.");
+    }
   };
 
   /* ── Map markers ── */
@@ -809,7 +835,6 @@ export default function MerchantDeliveryView() {
                   )}
                   {(() => {
                     const deliveryCode = deriveDeliveryCode(order.id, order.pickup_code);
-                    const message = `Olá ${order.customer_name ?? ''}! Seu código de entrega é ${deliveryCode}. Mostre-o ao motoboy antes de receber o produto.`;
                     return (
                       <div className="flex items-start gap-2 text-sm text-slate-700 bg-amber-50 border border-amber-200 rounded-md p-2.5">
                         <Package className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
@@ -820,16 +845,37 @@ export default function MerchantDeliveryView() {
                           <button
                             type="button"
                             onClick={async () => {
+                              const text = String(deliveryCode);
+                              let ok = false;
                               try {
-                                await navigator.clipboard.writeText(message);
-                                toast.success('Mensagem copiada! Cole no WhatsApp do cliente.');
-                              } catch {
-                                toast.error('Não foi possível copiar. Copie manualmente.');
+                                if (navigator.clipboard && window.isSecureContext) {
+                                  await navigator.clipboard.writeText(text);
+                                  ok = true;
+                                }
+                              } catch { /* ignore — usa fallback */ }
+                              if (!ok) {
+                                try {
+                                  const ta = document.createElement('textarea');
+                                  ta.value = text;
+                                  ta.setAttribute('readonly', '');
+                                  ta.style.position = 'fixed';
+                                  ta.style.top = '0';
+                                  ta.style.left = '0';
+                                  ta.style.opacity = '0';
+                                  document.body.appendChild(ta);
+                                  ta.focus();
+                                  ta.select();
+                                  ta.setSelectionRange(0, text.length);
+                                  ok = document.execCommand('copy');
+                                  document.body.removeChild(ta);
+                                } catch { /* ignore */ }
                               }
+                              if (ok) toast.success(`Código ${text} copiado!`);
+                              else toast.error('Não foi possível copiar. Selecione manualmente.');
                             }}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors active:scale-95"
                           >
-                            <Copy className="h-3.5 w-3.5" /> Copiar mensagem
+                            <Copy className="h-3.5 w-3.5" /> Copiar código
                           </button>
                         </div>
                       </div>

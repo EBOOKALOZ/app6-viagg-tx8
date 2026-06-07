@@ -118,6 +118,7 @@ export default function AdvertiserDeliveriesPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [productImage, setProductImage] = useState<string | null>(null);
+  const [productName, setProductName] = useState<string | null>(null);
 
   const [manualDestCoords, setManualDestCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isMapSelectMode, setIsMapSelectMode] = useState(false);
@@ -324,6 +325,14 @@ export default function AdvertiserDeliveriesPage() {
   }, []);
 
   const handleMarkerDrag = useCallback((_id: string, lat: number, lng: number) => {
+    const ok = window.confirm(
+      "⚠️ Modo de proteção ativo\n\nVocê está alterando a localização de entrega manualmente.\n\nDeseja confirmar a nova posição?"
+    );
+    if (!ok) {
+      // Força re-render pra voltar o pino visualmente
+      setManualDestCoords(prev => prev ? { ...prev } : prev);
+      return;
+    }
     setManualDestCoords({ lat, lng });
     setDestinationAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
     setReverseGeocodedAddress(null);
@@ -480,7 +489,10 @@ export default function AdvertiserDeliveriesPage() {
               {store && <RouteDetailsCard routeInfo={routeInfo} isCalculating={isCalculatingRoute} hasValidCoordinates={hasValidCoordinates} />}
 
               {/* Upload de imagem do produto */}
-              <ProductImageUpload onImageSelect={setProductImage} />
+              <ProductImageUpload
+                onImageSelect={setProductImage}
+                onProductPick={(p) => { setProductImage(p.image); setProductName(p.title); }}
+              />
 
               <DestinationSection
                 destinationAddress={destinationAddress}
@@ -505,6 +517,8 @@ export default function AdvertiserDeliveriesPage() {
                   onMarkerDragEnd={handleMarkerDrag} isMapSelectMode={isMapSelectMode}
                   tempDestCoords={tempDestCoords} onMapMouseMove={handleMapMouseMove}
                   destDetails={destDetails} customerName={customerName} customerPhone={customerPhone}
+                  productName={productName} productImage={productImage}
+                  onPasteCoords={(lat, lng) => { setManualDestCoords({ lat, lng }); setDestinationAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`); reverseGeocode(lat, lng); }}
                 />
               )}
 
@@ -546,6 +560,8 @@ export default function AdvertiserDeliveriesPage() {
                 isMapSelectMode={isMapSelectMode} tempDestCoords={tempDestCoords}
                 onMapMouseMove={handleMapMouseMove} destDetails={destDetails}
                 customerName={customerName} customerPhone={customerPhone}
+                productName={productName} productImage={productImage}
+                onPasteCoords={(lat, lng) => { setManualDestCoords({ lat, lng }); setDestinationAddress(`${lat.toFixed(6)}, ${lng.toFixed(6)}`); reverseGeocode(lat, lng); }}
               />
             )}
           </div>
@@ -564,7 +580,10 @@ export default function AdvertiserDeliveriesPage() {
 
             <div className="p-5 space-y-5 flex-1">
               {/* Upload de imagem do produto */}
-              <ProductImageUpload onImageSelect={setProductImage} />
+              <ProductImageUpload
+                onImageSelect={setProductImage}
+                onProductPick={(p) => { setProductImage(p.image); setProductName(p.title); }}
+              />
 
               <DestinationSection
                 destinationAddress={destinationAddress}

@@ -3,14 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, CheckCircle2, AlertCircle, Loader2, X, Image as ImageIcon, Camera, Trash2, RefreshCw } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, Loader2, X, Image as ImageIcon, Trash2, RefreshCw, Store as StoreIcon, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
 
 interface ProductImageUploadProps {
   listingId?: string;
   onUploadComplete?: (mediaId: string, path: string) => void;
   onFilesSelected?: (files: File[]) => void;
   onImageSelect?: (dataUri: string | null) => void;
+  onProductPick?: (product: { id: string; title: string; image: string | null; price?: number | null }) => void;
   maxImages?: number;
 }
 
@@ -125,6 +128,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   onUploadComplete,
   onFilesSelected,
   onImageSelect,
+  onProductPick,
   maxImages = 6
 }) => {
   const { user } = useAuth();
@@ -139,6 +143,151 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   const [generatingPreviews, setGeneratingPreviews] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [storePickerOpen, setStorePickerOpen] = useState(false);
+
+  // Loja + produtos do usuário (pra picker)
+  const { data: storeData } = useQuery({
+    queryKey: ['product-upload-store-picker', user?.id],
+    enabled: !!user?.id && storePickerOpen,
+    queryFn: async () => {
+      const resolveStorage = async (raw: string | null): Promise<string | null> => {
+        if (!raw) return null;
+        if (/^https?:\/\//i.test(raw)) return raw;
+        try {
+          const { data: signed } = await supabase.storage
+            .from('marketing-materials').createSignedUrl(raw, 60 * 60);
+          if (signed?.signedUrl) return signed.signedUrl;
+        } catch { /* ignore */ }
+        return supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+      };
+      const { data: store } = await (supabase.from('merchant_stores' as any)
+        .select('id, nome_loja, logo_url').eq('user_id', user!.id).maybeSingle()) as any;
+      const storeId = (store as any)?.id;
+
+      // Resolve advertiser_account_id do usuário
+      const { data: adv } = await (supabase.from('advertiser_accounts' as any)
+        .select('id').eq('user_id', user!.id).maybeSingle()) as any;
+      const advAccountId = (adv as any)?.id;
+
+      // Busca em advertiser_listings (advertiser_account_id) + join nas mídias
+      const advReq = advAccountId
+        ? (supabase.from('advertiser_listings' as any)
+            .select('id, title, cover_image_url, price, advertiser_listing_media(media_url, storage_path)')
+            .eq('advertiser_account_id', advAccountId)
+            .order('created_at', { ascending: false })
+            .limit(60)) as any
+        : Promise.resolve({ data: [] });
+
+      // Busca em merchant_marketing_products (merchant_store_id)
+      const mktReq = storeId
+        ? (supabase.from('merchant_marketing_products' as any)
+            .select('id, title, image_url, price')
+            .eq('merchant_store_id', storeId)
+            .order('created_at', { ascending: false })
+            .limit(60)) as any
+        : Promise.resolve({ data: [] });
+
+      // Busca em merchant_products (user_id, com colunas pt-BR)
+      const mpReq = (supabase.from('merchant_products' as any)
+        .select('id, nome, imagem_url, preco')
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .limit(60)) as any;
+
+      // Busca em products (store_id, com colunas mistas — usa ambos os nomes)
+      const prodsReq = storeId
+        ? (supabase.from('products' as any)
+            .select('id, nome, preco, imagem_url, name, price, image_url')
+            .eq('store_id', storeId)
+            .order('created_at', { ascending: false })
+            .limit(60)) as any
+        : Promise.resolve({ data: [] });
+
+      const [{ data: advProds }, { data: mktProds }, { data: mpProds }, { data: prodsData }] = await Promise.all([advReq, mktReq, mpReq, prodsReq]);
+
+      const all = [
+        ...((advProds || []) as any[]).map(p => {
+          const firstMedia = (p.advertiser_listing_media || [])[0];
+          return {
+            id: p.id,
+            title: p.title,
+            price: p.price,
+            raw: p.cover_image_url || firstMedia?.media_url || firstMedia?.storage_path || null,
+          };
+        }),
+        ...((mktProds || []) as any[]).map(p => ({
+          id: p.id, title: p.title, price: p.price, raw: p.image_url,
+        })),
+        ...((mpProds || []) as any[]).map(p => ({
+          id: p.id, title: p.nome, price: p.preco, raw: p.imagem_url,
+        })),
+        ...((prodsData || []) as any[]).map(p => ({
+          id: p.id,
+          title: p.nome || p.name || 'Produto',
+          price: p.preco ?? p.price,
+          raw: p.imagem_url || p.image_url,
+        })),
+      ];
+
+      const enriched = await Promise.all(all.map(async (p) => ({
+        ...p,
+        image: await resolveStorage(p.raw),
+      })));
+
+      // Dedupe por id
+      const seen = new Set<string>();
+      const products = enriched.filter(p => seen.has(p.id) ? false : (seen.add(p.id), true));
+
+      // Resolve logo da loja
+      const rawLogo = (store as any)?.logo_url as string | null;
+      const storeLogo = rawLogo ? await resolveStorage(rawLogo) : null;
+
+      return {
+        storeName: (store as any)?.nome_loja || 'Minha Loja',
+        storeLogo,
+        products,
+      };
+    },
+  });
+
+  // Query separada pra resolver o nome+logo da loja sempre (mesmo sem abrir o modal)
+  const { data: storeInfo } = useQuery({
+    queryKey: ['product-upload-store-info', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase.from('merchant_stores' as any)
+        .select('nome_loja, logo_url').eq('user_id', user!.id).maybeSingle()) as any;
+      const raw = (data as any)?.logo_url as string | null;
+      let logo: string | null = null;
+      if (raw) {
+        if (/^https?:\/\//i.test(raw)) logo = raw;
+        else {
+          try {
+            const { data: signed } = await supabase.storage
+              .from('marketing-materials').createSignedUrl(raw, 60 * 60);
+            logo = signed?.signedUrl || supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+          } catch { /* ignore */ }
+        }
+      }
+      return {
+        name: (data as any)?.nome_loja || 'Minha Loja',
+        logo,
+      };
+    },
+  });
+  const storeName = storeInfo?.name || 'Minha Loja';
+  const storeLogo = storeInfo?.logo || null;
+
+  const handlePickProduct = (product: { id: string; title: string; image: string | null; price?: number | null }) => {
+    if (!product.image) {
+      toast.error('Esse produto não tem imagem cadastrada.');
+      return;
+    }
+    if (onImageSelect) onImageSelect(product.image);
+    if (onProductPick) onProductPick(product);
+    toast.success(`"${product.title}" selecionado.`);
+    setStorePickerOpen(false);
+  };
 
    // Carregar imagens existentes se houver listingId
    useEffect(() => {
@@ -534,10 +683,10 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
               </div>
             )}
             <div className="text-center">
-              <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">
+              <p className="text-sm font-black text-white uppercase tracking-tight">
                 {generatingPreviews ? 'Processando...' : uploading ? 'Enviando...' : 'Galeria'}
               </p>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
+              <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest mt-1">
                 Selecionar fotos do aparelho
               </p>
             </div>
@@ -546,23 +695,93 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
 
         <button
           type="button"
-          onClick={() => cameraInputRef.current?.click()}
+          onClick={() => setStorePickerOpen(true)}
           disabled={uploading || generatingPreviews}
           className="flex flex-col items-center justify-center border-2 border-dashed rounded-[30px] p-8 hover:border-blue-500/50 transition-all cursor-pointer group border-zinc-200 bg-zinc-50/50"
         >
           <div className="flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white shadow-xl flex items-center justify-center text-zinc-400 group-hover:text-blue-500 transition-colors">
-              <Camera className="w-7 h-7" />
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-xl flex items-center justify-center text-zinc-400 group-hover:text-blue-500 transition-colors overflow-hidden">
+              {storeLogo ? (
+                <img
+                  src={storeLogo}
+                  alt={storeName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <StoreIcon className="w-7 h-7" />
+              )}
             </div>
             <div className="text-center">
-              <p className="text-sm font-black text-zinc-900 uppercase tracking-tight">Câmera</p>
-              <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
-                Tirar foto agora
+              <p className="text-sm font-black text-white uppercase tracking-tight line-clamp-1">{storeName}</p>
+              <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest mt-1">
+                Buscar produtos de sua loja
               </p>
             </div>
           </div>
         </button>
       </div>
+
+      {/* Modal: produtos cadastrados da loja */}
+      <Dialog open={storePickerOpen} onOpenChange={setStorePickerOpen}>
+        <DialogContent className="max-w-md max-h-[75vh] overflow-hidden flex flex-col p-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-white">
+              <div className="w-10 h-10 rounded-xl bg-white border border-zinc-200 flex items-center justify-center overflow-hidden shrink-0">
+                {(storeData?.storeLogo || storeLogo) ? (
+                  <img
+                    src={storeData?.storeLogo || storeLogo!}
+                    alt={storeData?.storeName || storeName}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <StoreIcon className="w-5 h-5 text-blue-500" />
+                )}
+              </div>
+              <span className="truncate text-white">{storeData?.storeName || storeName}</span>
+              <span className="text-xs font-bold text-zinc-800 bg-white px-2 py-0.5 rounded-full ml-2 shrink-0">
+                {storeData?.products?.length ?? 0} produtos
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-2 -mr-2">
+            {!storeData ? (
+              <div className="py-16 flex justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            ) : storeData.products.length === 0 ? (
+              <div className="py-16 text-center text-zinc-500">
+                <Package className="w-12 h-12 mx-auto mb-3 text-zinc-300" />
+                <p className="text-sm font-bold">Nenhum produto cadastrado ainda.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-1">
+                {storeData.products.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handlePickProduct({ id: p.id, title: p.title, image: p.image, price: p.price })}
+                    className="group border-2 border-zinc-200 hover:border-blue-500 rounded-xl overflow-hidden bg-white transition-all text-left"
+                  >
+                    <div className="aspect-square bg-zinc-50 flex items-center justify-center overflow-hidden">
+                      {p.image ? (
+                        <img src={p.image} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      ) : (
+                        <Package className="w-10 h-10 text-zinc-300" />
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-[11px] font-bold text-zinc-800 line-clamp-2 leading-tight">{p.title}</p>
+                      {p.price && <p className="text-[10px] text-zinc-500 mt-0.5">R$ {p.price}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {uploading && (
         <div className="space-y-3 px-2">
