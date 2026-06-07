@@ -105,8 +105,8 @@ export default function AdvertiserCreditsPage() {
                     <img src="/assets/brand/logo-advertiser.jpg" alt="Logo" className="w-full h-full object-contain p-1 rounded-[30px]" />
                   </div>
                   <div className="space-y-1">
-                    <CardTitle className="text-2xl font-black uppercase tracking-tight text-[#F5F7FA] leading-none">{p.name}</CardTitle>
-                    <p className="text-[10px] text-[#A7B0BE] font-black uppercase tracking-widest">
+                    <CardTitle className="text-[32px] font-black uppercase tracking-tight text-[#F5F7FA] leading-none">{p.name}</CardTitle>
+                    <p className="text-[13px] text-[#A7B0BE] font-black uppercase tracking-widest">
                       {p.package_type === 'standard' || p.package_type === 'STANDARD' ? 'Padrão'
                        : p.package_type === 'real_estate' || p.package_type === 'REAL_ESTATE' ? 'Imóveis'
                        : p.package_type === 'vehicles' || p.package_type === 'VEHICLES' ? 'Veículos'
@@ -118,28 +118,28 @@ export default function AdvertiserCreditsPage() {
                 <CardContent className="p-10 pt-4 flex-1 flex flex-col justify-between">
                   <div className="space-y-8">
                     <div className="space-y-1 text-center">
-                      <p className="text-4xl font-black text-[#F5F7FA] tracking-tighter">
+                      <p className="text-[47px] font-black text-[#F5F7FA] tracking-tighter">
                         {p.price_brl === 0 ? "Grátis" : formatCurrencyBRL(p.price_brl)}
                       </p>
-                      <p className="text-[11px] text-[#FF6A00] font-black uppercase tracking-widest bg-[#FF6A00]/10 py-3 px-4 text-center rounded-[20px] border border-[#FF6A00]/20 mt-4 flex flex-col items-center gap-1">
+                      <p className="text-[14px] text-white font-black uppercase tracking-widest bg-gradient-to-br from-[#FF6A00] to-[#E55A00] py-3 px-4 text-center rounded-[20px] border border-orange-700 shadow-lg shadow-orange-900/30 mt-4 flex flex-col items-center gap-1">
                         <span className="flex items-center gap-2">
-                          <Zap className="w-4 h-4 fill-current" />
+                          <Zap className="w-5 h-5 fill-current text-yellow-200" />
                           <span className="text-white">{p.credits_amount} Créditos de Comunicação</span>
                         </span>
                         {(p.bonus_credits || 0) > 0 && (
-                          <span className="text-emerald-400 text-[10px]">+ {p.bonus_credits} Créditos Bônus</span>
+                          <span className="text-yellow-200 text-[13px]">+ {p.bonus_credits} Créditos Bônus</span>
                         )}
-                        <span className="text-[9px] text-[#A7B0BE] normal-case tracking-wider">acesso para seus clientes</span>
+                        <span className="text-[12px] text-white/80 normal-case tracking-wider">acesso para seus clientes</span>
                       </p>
                     </div>
 
                     <div className="space-y-6 py-8 border-t border-[#2A3038]">
-                      <p className="text-xs text-[#A7B0BE] font-bold uppercase tracking-widest ml-1">Benefícios Incluídos</p>
+                      <p className="text-[16px] text-[#A7B0BE] font-bold uppercase tracking-widest ml-1">Benefícios Incluídos</p>
                       <ul className="space-y-5">
                         {Array.isArray(p.features_json) && p.features_json.map((feature: string, i: number) => (
-                          <li key={i} className="flex items-start gap-4 text-xs font-bold text-[#A7B0BE] leading-tight uppercase tracking-tight">
+                          <li key={i} className="flex items-start gap-4 text-[16px] font-bold text-[#A7B0BE] leading-tight uppercase tracking-tight">
                             <div className="p-1.5 bg-[#22C55E]/10 rounded-xl">
-                              <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
+                              <CheckCircle2 className="w-5 h-5 text-[#22C55E] shrink-0" />
                             </div>
                             <span className="pt-1">{feature}</span>
                           </li>
@@ -148,12 +148,12 @@ export default function AdvertiserCreditsPage() {
                     </div>
                   </div>
 
-                  <Button 
+                  <Button
                     className={cn(
                       "w-full h-16 rounded-[24px] font-black uppercase text-xs tracking-[0.2em] transition-all shadow-2xl gap-3 group/btn mt-8",
                       p.is_recommended
-                        ? "bg-[#FF6A00] text-white hover:bg-[#FF7A1A] shadow-[#FF6A00]/20"
-                        : "bg-[#14171B] text-[#F5F7FA] hover:bg-[#2A3038] border border-[#2A3038]"
+                        ? "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/30"
+                        : "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/20 border border-yellow-500/40"
                     )}
                     onClick={() => navigate(`/anunciante/checkout/${p.id}`)}
                   >

@@ -388,15 +388,15 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             layout === 'public' ? "py-12" : "py-4"
         )}>
             <div className={cn(
-                "bg-white rounded-[40px] overflow-hidden border border-zinc-100",
-                layout === 'public' ? "shadow-2xl shadow-orange-500/5" : "shadow-xl border-zinc-200"
+                "bg-emerald-50 rounded-[40px] overflow-hidden border border-emerald-100",
+                layout === 'public' ? "shadow-2xl shadow-emerald-500/10" : "shadow-xl border-emerald-200"
             )}>
                 <div className="grid grid-cols-1 md:grid-cols-2 min-h-[500px]">
-                    
+
                     {/* ── LEFT COLUMN: DETAILS ── */}
                     <div className={cn(
-                        "p-10 border-r border-zinc-100 transition-colors duration-500", 
-                        checkoutStep === "confirmed" ? "bg-emerald-50/30" : "bg-zinc-50"
+                        "p-10 border-r border-emerald-100 transition-colors duration-500",
+                        checkoutStep === "confirmed" ? "bg-emerald-100/40" : "bg-emerald-50"
                     )}>
                         <div className="space-y-8">
                             <div className="space-y-2">
@@ -411,8 +411,8 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                             </div>
 
                             <div className={cn(
-                                "p-6 rounded-3xl bg-emerald-50 border border-emerald-100 shadow-xl transition-all duration-500 space-y-6",
-                                checkoutStep === "confirmed" ? "border-emerald-200 shadow-emerald-500/5" : "border-orange-100 shadow-orange-500/5"
+                                "p-6 rounded-3xl bg-emerald-100 border-2 border-emerald-300 shadow-xl transition-all duration-500 space-y-6",
+                                checkoutStep === "confirmed" ? "border-emerald-400 shadow-emerald-500/20" : "border-emerald-300 shadow-emerald-500/15"
                             )}>
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-4">
@@ -434,19 +434,29 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                     </div>
 
                                     {!isListingCheckout && (
-                                       <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-100">
-                                          <p className="text-[10px] text-zinc-400 font-black uppercase tracking-widest mb-1">Conteúdo</p>
-                                          <p className="text-sm font-bold text-zinc-700">💎 {(pkg?.credits_amount || 0) + (pkg?.bonus_credits || 0)} créditos inclusos</p>
+                                       <div className="p-[21px] bg-emerald-50 rounded-2xl border border-emerald-200 space-y-4">
+                                          <div>
+                                            <p className="text-[13px] text-emerald-700 font-black uppercase tracking-widest mb-1.5">Conteúdo</p>
+                                            <p className="text-lg font-bold text-zinc-700">💎 {(pkg?.credits_amount || 0) + (pkg?.bonus_credits || 0)} créditos inclusos</p>
+                                          </div>
+                                          <div className="pt-4 border-t border-emerald-200 flex flex-col items-center justify-center font-black gap-1">
+                                             <span className="text-emerald-700 uppercase text-[11px] tracking-[0.2em]">Total</span>
+                                             <span className="text-3xl text-zinc-900 tracking-tighter">
+                                                {formatCurrency(pkg?.price_brl || 0)}
+                                             </span>
+                                          </div>
                                        </div>
                                     )}
                                 </div>
 
-                                <div className="pt-6 border-t border-zinc-100 flex items-center justify-between font-black">
-                                   <span className="text-zinc-400 uppercase text-[10px] tracking-[0.2em]">Total</span>
-                                   <span className="text-3xl text-zinc-900 tracking-tighter">
-                                      {formatCurrency(pkg?.price_brl || 0)}
-                                   </span>
-                                </div>
+                                {isListingCheckout && (
+                                  <div className="pt-6 border-t border-emerald-300 flex items-center justify-between font-black">
+                                     <span className="text-emerald-700 uppercase text-[10px] tracking-[0.2em]">Total</span>
+                                     <span className="text-3xl text-zinc-900 tracking-tighter">
+                                        {formatCurrency(pkg?.price_brl || 0)}
+                                     </span>
+                                  </div>
+                                )}
                             </div>
 
                             <div className="flex items-center gap-4 text-zinc-400">
@@ -459,7 +469,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     </div>
 
                     {/* ── RIGHT COLUMN: ACTION ── */}
-                    <div className="p-10 flex flex-col justify-center bg-white">
+                    <div className="p-10 flex flex-col justify-center bg-emerald-50">
                         
                         {/* STEP: SELECT */}
                         {checkoutStep === "select" && (

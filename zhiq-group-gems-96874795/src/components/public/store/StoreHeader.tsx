@@ -1,8 +1,13 @@
-import { Store, ShieldCheck, Zap, Share2, Phone, MapPin, CheckCircle2, Star } from "lucide-react";
+import { useEffect } from "react";
+import { Store, ShieldCheck, Zap, Share2, Phone, MapPin, CheckCircle2, Star, Plus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface StoreInfo {
     store_name: string;
@@ -30,6 +35,97 @@ interface StoreHeaderProps {
 }
 
 export function StoreHeader({ store, stats, productsCount, whatsappNumber, onShare, logoUrl, bannerUrl, compact = false, sidebarMode = false }: StoreHeaderProps) {
+    const { user } = useAuth();
+    const queryClient = useQueryClient();
+
+    // Chave única por loja
+    const storeKey = (store.store_name || "default").trim().toLowerCase();
+
+    // ID anônimo persistido em localStorage
+    const getAnonId = (): string => {
+        try {
+            let id = localStorage.getItem("viagg_anon_id");
+            if (!id) {
+                id = crypto.randomUUID();
+                localStorage.setItem("viagg_anon_id", id);
+            }
+            return id;
+        } catch { return "anon-fallback"; }
+    };
+
+    // Query do total de seguidores
+    const { data: followerCount = 0 } = useQuery({
+        queryKey: ["store-followers-count", storeKey],
+        queryFn: async () => {
+            const { count } = await (supabase.from("store_followers" as any)
+                .select("id", { count: "exact", head: true })
+                .eq("store_key", storeKey)) as any;
+            return count ?? 0;
+        },
+        refetchInterval: 30_000,
+    });
+
+    // Query do estado "estou seguindo?"
+    const anonId = getAnonId();
+    const { data: isFollowing = false } = useQuery({
+        queryKey: ["store-followers-mine", storeKey, user?.id ?? anonId],
+        queryFn: async () => {
+            const q = (supabase.from("store_followers" as any)
+                .select("id", { count: "exact", head: true })
+                .eq("store_key", storeKey)) as any;
+            const { count } = user?.id
+                ? await q.eq("user_id", user.id)
+                : await q.eq("visitor_anon_id", anonId);
+            return (count ?? 0) > 0;
+        },
+    });
+
+    // Realtime: invalida queries em qualquer mudança
+    useEffect(() => {
+        const ch = supabase
+            .channel(`store-followers:${storeKey}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: "store_followers", filter: `store_key=eq.${storeKey}` },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ["store-followers-count", storeKey] });
+                    queryClient.invalidateQueries({ queryKey: ["store-followers-mine", storeKey] });
+                })
+            .subscribe();
+        return () => { supabase.removeChannel(ch); };
+    }, [storeKey, queryClient]);
+
+    const toggleFollow = async () => {
+        console.log("[StoreHeader] toggleFollow clicked", { storeKey, isFollowing, userId: user?.id, anonId });
+        if (isFollowing) {
+            // Unfollow
+            const q = (supabase.from("store_followers" as any).delete().eq("store_key", storeKey)) as any;
+            const { error, count } = user?.id
+                ? await q.eq("user_id", user.id)
+                : await q.eq("visitor_anon_id", anonId);
+            console.log("[StoreHeader] unfollow result", { error, count });
+            if (error) { toast.error("Erro ao deixar de seguir: " + error.message); return; }
+            toast.success("Você deixou de seguir esta loja.");
+        } else {
+            // Follow
+            const payload = {
+                store_key: storeKey,
+                user_id: user?.id ?? null,
+                visitor_anon_id: user?.id ? null : anonId,
+            };
+            console.log("[StoreHeader] follow payload", payload);
+            const { error, data } = await (supabase.from("store_followers" as any).insert(payload).select()) as any;
+            console.log("[StoreHeader] follow result", { error, data });
+            if (error) {
+                if (error.code === "23505") toast.info("Você já segue esta loja.");
+                else toast.error("Erro ao seguir: " + (error.message || error.code || "desconhecido"));
+                return;
+            }
+            toast.success("Agora você segue esta loja! 🎉");
+        }
+        queryClient.invalidateQueries({ queryKey: ["store-followers-count", storeKey] });
+        queryClient.invalidateQueries({ queryKey: ["store-followers-mine", storeKey] });
+    };
+
+    const followersText = followerCount > 1000 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount;
 
     // --- PRIVACY FILTER (Endereço Tímido e Remoção de Sensíveis) ---
     const sanitize = (val: string | null | undefined): string | null => {
@@ -51,21 +147,24 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
     const sCity = sanitize(store.city);
     const sRegion = sanitize(store.region);
 
-    let timidAddress = "Atendimento Local";
-    if (sLogradouro && sBairro && sCity) {
-        timidAddress = `${sLogradouro}, ${sBairro} - ${sCity}${sRegion ? `/${sRegion}` : ""}`;
-    } else if (sBairro && sCity) {
-        timidAddress = `${sBairro}, ${sCity}${sRegion ? `/${sRegion}` : ""}`;
-    } else if (sCity) {
-        timidAddress = `Atendendo na região de ${sCity}${sRegion ? `/${sRegion}` : ""}`;
+    // Constrói o endereço priorizando a CIDADE (sempre que disponível)
+    let timidAddress = "Cidade não cadastrada";
+    if (sCity) {
+        // Mostra cidade SEMPRE de forma destacada, com bairro/região se houver
+        const parts: string[] = [];
+        if (sBairro) parts.push(sBairro);
+        parts.push(`${sCity}${sRegion ? `/${sRegion}` : ""}`);
+        timidAddress = parts.join(", ");
+    } else if (sRegion) {
+        timidAddress = sRegion;
     }
 
     return (
         <div className="relative animate-in fade-in duration-1000">
 
             {/* Store Card */}
-            <div className={cn("w-full px-4 lg:px-8 xl:px-12 relative z-10 mb-8 flex justify-center", compact ? "mt-0" : "mt-4 lg:mt-6")}>
-                <div className="w-full max-w-7xl">
+            <div className={cn("w-full px-2 lg:px-3 xl:px-4 relative z-10 mb-8 flex justify-center", compact ? "mt-0" : "mt-4 lg:mt-6")}>
+                <div className="w-full max-w-[1920px]">
                 <Card className="border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#1B1F24] ring-1 ring-zinc-700 overflow-hidden">
                     <div className={cn("flex items-center", sidebarMode ? "flex-col text-center p-4 gap-3" : cn("flex-col xl:flex-row", compact ? "p-3 lg:p-4 gap-4 xl:items-end" : "p-6 lg:p-10 gap-6 lg:gap-10 xl:items-end"))}>
                         
@@ -128,6 +227,13 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                             </div>
                             <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
+                                <p className={cn("font-black text-[#F5F7FA] tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
+                                    {followersText}
+                                </p>
+                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
+                            </div>
+                            <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
+                            <div className="text-center">
                                 <p className={cn("font-black text-[#F5F7FA] tracking-tight flex items-center justify-center", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     98<span className={compact ? "text-xs" : "text-sm"}>%</span>
                                 </p>
@@ -148,11 +254,22 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                             </div>
                         </div>
                         <div className={cn("flex items-center w-full", sidebarMode ? "gap-2 justify-center flex-wrap" : "gap-2 lg:gap-3 lg:w-auto justify-center lg:justify-end")}>
-                            <Button 
-                                variant="outline" 
-                                className={cn("flex-1 lg:flex-none rounded-lg lg:rounded-xl border-[#FF6A00]/30 font-black uppercase tracking-wider hover:bg-[#FF6A00]/10 text-[#FF6A00]", compact ? "text-[9px] h-8 lg:h-9 px-3 lg:px-4" : "text-[11px] h-11 lg:h-12 px-5")}
+                            <Button
+                                variant="outline"
+                                onClick={toggleFollow}
+                                className={cn(
+                                    "flex-1 lg:flex-none rounded-lg lg:rounded-xl font-black uppercase tracking-wider",
+                                    isFollowing
+                                        ? "border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400"
+                                        : "border-[#FF6A00]/30 hover:bg-[#FF6A00]/10 text-[#FF6A00]",
+                                    compact ? "text-[9px] h-8 lg:h-9 px-3 lg:px-4" : "text-[11px] h-11 lg:h-12 px-5"
+                                )}
                             >
-                                <Plus className={cn("mr-1.5", compact ? "w-3 h-3" : "w-4 h-4")} /> Seguir
+                                {isFollowing ? (
+                                    <><Check className={cn("mr-1.5", compact ? "w-3 h-3" : "w-4 h-4")} /> Seguindo</>
+                                ) : (
+                                    <><Plus className={cn("mr-1.5", compact ? "w-3 h-3" : "w-4 h-4")} /> Seguir</>
+                                )}
                             </Button>
                             
                             <Button 
@@ -180,12 +297,5 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
         </div>
     );
 }
-
-const Plus = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M5 12h14" />
-      <path d="M12 5v14" />
-    </svg>
-);
 
 export default StoreHeader;
