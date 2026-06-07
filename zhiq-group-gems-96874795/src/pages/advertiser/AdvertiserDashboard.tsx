@@ -183,7 +183,7 @@ export default function AdvertiserDashboard() {
         const candidate = item.cover_image_url || mediaFirst?.media_url || mediaFirst?.storage_path;
         const resolvedImg = await resolveProductImg(candidate);
         normalized.push({
-          id: item.id, title: item.title, category: 'produto', city: item.city || '', state: 'SP',
+          id: item.id, title: item.title, category: 'produto', city: item.city || '', state: '',
           price: item.price || 0, status: item.listing_status, image: resolvedImg, storageBucket: null,
           typeLabel: item.category || 'Produto', created_at: item.created_at
         });
@@ -450,6 +450,16 @@ export default function AdvertiserDashboard() {
                 className="bg-white/5 hover:bg-white/10 text-white font-black uppercase text-[11px] sm:text-xs tracking-wider sm:tracking-widest h-12 sm:h-14 px-5 sm:px-8 rounded-xl sm:rounded-2xl backdrop-blur-md transition-all border-none w-full sm:w-auto"
               >
                 Completar Perfil
+              </Button>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const { playNotificationSound } = await import("@/lib/notificationSound");
+                  playNotificationSound();
+                }}
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-black uppercase text-[10px] sm:text-xs tracking-wider sm:tracking-widest h-12 sm:h-14 px-5 sm:px-8 rounded-xl sm:rounded-2xl border border-emerald-500/30 transition-all w-full sm:w-auto"
+              >
+                🔔 Testar Som
               </Button>
             </div>
           </div>

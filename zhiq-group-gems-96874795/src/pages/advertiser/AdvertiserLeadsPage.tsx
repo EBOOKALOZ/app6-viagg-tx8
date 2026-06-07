@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { debitSellerCredits } from "@/lib/credits/debitSellerCredits";
+import { CREDIT_COSTS } from "@/lib/credits/creditPricing";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
@@ -38,6 +40,7 @@ interface PurchaseIntentionCard {
 export default function AdvertiserLeadsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { intentions, isLoading, pendingCount, unlockIntention, deleteIntention } = useContactIntentions();
   const { balance } = useAdvertiserCredits();
   const { data: accountData } = useAdvertiserAccountData();
@@ -61,6 +64,7 @@ export default function AdvertiserLeadsPage() {
       const { data } = await (supabase.from("discount_requests") as any)
         .select("*")
         .in("store_id", storeIds)
+        .neq("status", "deleted")
         .order("created_at", { ascending: false });
 
       const list = (data || []) as any[];
@@ -117,6 +121,27 @@ export default function AdvertiserLeadsPage() {
   });
 
   const respondDiscount = async (id: string, status: 'accepted' | 'rejected') => {
+    // Debita 9 créditos apenas no aceite
+    if (status === 'accepted') {
+      const res = await debitSellerCredits({
+        event: "advertiser_accept_offer",
+        userId: user?.id,
+        refType: "discount_request",
+        refId: id,
+      });
+      if (!res.charged && res.reason === "insufficient_credits") {
+        toast.error(`Saldo insuficiente. Precisa de ${res.required}, tem ${res.available}.`);
+        return;
+      }
+      if (!res.charged && res.reason !== "deduped_in_session") {
+        toast.error(`Erro ao debitar: ${res.reason}`);
+        return;
+      }
+      if (res.charged) {
+        toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
+        queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
+      }
+    }
     const { error } = await (supabase.from("discount_requests") as any)
       .update({ status })
       .eq("id", id);
@@ -126,16 +151,40 @@ export default function AdvertiserLeadsPage() {
   };
 
   const deleteDiscount = async (id: string) => {
-    if (!window.confirm("Excluir esta oferta?")) return;
-    const { error } = await (supabase.from("discount_requests") as any).delete().eq("id", id);
-    if (error) { toast.error("Erro: " + error.message); return; }
-    toast.success("Oferta excluída.");
+    // 1. Tenta DELETE físico
+    const { error: delErr, count } = await (supabase.from("discount_requests") as any)
+      .delete({ count: 'exact' })
+      .eq("id", id);
+
+    let deleted = !delErr && (count ?? 0) > 0;
+
+    // 2. Se RLS bloqueou (0 rows afetados), tenta soft-delete via UPDATE status='deleted'
+    if (!deleted) {
+      const { error: updErr } = await (supabase.from("discount_requests") as any)
+        .update({ status: "deleted" })
+        .eq("id", id);
+      deleted = !updErr;
+      if (updErr) {
+        console.error("[deleteDiscount] falhou:", { delErr, updErr });
+        toast.error("Erro ao excluir: " + (updErr.message || delErr?.message || "RLS bloqueou"));
+        return;
+      }
+    }
+
+    // 3. Remove do localStorage de offers chamadas (se estiver lá)
     setCalledOffers(prev => {
       const next = new Set(prev);
       next.delete(id);
       try { localStorage.setItem("called-offers", JSON.stringify([...next])); } catch {}
       return next;
     });
+
+    // 4. Atualização otimista do cache do React Query — some imediatamente da UI
+    queryClient.setQueryData<any[]>(["advertiser-discount-requests-messages", user?.id], (old) =>
+      (old || []).filter((r: any) => r.id !== id && r.status !== "deleted")
+    );
+
+    toast.success("Oferta excluída.");
     refetchDiscountRequests();
   };
 
@@ -162,6 +211,31 @@ export default function AdvertiserLeadsPage() {
       try { localStorage.setItem("unlocked-orders", JSON.stringify([...next])); } catch {}
       return next;
     });
+  };
+
+  // Débito de créditos pra "Chamar Cliente no WhatsApp" no pedido (13 cr)
+  const debitOrderCallCredits = async (orderId: string): Promise<boolean> => {
+    if (unlockedOrders.has(orderId)) return true; // já debitou neste pedido
+    const res = await debitSellerCredits({
+      event: "advertiser_unlock_order_whatsapp",
+      userId: user?.id,
+      refType: "purchase_intention",
+      refId: orderId,
+      extraDescription: `Pedido ${orderId.slice(0, 8)}`,
+    });
+    if (!res.charged) {
+      if (res.reason === "insufficient_credits") {
+        toast.error(`Saldo insuficiente. Precisa de ${res.required}, tem ${res.available}.`);
+      } else if (res.reason === "advertiser_not_found") {
+        toast.error("Conta de anunciante não encontrada.");
+      } else if (res.reason !== "deduped_in_session") {
+        toast.error(`Erro ao debitar: ${res.reason}`);
+      }
+      return false;
+    }
+    toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
+    queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
+    return true;
   };
 
   const markAsCalled = (id: string) => {
@@ -690,26 +764,37 @@ export default function AdvertiserLeadsPage() {
                     <div className="mt-auto space-y-2">
                       <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-yellow-100 border border-yellow-400">
                         <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800 flex items-center gap-1">
-                          ⚠️ Custa 5 créditos ao chamar
+                          ⚠️ Custa {CREDIT_COSTS.advertiser_unlock_order_whatsapp} créditos ao chamar
                         </span>
                         <span className="text-[10px] font-bold text-yellow-800">
                           Saldo: {balance.available_credits ?? 0}
                         </span>
                       </div>
                       <Button
-                        disabled={(balance.available_credits ?? 0) < 5}
-                        onClick={() => {
-                          window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank");
+                        disabled={(balance.available_credits ?? 0) < CREDIT_COSTS.advertiser_unlock_order_whatsapp}
+                        onClick={async () => {
+                          const ok = await debitOrderCallCredits(pi.id);
+                          if (!ok) return;
                           markOrderUnlocked(pi.id);
+                          window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank");
                         }}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 disabled:text-zinc-500 text-white font-black uppercase text-[11px] tracking-widest h-11 gap-2"
                       >
-                        <MessageSquare className="w-4 h-4" /> Chamar Cliente no WhatsApp (-5 cr)
+                        <MessageSquare className="w-4 h-4" /> Chamar Cliente no WhatsApp (-{CREDIT_COSTS.advertiser_unlock_order_whatsapp} cr)
                       </Button>
-                      {(balance.available_credits ?? 0) < 5 && (
-                        <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider text-center">
-                          saldo insuficiente
-                        </p>
+                      {(balance.available_credits ?? 0) < CREDIT_COSTS.advertiser_unlock_order_whatsapp && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider text-center">
+                            saldo insuficiente
+                          </p>
+                          <Button
+                            size="sm"
+                            onClick={() => navigate('/anunciante/creditos')}
+                            className="w-full h-9 rounded-lg bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[10px] uppercase tracking-widest gap-1 shadow-lg shadow-orange-500/40 animate-pulse"
+                          >
+                            🪙 Comprar Créditos
+                          </Button>
+                        </div>
                       )}
                     </div>
                   )}
@@ -736,7 +821,7 @@ export default function AdvertiserLeadsPage() {
             // Acesso gratuito: enquanto o lojista NÃO comprou nenhum pacote,
             // todas as mensagens aparecem desbloqueadas. Após a primeira compra,
             // só desbloqueia mediante crédito (lead.status === 'unlocked').
-            const isUnlocked = lead.status === "unlocked" || !hasPaidPackage;
+            const isUnlocked = lead.status === "unlocked";
 
             return (
               <Card key={lead.id} className="bg-[#F5E62B] border border-[#E0D020] shadow-lg overflow-hidden flex flex-col relative group">
@@ -888,11 +973,7 @@ export default function AdvertiserLeadsPage() {
                             <>
                               <Button
                                 onClick={() => handleUnlock(lead.id)}
-                                className={
-                                  hasEnoughCredits
-                                    ? "w-full bg-zhiq-teal hover:opacity-90 text-white font-black uppercase text-sm sm:text-base tracking-wider h-auto min-h-14 py-2 shadow-lg shadow-emerald-900/30 gap-2 px-3 flex-col"
-                                    : "w-full bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-sm sm:text-base tracking-wider h-auto min-h-14 py-2 shadow-lg shadow-[#FF6A00]/20 gap-2 px-3 flex-col"
-                                }
+                                className="w-full bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-sm sm:text-base tracking-wider h-auto min-h-14 py-2 shadow-lg shadow-emerald-900/30 gap-2 px-3 flex-col"
                               >
                                 <span className="flex items-center gap-2 leading-tight">
                                   <Unlock className="w-5 h-5 shrink-0" />

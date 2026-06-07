@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { installAudioUnlocker, playNotificationSound } from "@/lib/notificationSound";
 
 /**
  * Assina mudanças em tabelas-chave do Supabase e invalida queries do React Query
@@ -13,6 +14,11 @@ import { toast } from "sonner";
 export function GlobalRealtime() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+
+  // Destrava áudio na 1ª interação do usuário (necessário pra autoplay policy)
+  useEffect(() => {
+    installAudioUnlocker();
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -48,10 +54,12 @@ export function GlobalRealtime() {
         (payload) => {
           invalidateAll();
           if (table === "discount_requests" && payload.eventType === "INSERT") {
-            toast.success("Nova oferta recebida!", { duration: 4000 });
+            playNotificationSound();
+            toast.success("🔔 Nova oferta recebida!", { duration: 4000 });
           }
           if (table === "purchase_intentions" && payload.eventType === "INSERT") {
-            toast.success("Novo pedido recebido!", { duration: 4000 });
+            playNotificationSound();
+            toast.success("🛒 Novo pedido recebido!", { duration: 4000 });
           }
         }
       );

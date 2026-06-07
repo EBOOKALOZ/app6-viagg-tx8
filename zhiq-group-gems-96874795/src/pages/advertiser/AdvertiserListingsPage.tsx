@@ -54,6 +54,8 @@ import { useAdvertiserLeadsDashboard } from "@/hooks/useAdvertiserLeadsDashboard
 import { LeadCard } from "@/components/advertiser/LeadCard";
 import { AdvertiserCreditPackagesPanel } from "@/components/advertiser/AdvertiserCreditPackagesPanel";
 import { useAdvertiserCampaignDispatch } from "@/hooks/useAdvertiserCampaignDispatch";
+import { debitSellerCredits } from "@/lib/credits/debitSellerCredits";
+import { playNotificationSound } from "@/lib/notificationSound";
 
 // ─── Countdown inline ────────────────────────────────────────
 function InlineCountdown({ endsAt }: { endsAt: string }) {
@@ -163,6 +165,7 @@ export default function AdvertiserListingsPage() {
         .from('discount_requests' as any)
         .select('*')
         .in('store_id', storeIds)
+        .neq('status', 'deleted')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -228,6 +231,7 @@ export default function AdvertiserListingsPage() {
   const discountRequests = (discountRequestsQuery.data ?? []) as any[];
   const pendingDiscountCount = discountRequests.filter(r => r.status === 'pending').length;
 
+
   const [calledOffers, setCalledOffers] = useState<Set<string>>(() => {
     try {
       const raw = localStorage.getItem('called-offers');
@@ -266,6 +270,27 @@ export default function AdvertiserListingsPage() {
   };
 
   const respondDiscountRequest = async (id: string, newStatus: 'accepted' | 'rejected') => {
+    // Debita 9 créditos apenas no aceite
+    if (newStatus === 'accepted') {
+      const res = await debitSellerCredits({
+        event: "advertiser_accept_offer",
+        userId: user?.id,
+        refType: "discount_request",
+        refId: id,
+      });
+      if (!res.charged && res.reason === "insufficient_credits") {
+        toast.error(`Saldo insuficiente. Precisa de ${res.required}, tem ${res.available}.`);
+        return;
+      }
+      if (!res.charged && res.reason !== "deduped_in_session") {
+        toast.error(`Erro ao debitar: ${res.reason}`);
+        return;
+      }
+      if (res.charged) {
+        toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
+        queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
+      }
+    }
     const { error } = await supabase
       .from('discount_requests' as any)
       .update({ status: newStatus })
@@ -384,12 +409,12 @@ export default function AdvertiserListingsPage() {
 
         normalized.push({
           id: item.id, title: item.title, category: 'produto',
-          city: item.city || '', state: 'SP', 
-          price: item.price || 0, 
-          status: item.listing_status, 
-          image: pUrl, 
+          city: item.city || '', state: '',
+          price: item.price || 0,
+          status: item.listing_status,
+          image: pUrl,
           storageBucket: null,
-          typeLabel: item.category || 'Produto', 
+          typeLabel: item.category || 'Produto',
           listingMode: 'normal',
           raw: item,
         });
@@ -429,7 +454,18 @@ export default function AdvertiserListingsPage() {
       }, (payload) => {
         invalidateDiscount();
         if (payload.eventType === 'INSERT') {
-          toast.success('Nova oferta recebida!', { duration: 4000 });
+          playNotificationSound(); // 🔔 cha-ching!
+          toast.success('🔔 Nova oferta recebida!', {
+            duration: 10000,
+            action: {
+              label: 'Ver Oferta',
+              onClick: () => setActiveTab('offers'),
+            },
+            cancel: {
+              label: 'Comprar Créditos',
+              onClick: () => navigate('/anunciante/creditos'),
+            },
+          });
         }
       })
       .subscribe();
@@ -555,7 +591,7 @@ export default function AdvertiserListingsPage() {
         >
           Ofertas Recebidas
           {(pendingOffersCount + pendingDiscountCount) > 0 && (
-            <span className="w-5 h-5 rounded-full bg-[#E6E6FA] text-[#0D0F12] text-[9px] font-black flex items-center justify-center animate-bounce">
+            <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[9px] font-black flex items-center justify-center animate-bounce">
               {pendingOffersCount + pendingDiscountCount}
             </span>
           )}
@@ -636,7 +672,7 @@ export default function AdvertiserListingsPage() {
                             <div>
                               <h3 className="font-black text-[#F5F7FA] text-sm line-clamp-1">{listing.title}</h3>
                               <p className="text-[10px] font-bold text-[#A7B0BE] uppercase tracking-wider flex items-center gap-1">
-                                <MapPin className="w-3 h-3" /> {listing.city}, {listing.state}
+                                <MapPin className="w-3 h-3" /> {[listing.city, listing.state].filter(Boolean).join(", ")}
                               </p>
                             </div>
                           </div>
@@ -888,9 +924,18 @@ export default function AdvertiserListingsPage() {
                             </span>
                           </div>
                           {(balance.available_credits ?? 0) < 9 && (
-                            <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
-                              saldo insuficiente
-                            </span>
+                            <div className="flex flex-col items-end gap-1.5">
+                              <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
+                                saldo insuficiente
+                              </span>
+                              <Button
+                                size="sm"
+                                onClick={() => navigate('/anunciante/creditos')}
+                                className="h-8 px-3 rounded-lg bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[10px] uppercase tracking-widest gap-1 shadow-lg shadow-orange-500/40 animate-pulse"
+                              >
+                                <Coins className="w-3 h-3" /> Comprar Créditos
+                              </Button>
+                            </div>
                           )}
                         </div>
                       )}
