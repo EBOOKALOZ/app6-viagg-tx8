@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Store, MessageSquare, Megaphone, Tag } from "lucide-react";
+import { Home, Store, MessageSquare, Megaphone, Tag, Package } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,26 +40,32 @@ export function StoreBottomNav() {
     },
   });
 
-  // Conta de MENSAGENS pendentes (leads bloqueados + pedidos novos)
+  // Conta de MENSAGENS pendentes (leads bloqueados)
   const { data: pendingMessages = 0 } = useQuery({
-    queryKey: ["bottom-nav-pending-messages", user?.id, ids?.storeId],
+    queryKey: ["bottom-nav-pending-messages", user?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const [leadsRes, ordersRes] = await Promise.all([
-        (supabase.from("advertiser_contact_intentions" as any)
-          .select("id", { count: "exact", head: true })
-          .eq("advertiser_user_id", user!.id)
-          .neq("status", "unlocked")
-          .neq("status", "cancelled")) as any,
-        ids?.storeId
-          ? ((supabase.from("purchase_intentions" as any)
-              .select("id", { count: "exact", head: true })
-              .eq("store_id", ids.storeId)
-              .eq("status", "new")) as any)
-          : { count: 0 },
-      ]);
-      return (leadsRes?.count ?? 0) + (ordersRes?.count ?? 0);
+      const { count } = await (supabase.from("advertiser_contact_intentions" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("advertiser_user_id", user!.id)
+        .neq("status", "unlocked")
+        .neq("status", "cancelled")) as any;
+      return count ?? 0;
+    },
+  });
+
+  // Conta de PEDIDOS novos (purchase_intentions)
+  const { data: pendingOrders = 0 } = useQuery({
+    queryKey: ["bottom-nav-pending-orders", user?.id, ids?.storeId],
+    enabled: !!user?.id && !!ids?.storeId,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { count } = await (supabase.from("purchase_intentions" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", ids!.storeId)
+        .eq("status", "new")) as any;
+      return count ?? 0;
     },
   });
 
@@ -81,6 +87,12 @@ export function StoreBottomNav() {
       icon: <MessageSquare className="w-5 h-5 mb-1" />,
       path: "/anunciante/mensagens",
       badge: pendingMessages,
+    },
+    {
+      label: "Pedidos",
+      icon: <Package className="w-5 h-5 mb-1" />,
+      path: "/loja/pedidos",
+      badge: pendingOrders,
     },
     {
       label: "Anunciar",

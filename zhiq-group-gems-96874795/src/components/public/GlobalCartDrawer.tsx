@@ -192,33 +192,45 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
                 Revise abaixo as lojas e os produtos que receberão sua intenção:
               </p>
               {storeGroups.map(g => (
-                <div key={g.store_id} className="py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-2 mb-1.5">
+                <div key={g.store_id} className="py-3 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-3 mb-2">
                     {g.store_logo ? (
-                      <img src={g.store_logo} alt="" className="h-6 w-6 rounded-full object-cover shrink-0" />
+                      <img src={g.store_logo} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
                     ) : (
-                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center text-white text-[8px] font-black shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center text-white text-[11px] font-black shrink-0">
                         {g.store_name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <span className="text-[12px] font-semibold text-gray-700 flex-1 truncate">{g.store_name}</span>
-                    <span className="text-[11px] text-gray-400 shrink-0">{g.total_items} {g.total_items === 1 ? "item" : "itens"}</span>
-                    <span className="text-[12px] font-bold text-gray-700 shrink-0">R$ {g.subtotal.toFixed(2).replace(".", ",")}</span>
+                    <span className="text-[16px] font-semibold text-gray-700 flex-1 truncate">{g.store_name}</span>
+                    <span className="text-[14px] text-gray-400 shrink-0">{g.total_items} {g.total_items === 1 ? "item" : "itens"}</span>
+                    <span className="text-[16px] font-bold text-gray-700 shrink-0">R$ {g.subtotal.toFixed(2).replace(".", ",")}</span>
                   </div>
-                  {/* Lista de Produtos */}
-                  <div className="pl-8 space-y-1">
+                  {/* Lista de Produtos com imagem */}
+                  <div className="pl-[52px] space-y-2">
                     {(g.items || []).map((item) => (
-                      <div key={item.item_id} className="flex items-start justify-between gap-2 text-[11px]">
-                        <span className="text-gray-500 line-clamp-1 flex-1">• {item.quantity}x {item.product_title}</span>
-                        <span className="text-gray-400 font-medium shrink-0">R$ {(item.product_price * item.quantity).toFixed(2).replace(".", ",")}</span>
+                      <div key={item.item_id} className="flex items-center gap-3 text-[14px]">
+                        <div className="h-10 w-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
+                          {item.product_image_url ? (
+                            <img
+                              src={item.product_image_url}
+                              alt={item.product_title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <span className="text-gray-300 text-[10px]">📦</span>
+                          )}
+                        </div>
+                        <span className="text-gray-600 line-clamp-1 flex-1">{item.quantity}x {item.product_title}</span>
+                        <span className="text-gray-500 font-medium shrink-0">R$ {(item.product_price * item.quantity).toFixed(2).replace(".", ",")}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
-              <div className="flex justify-between pt-2 mt-2 border-t border-gray-100">
-                <span className="text-[12px] font-bold text-gray-500">Total Geral</span>
-                <span className="text-[14px] font-black text-gray-800">R$ {totalSubtotal.toFixed(2).replace(".", ",")}</span>
+              <div className="flex justify-between pt-3 mt-2 border-t border-gray-100">
+                <span className="text-[16px] font-bold text-gray-500">Total Geral</span>
+                <span className="text-[18px] font-black text-gray-800">R$ {totalSubtotal.toFixed(2).replace(".", ",")}</span>
               </div>
               <button onClick={() => setStep("cart")}
                 className="mt-2 text-[11px] text-[#FF6A00] font-bold hover:underline">

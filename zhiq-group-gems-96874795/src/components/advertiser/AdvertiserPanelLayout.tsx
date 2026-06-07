@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Building2, 
-  Package, 
-  Megaphone, 
-  LayoutDashboard, 
-  Settings, 
-  LogOut, 
-  User, 
+import { Building2,
+  Package,
+  Megaphone,
+  LayoutDashboard,
+  Settings,
+  LogOut,
+  User,
   CreditCard,
   Menu,
   X,
@@ -21,7 +21,8 @@ import { Building2,
   TrendingUp,
   Star,
   Truck,
-  MessageSquare
+  MessageSquare,
+  ShoppingBag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,7 +63,45 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     },
   });
 
-  const totalMessagesCount = pendingLeadCount + marketplaceCount;
+  // Mensagens agora conta SÓ leads (Pedidos e Ofertas têm badges próprios)
+  const totalMessagesCount = pendingLeadCount;
+  void marketplaceCount;
+
+  // Contagem de OFERTAS pendentes (discount_requests)
+  const { data: pendingOffersCount = 0 } = useQuery({
+    queryKey: ["sidebar-pending-offers", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const storeIds: string[] = [];
+      const { data: adv } = await (supabase.from("advertiser_accounts" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      if ((adv as any)?.id) storeIds.push((adv as any).id);
+      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      if ((ms as any)?.id) storeIds.push((ms as any).id);
+      if (storeIds.length === 0) return 0;
+      const { count } = await (supabase.from("discount_requests" as any)
+        .select("id", { count: "exact", head: true })
+        .in("store_id", storeIds)
+        .eq("status", "pending")) as any;
+      return count || 0;
+    },
+  });
+
+  // Contagem de PEDIDOS novos (purchase_intentions)
+  const { data: pendingOrdersCount = 0 } = useQuery({
+    queryKey: ["sidebar-pending-orders", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      if (!(ms as any)?.id) return 0;
+      const { count } = await (supabase.from("purchase_intentions" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", (ms as any).id)
+        .eq("status", "new")) as any;
+      return count || 0;
+    },
+  });
 
   const navigation = [
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
@@ -70,6 +109,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
+    { name: "Ofertas Recebidas", href: "/anunciante/meus-anuncios?tab=offers", icon: Tag },
+    { name: "Pedidos", href: "/loja/pedidos", icon: ShoppingBag },
     // Leilão / Arremate / Nova Entrega ocultados
     { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     { name: "Créditos", href: "/anunciante/creditos", icon: Coins },
@@ -106,11 +147,19 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
           )} />
         </div>
         <span className="truncate">{item.name}</span>
-        {item.name === "Mensagens" && totalMessagesCount > 0 && (
-          <span className="ml-auto bg-[#22C55E] text-white text-base font-black min-w-[35px] h-[35px] flex items-center justify-center rounded-full px-2 shadow-lg shadow-emerald-500/30 animate-pulse">
-            {totalMessagesCount}
-          </span>
-        )}
+        {(() => {
+          const badge =
+            item.name === "Mensagens" ? totalMessagesCount :
+            item.name === "Ofertas Recebidas" ? pendingOffersCount :
+            item.name === "Pedidos" ? pendingOrdersCount :
+            0;
+          if (!badge || badge <= 0) return null;
+          return (
+            <span className="ml-auto bg-[#22C55E] text-white text-base font-black min-w-[35px] h-[35px] flex items-center justify-center rounded-full px-2 shadow-lg shadow-emerald-500/30 animate-pulse">
+              {badge}
+            </span>
+          );
+        })()}
       </button>
     );
 

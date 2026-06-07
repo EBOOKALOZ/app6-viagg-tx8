@@ -895,50 +895,66 @@ export default function AdvertiserListingsPage() {
                         </div>
                       </div>
 
-                      {req.status === 'pending' && (
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              disabled={(balance.available_credits ?? 0) < 9}
-                              onClick={() => respondDiscountRequest(req.id, 'accepted')}
-                              className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-black text-[10px] uppercase tracking-wide gap-1"
-                            >
-                              <CheckCheck className="w-3 h-3" /> Aceitar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => respondDiscountRequest(req.id, 'rejected')}
-                              className="h-9 px-3 rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-red-400 hover:border-red-500/40 font-black text-[10px] uppercase gap-1"
-                            >
-                              <X className="w-3 h-3" /> Recusar
-                            </Button>
-                          </div>
-                          <div className="flex items-center gap-2 text-[10.9px] font-bold">
-                            <span className="flex items-center gap-1 text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                              <Coins className="w-2.5 h-2.5" /> Saldo: {balance.available_credits ?? 0}
-                            </span>
-                            <span className="flex items-center gap-1 text-orange-300 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full">
-                              -9 ao aceitar
-                            </span>
-                          </div>
-                          {(balance.available_credits ?? 0) < 9 && (
-                            <div className="flex flex-col items-end gap-1.5">
-                              <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider">
-                                saldo insuficiente
-                              </span>
+                      {req.status === 'pending' && (() => {
+                        const saldo = balance.available_credits ?? 0;
+                        const hasEnough = saldo >= 9;
+                        return (
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <div className="flex gap-2">
                               <Button
                                 size="sm"
-                                onClick={() => navigate('/anunciante/creditos')}
-                                className="h-8 px-3 rounded-lg bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[10px] uppercase tracking-widest gap-1 shadow-lg shadow-orange-500/40 animate-pulse"
+                                onClick={() => {
+                                  if (!hasEnough) {
+                                    toast.error(`Sem saldo (precisa 9, tem ${saldo}). Redirecionando para compra...`, { duration: 3000 });
+                                    setTimeout(() => navigate('/anunciante/creditos'), 1200);
+                                    return;
+                                  }
+                                  respondDiscountRequest(req.id, 'accepted');
+                                }}
+                                className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wide gap-1"
                               >
-                                <Coins className="w-3 h-3" /> Comprar Créditos
+                                <CheckCheck className="w-3 h-3" /> Aceitar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => respondDiscountRequest(req.id, 'rejected')}
+                                className="h-9 px-3 rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-red-400 hover:border-red-500/40 font-black text-[10px] uppercase gap-1"
+                              >
+                                <X className="w-3 h-3" /> Recusar
                               </Button>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {/* Badge de saldo (30% maior, vermelho/verde dinâmico) */}
+                            <div className="flex items-center gap-2 text-[14px] font-bold">
+                              <span className={cn(
+                                "flex items-center gap-1.5 border px-3 py-1 rounded-full",
+                                hasEnough
+                                  ? "text-emerald-300 bg-emerald-500/15 border-emerald-500/30"
+                                  : "text-red-300 bg-red-500/15 border-red-500/40"
+                              )}>
+                                <Coins className="w-3.5 h-3.5" /> Saldo: <span className="font-black text-base">{saldo}</span>
+                              </span>
+                              <span className="flex items-center gap-1 text-orange-300 bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-full text-[12px]">
+                                -9 ao aceitar
+                              </span>
+                            </div>
+                            {!hasEnough && (
+                              <div className="flex flex-col items-end gap-1.5">
+                                <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider">
+                                  saldo insuficiente
+                                </span>
+                                <Button
+                                  size="sm"
+                                  onClick={() => navigate('/anunciante/creditos')}
+                                  className="h-8 px-3 rounded-lg bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[10px] uppercase tracking-widest gap-1 shadow-lg shadow-orange-500/40 animate-pulse"
+                                >
+                                  <Coins className="w-3 h-3" /> Comprar Créditos
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {req.status === 'accepted' && (
                         <div className="flex flex-col gap-2 items-end shrink-0">

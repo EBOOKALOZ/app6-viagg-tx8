@@ -174,7 +174,15 @@ export function useStoreCart(storeId: string | undefined) {
       toast.success("Produto adicionado à cesta!", { duration: 2000 });
     },
     onError: (err: Error) => {
-      toast.error(`Erro: ${err.message || "Falha ao adicionar produto"}`, { duration: 8000 });
+      const msg = err.message || "";
+      // Erros conhecidos de constraint que indicam que o produto não tem store_id real
+      // (ex: vem de advertiser_listings, não de merchant_stores). O useGlobalCart já cuida do fallback.
+      const isStoreIdNull = msg.includes('null value in column "store_id"') || msg.includes("store_cart_items");
+      if (isStoreIdNull) {
+        console.warn("[useStoreCart] suprimido (item já tratado por useGlobalCart):", msg);
+        return;
+      }
+      toast.error(`Erro: ${msg || "Falha ao adicionar produto"}`, { duration: 8000 });
       console.error("[useStoreCart] addItem error:", err);
     },
     onSettled: () => {

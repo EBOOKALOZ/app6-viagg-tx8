@@ -6,7 +6,7 @@
  * If visitor already registered, shows compact summary with edit option.
  */
 import { useState } from "react";
-import { User, Phone, Mail, MapPin, Building2, Loader2, ChevronDown, ChevronUp, CheckCircle, Edit3 } from "lucide-react";
+import { User, Phone, Mail, MapPin, Building2, Loader2, ChevronDown, ChevronUp, CheckCircle, CheckCircle2, Edit3 } from "lucide-react";
 import { VisitorProfile, useVisitorProfile } from "@/hooks/useVisitorProfile";
 
 interface Props {
@@ -99,10 +99,59 @@ export function VisitorMiniSignup({ visitor, onComplete, storeName, isSubmitting
   const { profile, update, save, isSaving, hasProfile } = visitor;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isEditing, setIsEditing] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progressValue, setProgressValue] = useState(0);
+
+  const runWithProgress = async (action: () => Promise<void>) => {
+    setShowProgressModal(true);
+    setProgressValue(0);
+    const startedAt = Date.now();
+    const DURATION = 2800;
+    const intervalId = setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const pct = Math.min(100, Math.round((elapsed / DURATION) * 100));
+      setProgressValue(pct);
+      if (pct >= 100) clearInterval(intervalId);
+    }, 40);
+    try {
+      await action();
+      setProgressValue(100);
+      setTimeout(() => setShowProgressModal(false), 600);
+    } catch {
+      clearInterval(intervalId);
+      setShowProgressModal(false);
+    }
+  };
+
+  const ProgressModal = showProgressModal ? (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-[min(420px,92vw)] rounded-3xl bg-zhiq-teal text-white p-8 shadow-2xl border-2 border-emerald-400/40 animate-in zoom-in-95 duration-300">
+        <div className="flex flex-col items-center text-center gap-5">
+          <div className="w-16 h-16 rounded-full bg-white/15 flex items-center justify-center shadow-inner">
+            <CheckCircle2 className="w-9 h-9 text-white" />
+          </div>
+          <p className="text-base sm:text-lg font-black leading-snug uppercase tracking-wide">
+            O Vendedor entrará em contato com você sobre o produto desejado
+          </p>
+          <div className="w-full space-y-2">
+            <div className="h-3 w-full rounded-full bg-white/15 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-300 to-emerald-500 transition-all duration-100 ease-out"
+                style={{ width: `${progressValue}%` }}
+              />
+            </div>
+            <p className="text-[12px] font-bold tracking-widest text-white/90">{progressValue}%</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   // If already registered, show compact summary
   if (hasProfile && !isEditing) {
     return (
+      <>
+      {ProgressModal}
       <div className="space-y-3">
         <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
           <div className="flex items-center justify-between mb-2">
@@ -139,7 +188,7 @@ export function VisitorMiniSignup({ visitor, onComplete, storeName, isSubmitting
         <button
           onClick={() => onComplete(profile)}
           disabled={isSubmitting}
-          className="w-full py-3.5 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-zinc-900 font-bold rounded-xl text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <><Loader2 className="h-4 w-4 animate-spin" /> Processando...</>
@@ -148,6 +197,7 @@ export function VisitorMiniSignup({ visitor, onComplete, storeName, isSubmitting
           )}
         </button>
       </div>
+      </>
     );
   }
 
@@ -168,17 +218,62 @@ export function VisitorMiniSignup({ visitor, onComplete, storeName, isSubmitting
       const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate() || isSaving || isSubmitting) return;
+
+        // Mostra modal verde com progresso 0-100% durante o envio
+        setShowProgressModal(true);
+        setProgressValue(0);
+        const startedAt = Date.now();
+        const DURATION = 2800; // ~2.8s
+        const intervalId = setInterval(() => {
+          const elapsed = Date.now() - startedAt;
+          const pct = Math.min(100, Math.round((elapsed / DURATION) * 100));
+          setProgressValue(pct);
+          if (pct >= 100) clearInterval(intervalId);
+        }, 40);
+
         try {
           const saved = await save(profile);
           setIsEditing(false);
           await onComplete(saved);
-        } catch { /* handled by hook */ }
+          // Garante 100% antes de fechar
+          setProgressValue(100);
+          setTimeout(() => setShowProgressModal(false), 600);
+        } catch {
+          clearInterval(intervalId);
+          setShowProgressModal(false);
+        }
       };
 
   const allAccepted = profile.accepted_terms && profile.accepted_privacy &&
     profile.accepted_direct_payment && profile.accepted_store_contact;
 
   return (
+    <>
+    {/* ── Modal verde de progresso ─────────────── */}
+    {showProgressModal && (
+      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="w-[min(420px,92vw)] rounded-3xl bg-zhiq-teal text-white p-8 shadow-2xl border-2 border-emerald-400/40 animate-in zoom-in-95 duration-300">
+          <div className="flex flex-col items-center text-center gap-5">
+            <div className="w-16 h-16 rounded-full bg-white/15 flex items-center justify-center shadow-inner">
+              <CheckCircle2 className="w-9 h-9 text-white" />
+            </div>
+            <p className="text-base sm:text-lg font-black leading-snug uppercase tracking-wide">
+              O Vendedor entrará em contato com você sobre o produto desejado
+            </p>
+            <div className="w-full space-y-2">
+              <div className="h-3 w-full rounded-full bg-white/15 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-300 to-emerald-500 transition-all duration-100 ease-out"
+                  style={{ width: `${progressValue}%` }}
+                />
+              </div>
+              <p className="text-[12px] font-bold tracking-widest text-white/90">{progressValue}%</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Header */}
       <div className="text-center pb-1">
@@ -359,7 +454,7 @@ export function VisitorMiniSignup({ visitor, onComplete, storeName, isSubmitting
        <button
          type="submit"
          disabled={isSaving || isSubmitting || !allAccepted || !profile.full_name.trim() || profile.whatsapp.replace(/\D/g, "").length < 10}
-         className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+         className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-zinc-900 font-bold rounded-xl text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
        >
          {(isSaving || isSubmitting) ? (
            <><Loader2 className="h-5 w-5 animate-spin" /> Processando...</>
@@ -368,5 +463,6 @@ export function VisitorMiniSignup({ visitor, onComplete, storeName, isSubmitting
          )}
        </button>
     </form>
+    </>
   );
 }
