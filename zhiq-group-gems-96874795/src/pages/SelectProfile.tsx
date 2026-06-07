@@ -220,7 +220,8 @@ export default function SelectProfile() {
             <p className="text-sm text-white/50">Escolha como deseja usar a plataforma</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex justify-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
             {profileList.map((profile) => {
               const isComingSoon = profile.id === "passenger" && !isPassengerEnabled;
               const isSel = selected === profile.id && !isComingSoon;
@@ -316,7 +317,7 @@ export default function SelectProfile() {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleContinue(); }}
                       disabled={isSaving || progressActive}
-                      className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-900 hover:bg-emerald-800 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-12 w-[calc(100%-1.5rem)] rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-900 hover:bg-emerald-800 text-white transition-all disabled:cursor-not-allowed animate-in fade-in zoom-in-95 duration-300"
                     >
                       {progressActive && (
                         <span
@@ -334,8 +335,8 @@ export default function SelectProfile() {
               );
             })}
 
-            {/* Quero Vender — Purple Premium Entry integrada ao estado */}
-            <div
+            {/* Quero Vender — OCULTO TEMPORARIAMENTE */}
+            {/* <div
               role="button"
               tabIndex={0}
               onClick={() => handleCardClick("quero_vender")}
@@ -347,7 +348,6 @@ export default function SelectProfile() {
                   : "hover:shadow-[0_20px_50px_rgba(123,63,228,0.25)]"
               )}
             >
-              {/* Hero image with zoom effect */}
               <img
                 src={vendaAnuncioHero}
                 alt="Quero Vender na plataforma Viagg"
@@ -356,8 +356,6 @@ export default function SelectProfile() {
                   selected === "quero_vender" ? "scale-110 opacity-100" : "scale-100 opacity-90 group-hover:scale-110 group-hover:opacity-100"
                 )}
               />
-              
-              {/* Premium Dark Gradient Overlay */}
               <div 
                 className="absolute inset-0 transition-opacity duration-500"
                 style={{ background: selected === "quero_vender" 
@@ -365,8 +363,6 @@ export default function SelectProfile() {
                   : 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%)' 
                 }}
               />
-
-              {/* Text content */}
               <div className="absolute inset-x-0 bottom-0 p-6 text-white text-center flex flex-col items-center gap-4">
                 <div className="space-y-1 text-center w-full">
                   <h3 className={cn(
@@ -375,7 +371,6 @@ export default function SelectProfile() {
                   )}>Quero Vender</h3>
                   <p className="text-[11px] text-white/85 font-medium leading-tight px-4">Anuncie seus produtos ou imóveis na plataforma</p>
                 </div>
-                
                 {selected !== "quero_vender" && (
                   <div
                      className="text-white text-[10px] font-bold uppercase tracking-[0.2em] py-3 px-8 rounded-full transition-all duration-300 shadow-[0_8px_20px_rgba(123,63,228,0.3)] group-hover:shadow-[0_12px_25px_rgba(123,63,228,0.4)]"
@@ -385,8 +380,6 @@ export default function SelectProfile() {
                   </div>
                 )}
               </div>
-
-              {/* Continuar overlay — Quero Vender selecionado */}
               {selected === "quero_vender" && (
                 <button
                   type="button"
@@ -406,8 +399,9 @@ export default function SelectProfile() {
                   </span>
                 </button>
               )}
-            </div>
+            </div> */}
 
+          </div>
           </div>
 
           {/* Botão global Continuar removido — agora aparece dentro do card selecionado */}

@@ -198,8 +198,8 @@ export default function PublicHome() {
               </div>
             </button>
 
-            {/* Quero Vender — Premium Purple Identity */}
-            <button
+            {/* Quero Vender — OCULTO TEMPORARIAMENTE */}
+            {/* <button
               type="button"
               onClick={() => navigate("/mercado/quero-vender")}
               className="group relative flex flex-col rounded-xl bg-black border border-white/5 overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-[0_10px_40px_rgba(123,63,228,0.15)] hover:scale-[1.02] text-left h-full"
@@ -222,7 +222,7 @@ export default function PublicHome() {
                    </div>
                 </div>
               </div>
-            </button>
+            </button> */}
 
           </section>
         </div>
