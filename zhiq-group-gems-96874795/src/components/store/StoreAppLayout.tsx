@@ -5,18 +5,35 @@ import { StoreBottomNav } from "./StoreBottomNav";
 import { Loader2 } from "lucide-react";
 
 export function StoreAppLayout() {
-  const { user, activeProfile } = useAuth();
+  const { user, activeProfile, isLoading: authLoading, availableProfiles } = useAuth();
   const { store, isLoading, error } = useMyStore();
+
+  // Enquanto auth está carregando, mostra loading (evita redirect prematuro no hard reload)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
+          <p className="text-zinc-400 text-sm">Carregando sessão...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
-  // We explicitly check if they are in the allowed profiles if necessary,
-  // but since we are unifying, both 'merchant' and 'advertiser' are treated as shop owners.
-  if (activeProfile !== 'merchant' && activeProfile !== 'advertiser') {
-    // If not merchant or advertiser, they shouldn't be in the store dashboard
-    return <Navigate to="/choose-profile" replace />;
+  // Aceita merchant/advertiser por activeProfile OU por availableProfiles
+  // (o activeProfile pode ser null se o usuário ainda não escolheu, mas se for elegível, deixa entrar)
+  const hasShopAccess =
+    activeProfile === 'merchant' ||
+    activeProfile === 'advertiser' ||
+    availableProfiles?.includes('merchant') ||
+    availableProfiles?.includes('advertiser');
+
+  if (!hasShopAccess) {
+    return <Navigate to="/select-profile" replace />;
   }
 
   if (isLoading) {

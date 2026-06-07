@@ -165,8 +165,21 @@ export default function StorePublicPage() {
 
                 let advRes: any = { data: null };
                 if (advAccRes.data?.id) {
+                    // Tenta com join — se falhar (FK no PostgREST), faz query simples sem join
                     advRes = await supabase.from("advertiser_listings").select("*, advertiser_listing_media(media_url)").eq("advertiser_account_id", advAccRes.data.id).order("created_at", { ascending: false });
+                    if (advRes.error || !advRes.data) {
+                        console.warn("[StorePublicPage] join falhou, refazendo sem mídia:", advRes.error);
+                        advRes = await supabase.from("advertiser_listings").select("*").eq("advertiser_account_id", advAccRes.data.id).order("created_at", { ascending: false });
+                    }
                 }
+                console.log("[StorePublicPage] products fetched", {
+                    storeId, userId,
+                    merchant_marketing_products: oldProducts?.length ?? 0,
+                    product_listings: pRes.data?.length ?? 0,
+                    real_estate_listings: rRes.data?.length ?? 0,
+                    vehicle_listings: vRes.data?.length ?? 0,
+                    advertiser_listings: advRes.data?.length ?? 0,
+                });
 
                 if (pRes.data) {
                     results.push(...pRes.data.map((p: any) => ({

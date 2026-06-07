@@ -30,8 +30,6 @@ interface StoreHeaderProps {
 }
 
 export function StoreHeader({ store, stats, productsCount, whatsappNumber, onShare, logoUrl, bannerUrl, compact = false, sidebarMode = false }: StoreHeaderProps) {
-    const followerCount = Math.floor(Math.random() * 5000) + 1200; // Mock until real backend is supported
-    const followersText = followerCount > 1000 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount;
 
     // --- PRIVACY FILTER (Endereço Tímido e Remoção de Sensíveis) ---
     const sanitize = (val: string | null | undefined): string | null => {
@@ -130,13 +128,6 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                             </div>
                             <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
-                                <p className={cn("font-black text-[#F5F7FA] tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
-                                    {followersText}
-                                </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
-                            </div>
-                            <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
-                            <div className="text-center">
                                 <p className={cn("font-black text-[#F5F7FA] tracking-tight flex items-center justify-center", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     98<span className={compact ? "text-xs" : "text-sm"}>%</span>
                                 </p>
@@ -150,7 +141,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                     <div className={cn("bg-[#14171B]/80 border-t border-zinc-700 flex flex-wrap items-center gap-3", sidebarMode ? "hidden" : "justify-between", !sidebarMode && compact ? "px-4 py-2 lg:py-2.5 gap-3" : !sidebarMode ? "px-6 py-4 lg:py-5 gap-4" : "")}>
                         <div className={cn("items-center gap-4 lg:gap-5", sidebarMode ? "hidden" : "hidden lg:flex")}>
                             <div className={cn("flex items-center gap-1.5 font-bold text-zinc-400 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
-                                <ShieldCheck className={cn("text-emerald-500", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Compra Segura
+                                <ShieldCheck className={cn("text-emerald-500", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Compra com Comércio Local
                             </div>
                             <div className={cn("flex items-center gap-1.5 font-bold text-zinc-400 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
                                 <Zap className={cn("text-[#FF6A00]", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Entrega Rápida

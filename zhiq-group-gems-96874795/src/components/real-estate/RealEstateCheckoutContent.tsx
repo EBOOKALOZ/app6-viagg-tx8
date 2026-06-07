@@ -411,7 +411,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                             </div>
 
                             <div className={cn(
-                                "p-6 rounded-3xl bg-white border shadow-xl transition-all duration-500 space-y-6",
+                                "p-6 rounded-3xl bg-emerald-50 border border-emerald-100 shadow-xl transition-all duration-500 space-y-6",
                                 checkoutStep === "confirmed" ? "border-emerald-200 shadow-emerald-500/5" : "border-orange-100 shadow-orange-500/5"
                             )}>
                                 <div className="space-y-4">
@@ -475,10 +475,10 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                 <Button
                                     onClick={handleConfirmPurchase}
                                     disabled={isProcessing}
-                                    className="w-full h-16 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-orange-500/20 active:scale-[0.98] transition-all"
+                                    className="w-full h-16 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm sm:text-base px-3 shadow-xl shadow-orange-500/20 active:scale-[0.98] transition-all whitespace-normal text-center leading-tight"
                                 >
                                     {isProcessing ? (
-                                        <><Loader2 className="w-6 h-6 animate-spin mr-3" /> Gerando...</>
+                                        <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Gerando...</>
                                     ) : "Recarga via Mercado Pago"}
                                 </Button>
 
