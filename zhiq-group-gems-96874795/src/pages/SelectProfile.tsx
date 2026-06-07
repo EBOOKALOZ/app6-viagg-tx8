@@ -316,7 +316,7 @@ export default function SelectProfile() {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleContinue(); }}
                       disabled={isSaving || progressActive}
-                      className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-zhiq-teal hover:opacity-90 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                      className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-900 hover:bg-emerald-800 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
                     >
                       {progressActive && (
                         <span
@@ -326,7 +326,7 @@ export default function SelectProfile() {
                         />
                       )}
                       <span className="relative z-10 flex items-center justify-center gap-2">
-                        {progressActive ? `${percent}%` : (isSaving ? "Iniciando…" : "Continuar")}
+                        {isSaving ? "Iniciando…" : "Continuar"}
                       </span>
                     </button>
                   )}
@@ -392,7 +392,7 @@ export default function SelectProfile() {
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleContinue(); }}
                   disabled={isSaving || progressActive}
-                  className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-zhiq-teal hover:opacity-90 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  className="absolute inset-x-3 bottom-3 z-20 h-12 rounded-xl font-bold text-base shadow-2xl overflow-hidden bg-emerald-900 hover:bg-emerald-800 text-white transition-all disabled:cursor-not-allowed animate-in fade-in slide-in-from-bottom-2 duration-300"
                 >
                   {progressActive && (
                     <span
@@ -402,7 +402,7 @@ export default function SelectProfile() {
                     />
                   )}
                   <span className="relative z-10 flex items-center justify-center gap-2">
-                    {progressActive ? `${percent}%` : (isSaving ? "Iniciando…" : "Continuar")}
+                    {isSaving ? "Iniciando…" : "Continuar"}
                   </span>
                 </button>
               )}
@@ -435,7 +435,7 @@ export default function SelectProfile() {
               />
             )}
             <span className="relative z-10 transition-transform duration-300 group-active:scale-95 flex items-center justify-center gap-3">
-              {progressActive ? `${percent}%` : (isSaving ? "Iniciando…" : "Continuar")}
+              {isSaving ? "Iniciando…" : "Continuar"}
             </span>
           </button>
 

@@ -137,6 +137,8 @@ export const AdvertiserNewDelivery = lazy(() => import("@/pages/advertiser/Adver
 export const VehicleForm = lazy(() => import("@/pages/advertiser/VehicleForm"));
 export const ProductForm = lazy(() => import("@/pages/advertiser/ProductForm"));
 export const AdvertiserLeadsPage = lazy(() => import("@/pages/advertiser/AdvertiserLeadsPage"));
+export const AdvertiserOffersPage = lazy(() => import("@/pages/advertiser/AdvertiserOffersPage"));
+export const AdvertiserMessagesPage = lazy(() => import("@/pages/advertiser/AdvertiserMessagesPage"));
 export const AdvertiserDeliveriesPage = lazy(() => import("@/pages/advertiser/AdvertiserDeliveriesPage"));
 export const AdvertiserPromotionPage = lazy(() => import("@/pages/advertiser/AdvertiserPromotionPage"));
 export const AdvertiserWalletPage = lazy(() => import("@/pages/advertiser/AdvertiserWalletPage"));

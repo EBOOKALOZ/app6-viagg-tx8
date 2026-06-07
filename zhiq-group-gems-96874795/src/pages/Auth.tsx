@@ -352,12 +352,12 @@ export default function Auth() {
             "border overflow-hidden rounded-[36px] backdrop-blur-[60px] transition-all duration-500 relative",
             isAdvertiserMode
               ? "border-[#D6A75C]/40 shadow-[0_48px_160px_-16px_rgba(59,31,20,0.5)] bg-[#3B1F14] text-[#FFF4E6]"
-              : "border-yellow-400/60 shadow-[0_0_128px_rgba(234,179,8,0.3)] bg-yellow-400/[0.42]"
+              : "border-emerald-800/80 shadow-[0_0_128px_rgba(1,20,15,0.7)] bg-[#01140F]"
           )}>
             <CardContent className={cn("relative p-4 space-y-3.5", isAdvertiserMode ? "md:p-6" : "md:p-8 md:space-y-6")}>
               <div className={cn(
                 "absolute top-0 left-0 w-full h-full bg-gradient-to-br pointer-events-none",
-                isAdvertiserMode ? "from-orange-500/5 via-transparent to-transparent" : "from-yellow-400/20 via-transparent to-transparent"
+                isAdvertiserMode ? "from-orange-500/5 via-transparent to-transparent" : "from-emerald-500/10 via-transparent to-transparent"
               )} />
 
               <div className="flex bg-black/40 p-1 rounded-xl border border-white/10 shadow-inner relative z-10">

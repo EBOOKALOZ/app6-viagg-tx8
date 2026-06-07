@@ -4,6 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const BR_STATES = [
+  { uf: 'AC', nome: 'Acre' }, { uf: 'AL', nome: 'Alagoas' }, { uf: 'AP', nome: 'Amapá' },
+  { uf: 'AM', nome: 'Amazonas' }, { uf: 'BA', nome: 'Bahia' }, { uf: 'CE', nome: 'Ceará' },
+  { uf: 'DF', nome: 'Distrito Federal' }, { uf: 'ES', nome: 'Espírito Santo' }, { uf: 'GO', nome: 'Goiás' },
+  { uf: 'MA', nome: 'Maranhão' }, { uf: 'MT', nome: 'Mato Grosso' }, { uf: 'MS', nome: 'Mato Grosso do Sul' },
+  { uf: 'MG', nome: 'Minas Gerais' }, { uf: 'PA', nome: 'Pará' }, { uf: 'PB', nome: 'Paraíba' },
+  { uf: 'PR', nome: 'Paraná' }, { uf: 'PE', nome: 'Pernambuco' }, { uf: 'PI', nome: 'Piauí' },
+  { uf: 'RJ', nome: 'Rio de Janeiro' }, { uf: 'RN', nome: 'Rio Grande do Norte' }, { uf: 'RS', nome: 'Rio Grande do Sul' },
+  { uf: 'RO', nome: 'Rondônia' }, { uf: 'RR', nome: 'Roraima' }, { uf: 'SC', nome: 'Santa Catarina' },
+  { uf: 'SP', nome: 'São Paulo' }, { uf: 'SE', nome: 'Sergipe' }, { uf: 'TO', nome: 'Tocantins' },
+];
 import { Store, Loader2, Upload, Save, Camera, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { StoreLocationPicker } from '@/components/merchant/StoreLocationPicker';
@@ -25,6 +38,8 @@ interface StoreForm {
   street: string;
   number: string;
   neighborhood: string;
+  cidade: string;
+  estado: string;
   /* Visuais — não persistidos no banco */
   logo_url: string | null;
   latitude: number | null;
@@ -35,6 +50,7 @@ interface StoreForm {
 const EMPTY_FORM: StoreForm = {
   nome_loja: '', cnpj: '', descricao: '', categoria_id: '', categoria_nome: '',
   telefone: '', email: '', street: '', number: '', neighborhood: '',
+  cidade: '', estado: '',
   logo_url: null, latitude: null, longitude: null, endereco_formatado: null,
 };
 
@@ -71,6 +87,8 @@ export default function MerchantSettingsContent() {
           street: result.data!.street || '',
           number: result.data!.number || '',
           neighborhood: result.data!.neighborhood || '',
+          cidade: result.data!.cidade || '',
+          estado: result.data!.estado || '',
           logo_url: result.data!.logo_url || null,
           latitude: result.data!.latitude != null ? Number(result.data!.latitude) : null,
           longitude: result.data!.longitude != null ? Number(result.data!.longitude) : null,
@@ -139,6 +157,8 @@ export default function MerchantSettingsContent() {
       street: details?.rua || prev.street,
       number: details?.numero || prev.number,
       neighborhood: details?.bairro || prev.neighborhood,
+      cidade: details?.cidade || prev.cidade,
+      estado: details?.estado || prev.estado,
     }));
   };
 
@@ -260,6 +280,25 @@ export default function MerchantSettingsContent() {
             <div className="space-y-2">
               <Label htmlFor="neighborhood">Bairro</Label>
               <Input id="neighborhood" placeholder="Nome do bairro" value={form.neighborhood} onChange={(e) => setForm(p => ({ ...p, neighborhood: e.target.value }))} />
+            </div>
+            <div className="lg:grid lg:grid-cols-[2fr_1fr] lg:gap-4 space-y-4 lg:space-y-0">
+              <div className="space-y-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input id="cidade" placeholder="Ex: São Paulo" value={form.cidade} onChange={(e) => setForm(p => ({ ...p, cidade: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado (UF)</Label>
+                <Select value={form.estado || undefined} onValueChange={(v) => setForm(p => ({ ...p, estado: v }))}>
+                  <SelectTrigger id="estado" className="text-white [&>span]:text-white">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {BR_STATES.map(s => (
+                      <SelectItem key={s.uf} value={s.uf} className="text-white focus:text-white">{s.uf} — {s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {/* Coordenadas */}
             {form.latitude != null && form.longitude != null && (

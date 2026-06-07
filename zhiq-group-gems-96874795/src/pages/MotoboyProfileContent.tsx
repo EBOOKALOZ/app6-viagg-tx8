@@ -443,7 +443,16 @@ export default function MotoboyProfileContent() {
             <Label className="text-xs">WhatsApp</Label>
             <Input
               value={motoboyData.whatsapp}
-              onChange={(e) => setMotoboyData({ ...motoboyData, whatsapp: e.target.value })}
+              onChange={(e) => {
+                const d = e.target.value.replace(/\D/g, '').slice(0, 11);
+                let masked = d;
+                if (d.length > 2 && d.length <= 7) masked = `(${d.slice(0,2)}) ${d.slice(2)}`;
+                else if (d.length > 7) masked = `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+                else if (d.length > 0) masked = `(${d}`;
+                setMotoboyData({ ...motoboyData, whatsapp: masked });
+              }}
+              inputMode="numeric"
+              maxLength={15}
               placeholder="(00) 00000-0000"
               className="mt-1"
             />

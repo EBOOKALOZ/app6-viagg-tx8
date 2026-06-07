@@ -24,6 +24,8 @@ import {
   MerchantDeliveryView,
   AdvertiserCheckoutPage,
   AdvertiserLeadsPage,
+  AdvertiserOffersPage,
+  AdvertiserMessagesPage,
   AdvertiserPromotionPage,
   AdvertiserWalletPage,
 } from "./lazyPages";
@@ -50,7 +52,9 @@ export const advertiserRoutes = (
     <Route path="/anunciante/entregas/nova"   element={<Suspense fallback={<PageFallback />}><AdvertiserNewDelivery /></Suspense>} />
     <Route path="/anunciante/entregas/:orderId" element={<Suspense fallback={<PageFallback />}><MerchantDeliveryView /></Suspense>} />
     <Route path="/anunciante/checkout/:listingId" element={<Suspense fallback={<PageFallback />}><AdvertiserCheckoutPage /></Suspense>} />
-    <Route path="/anunciante/mensagens"       element={<Suspense fallback={<PageFallback />}><AdvertiserLeadsPage /></Suspense>} />
+    <Route path="/anunciante/mensagens"       element={<Suspense fallback={<PageFallback />}><AdvertiserMessagesPage /></Suspense>} />
+    <Route path="/anunciante/mensagens/legado" element={<Suspense fallback={<PageFallback />}><AdvertiserLeadsPage /></Suspense>} />
+    <Route path="/anunciante/ofertas-recebidas" element={<Suspense fallback={<PageFallback />}><AdvertiserOffersPage /></Suspense>} />
     <Route path="/anunciante/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/carteira"        element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
   </Route>

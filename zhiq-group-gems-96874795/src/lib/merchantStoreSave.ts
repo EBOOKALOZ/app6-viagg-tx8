@@ -67,6 +67,9 @@ export async function saveMerchantStore(
   // Só envia lat/lng se as colunas existirem no banco (migration rodada)
   if (safePayload.latitude != null) rpcParams.p_latitude = safePayload.latitude;
   if (safePayload.longitude != null) rpcParams.p_longitude = safePayload.longitude;
+  if (safePayload.cidade != null) rpcParams.p_cidade = safePayload.cidade;
+  if (safePayload.estado != null) rpcParams.p_estado = safePayload.estado;
+  if (safePayload.cep != null) rpcParams.p_cep = safePayload.cep;
 
   console.log('[merchantStoreSave] Chamando RPC upsert_merchant_store_safe com:', JSON.stringify(rpcParams, null, 2));
 

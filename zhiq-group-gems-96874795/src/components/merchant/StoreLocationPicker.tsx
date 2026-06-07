@@ -299,7 +299,7 @@ export function StoreLocationPicker({
 
           <TabsContent value="map" forceMount className={`mt-4 ${activeTab !== 'map' ? 'hidden' : ''}`}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white">
                 {mapUnlocked
                   ? "Clique no mapa para definir a localização exata."
                   : "Pino travado. Toque em desbloquear para mover."}
@@ -309,7 +309,7 @@ export function StoreLocationPicker({
                   variant="outline"
                   size="sm"
                   onClick={() => setMapUnlocked(false)}
-                  className="gap-1.5"
+                  className="gap-1.5 text-white"
                 >
                   <Lock className="h-3.5 w-3.5" />
                   Travar
@@ -319,7 +319,7 @@ export function StoreLocationPicker({
                   variant="outline"
                   size="sm"
                   onClick={() => setCaptchaOpen(true)}
-                  className="gap-1.5"
+                  className="gap-1.5 text-white"
                 >
                   <Unlock className="h-3.5 w-3.5" />
                   Desbloquear

@@ -72,59 +72,59 @@ export function StoreBottomNav() {
   const navItems = [
     {
       label: "Início",
-      icon: <Home className="w-5 h-5 mb-1" />,
+      icon: <Home className="w-[18px] h-[18px] mb-1" />,
       path: "/mercado",
       badge: 0,
     },
     {
       label: "Minha Loja",
-      icon: <Store className="w-5 h-5 mb-1" />,
+      icon: <Store className="w-[18px] h-[18px] mb-1" />,
       path: "/loja/minha-loja",
       badge: 0,
     },
     {
       label: "Mensagens",
-      icon: <MessageSquare className="w-5 h-5 mb-1" />,
+      icon: <MessageSquare className="w-[18px] h-[18px] mb-1" />,
       path: "/anunciante/mensagens",
       badge: pendingMessages,
     },
     {
       label: "Pedidos",
-      icon: <Package className="w-5 h-5 mb-1" />,
+      icon: <Package className="w-[18px] h-[18px] mb-1" />,
       path: "/loja/pedidos",
       badge: pendingOrders,
     },
     {
       label: "Anunciar",
-      icon: <Megaphone className="w-5 h-5 mb-1" />,
+      icon: <Megaphone className="w-[18px] h-[18px] mb-1" />,
       path: "/loja/campanhas",
       badge: 0,
     },
     {
       label: "Ofertas",
-      icon: <Tag className="w-5 h-5 mb-1" />,
-      path: "/anunciante/meus-anuncios",
+      icon: <Tag className="w-[18px] h-[18px] mb-1" />,
+      path: "/anunciante/ofertas-recebidas",
       badge: pendingOffers,
     },
   ];
 
   return (
     <div className="fixed bottom-0 left-0 w-full bg-zinc-950/95 backdrop-blur-md border-t border-yellow-500/10 text-zinc-400 z-50 md:hidden pb-safe">
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-around items-center h-[58px]">
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}
               to={item.path}
-              className={`relative flex flex-col items-center justify-center w-full h-full text-xs font-medium transition-colors ${
+              className={`relative flex flex-col items-center justify-center w-full h-full text-[11px] font-medium transition-colors ${
                 isActive ? "text-yellow-500" : "hover:text-zinc-200"
               }`}
             >
               <div className="relative">
                 {item.icon}
                 {item.badge > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center shadow-lg animate-pulse">
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center shadow-lg animate-pulse">
                     {item.badge > 99 ? "99+" : item.badge}
                   </span>
                 )}
