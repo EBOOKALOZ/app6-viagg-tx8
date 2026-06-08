@@ -46,76 +46,53 @@ type MerchantWithBalance = {
 const AdminMerchantInvoices = () => {
   const [expandedMerchantId, setExpandedMerchantId] = useState<string | null>(null);
 
-  // Fetch merchants with balance
+  // Fetch all registered merchant_stores as the primary source, then left-join financial_accounts/profiles
   const { data: merchants, isLoading, error } = useQuery({
     queryKey: ["admin-merchant-invoices"],
     queryFn: async () => {
-      // Direct query to financial_accounts for merchants
-      const { data: accounts, error: accountsError } = await supabase
-        .from("financial_accounts")
-        .select(`
-          owner_user_id,
-          available_balance,
-          reserved_balance,
-          pending_balance,
-          last_movement_at,
-          profile_type
-        `)
-        .eq("profile_type", "merchant")
-        .eq("is_active", true);
-
-      if (accountsError) {
-        console.error("Erro ao carregar financial_accounts:", accountsError);
-        throw accountsError;
+      // Usa RPC admin_list_merchant_balances (SECURITY DEFINER - bypassa RLS)
+      const { data: balances, error: balErr } = await (supabase.rpc as any)("admin_list_merchant_balances");
+      if (balErr) {
+        console.error("Erro ao chamar admin_list_merchant_balances:", balErr);
+        throw balErr;
       }
+      if (!balances || balances.length === 0) return [];
 
-      if (!accounts || accounts.length === 0) return [];
+      const userIds = [...new Set((balances || []).map((b: any) => b.user_id).filter(Boolean))] as string[];
 
-      // Fetch store names and profile emails
-      const userIds = accounts.map(a => a.owner_user_id);
-      
-      const { data: stores } = await supabase
-        .from("merchant_stores")
-        .select("user_id, nome_loja, street, neighborhood, cidade, estado")
-        .in("user_id", userIds);
-
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, email, full_name")
-        .in("id", userIds);
-
-      const storesMap: Record<string, any> = {};
-      (stores || []).forEach(s => { storesMap[s.user_id] = s; });
+      const { data: profiles } = userIds.length > 0
+        ? await (supabase.from("profiles") as any)
+            .select("id, email, full_name, name")
+            .in("id", userIds)
+        : { data: [] as any[] };
 
       const profilesMap: Record<string, any> = {};
-      (profiles || []).forEach(p => { profilesMap[p.id] = p; });
+      (profiles || []).forEach((p: any) => { profilesMap[p.id] = p; });
 
-      const result: MerchantWithBalance[] = accounts.map((account: any) => {
-        const userId = account.owner_user_id;
-        const store = storesMap[userId];
-        const profile = profilesMap[userId];
+      const result: MerchantWithBalance[] = (balances as any[]).map((b: any) => {
+        const profile = profilesMap[b.user_id];
+        const balanceCents = Math.round(Number(b.available_balance || 0) * 100);
+        const reservedCents = Math.round(Number(b.reserved_balance || 0) * 100);
 
-        const balanceCents = Math.round((account.available_balance || 0) * 100);
-        const reservedCents = Math.round((account.reserved_balance || 0) * 100);
-        
-        let status_code = "ativo";
+        let status_code: string;
         if (balanceCents <= 0) status_code = "sem_saldo";
-        else if (balanceCents < 5000) status_code = "saldo_baixo"; // Less than R$ 50
+        else if (balanceCents < 1000) status_code = "saldo_baixo";
+        else status_code = "ativo";
 
         return {
-          user_id: userId,
-          store_id: store?.id || "",
-          nome_loja: store?.nome_loja || profile?.full_name || "Loja sem nome",
-          owner_name: profile?.full_name || "Sem nome",
+          user_id: b.user_id,
+          store_id: b.store_id || "",
+          nome_loja: b.nome_loja || profile?.full_name || profile?.name || "Loja sem nome",
+          owner_name: profile?.full_name || profile?.name || "Sem nome",
           owner_email: profile?.email || null,
-          cidade: store?.cidade || null,
-          estado: store?.estado || null,
+          cidade: b.cidade || null,
+          estado: b.estado || null,
           balance_cents: balanceCents,
           reserved_cents: reservedCents,
-          gross_added_cents: 0, // Not available directly in financial_accounts
-          total_debited_cents: 0, // Not available directly in financial_accounts
-          last_movement_at: account.last_movement_at,
-          status_code: status_code
+          gross_added_cents: 0,
+          total_debited_cents: 0,
+          last_movement_at: b.updated_at || null,
+          status_code,
         };
       });
 

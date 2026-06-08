@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { AdminSidebar } from "./AdminSidebar";
 import { FooterProfile } from "@/components/FooterProfile";
 import { AdminThemeProvider } from "@/contexts/AdminThemeContext";
@@ -8,14 +8,20 @@ import { isDarkColor } from "@/components/admin/GroupColorPicker";
 function AdminLayoutInner() {
   const { canvasColor } = useAdminPanelColors();
   const darkCanvas = isDarkColor(canvasColor);
+  const location = useLocation();
+
+  // Páginas do menu Multi-Perfil recebem fundo verde
+  const isMultiPerfil = location.pathname.startsWith("/admin/perfis");
+  const effectiveCanvasColor = isMultiPerfil ? "#E8F5E9" : canvasColor;
+  const effectiveDark = isDarkColor(effectiveCanvasColor);
 
   return (
     <div
       className="flex min-h-screen w-full"
       id="admin-theme-root"
       style={{
-        backgroundColor: canvasColor,
-        color: darkCanvas ? "#fff" : "hsl(var(--admin-card-foreground, var(--foreground)))",
+        backgroundColor: effectiveCanvasColor,
+        color: effectiveDark ? "#fff" : "hsl(var(--admin-card-foreground, var(--foreground)))",
       }}
     >
       <AdminSidebar />

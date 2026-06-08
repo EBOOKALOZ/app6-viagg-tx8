@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Bike, Store, Car, Truck, Zap, Flag, Users } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { MerchantGrowth } from "@/components/admin/MerchantGrowth";
+import { MerchantPackageStats } from "@/components/admin/MerchantPackageStats";
+import { MerchantCreditBuyers } from "@/components/admin/MerchantCreditBuyers";
+import { MotoboyFinanceStats } from "@/components/admin/MotoboyFinanceStats";
 import AdminMerchantInvoices from "@/pages/admin/AdminMerchantInvoices";
 
 const profileMeta: Record<string, { label: string; icon: React.ElementType; profileKey: string }> = {
@@ -28,26 +31,32 @@ export default function AdminMultiPerfil() {
       let error = null;
 
       if (meta.profileKey === 'merchant') {
-        const { data: merchantsList, error: metricsErr } = await supabase
-          .from('v_admin_merchant_financial_status')
-          .select('*');
+        const { data: stores, error: storesErr } = await (supabase.from('merchant_stores') as any)
+          .select('user_id, cidade, city, estado, region, status');
 
-        error = metricsErr;
+        error = storesErr;
         if (error) throw error;
 
-        const totalLojistas = merchantsList?.length || 0;
-        const totalAtivos = merchantsList?.filter((m: any) => m.status_code === 'ativo').length || 0;
+        const isActiveStatus = (s: any) => {
+          const v = (s || '').toString().toLowerCase().trim();
+          return !v || v === 'ativo' || v === 'active';
+        };
+
+        const totalLojistas = stores?.length || 0;
+        const totalAtivos = (stores || []).filter((m: any) => isActiveStatus(m.status)).length;
 
         const citiesMap = new Map<string, number>();
-        merchantsList?.forEach((m: any) => {
-          if (m.cidade) {
-            citiesMap.set(m.cidade, (citiesMap.get(m.cidade) || 0) + 1);
+        (stores || []).forEach((m: any) => {
+          const cidade = m.cidade || m.city;
+          if (cidade) {
+            const key = `${cidade}${m.estado || m.region ? ` - ${m.estado || m.region}` : ''}`;
+            citiesMap.set(key, (citiesMap.get(key) || 0) + 1);
           }
         });
 
         const totalCidades = citiesMap.size;
+        const densidadeMedia = totalCidades > 0 ? totalLojistas / totalCidades : 0;
 
-        // Convert to array of { name: city, value: count } expected by UI chart
         const distribuicao_cidades = Array.from(citiesMap.entries())
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value);
@@ -57,7 +66,8 @@ export default function AdminMultiPerfil() {
           totalAtivos,
           totalLojistas,
           totalCidades,
-          percentualCrescimento: 0, // Not explicitly asked, keeping stub
+          densidadeMedia,
+          percentualCrescimento: 0,
           byCity: distribuicao_cidades,
         };
       } else {
@@ -87,7 +97,8 @@ export default function AdminMultiPerfil() {
         };
       }
     },
-    staleTime: 60000,
+    staleTime: 9_000,
+    refetchInterval: 9_000,
   });
 
   return (
@@ -120,23 +131,26 @@ export default function AdminMultiPerfil() {
 
             <Card className="shadow-lg">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs uppercase text-muted-foreground tracking-wider">Total Cadastrados</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? <Skeleton className="h-10 w-20" /> : (
-                  <div className="text-4xl font-bold">{profiles?.totalLojistas || 0}</div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader className="pb-2">
                 <CardTitle className="text-xs uppercase text-muted-foreground tracking-wider">Cidades</CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? <Skeleton className="h-10 w-20" /> : (
                   <div className="text-4xl font-bold">{profiles?.totalCidades || 0}</div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs uppercase text-muted-foreground tracking-wider">Densidade Média</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? <Skeleton className="h-10 w-20" /> : (
+                  <div className="text-4xl font-bold">
+                    {profiles?.densidadeMedia ? profiles.densidadeMedia.toFixed(1) : 0}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">por cidade</p>
               </CardContent>
             </Card>
           </>
@@ -242,9 +256,18 @@ export default function AdminMultiPerfil() {
         </CardContent>
       </Card>
 
+      {/* Bloco financeiro exclusivo para Motoboys */}
+      {meta.profileKey === 'motoboy' && (
+        <div className="space-y-6">
+          <MotoboyFinanceStats />
+        </div>
+      )}
+
       {/* Bloco de Crescimento Exclusivo para Lojistas */}
       {meta.profileKey === 'merchant' && (
         <div className="space-y-6">
+          <MerchantPackageStats />
+          <MerchantCreditBuyers />
           <MerchantGrowth />
           <AdminMerchantInvoices />
         </div>

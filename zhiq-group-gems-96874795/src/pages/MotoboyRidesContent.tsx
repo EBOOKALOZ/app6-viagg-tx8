@@ -5,9 +5,40 @@ import RideRouteMiniMap from '@/components/motoboy/RideRouteMiniMap';
 import PickupRouteCard from '@/components/motoboy/PickupRouteCard';
 import polyline from '@mapbox/polyline';
 
+interface ServiceOrder {
+  id: string;
+  pickup_location: string;
+  destination: string;
+  pickup_lat: number;
+  pickup_lng: number;
+  drop_lat: number;
+  drop_lng: number;
+  distance_km: number;
+  estimated_minutes: number;
+  total_price: number;
+  merchant_id: string;
+  pickup_distance_km: number | null;
+  pickup_estimated_minutes: number | null;
+  pickup_route_polyline: string | null;
+  drop_route_polyline: string | null;
+  pickup_address?: string;
+  pickup_calculated_at?: string;
+}
+
+interface DeliveryOffer {
+  id: string;
+  status: string;
+  created_at: string;
+  commission_percent: number;
+  gross_value: number;
+  net_value: number;
+  delivery_order_id: string;
+  service_orders: ServiceOrder | null;
+}
+
 export default function MotoboyRidesContent() {
   const navigate = useNavigate();
-  const [offers, setOffers] = useState<any[]>([]);
+  const [offers, setOffers] = useState<DeliveryOffer[]>([]);
   const [stores, setStores] = useState<Record<string, any>>({});
   const [commission, setCommission] = useState<{ percentual: number | null; grupos: number | null } | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
@@ -35,67 +66,55 @@ export default function MotoboyRidesContent() {
 
   // Trigger calculate-pickup-route for offers missing pickup data
   useEffect(() => {
-    if (offers.length === 0) return;
-    
-    offers.forEach(async (offer) => {
-      const order = offer.service_orders;
-      if (!order) return;
-      const orderId = order.id;
-      
-      // Skip if already calculated or already triggered
-      if (order.pickup_calculated_at || pickupTriggered.has(orderId)) return;
-      
-      // Mark as triggered BEFORE calling to avoid rapid duplicate triggers
-      setPickupTriggered(prev => {
-        if (prev.has(orderId)) return prev;
-        const next = new Set(prev);
-        next.add(orderId);
-        return next;
-      });
+    const calculateRoutes = async () => {
+      if (offers.length === 0) return;
 
-      // Need motoboy_id
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      
-      console.log(`[pickup-route] Triggering calculation for order ${orderId}`);
-      try {
-        const { data, error } = await supabase.functions.invoke('calculate-pickup-route', {
-          body: { order_id: orderId, motoboy_id: user.id },
-        });
-        
-        if (error) {
-          console.error('[pickup-route] Error:', error);
-          return;
-        }
-        
-        if (data?.calculated) {
-          // Refresh offers to get updated pickup data
-          const { data: updated } = await supabase
-            .from('service_orders')
-            .select('pickup_distance_km, pickup_estimated_minutes')
-            .eq('id', orderId)
-            .maybeSingle();
-          
-          if (updated) {
-            setOffers(prev => prev.map(o => {
-              if (o.service_orders?.id === orderId) {
-                return {
-                  ...o,
-                  service_orders: {
-                    ...o.service_orders,
-                    pickup_distance_km: updated.pickup_distance_km,
-                    pickup_estimated_minutes: updated.pickup_estimated_minutes,
-                  },
-                };
-              }
-              return o;
-            }));
+
+      for (const offer of offers) {
+        const order = offer.service_orders;
+        if (!order) continue;
+        const orderId = order.id;
+
+        // Pula se já calculado ou disparado nesta sessão
+        if (order.pickup_calculated_at || pickupTriggered.has(orderId)) continue;
+
+        setPickupTriggered(prev => new Set(prev).add(orderId));
+
+        console.log(`[pickup-route] Triggering calculation for order ${orderId}`);
+        try {
+          const { data, error } = await supabase.functions.invoke('calculate-pickup-route', {
+            body: { order_id: orderId, motoboy_id: user.id },
+          });
+
+          if (error) {
+            console.error('[pickup-route] Error:', error);
+            continue;
           }
+
+          if (data?.calculated) {
+            const { data: updated } = await supabase
+              .from('service_orders')
+              .select('pickup_distance_km, pickup_estimated_minutes')
+              .eq('id', orderId)
+              .maybeSingle();
+
+            if (updated) {
+              setOffers(prev => prev.map(o =>
+                o.service_orders?.id === orderId
+                  ? { ...o, service_orders: { ...o.service_orders, ...updated } }
+                  : o
+              ));
+            }
+          }
+        } catch (err) {
+          console.error('[pickup-route] Exception:', err);
         }
-      } catch (err) {
-        console.error('[pickup-route] Exception:', err);
       }
-    });
+    };
+
+    calculateRoutes();
   }, [offers]); // Removed pickupTriggered from dependencies to stop the loop
 
   // ── Commission tiers ──

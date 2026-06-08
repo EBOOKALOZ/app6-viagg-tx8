@@ -174,6 +174,7 @@ export function AdminSidebar() {
   const isSupportOnly = !!supportRole && !isAdmin;
 
   const isAdminArea = location.pathname.startsWith("/admin");
+  const isMultiPerfil = location.pathname.startsWith("/admin/perfis");
 
   const supportAllowedUrls = new Set([
     "/admin/support",
@@ -211,7 +212,13 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-card shrink-0">
+    <aside
+      className={cn(
+        "flex h-screen w-64 flex-col border-r shrink-0 transition-colors duration-300",
+        isMultiPerfil ? "" : "bg-card"
+      )}
+      style={isMultiPerfil ? { backgroundColor: "#E8F5E9" } : undefined}
+    >
       {/* Header */}
       <div className="flex h-16 items-center border-b px-5 gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
