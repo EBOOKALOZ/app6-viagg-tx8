@@ -25,6 +25,7 @@ import {
   AdvertiserCheckoutPage,
   AdvertiserLeadsPage,
   AdvertiserOffersPage,
+  AdvertiserVisitsPage,
   AdvertiserMessagesPage,
   AdvertiserPromotionPage,
   AdvertiserWalletPage,
@@ -57,6 +58,7 @@ export const advertiserRoutes = (
     <Route path="/anunciante/mensagens/legado" element={<Suspense fallback={<PageFallback />}><AdvertiserLeadsPage /></Suspense>} />
     <Route path="/anunciante/ofertas-recebidas" element={<Suspense fallback={<PageFallback />}><AdvertiserOffersPage /></Suspense>} />
     <Route path="/anunciante/pedidos"          element={<Suspense fallback={<PageFallback />}><StoreOrdersPage /></Suspense>} />
+    <Route path="/anunciante/visitas"          element={<Suspense fallback={<PageFallback />}><AdvertiserVisitsPage /></Suspense>} />
     <Route path="/anunciante/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/carteira"        element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
   </Route>

@@ -22,7 +22,8 @@ import { Building2,
   Star,
   Truck,
   MessageSquare,
-  ShoppingBag
+  ShoppingBag,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -103,6 +104,22 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     },
   });
 
+  // Contagem de VISITAS da loja (marketplace_product_click_events — visitas cobradas)
+  const { data: visitsCount = 0 } = useQuery({
+    queryKey: ["sidebar-visits-count", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      if (!(ms as any)?.id) return 0;
+      const { count } = await (supabase.from("marketplace_product_click_events" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", (ms as any).id)
+        .not("status", "in", "(owner_skip,dry_run)")) as any;
+      return count || 0;
+    },
+  });
+
   const navigation = [
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
     { name: "Minha Loja", href: "/loja/minha-loja", icon: Store },
@@ -111,6 +128,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },
     { name: "Pedidos", href: "/anunciante/pedidos", icon: ShoppingBag },
+    { name: "Visitas", href: "/anunciante/visitas", icon: Eye },
     // Leilão / Arremate / Nova Entrega ocultados
     { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     { name: "Créditos", href: "/anunciante/creditos", icon: Coins },
@@ -152,6 +170,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
             item.name === "Mensagens" ? totalMessagesCount :
             item.name === "Ofertas Recebidas" ? pendingOffersCount :
             item.name === "Pedidos" ? pendingOrdersCount :
+            item.name === "Visitas" ? visitsCount :
             0;
           if (!badge || badge <= 0) return null;
           return (
