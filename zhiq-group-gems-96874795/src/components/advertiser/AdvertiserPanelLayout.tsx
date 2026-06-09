@@ -110,7 +110,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },
-    { name: "Pedidos", href: "/loja/pedidos", icon: ShoppingBag },
+    { name: "Pedidos", href: "/anunciante/pedidos", icon: ShoppingBag },
     // Leilão / Arremate / Nova Entrega ocultados
     { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     { name: "Créditos", href: "/anunciante/creditos", icon: Coins },

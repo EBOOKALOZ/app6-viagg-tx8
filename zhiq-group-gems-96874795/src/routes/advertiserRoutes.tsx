@@ -28,6 +28,7 @@ import {
   AdvertiserMessagesPage,
   AdvertiserPromotionPage,
   AdvertiserWalletPage,
+  StoreOrdersPage,
 } from "./lazyPages";
 
 export const advertiserRoutes = (
@@ -55,6 +56,7 @@ export const advertiserRoutes = (
     <Route path="/anunciante/mensagens"       element={<Suspense fallback={<PageFallback />}><AdvertiserMessagesPage /></Suspense>} />
     <Route path="/anunciante/mensagens/legado" element={<Suspense fallback={<PageFallback />}><AdvertiserLeadsPage /></Suspense>} />
     <Route path="/anunciante/ofertas-recebidas" element={<Suspense fallback={<PageFallback />}><AdvertiserOffersPage /></Suspense>} />
+    <Route path="/anunciante/pedidos"          element={<Suspense fallback={<PageFallback />}><StoreOrdersPage /></Suspense>} />
     <Route path="/anunciante/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/carteira"        element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
   </Route>

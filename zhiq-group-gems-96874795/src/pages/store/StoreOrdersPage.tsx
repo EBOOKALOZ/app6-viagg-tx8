@@ -1,5 +1,5 @@
-import { useOutletContext, useNavigate } from "react-router-dom";
-import { MyStoreData } from "@/hooks/useMyStore";
+import { useNavigate } from "react-router-dom";
+import { useMyStore } from "@/hooks/useMyStore";
 import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,7 +34,7 @@ const fmtBRL = (v: number | null) =>
   (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function StoreOrdersPage() {
-  const { store } = useOutletContext<{ store: MyStoreData }>();
+  const { store, isLoading: storeLoading } = useMyStore();
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -147,7 +147,7 @@ export default function StoreOrdersPage() {
         <p className="text-[#A7B0BE] mt-2 text-sm">Gerencie suas vendas locais.</p>
       </header>
 
-      {isLoading ? (
+      {(isLoading || storeLoading) ? (
         <div className="py-20 flex justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
         </div>

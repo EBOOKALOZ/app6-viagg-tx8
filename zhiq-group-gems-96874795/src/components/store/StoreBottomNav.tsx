@@ -91,7 +91,7 @@ export function StoreBottomNav() {
     {
       label: "Pedidos",
       icon: <Package className="w-[18px] h-[18px] mb-1" />,
-      path: "/loja/pedidos",
+      path: "/anunciante/pedidos",
       badge: pendingOrders,
     },
     {

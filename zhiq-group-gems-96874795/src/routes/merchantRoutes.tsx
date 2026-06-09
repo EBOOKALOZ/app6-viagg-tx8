@@ -23,7 +23,6 @@ import {
   LazyPropertyForm,
   MerchantDeliveryView,
   StoreMinhaLojaPage,
-  StoreOrdersPage,
   MerchantMessagesPage,
 } from "./lazyPages";
 
@@ -47,7 +46,7 @@ export const merchantRoutes = (
       <Route path="/merchant/entrega/:orderId" element={<MerchantDeliveryView />} />
       <Route path="/merchant/campanhas" element={<MerchantCampaigns />} />
       <Route path="/merchant/m1" element={<MerchantM1Panel />} />
-      <Route path="/merchant/pedidos" element={<Navigate to="/loja/pedidos" replace />} />
+      <Route path="/merchant/pedidos" element={<Navigate to="/anunciante/pedidos" replace />} />
       <Route path="/merchant/pagamentos" element={<MerchantPaymentSettings />} />
       <Route path="/merchant/creditos" element={<MerchantCredits />} />
       <Route path="/merchant/financeiro" element={<MerchantPayPremium />} />
@@ -58,7 +57,7 @@ export const merchantRoutes = (
     {/* Loja Unificada (Premium) */}
     <Route element={<StoreAppLayout />}>
       <Route path="/loja/minha-loja" element={<Suspense fallback={<PageFallback />}><StoreMinhaLojaPage /></Suspense>} />
-      <Route path="/loja/pedidos" element={<Suspense fallback={<PageFallback />}><StoreOrdersPage /></Suspense>} />
+      <Route path="/loja/pedidos" element={<Navigate to="/anunciante/pedidos" replace />} />
     </Route>
   </>
 );

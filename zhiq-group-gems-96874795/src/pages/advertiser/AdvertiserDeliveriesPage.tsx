@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Loader2, Plus, Package, Navigation, Clock,
   ChevronRight, Bike, CheckCircle2, X, RefreshCw,
-  ArrowLeft, Truck, AlertCircle, Search,
+  ArrowLeft, Truck, AlertCircle, Search, EyeOff, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +108,8 @@ export default function AdvertiserDeliveriesPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchName, setSearchName] = useState("");
   const [searchDate, setSearchDate] = useState("");
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [showHidden, setShowHidden] = useState(false);
 
   /* ── Create form state ── */
   const [store, setStore] = useState<StoreData | null>(null);
@@ -446,6 +448,7 @@ export default function AdvertiserDeliveriesPage() {
     const nameQ = searchName.trim().toLowerCase();
     const dateQ = searchDate.trim();
     return orders.filter(o => {
+      if (!showHidden && hiddenIds.has(o.id)) return false;
       if (nameQ && !(o.customer_name ?? "").toLowerCase().includes(nameQ)) return false;
       if (dateQ) {
         const orderDate = format(new Date(o.created_at), "yyyy-MM-dd");
@@ -453,7 +456,22 @@ export default function AdvertiserDeliveriesPage() {
       }
       return true;
     });
-  }, [orders, searchName, searchDate]);
+  }, [orders, searchName, searchDate, hiddenIds, showHidden]);
+
+  const hiddenCount = useMemo(() => orders.filter(o => hiddenIds.has(o.id)).length, [orders, hiddenIds]);
+
+  const handleHideOrder = (e: React.MouseEvent, orderId: string) => {
+    e.stopPropagation();
+    setHiddenIds(prev => {
+      const next = new Set(prev);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
 
   const hasFilters = searchName.trim() !== "" || searchDate.trim() !== "";
 
@@ -645,51 +663,66 @@ export default function AdvertiserDeliveriesPage() {
       || productImages[order.id]
       || null;
 
+    const isHidden = hiddenIds.has(order.id);
+
     return (
-      <button
-        key={order.id}
-        className="w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all p-4 flex items-start gap-3"
-        onClick={() => navigate(`/anunciante/entregas/${order.id}`)}
-      >
-        {/* Foto do produto ou ícone de status */}
-        {productImgUrl ? (
-          <img
-            src={productImgUrl}
-            alt=""
-            className="w-12 h-12 rounded-xl object-cover shrink-0 mt-0.5 border border-slate-200 shadow-sm"
-          />
-        ) : (
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${cfg.badgeClass}`}>
-            <StatusIcon className="h-5 w-5" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-bold text-slate-800 truncate">{order.customer_name ?? "Cliente"}</p>
-            <Badge variant="outline" className={`shrink-0 text-[11px] font-semibold border ${cfg.badgeClass}`}>
-              {cfg.label}
-            </Badge>
-          </div>
-          {order.destination && (
-            <div className="flex items-start gap-1.5">
-              <Navigation className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-slate-500 line-clamp-1">
-                {/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(order.destination.trim())
-                  ? "Endereço em processamento..."
-                  : order.destination}
-              </p>
+      <div key={order.id} className={`relative group ${isHidden ? "opacity-50" : ""}`}>
+        <button
+          className="w-full text-left bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all p-4 flex items-start gap-3"
+          onClick={() => navigate(`/anunciante/entregas/${order.id}`)}
+        >
+          {/* Foto do produto ou ícone de status */}
+          {productImgUrl ? (
+            <img
+              src={productImgUrl}
+              alt=""
+              className="w-12 h-12 rounded-xl object-cover shrink-0 mt-0.5 border border-slate-200 shadow-sm"
+            />
+          ) : (
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${cfg.badgeClass}`}>
+              <StatusIcon className="h-5 w-5" />
             </div>
           )}
-          <div className="flex items-center gap-3 pt-0.5">
-            {order.distance_km && <span className="text-xs text-slate-400">{order.distance_km.toFixed(1)} km</span>}
-            <span className="text-xs font-bold text-primary">{brl(order.total_price)}</span>
-            <span className="text-xs text-slate-300 ml-auto">
-              {format(new Date(order.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-            </span>
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-bold text-slate-800 truncate">{order.customer_name ?? "Cliente"}</p>
+              <Badge variant="outline" className={`shrink-0 text-[11px] font-semibold border ${cfg.badgeClass}`}>
+                {cfg.label}
+              </Badge>
+            </div>
+            {order.destination && (
+              <div className="flex items-start gap-1.5">
+                <Navigation className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-slate-500 line-clamp-1">
+                  {/^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(order.destination.trim())
+                    ? "Endereço em processamento..."
+                    : order.destination}
+                </p>
+              </div>
+            )}
+            <div className="flex items-center gap-3 pt-0.5">
+              {order.distance_km && <span className="text-xs text-slate-400">{order.distance_km.toFixed(1)} km</span>}
+              <span className="text-xs font-bold text-primary">{brl(order.total_price)}</span>
+              <span className="text-xs text-slate-300 ml-auto">
+                {format(new Date(order.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+              </span>
+            </div>
           </div>
-        </div>
-        <ChevronRight className="h-4 w-4 text-slate-300 shrink-0 mt-3" />
-      </button>
+          <ChevronRight className="h-4 w-4 text-slate-300 shrink-0 mt-3" />
+        </button>
+        {/* Botão Esconder */}
+        <button
+          onClick={(e) => handleHideOrder(e, order.id)}
+          className={`absolute top-2 right-2 z-10 p-1.5 rounded-lg transition-all ${
+            isHidden
+              ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
+              : "bg-slate-100 text-slate-400 hover:bg-red-100 hover:text-red-500 opacity-0 group-hover:opacity-100"
+          }`}
+          title={isHidden ? "Mostrar entrega" : "Esconder entrega"}
+        >
+          {isHidden ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </button>
+      </div>
     );
   };
 
@@ -749,6 +782,17 @@ export default function AdvertiserDeliveriesPage() {
             </Button>
           )}
         </div>
+
+        {/* Toggle mostrar/esconder entregas ocultas */}
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setShowHidden(p => !p)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-white border border-slate-200 text-slate-500 text-sm font-medium hover:bg-slate-50 transition-colors"
+          >
+            {showHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showHidden ? "Ocultar" : "Mostrar"} {hiddenCount} entrega{hiddenCount !== 1 ? "s" : ""} escondida{hiddenCount !== 1 ? "s" : ""}
+          </button>
+        )}
 
       {/* Unified list of deliveries sorted by newest first */}
       {filteredOrders.length > 0 ? (
