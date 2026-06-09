@@ -1,27 +1,37 @@
-import React from "react";
-import { 
-  CreditCard, 
-  Plus, 
-  History, 
-  Star, 
-  ShieldCheck, 
-  Zap, 
-  CheckCircle2, 
-  PackageCheck, 
-  Loader2, 
+import React, { useState, useMemo } from "react";
+import {
+  CreditCard,
+  Plus,
+  History,
+  Star,
+  ShieldCheck,
+  Zap,
+  CheckCircle2,
+  PackageCheck,
+  Loader2,
   ArrowRight,
   Building2,
   CarFront,
   ShoppingBag,
-  Sparkles
+  Sparkles,
+  Coins,
+  TrendingDown,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRealEstatePackages } from "@/hooks/useRealEstatePackages";
 import { useMerchantCredits } from "@/hooks/useMerchantCredits";
+import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
+import { CREDIT_EVENT_LABELS } from "@/lib/credits/creditPricing";
 import { useNavigate } from "react-router-dom";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function AdvertiserCreditsPage() {
   const { user } = useAuth();
@@ -29,6 +39,62 @@ export default function AdvertiserCreditsPage() {
   const { data: packages, isLoading: packagesLoading } = useRealEstatePackages();
   const merchantCredits = useMerchantCredits();
   const merchantLoading = merchantCredits.isLoading;
+
+  // Histórico de créditos (advertiser_credit_ledger) — já buscado pelo hook
+  const { ledger } = useAdvertiserCredits();
+  const consumo = useMemo(
+    () => (ledger || []).filter((e: any) => e.entry_type === "debit"),
+    [ledger]
+  );
+
+  // Aquisições = compras de pacotes (tabela credit_purchases, por store_id).
+  const storeId = merchantCredits.storeId;
+  const { data: aquisicoes = [] } = useQuery({
+    queryKey: ["advertiser-credit-purchases", storeId],
+    enabled: !!storeId,
+    queryFn: async () => {
+      const { data } = await (supabase.from("credit_purchases") as any)
+        .select("id, product_name, amount_paid, credits_granted, status, created_at")
+        .eq("store_id", storeId)
+        .eq("status", "paid")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      return data || [];
+    },
+  });
+
+  // "Ocultar" cards de aquisição — cosmético, por dispositivo (localStorage).
+  // O registro NUNCA é apagado do banco (auditoria intacta).
+  const HIDDEN_KEY = "viagg_hidden_credit_purchases";
+  const [hiddenIds, setHiddenIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]"); } catch { return []; }
+  });
+  const [showHidden, setShowHidden] = useState(false);
+
+  const hideCard = (id: string) => {
+    setHiddenIds((prev) => {
+      const next = [...prev, id];
+      try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const unhideAll = () => {
+    setHiddenIds([]);
+    try { localStorage.removeItem(HIDDEN_KEY); } catch { /* ignore */ }
+  };
+
+  const labelFor = (code: string) =>
+    (CREDIT_EVENT_LABELS as Record<string, string>)[code] ||
+    ({
+      package_purchase: "Compra de pacote",
+      subscription_activation: "Assinatura ativada",
+      offer_accept: "Aceite de oferta",
+      manual: "Ajuste manual",
+    } as Record<string, string>)[code] ||
+    code;
+
+  const hiddenCount = aquisicoes.filter((e: any) => hiddenIds.includes(e.id)).length;
+  const visibleAquisicoes = aquisicoes.filter((e: any) => showHidden || !hiddenIds.includes(e.id));
 
   const realEstatePkgs = packages?.filter(p => p.category === 'real_estate') || [];
   const vehiclePkgs = packages?.filter(p => p.category === 'vehicles') || [];
@@ -198,18 +264,130 @@ export default function AdvertiserCreditsPage() {
         </div>
       )}
 
+      {/* ═══ HISTÓRICO DE CONSUMO ═══ */}
+      <section className="space-y-6">
+        <div className="space-y-3">
+          <h2 className="text-3xl font-black text-[#F5F7FA] tracking-tighter uppercase flex items-center gap-3">
+            <div className="p-3 bg-[#0D0F12] rounded-2xl shadow-xl shadow-black/30">
+              <TrendingDown className="w-6 h-6 text-[#FF6A00]" />
+            </div>
+            Histórico de Consumo
+          </h2>
+          <p className="text-[#A7B0BE] font-bold uppercase text-[10px] tracking-[0.2em] ml-16">
+            Cada crédito gasto pelas ações dos seus clientes
+          </p>
+        </div>
+
+        {consumo.length === 0 ? (
+          <div className="bg-[#1B1F24] border-2 border-dashed border-[#2A3038] rounded-[32px] p-16 flex flex-col items-center text-center space-y-4 shadow-xl shadow-black/20">
+            <div className="w-16 h-16 rounded-full bg-[#14171B] flex items-center justify-center text-[#2A3038]">
+              <Coins className="w-8 h-8" />
+            </div>
+            <p className="text-[#A7B0BE] font-black uppercase tracking-widest text-xs">Nenhum consumo registrado ainda</p>
+          </div>
+        ) : (
+          <div className="bg-[#1B1F24] border border-[#2A3038] rounded-[24px] overflow-hidden shadow-xl shadow-black/20 divide-y divide-[#2A3038]">
+            {consumo.map((e: any) => (
+              <div key={e.id} className="flex items-center gap-4 px-6 py-4 hover:bg-[#2A3038]/30 transition-colors">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                  <TrendingDown className="w-4 h-4 text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#F5F7FA] truncate">{labelFor(e.reason_code)}</p>
+                  <p className="text-[11px] text-[#A7B0BE] mt-0.5">
+                    {format(new Date(e.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {typeof e.balance_after === "number" ? ` · saldo após: ${e.balance_after}` : ""}
+                  </p>
+                  {e.description && <p className="text-[10px] text-[#A7B0BE]/60 mt-0.5 truncate">{e.description}</p>}
+                </div>
+                <p className="text-sm font-black text-red-400 tabular-nums shrink-0">
+                  − {Math.abs(Number(e.amount || 0))} cr
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Trust and Shield Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-[#2A3038]">
           <section className="space-y-6">
-            <h3 className="text-xl font-black text-[#F5F7FA] uppercase tracking-tight flex items-center gap-2">
-               <History className="w-6 h-6 text-[#A7B0BE]" /> Histórico de Aquisições
-            </h3>
-            <div className="bg-[#1B1F24] border-2 border-dashed border-[#2A3038] rounded-[32px] p-20 flex flex-col items-center text-center space-y-4 shadow-xl shadow-black/20">
-               <div className="w-16 h-16 rounded-full bg-[#14171B] flex items-center justify-center text-[#2A3038]">
-                  <History className="w-8 h-8" />
-               </div>
-               <p className="text-[#A7B0BE] font-black uppercase tracking-widest text-xs">Nenhum pacote adquirido até o momento</p>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-xl font-black text-[#F5F7FA] uppercase tracking-tight flex items-center gap-2">
+                 <History className="w-6 h-6 text-[#A7B0BE]" /> Histórico de Aquisições
+              </h3>
+              {hiddenCount > 0 && (
+                <button
+                  onClick={() => setShowHidden((v) => !v)}
+                  className="text-[10px] font-black uppercase tracking-widest text-[#A7B0BE] hover:text-white flex items-center gap-1 shrink-0"
+                >
+                  {showHidden
+                    ? (<><EyeOff className="w-3.5 h-3.5" /> esconder ocultas</>)
+                    : (<><Eye className="w-3.5 h-3.5" /> ver {hiddenCount} oculta{hiddenCount > 1 ? "s" : ""}</>)}
+                </button>
+              )}
             </div>
+
+            {visibleAquisicoes.length === 0 ? (
+              <div className="bg-[#1B1F24] border-2 border-dashed border-[#2A3038] rounded-[32px] p-20 flex flex-col items-center text-center space-y-4 shadow-xl shadow-black/20">
+                 <div className="w-16 h-16 rounded-full bg-[#14171B] flex items-center justify-center text-[#2A3038]">
+                    <History className="w-8 h-8" />
+                 </div>
+                 <p className="text-[#A7B0BE] font-black uppercase tracking-widest text-xs">Nenhum pacote adquirido até o momento</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {visibleAquisicoes.map((e: any) => {
+                  const isHidden = hiddenIds.includes(e.id);
+                  return (
+                    <div
+                      key={e.id}
+                      className={cn(
+                        "relative bg-[#1B1F24] border rounded-[20px] p-5 shadow-lg shadow-black/20 transition-all",
+                        isHidden ? "border-[#2A3038] opacity-50" : "border-[#2A3038] hover:border-[#FF6A00]/30"
+                      )}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E] shrink-0">
+                          <PackageCheck className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-[#F5F7FA] truncate">{e.product_name || "Pacote de créditos"}</p>
+                          <p className="text-[11px] text-[#A7B0BE] mt-0.5">
+                            {format(new Date(e.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <span className="inline-flex items-center gap-1.5 bg-[#22C55E]/10 text-[#22C55E] px-3 py-1 rounded-lg text-xs font-black">
+                              <Zap className="w-3.5 h-3.5" /> +{e.credits_granted} créditos
+                            </span>
+                            <span className="inline-flex items-center bg-[#2A3038] text-[#F5F7FA] px-3 py-1 rounded-lg text-xs font-black">
+                              {formatCurrencyBRL(Number(e.amount_paid || 0))}
+                            </span>
+                          </div>
+                        </div>
+                        {!isHidden && (
+                          <button
+                            onClick={() => hideCard(e.id)}
+                            title="Ocultar este card"
+                            className="shrink-0 text-[#A7B0BE]/60 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10"
+                          >
+                            <EyeOff className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {showHidden && hiddenCount > 0 && (
+                  <button
+                    onClick={unhideAll}
+                    className="w-full text-[10px] font-black uppercase tracking-widest text-[#A7B0BE] hover:text-white py-2"
+                  >
+                    restaurar todas as ocultas
+                  </button>
+                )}
+              </div>
+            )}
          </section>
 
          <div className="space-y-6">

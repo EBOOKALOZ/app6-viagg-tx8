@@ -59,15 +59,26 @@ const AdminMerchantInvoices = () => {
       if (!balances || balances.length === 0) return [];
 
       const userIds = [...new Set((balances || []).map((b: any) => b.user_id).filter(Boolean))] as string[];
+      const storeIds = [...new Set((balances || []).map((b: any) => b.store_id).filter(Boolean))] as string[];
 
       const { data: profiles } = userIds.length > 0
         ? await (supabase.from("profiles") as any)
-            .select("id, email, full_name, name")
+            .select("id, email, name")
             .in("id", userIds)
+        : { data: [] as any[] };
+
+      // E-mail de contato da própria loja (merchant_stores.email) — fonte primária
+      const { data: stores } = storeIds.length > 0
+        ? await (supabase.from("merchant_stores") as any)
+            .select("id, email")
+            .in("id", storeIds)
         : { data: [] as any[] };
 
       const profilesMap: Record<string, any> = {};
       (profiles || []).forEach((p: any) => { profilesMap[p.id] = p; });
+
+      const storeEmailMap: Record<string, string | null> = {};
+      (stores || []).forEach((s: any) => { storeEmailMap[s.id] = s.email ?? null; });
 
       const result: MerchantWithBalance[] = (balances as any[]).map((b: any) => {
         const profile = profilesMap[b.user_id];
@@ -82,9 +93,9 @@ const AdminMerchantInvoices = () => {
         return {
           user_id: b.user_id,
           store_id: b.store_id || "",
-          nome_loja: b.nome_loja || profile?.full_name || profile?.name || "Loja sem nome",
-          owner_name: profile?.full_name || profile?.name || "Sem nome",
-          owner_email: profile?.email || null,
+          nome_loja: b.nome_loja || profile?.name || "Loja sem nome",
+          owner_name: profile?.name || "Sem nome",
+          owner_email: storeEmailMap[b.store_id] || profile?.email || null,
           cidade: b.cidade || null,
           estado: b.estado || null,
           balance_cents: balanceCents,
@@ -276,7 +287,7 @@ const AdminMerchantInvoices = () => {
                             <div>
                               <p className="font-medium">{displayName}</p>
                               {merchant.owner_email && (
-                                <p className="text-[10px] text-primary/70 truncate max-w-[200px]">{merchant.owner_email}</p>
+                                <p className="text-xs text-primary truncate max-w-[220px]">{merchant.owner_email}</p>
                               )}
                               <p className="text-xs text-muted-foreground">
                                 {merchant.cidade ? `${merchant.cidade}${merchant.estado ? ` - ${merchant.estado}` : ''}` : 'Local não informado'}

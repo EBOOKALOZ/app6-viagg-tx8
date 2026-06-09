@@ -103,16 +103,21 @@ export async function debitSellerCredits(args: DebitSellerCreditsArgs): Promise<
     return { charged: false, reason: updErr.message };
   }
 
-  // INSERT no ledger (não bloqueia)
+  // INSERT no ledger (não bloqueia). entry_type/balance_* são NOT NULL;
+  // ref_type/ref_id vão em metadata (a tabela não tem essas colunas).
+  // Toda inserção aqui dispara o trigger trg_notify_advertiser_on_ledger,
+  // que envia o e-mail de notificação ao lojista.
   await (supabase.from("advertiser_credit_ledger" as any).insert({
     advertiser_account_id: accId,
+    entry_type: "debit",
     amount: -amount,
+    balance_before: available,
+    balance_after: available - amount,
     reason_code: args.event,
     description: args.extraDescription
       ? `${CREDIT_EVENT_LABELS[args.event]} — ${args.extraDescription}`
       : CREDIT_EVENT_LABELS[args.event],
-    ref_type: args.refType ?? null,
-    ref_id: args.refId ?? null,
+    metadata: { ref_type: args.refType ?? null, ref_id: args.refId ?? null },
   })) as any;
 
   sessionDedupe.add(dedupeKey);

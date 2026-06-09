@@ -223,7 +223,7 @@ export default function AdminMultiPerfil() {
                       <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.min((item.value / (profiles?.totalLojistas || 1)) * 100 * 5, 100)}%` }}
+                          style={{ width: `${(item.value / (profiles.byCity[0]?.value || 1)) * 100}%` }}
                         />
                       </div>
                     </div>
@@ -242,7 +242,7 @@ export default function AdminMultiPerfil() {
                       <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.min((item.value / (profiles?.total || 1)) * 100 * 5, 100)}%` }}
+                          style={{ width: `${(item.value / (profiles.byCity[0]?.value || 1)) * 100}%` }}
                         />
                       </div>
                     </div>

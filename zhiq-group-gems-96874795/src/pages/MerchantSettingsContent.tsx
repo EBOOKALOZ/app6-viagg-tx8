@@ -292,9 +292,9 @@ export default function MerchantSettingsContent() {
                   <SelectTrigger id="estado" className="text-white [&>span]:text-white">
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-72">
+                  <SelectContent className="bg-white">
                     {BR_STATES.map(s => (
-                      <SelectItem key={s.uf} value={s.uf} className="text-white focus:text-white">{s.uf} — {s.nome}</SelectItem>
+                      <SelectItem key={s.uf} value={s.uf} className="text-black focus:text-black">{s.uf} — {s.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

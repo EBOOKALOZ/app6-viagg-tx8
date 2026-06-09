@@ -974,7 +974,7 @@ const scrollToProducts = () => {
                           localStorage.setItem("viagg_auth_entry", "advertiser");
                           navigate("/anunciante/painel");
                         } else {
-                          navigate("/auth?entry=advertiser");
+                          navigate("/auth");
                         }
                     }}
                 >

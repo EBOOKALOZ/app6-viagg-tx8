@@ -29,13 +29,11 @@ export const SellRealEstateCTA: React.FC<SellRealEstateCTAProps> = ({
       console.warn('Tracking failed:', err);
     }
 
-    // 2. Navigation logic
-    if (user) {
-      localStorage.setItem("viagg_auth_entry", "advertiser");
-      navigate("/anunciante/painel");
-    } else {
-      navigate("/auth?entry=advertiser");
-    }
+    // 2. Navegação: sempre vai para o painel do lojista.
+    //    Se não estiver logado, o guard AdvertiserProtectedRoute redireciona
+    //    automaticamente para /auth (login real).
+    localStorage.setItem("viagg_auth_entry", "advertiser");
+    navigate("/anunciante/painel");
   };
 
   if (variant === 'simple') {

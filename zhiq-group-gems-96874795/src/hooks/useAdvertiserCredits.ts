@@ -141,7 +141,7 @@ export function useAdvertiserCredits() {
         .select("*")
         .eq("advertiser_account_id", advertiserAccountId)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(50);
 
       return { products, creditPackages, usageRules, balance, ledger: ledgerData || [] };
     },
