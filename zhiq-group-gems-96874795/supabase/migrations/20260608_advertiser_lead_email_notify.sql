@@ -18,8 +18,10 @@ security definer
 set search_path = public
 as $$
 declare
-  -- ⚠️ AJUSTE a URL se o ref do projeto mudar.
-  v_url  text := 'https://broifhfqmnzqoongtokm.supabase.co/functions/v1/send-event-notification';
+  -- ⚠️ Função publicada como `swift-action` (a nova `send-event-notification`
+  -- não permite salvar Verify JWT = OFF, então rejeita a anon key). swift-action
+  -- está com Verify JWT OFF e aceita a anon key dos triggers.
+  v_url  text := 'https://broifhfqmnzqoongtokm.supabase.co/functions/v1/swift-action';
   -- Chave anon (pública). A função roda com verify_jwt = false.
   v_anon text := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyb2lmaGZxbW56cW9vbmd0b2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4Mjc2NzAsImV4cCI6MjA4MzQwMzY3MH0.Zk_AsCPkqaRozf0Nbsxd_S8HBef52VBu7rU4fOD0Hv8';
 begin

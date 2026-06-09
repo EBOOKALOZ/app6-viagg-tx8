@@ -93,7 +93,7 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
     Promise.all([
       supabase
         .from('motoboy_profiles')
-        .select('cidade, bairro, estado, nome, sobrenome, avatar_url')
+        .select('cidade, bairro, estado, nome, sobrenome, avatar_url, latitude_residencia, longitude_residencia')
         .eq('user_id', user.id)
         .maybeSingle(),
       supabase
@@ -109,9 +109,11 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
           setMotoboyCity([data.bairro, data.cidade, data.estado].filter(Boolean).join(', ') || 'Localização não cadastrada');
           setMotoboyName([data.nome, data.sobrenome].filter(Boolean).join(' ') || profile?.name || '');
           setMotoboyAvatar(profile?.avatar_url || (data as any).avatar_url || null);
-          // Usar coordenadas da cidade como fallback para o mapa
-          if (data.cidade) {
-            const coords = getCityCoordinates(data.cidade);
+          // Usar coordenadas exatas da residência se existirem
+          if (data.latitude_residencia && data.longitude_residencia) {
+             setCityCoords({ lat: data.latitude_residencia, lng: data.longitude_residencia });
+          } else if (data.cidade) {
+             const coords = getCityCoordinates(data.cidade);
             if (coords) {
                setCityCoords(coords);
             } else {
@@ -226,7 +228,7 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
             className="flex flex-col w-full max-w-[1080px]"
           >
             <div className={cn(
-              'w-full rounded-[28px] border-2 bg-[#0d0d0d] text-white shadow-[0_-8px_60px_rgba(255,184,0,0.3)] overflow-hidden',
+              'w-full rounded-[28px] border-2 bg-[#0C3B24] text-white shadow-[0_-8px_60px_rgba(255,184,0,0.3)] overflow-hidden',
               isExpired ? 'border-slate-600 grayscale' : isUrgent ? 'border-red-500' : 'border-[#ffb800]'
             )}>
             {/* Logo da Plataforma (dentro do card) */}
@@ -252,7 +254,7 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
               <motion.div
                 animate={!isExpired ? { scale: [1, 1.05, 1] } : {}}
                 transition={{ repeat: Infinity, duration: 1.8 }}
-                className="w-20 h-20 rounded-xl bg-[#0d0d0d] flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,184,0,0.5)] overflow-hidden border-2 border-[#ffb800]"
+                className="w-20 h-20 rounded-xl bg-[#0C3B24] flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,184,0,0.5)] overflow-hidden border-2 border-[#ffb800]"
               >
                 {offer.loja_logo || (offer as any).merchant?.logo_url ? (
                   <img src={offer.loja_logo || (offer as any).merchant?.logo_url} alt={offer.loja_nome || 'Loja'} className="w-full h-full object-cover" />
@@ -337,7 +339,7 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        className="fixed inset-0 z-[9999] bg-[#0a0a0a] flex flex-col overflow-hidden"
+        className="fixed inset-0 z-[9999] bg-[#0C3B24] flex flex-col overflow-hidden"
       >
         {/* Mapa tela cheia (fundo) — 3 pontos: motoboy real, loja, cliente */}
         <div className="absolute inset-0">
@@ -394,7 +396,7 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
           {/* Barra de tempo */}
           <div className="px-4 mb-1.5">{TimerBar}</div>
 
-          <div className="bg-[#0d0d0d]/95 backdrop-blur-xl rounded-t-[1.5rem] border-t border-white/5 px-4 pt-2.5 pb-4 space-y-2">
+          <div className="bg-[#0C3B24]/95 backdrop-blur-xl rounded-t-[1.5rem] border-t border-white/5 px-4 pt-2.5 pb-4 space-y-2">
 
             {/* Handle de colapso — toque para expandir/encolher */}
             <button

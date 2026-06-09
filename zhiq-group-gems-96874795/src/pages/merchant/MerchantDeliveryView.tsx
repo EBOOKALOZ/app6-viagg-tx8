@@ -286,7 +286,18 @@ export default function MerchantDeliveryView() {
         .select("lat, lng")
         .eq("motoboy_id", motoboyId)
         .maybeSingle();
-      if (data?.lat && data?.lng) setMotoboyLocation({ lat: Number(data.lat), lng: Number(data.lng) });
+      if (data?.lat && data?.lng) {
+        setMotoboyLocation({ lat: Number(data.lat), lng: Number(data.lng) });
+      } else {
+        const { data: profile } = await supabase
+          .from("motoboy_profiles")
+          .select("latitude_residencia, longitude_residencia")
+          .eq("user_id", motoboyId)
+          .maybeSingle();
+        if (profile?.latitude_residencia && profile?.longitude_residencia) {
+          setMotoboyLocation({ lat: Number(profile.latitude_residencia), lng: Number(profile.longitude_residencia) });
+        }
+      }
     };
     fetchLocation();
 
@@ -578,7 +589,7 @@ export default function MerchantDeliveryView() {
                     ts: fmtTs(offerSnapshot?.accepted_at),
                     done: currentStep >= 1 || isCompleted,
                     current: currentStep === 0 && !isCompleted && !isCancelled,
-                    colour: "bg-blue-500",
+                    colour: "bg-green-500",
                   },
                   {
                     icon: Navigation,
@@ -587,9 +598,9 @@ export default function MerchantDeliveryView() {
                       ? order.pickup_location.replace(/^-?\d+\.\d+,\s*-?\d+\.\d+$/, "Loja")
                       : undefined,
                     ts: fmtTs(offerSnapshot?.accepted_at),
-                    done: currentStep >= 1 || isCompleted,
+                    done: currentStep >= 2 || isCompleted,
                     current: currentStep === 1 && !isCompleted,
-                    colour: "bg-blue-500",
+                    colour: "bg-green-500",
                   },
                   {
                     icon: Check,
@@ -598,7 +609,7 @@ export default function MerchantDeliveryView() {
                     ts: null,
                     done: currentStep >= 2 || isCompleted,
                     current: false,
-                    colour: "bg-amber-500",
+                    colour: "bg-green-500",
                   },
                   {
                     icon: Package,
@@ -607,9 +618,9 @@ export default function MerchantDeliveryView() {
                       ? order.destination
                       : undefined,
                     ts: null,
-                    done: currentStep >= 2 || isCompleted,
+                    done: currentStep >= 3 || isCompleted,
                     current: currentStep === 2 && !isCompleted,
-                    colour: "bg-primary",
+                    colour: "bg-green-500",
                   },
                   {
                     icon: CheckCircle2,

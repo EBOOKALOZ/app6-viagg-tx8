@@ -58,7 +58,7 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
     let cancelled = false;
     Promise.all([
       supabase.from('profiles').select('avatar_url, name').eq('id', user.id).maybeSingle(),
-      supabase.from('motoboy_profiles').select('cidade, bairro, estado, nome, sobrenome').eq('user_id', user.id).maybeSingle(),
+      supabase.from('motoboy_profiles').select('cidade, bairro, estado, nome, sobrenome, latitude_residencia, longitude_residencia').eq('user_id', user.id).maybeSingle(),
     ]).then(async ([profileRes, motoboyRes]) => {
       if (cancelled) return;
       const profile = profileRes.data as any;
@@ -69,8 +69,10 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
       const addr = [mb?.bairro, mb?.cidade, mb?.estado].filter(Boolean).join(', ');
       if (addr) setMotoboyAddress(addr);
 
-      // Obter lat/lng: 1) cidade hardcoded BR  2) Mapbox geocoding como fallback
-      if (mb?.cidade) {
+      // Obter lat/lng: 1) Residência exata 2) cidade hardcoded BR 3) Mapbox geocoding como fallback
+      if (mb?.latitude_residencia && mb?.longitude_residencia) {
+        if (!cancelled) setMotoboyPos({ lat: mb.latitude_residencia, lng: mb.longitude_residencia });
+      } else if (mb?.cidade) {
         const cityCoords = getCityCoordinates(mb.cidade);
         if (cityCoords) {
           if (!cancelled) setMotoboyPos(cityCoords);

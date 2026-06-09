@@ -527,7 +527,7 @@ export default function AdvertiserDeliveriesPage() {
                 onNameChange={setCustomerName} onPhoneChange={setCustomerPhone} onNotesChange={setDeliveryNotes}
               />
 
-              <ServiceSelectionCard serviceLevel={serviceLevel} onSelectService={setServiceLevel} />
+              {/* ServiceSelectionCard ocultado a pedido do usuário */}
 
               {store?.latitude && store?.longitude && (
                 <DeliveryMapSection
@@ -618,7 +618,7 @@ export default function AdvertiserDeliveriesPage() {
                 onNameChange={setCustomerName} onPhoneChange={setCustomerPhone} onNotesChange={setDeliveryNotes}
               />
 
-              <ServiceSelectionCard serviceLevel={serviceLevel} onSelectService={setServiceLevel} />
+              {/* ServiceSelectionCard ocultado a pedido do usuário */}
 
               {saldoApos !== null && saldoApos < 0 && (
                 <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
