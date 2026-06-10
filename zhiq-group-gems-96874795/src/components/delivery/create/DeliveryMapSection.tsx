@@ -1,4 +1,6 @@
 import { useMemo, useRef, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Truck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapboxPremiumMap, PremiumMapMarker, MapErrorBoundary } from "@/components/map/MapboxPremiumMap";
 import { parseCoordinates } from "@/lib/coordinateParser";
@@ -35,6 +37,17 @@ interface DeliveryMapSectionProps {
 }
 
 export function DeliveryMapSection({ store, destCoords, routeInfo, onMarkerDragEnd, isDesktopFullHeight, isMapSelectMode, tempDestCoords, onMapMouseMove, destDetails, customerName, customerPhone, productName, productImage, onPasteCoords }: DeliveryMapSectionProps) {
+  const navigate = useNavigate();
+  // Botão sobreposto no mapa → leva para a lista de entregas
+  const DeliveriesBtn = () => (
+    <button
+      onClick={() => navigate("/anunciante/entregas")}
+      className="absolute top-4 left-4 z-20 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF6A00] text-white text-sm font-bold shadow-lg shadow-black/30 hover:bg-[#e65c00] transition-colors"
+    >
+      <Truck className="w-4 h-4" /> Minhas Entregas
+    </button>
+  );
+
   // Handler global pra colar coordenadas a partir do input dentro do balão (popup é HTML)
   useEffect(() => {
     (window as any).__viaggPasteClientCoords = (raw: string) => {
@@ -184,6 +197,7 @@ export function DeliveryMapSection({ store, destCoords, routeInfo, onMarkerDragE
   if (isDesktopFullHeight) {
     return (
       <div className="relative w-full h-full min-h-[500px]">
+        <DeliveriesBtn />
         <MapErrorBoundary className="w-full h-full min-h-[500px]">
           <MapboxPremiumMap
             markers={markers}
@@ -207,6 +221,7 @@ export function DeliveryMapSection({ store, destCoords, routeInfo, onMarkerDragE
     <Card className="overflow-hidden rounded-xl shadow-2xl shadow-black/50 border border-white/5 bg-zinc-950/50">
       <CardContent className="p-0">
         <div className="relative w-full h-[600px] min-h-[600px] rounded-xl flex-shrink-0">
+          <DeliveriesBtn />
           <MapErrorBoundary className="w-full h-full rounded-xl">
             <MapboxPremiumMap
               markers={markers}

@@ -637,7 +637,7 @@ export default function ProductLandingPage() {
                                     <div className="min-w-0 flex-1">
                                         <span className="bg-[#FF6A00] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">Loja Oficial</span>
                                         <h3 className="font-black text-zinc-900 leading-tight truncate mt-1">{store.store_name || "Vendedor Local"}</h3>
-                                        {store.city && (<p className="text-xs text-zinc-500 flex items-center gap-1"><MapPin className="w-3 h-3 text-[#FF6A00]" /> {store.city}{store.region ? "/" + store.region : ""}</p>)}
+                                        {(store.bairro || store.city) && (<p className="text-xs text-zinc-500 flex items-center gap-1"><MapPin className="w-3 h-3 text-[#FF6A00]" /> {[store.bairro, store.city].filter(Boolean).join(", ")}{store.region ? "/" + store.region : ""}</p>)}
                                     </div>
                                 </div>
                                 {store.store_id && (

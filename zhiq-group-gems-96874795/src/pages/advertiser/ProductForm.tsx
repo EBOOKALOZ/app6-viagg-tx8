@@ -123,12 +123,16 @@ export const ProductForm = () => {
     pickup_address: '',
     digital_product_link: '',
     has_digital_files: false,
+    has_invoice: false,
+    warranty: '',
   });
 
   const [contactData, setContactData] = useState({
     contact_name: '',
     whatsapp_e164: '',
     phone_e164: '',
+    bairro: '',
+    cidade: '',
   });
 
   const showElectronicsFields = formData.condition !== 'digital' && isElectronicsCategory(formData.category);
@@ -209,6 +213,8 @@ export const ProductForm = () => {
             description,
             price: priceNumeric || 0,
             condition: formData.condition,
+            has_invoice: formData.has_invoice,
+            warranty: formData.warranty || null,
             listing_status: 'active',
           })
           .eq('id', currentId);
@@ -223,6 +229,8 @@ export const ProductForm = () => {
             description,
             price: priceNumeric || 0,
             condition: formData.condition,
+            has_invoice: formData.has_invoice,
+            warranty: formData.warranty || null,
             listing_status: 'active',
           })
           .select('id')
@@ -260,6 +268,14 @@ export const ProductForm = () => {
         }
       }
 
+      // Salva bairro/cidade no perfil do vendedor (aparece nos cards do mercado e na página do produto)
+      if (user && (contactData.bairro || contactData.cidade)) {
+        await supabase.from('profiles' as any).update({
+          bairro: contactData.bairro || null,
+          cidade: contactData.cidade || null,
+        }).eq('id', user.id);
+      }
+
       toast.success('Anúncio publicado com sucesso!');
       navigate('/anunciante');
     } catch (error: any) {
@@ -285,6 +301,8 @@ export const ProductForm = () => {
         contact_name: prev.contact_name || nameVal,
         whatsapp_e164: prev.whatsapp_e164 || (phoneVal ? formatPhone(phoneVal) : ''),
         phone_e164: prev.phone_e164 || (phoneVal ? formatPhone(phoneVal) : ''),
+        bairro: prev.bairro || p.bairro || '',
+        cidade: prev.cidade || p.cidade || '',
       }));
     })();
   }, [user]);
@@ -335,6 +353,8 @@ export const ProductForm = () => {
             digital_product_link: digitalLink,
             price_brl: data.price ? data.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '',
             condition: data.condition || 'novo',
+            has_invoice: data.has_invoice ?? false,
+            warranty: data.warranty || '',
           }));
         }
       };
@@ -488,6 +508,40 @@ export const ProductForm = () => {
                   </div>
                 </div>
               )}
+
+              {!isDigital && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-zinc-100">
+                  <div className="space-y-2">
+                    <InputLabel>Nota fiscal</InputLabel>
+                    <div className="flex gap-2">
+                      {[{ v: true, l: 'Com nota' }, { v: false, l: 'Sem nota' }].map((o) => (
+                        <button
+                          key={String(o.v)}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, has_invoice: o.v }))}
+                          className={cn(
+                            "flex-1 h-11 rounded-lg border-2 font-bold text-sm transition-all",
+                            formData.has_invoice === o.v
+                              ? "border-[#3483FA] bg-blue-50 text-zinc-900"
+                              : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300"
+                          )}
+                        >
+                          {o.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <InputLabel>Tempo de garantia</InputLabel>
+                    <Input
+                      placeholder="Ex.: 12 meses / Sem garantia"
+                      className="h-11 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                      value={formData.warranty}
+                      onChange={(e) => setFormData(prev => ({ ...prev, warranty: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
             </Section>
 
             {/* 4 — Fotos (físico e digital) */}
@@ -634,6 +688,30 @@ export const ProductForm = () => {
                     onChange={(e) => setContactData(prev => ({ ...prev, phone_e164: formatPhone(e.target.value) }))}
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-zinc-100">
+                <div className="space-y-2">
+                  <InputLabel>Bairro</InputLabel>
+                  <Input
+                    placeholder="Ex.: Centro"
+                    className="h-11 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                    value={contactData.bairro}
+                    onChange={(e) => setContactData(prev => ({ ...prev, bairro: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <InputLabel>Cidade</InputLabel>
+                  <Input
+                    placeholder="Ex.: Florianópolis"
+                    className="h-11 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                    value={contactData.cidade}
+                    onChange={(e) => setContactData(prev => ({ ...prev, cidade: e.target.value }))}
+                  />
+                </div>
+                <p className="sm:col-span-2 text-[11px] text-zinc-400 -mt-1">
+                  Bairro e cidade aparecem nos cards do mercado e na página do produto.
+                </p>
               </div>
             </Section>
 

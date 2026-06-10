@@ -84,12 +84,10 @@ export const playNotificationSound = () => {
   }
 };
 
-/** Toca em loop a cada 3s até stop ser chamado */
+/** Toca o bip UMA vez (sem loop) */
 let loopInterval: NodeJS.Timeout | null = null;
 export const playLeadNotificationSound = () => {
-  if (loopInterval) return;
   playNotificationSound();
-  loopInterval = setInterval(playNotificationSound, 3000);
 };
 export const stopLeadNotificationSound = () => {
   if (loopInterval) {

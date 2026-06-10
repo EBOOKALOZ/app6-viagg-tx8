@@ -1732,6 +1732,15 @@ const scrollToProducts = () => {
                 onClose={() => setDiscountProduct(null)}
             />
 
+            {/* Rodapé simples — só desktop (no celular o menu inferior já cobre) */}
+            <footer className="hidden md:block mt-10">
+                <div className="bg-blue-600 text-white py-7 px-6 text-center">
+                    <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
+                    <p className="text-sm text-blue-100 mt-1">Compre do comércio local — com segurança e entrega rápida.</p>
+                    <p className="text-xs text-blue-200 mt-2">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
+                </div>
+            </footer>
+
             <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />
 
             {/* Modal "Saber mais" — visitante manda pergunta direto pro vendedor */}
