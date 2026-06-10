@@ -99,7 +99,11 @@ function AddToCartButton({ cart, productId, bgColor, onGlobalAdd }: {
     return (
         <button
             onClick={async () => {
-                await cart.addItem(productId);
+                try {
+                    await cart.addItem({ productId });
+                } catch (e) {
+                    console.warn("Could not add to store cart, falling back to global cart", e);
+                }
                 onGlobalAdd?.();
             }}
             disabled={isAdding}
@@ -125,7 +129,6 @@ export default function ProductLandingPage() {
     const [showDiscountModal, setShowDiscountModal] = useState(false);
     const [showLeadModal, setShowLeadModal] = useState(false);
     const sliderRef = useRef<HTMLDivElement>(null);
-    const [cartOpen, setCartOpen] = useState(false);
 
     // â”€â”€ Fetch Product â”€â”€
     const { data: product, isLoading, error } = useQuery<Product | null>({
@@ -184,8 +187,6 @@ export default function ProductLandingPage() {
         enabled: !!id,
     });
 
-    // Cart must be after product query but hooks are unconditional â€” useStoreCart handles undefined
-    const cart = useStoreCart(product?.merchant_store_id);
     const globalCart = useGlobalCart();
     const { trackProductVisit } = useMarketplaceTracking();
 
@@ -262,6 +263,9 @@ export default function ProductLandingPage() {
         },
         enabled: !!product?.merchant_store_id,
     });
+
+    // Cart must be after product and store query so we can use the real store_id
+    const cart = useStoreCart(store?.store_id || product?.merchant_store_id);
 
     // â”€â”€ Fetch related products from same store â”€â”€
     const { data: relatedProducts = [] } = useQuery<Product[]>({
@@ -566,11 +570,11 @@ export default function ProductLandingPage() {
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border-2 border-red-500 bg-red-50/80 p-5 shadow-sm text-red-900 flex items-start gap-4">
-                            <span className="text-3xl flex-shrink-0 mt-0.5">!</span>
+                        <div className="rounded-2xl border-2 border-red-700 bg-red-600 p-5 shadow-md text-white flex items-start gap-4">
+                            <span className="text-4xl flex-shrink-0 mt-0.5 font-black">!</span>
                             <div>
-                                <p className="text-sm font-black uppercase tracking-tight text-red-700">Alerta de Segurança Anti-Golpe</p>
-                                <p className="text-sm font-medium mt-1.5 leading-relaxed text-red-950">NUNCA faça pagamentos antecipados! A <strong className="font-black text-red-700">Viagg-TX8</strong> conecta você ao vendedor local. Encontre-se presencialmente ou pague no ato da entrega.</p>
+                                <p className="text-base font-black uppercase tracking-tight text-white">Alerta de Segurança Anti-Golpe</p>
+                                <p className="text-sm font-medium mt-1.5 leading-relaxed text-red-50">NUNCA faça pagamentos antecipados! A <strong className="font-black text-white">Viagg-TX8</strong> conecta você ao vendedor local. Encontre-se presencialmente ou pague no ato da entrega.</p>
                             </div>
                         </div>
                     </div>
@@ -590,8 +594,18 @@ export default function ProductLandingPage() {
                                         productId={product.id}
                                         bgColor={style.bgColor}
                                         onGlobalAdd={() => {
-                                            if (product.merchant_store_id) {
-                                                globalCart.addItem(product.merchant_store_id, product.id, 1, product.title, product.image_url, parseFloat(String(product.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0, store?.store_name || "Loja", store?.logo_url || null);
+                                            const finalStoreId = store?.store_id || product.merchant_store_id;
+                                            if (finalStoreId) {
+                                                globalCart.addItem({
+                                                    storeId: finalStoreId,
+                                                    productId: product.id,
+                                                    quantity: 1,
+                                                    productTitle: product.title,
+                                                    productImageUrl: product.image_url,
+                                                    productPrice: parseFloat(String(product.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                                                    storeName: store?.store_name || "Loja",
+                                                    storeLogo: store?.logo_url || null,
+                                                });
                                             }
                                         }}
                                     />
@@ -659,13 +673,7 @@ export default function ProductLandingPage() {
                     </div>
                 )}
 
-                <footer className="mt-auto -mx-4 lg:-mx-8 xl:-mx-12">
-                    <div className="bg-blue-600 text-white py-9 px-6 text-center">
-                    <p className="text-lg font-black text-white">Viagg-TX8 · Mercado Local</p>
-                    <p className="text-sm text-blue-100 mt-2">Compre do comércio local — com segurança e entrega rápida.</p>
-                    <p className="text-xs text-blue-200 mt-3">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
-                    </div>
-                </footer>
+
             </div>
             </div>
 
@@ -709,17 +717,6 @@ export default function ProductLandingPage() {
                 open={showLeadModal}
                 onClose={() => setShowLeadModal(false)}
             />
-
-            {/* ---> CART DRAWER <--- */}
-            {product?.merchant_store_id && (
-                <StoreCartDrawer
-                    open={cartOpen}
-                    onOpenChange={setCartOpen}
-                    storeId={product.merchant_store_id}
-                    storeName={store?.store_name || "Loja"}
-                    cart={cart}
-                />
-            )}
 
             {/* ---> FOOTER <--- */}
         </MarketLayout>

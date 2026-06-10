@@ -177,7 +177,7 @@ export function useStoreCart(storeId: string | undefined) {
       const msg = err.message || "";
       // Erros conhecidos de constraint que indicam que o produto não tem store_id real
       // (ex: vem de advertiser_listings, não de merchant_stores). O useGlobalCart já cuida do fallback.
-      const isStoreIdNull = msg.includes('null value in column "store_id"') || msg.includes("store_cart_items");
+      const isStoreIdNull = msg.includes('null value in column "store_id"') || msg.includes("store_cart_items") || msg.includes("store_carts_store_id_fkey") || msg.includes("foreign key constraint");
       if (isStoreIdNull) {
         console.warn("[useStoreCart] suprimido (item já tratado por useGlobalCart):", msg);
         return;

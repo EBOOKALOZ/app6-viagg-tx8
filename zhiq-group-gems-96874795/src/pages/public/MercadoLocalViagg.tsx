@@ -1588,16 +1588,16 @@ const scrollToProducts = () => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        globalCart.addItem(
-                                                            product.merchant_store_id!,
-                                                            product.id,
-                                                            1,
-                                                            product.title,
-                                                            product.image_url,
-                                                            parseFloat(String(product.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
-                                                            product.store_name || "Loja",
-                                                            product.store_logo || null,
-                                                        );
+                                                        globalCart.addItem({
+                                                            storeId: product.merchant_store_id!,
+                                                            productId: product.id,
+                                                            quantity: 1,
+                                                            productTitle: product.title,
+                                                            productImageUrl: product.image_url,
+                                                            productPrice: parseFloat(String(product.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                                                            storeName: product.store_name || "Loja",
+                                                            storeLogo: product.store_logo || null,
+                                                        });
                                                     }}
                                                     disabled={globalCart.addingProductId === product.id}
                                                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-[#FF6A00] hover:bg-[#e65c00] transition-all duration-200"

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMyStore } from "@/hooks/useMyStore";
-import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins, X, EyeOff } from "lucide-react";
+import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins, X, EyeOff, Bike } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -325,6 +325,13 @@ export default function StoreOrdersPage() {
                   <MessageSquare className="w-4 h-4" /> Contatar Comprador (-{UNLOCK_COST} cr)
                 </Button>
               )}
+
+              <Button
+                onClick={() => navigate('/anunciante/entregas')}
+                className="w-full h-11 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-orange-900/30 mt-2"
+              >
+                <Bike className="w-4 h-4" /> Chamar Motoboy
+              </Button>
             </div>
           ))}
         </div>

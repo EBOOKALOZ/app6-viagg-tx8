@@ -746,8 +746,8 @@ export default function AdvertiserDeliveriesPage() {
           <Button variant="ghost" size="icon" onClick={() => fetchOrders(true)} disabled={isRefreshing} className="text-slate-400">
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
-          <Button size="sm" className="gap-1.5 font-semibold" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Nova
+          <Button size="sm" className="gap-1.5 font-semibold bg-[#FF6A00] hover:bg-[#FF7A1A] text-white" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Nova Chamada para Motoboy
           </Button>
         </div>
       </div>

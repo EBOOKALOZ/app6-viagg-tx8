@@ -265,6 +265,9 @@ export function useGlobalCart() {
     },
     onSuccess: () => {
       toast.success("Produto adicionado à cesta!", { duration: 2000 });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("vtx8-cart-add-action"));
+      }
     },
     onError: (err: Error) => {
       toast.error(`Erro: ${err.message}`, { duration: 5000 });

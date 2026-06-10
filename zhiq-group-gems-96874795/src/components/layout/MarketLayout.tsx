@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { FooterNeutral } from "@/components/FooterNeutral";
@@ -86,6 +86,12 @@ export function MarketLayout({
     };
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
+
+    useEffect(() => {
+        const handleOpenCart = () => setCartOpen(true);
+        window.addEventListener("vtx8-cart-add-action", handleOpenCart);
+        return () => window.removeEventListener("vtx8-cart-add-action", handleOpenCart);
+    }, []);
 
     return (
         <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-[#F5E62B]")}>

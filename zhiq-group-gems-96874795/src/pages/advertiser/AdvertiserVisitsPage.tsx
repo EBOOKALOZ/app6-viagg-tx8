@@ -79,22 +79,48 @@ export default function AdvertiserVisitsPage() {
           (mp || []).forEach((p: any) => { products[p.id] = { title: p.title || "Produto", image: resolveImg(p.cover_image_url) }; });
         }
       }
-      // Pacotes comprados (lotes pagos) + consumo total — p/ FIFO
-      const { data: purchases } = await (supabase.from("credit_purchases" as any)
-        .select("id, product_name, credits_granted, amount_paid, created_at")
-        .eq("store_id", storeId).eq("status", "paid").gt("credits_granted", 0)
-        .order("created_at", { ascending: true })) as any;
       // Saldo PRINCIPAL do lojista (advertiser_credit_balances) — pool unificado que as visitas consomem
       const { data: adv } = await (supabase.from("advertiser_accounts" as any)
         .select("id").eq("user_id", user!.id).maybeSingle()) as any;
       let bal: any = null;
+      let advPurchases: any[] = [];
       if ((adv as any)?.id) {
         const r = await (supabase.from("advertiser_credit_balances" as any)
           .select("available_credits, consumed_credits").eq("advertiser_account_id", (adv as any).id).maybeSingle()) as any;
         bal = r?.data;
+
+        const { data: advPurchasesData } = await (supabase.from("advertiser_credit_purchases" as any)
+          .select("id, advertiser_credit_packages(name), credits_total, amount_brl, created_at")
+          .eq("advertiser_account_id", (adv as any).id)
+          .eq("payment_status", "paid")
+          .gt("credits_total", 0)
+          .order("created_at", { ascending: true })) as any;
+
+        advPurchases = (advPurchasesData || []).map((p: any) => ({
+          id: p.id,
+          product_name: p.advertiser_credit_packages?.name || "Pacote de Créditos",
+          credits_granted: p.credits_total,
+          amount_paid: p.amount_brl,
+          created_at: p.created_at
+        }));
       }
+
+      // Pacotes legados (credit_purchases)
+      let purchases: any[] = [];
+      if (storeId) {
+        const { data } = await (supabase.from("credit_purchases" as any)
+          .select("id, product_name, credits_granted, amount_paid, created_at")
+          .eq("store_id", storeId).eq("status", "paid").gt("credits_granted", 0)
+          .order("created_at", { ascending: true })) as any;
+        purchases = data || [];
+      }
+
+      const allPackages = [...purchases, ...advPurchases].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
       return {
-        events, products, packages: (purchases || []),
+        events, products, packages: allPackages,
         consumed: Number((bal as any)?.consumed_credits ?? 0),
         available: Number((bal as any)?.available_credits ?? 0),
       };
@@ -205,16 +231,6 @@ export default function AdvertiserVisitsPage() {
           </div>
         ) : (
           <>
-            {/* Saldo de créditos disponível (verde, diminui com o consumo) */}
-            <div className="bg-[#0D0F12] rounded-2xl p-6 border border-[#22C55E]/40 shadow-lg shadow-emerald-500/10">
-              <div className="flex items-center gap-2 text-[#22C55E] text-xs font-bold uppercase tracking-widest">
-                <Coins className="w-4 h-4" /> Créditos disponíveis
-              </div>
-              <p className="text-5xl font-black mt-2 text-[#22C55E]">{availableCredits}</p>
-              <p className="text-xs text-[#A7B0BE] mt-1">
-                de <span className="font-bold text-[#F5F7FA]">{totalEverCredits}</span> créditos · {consumedCredits} já consumidos
-              </p>
-            </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
@@ -232,6 +248,71 @@ export default function AdvertiserVisitsPage() {
                   <Coins className="w-4 h-4 text-[#FF6A00]" /> Créditos consumidos
                 </div>
                 <p className="text-4xl font-black mt-2">{totalCredits}</p>
+              </div>
+            </div>
+
+            {/* Tabela de Consumo + Consumo por pacote */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Regras de Consumo */}
+              <div className="bg-[#0D0F12] rounded-2xl p-5 border border-[#FF6A00]/20 shadow-lg shadow-[#FF6A00]/5 flex flex-col">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-[#FF6A00] mb-4 flex items-center gap-2 shrink-0">
+                  <Coins className="w-4 h-4" /> Tabela de Consumo de Créditos
+                </h2>
+                <div className="grid grid-cols-2 gap-3 flex-1 content-start">
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
+                    <p className="text-xl font-black text-white">1 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">crédito</span></p>
+                    <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para o usuário clicar em cada produto</p>
+                    <div className="mt-auto pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 1)} vezes</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
+                    <p className="text-xl font-black text-white">5 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
+                    <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para o usuário adicionar na cesta</p>
+                    <div className="mt-auto pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 5)} vezes</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
+                    <p className="text-xl font-black text-white">5 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
+                    <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para o usuário Finalizar o pedido</p>
+                    <div className="mt-auto pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 5)} vezes</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
+                    <p className="text-xl font-black text-white">9 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
+                    <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para você ver e aceitar Ofertas</p>
+                    <div className="mt-auto pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 9)} vezes</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
+                    <p className="text-xl font-black text-white">13 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
+                    <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para desbloquear WhatsApp do cliente no pedido</p>
+                    <div className="mt-auto pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 13)} vezes</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
+                    <p className="text-xl font-black text-white">13 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
+                    <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para falar diretamente com o Vendedor</p>
+                    <div className="mt-auto pt-2 border-t border-white/5">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 13)} vezes</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Saldo de créditos disponível (verde, diminui com o consumo) movido para cá */}
+              <div className="bg-[#0D0F12] rounded-2xl p-6 border border-[#22C55E]/40 shadow-lg shadow-emerald-500/10 flex flex-col justify-center items-center text-center">
+                <div className="flex items-center justify-center gap-2 text-[#22C55E] text-sm font-bold uppercase tracking-widest mb-4">
+                  <Coins className="w-5 h-5" /> Créditos disponíveis
+                </div>
+                <p className="text-7xl font-black text-[#22C55E] mb-2">{availableCredits}</p>
+                <p className="text-sm text-[#A7B0BE]">
+                  de <span className="font-bold text-[#F5F7FA]">{totalEverCredits}</span> créditos · {consumedCredits} já consumidos
+                </p>
               </div>
             </div>
 
@@ -268,34 +349,7 @@ export default function AdvertiserVisitsPage() {
                   </div>
                 </section>
 
-                {/* Consumo por pacote (FIFO) */}
-                {pkgRows.length > 0 && (
-                  <section className="space-y-3">
-                    <h2 className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                      <Coins className="w-5 h-5 text-[#FF6A00]" /> Consumo por pacote
-                    </h2>
-                    <div className="space-y-2">
-                      {pkgRows.map((p) => {
-                        const pct = p.granted > 0 ? Math.min(100, Math.round((p.used / p.granted) * 100)) : 0;
-                        return (
-                          <div key={p.id} className="bg-[#0D0F12] rounded-xl p-3 border border-white/5">
-                            <div className="flex items-center justify-between text-sm mb-2">
-                              <span className="font-bold truncate">{p.name || "Pacote"} · {p.granted} cr</span>
-                              <span className="text-[#A7B0BE] text-xs shrink-0 ml-2">{new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                              <div className="h-full bg-[#FF6A00]" style={{ width: `${pct}%` }} />
-                            </div>
-                            <div className="flex justify-between text-xs mt-1.5">
-                              <span className="text-[#FF6A00] font-bold">{p.used} usados ({pct}%)</span>
-                              <span className="text-[#A7B0BE]">{p.left} restantes</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                )}
+                {/* Consumo por pacote movido para cima */}
 
                 {/* Por produto */}
                 <section className="space-y-3">

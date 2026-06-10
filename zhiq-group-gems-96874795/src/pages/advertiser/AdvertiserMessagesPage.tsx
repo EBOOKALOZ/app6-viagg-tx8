@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2 } from "lucide-react";
+import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -247,17 +247,22 @@ export default function AdvertiserMessagesPage() {
                     <Unlock className="w-4 h-4" /> Desbloquear (-{UNLOCK_COST} cr)
                   </Button>
                 ) : (
-                  <>
-                    {lead.visitor_phone && (
-                      <Button
-                        onClick={() => handleCallVisitor(lead)}
-                        className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
-                      >
-                        <MessageSquare className="w-4 h-4" /> Contatar Visitante
-                      </Button>
-                    )}
-                  </>
+                  lead.visitor_phone && (
+                    <Button
+                      onClick={() => handleCallVisitor(lead)}
+                      className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
+                    >
+                      <MessageSquare className="w-4 h-4" /> Contatar Visitante
+                    </Button>
+                  )
                 )}
+
+                <Button
+                  onClick={() => navigate('/anunciante/entregas')}
+                  className="w-full h-11 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-orange-900/30"
+                >
+                  <Bike className="w-4 h-4" /> Chamar Motoboy
+                </Button>
 
                 <Button
                   size="sm"
