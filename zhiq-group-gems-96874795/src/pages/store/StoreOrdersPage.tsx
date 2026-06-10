@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMyStore } from "@/hooks/useMyStore";
-import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins } from "lucide-react";
+import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins, X, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +55,23 @@ export default function StoreOrdersPage() {
         .select("available_credits").eq("advertiser_account_id", accId).maybeSingle()) as any;
       return Number((bal as any)?.available_credits ?? 0);
     },
+  });
+
+  // Ocultar pedidos individuais (localStorage, por navegador)
+  const HIDDEN_KEY = "viagg_hidden_orders";
+  const [hiddenIds, setHiddenIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]"); } catch { return []; }
+  });
+  const [showHidden, setShowHidden] = useState(false);
+  const hideOrder = (id: string) => setHiddenIds((prev) => {
+    const next = Array.from(new Set([...prev, id]));
+    try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
+  const unhideOrder = (id: string) => setHiddenIds((prev) => {
+    const next = prev.filter((x) => x !== id);
+    try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
   });
 
   const handleContactBuyer = async (pi: PurchaseIntentionCard) => {
@@ -126,6 +144,9 @@ export default function StoreOrdersPage() {
     },
   });
 
+  const hiddenCount = (orders as PurchaseIntentionCard[]).filter((o) => hiddenIds.includes(o.id)).length;
+  const visibleOrders = (orders as PurchaseIntentionCard[]).filter((o) => showHidden || !hiddenIds.includes(o.id));
+
   return (
     <div className="p-4 md:p-8 animate-fade-in space-y-6 mt-4">
       <header className="mb-6 border-b border-[#2A3038] pb-4">
@@ -147,6 +168,15 @@ export default function StoreOrdersPage() {
         <p className="text-[#A7B0BE] mt-2 text-sm">Gerencie suas vendas locais.</p>
       </header>
 
+      {hiddenCount > 0 && (
+        <div className="flex justify-end">
+          <button onClick={() => setShowHidden((v) => !v)}
+            className="text-[10px] font-black uppercase tracking-widest text-[#A7B0BE] hover:text-white flex items-center gap-1">
+            <EyeOff className="w-3 h-3" /> {showHidden ? "esconder ocultos" : `mostrar ${hiddenCount} oculto${hiddenCount > 1 ? "s" : ""}`}
+          </button>
+        </div>
+      )}
+
       {(isLoading || storeLoading) ? (
         <div className="py-20 flex justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
@@ -163,7 +193,7 @@ export default function StoreOrdersPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {orders.map((pi) => (
+          {visibleOrders.map((pi) => (
             <div
               key={pi.id}
               className={cn(
@@ -178,10 +208,21 @@ export default function StoreOrdersPage() {
                 <div className="inline-flex items-center gap-2 bg-yellow-500 text-zinc-900 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow">
                   <Package className="w-3 h-3" /> Pedido Marketplace
                 </div>
-                <span className="text-[10px] font-bold text-yellow-800 flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {new Date(pi.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-bold text-yellow-800 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {new Date(pi.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  {hiddenIds.includes(pi.id) ? (
+                    <button onClick={() => unhideOrder(pi.id)} title="Restaurar" className="text-yellow-700 hover:text-yellow-900 transition-colors">
+                      <EyeOff className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button onClick={() => hideOrder(pi.id)} title="Ocultar este pedido" className="text-yellow-700 hover:text-yellow-900 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Cliente (mascarado) */}

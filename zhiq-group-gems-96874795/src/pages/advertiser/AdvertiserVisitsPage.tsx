@@ -84,9 +84,20 @@ export default function AdvertiserVisitsPage() {
         .select("id, product_name, credits_granted, amount_paid, created_at")
         .eq("store_id", storeId).eq("status", "paid").gt("credits_granted", 0)
         .order("created_at", { ascending: true })) as any;
-      const { data: bal } = await (supabase.from("merchant_credit_balances" as any)
-        .select("consumed_credits").eq("store_id", storeId).maybeSingle()) as any;
-      return { events, products, packages: (purchases || []), consumed: Number((bal as any)?.consumed_credits ?? 0) };
+      // Saldo PRINCIPAL do lojista (advertiser_credit_balances) — pool unificado que as visitas consomem
+      const { data: adv } = await (supabase.from("advertiser_accounts" as any)
+        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
+      let bal: any = null;
+      if ((adv as any)?.id) {
+        const r = await (supabase.from("advertiser_credit_balances" as any)
+          .select("available_credits, consumed_credits").eq("advertiser_account_id", (adv as any).id).maybeSingle()) as any;
+        bal = r?.data;
+      }
+      return {
+        events, products, packages: (purchases || []),
+        consumed: Number((bal as any)?.consumed_credits ?? 0),
+        available: Number((bal as any)?.available_credits ?? 0),
+      };
     },
   });
 
@@ -147,7 +158,10 @@ export default function AdvertiserVisitsPage() {
 
   // Consumo por pacote (FIFO): distribui o total consumido do lote mais antigo p/ o mais novo
   const packages = (data?.packages || []) as Array<{ id: string; product_name: string | null; credits_granted: number; created_at: string }>;
-  let consRemaining = data?.consumed || 0;
+  const availableCredits = data?.available || 0;
+  const consumedCredits = data?.consumed || 0;
+  const totalEverCredits = availableCredits + consumedCredits;
+  let consRemaining = consumedCredits;
   const pkgRows = packages.map((p) => {
     const granted = Number(p.credits_granted) || 0;
     const used = Math.min(consRemaining, granted);
@@ -191,6 +205,17 @@ export default function AdvertiserVisitsPage() {
           </div>
         ) : (
           <>
+            {/* Saldo de créditos disponível (verde, diminui com o consumo) */}
+            <div className="bg-[#0D0F12] rounded-2xl p-6 border border-[#22C55E]/40 shadow-lg shadow-emerald-500/10">
+              <div className="flex items-center gap-2 text-[#22C55E] text-xs font-bold uppercase tracking-widest">
+                <Coins className="w-4 h-4" /> Créditos disponíveis
+              </div>
+              <p className="text-5xl font-black mt-2 text-[#22C55E]">{availableCredits}</p>
+              <p className="text-xs text-[#A7B0BE] mt-1">
+                de <span className="font-bold text-[#F5F7FA]">{totalEverCredits}</span> créditos · {consumedCredits} já consumidos
+              </p>
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-[#0D0F12] rounded-2xl p-5 border border-white/5">

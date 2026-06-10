@@ -514,7 +514,7 @@ export default function StorePublicPage() {
                     <div className="flex-1 min-w-0">
                         {/* ─── TAB: HOME ─── */}
                         {activeTab === "home" && !search && (
-                            <div className="space-y-12">
+                            <div className="flex flex-col gap-12">
                                 {/* Horizontal Categories Row (Mobile Only) */}
                                 {categories.length > 0 && (
                                     <div className="space-y-4 lg:hidden">
