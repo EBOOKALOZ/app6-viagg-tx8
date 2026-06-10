@@ -11,7 +11,7 @@ import { FloatingCartButton } from "@/components/public/FloatingCartButton";
 import { GlobalRealtime } from "@/components/GlobalRealtime";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageFallback from "@/components/PageFallback";
-import { Index, NotFound } from "@/routes/lazyPages";
+import { NotFound, MercadoLocalViagg } from "@/routes/lazyPages";
 
 /* ── Módulos de rotas ── */
 import { publicRoutes } from "@/routes/publicRoutes";
@@ -84,8 +84,8 @@ export default function App() {
                       {advertiserRoutes}
                     </Route>
 
-                    {/* ── Index / catch-all ── */}
-                    <Route path="/" element={<Index />} />
+                    {/* ── Raiz mostra o Mercado Local (página principal) ── */}
+                    <Route path="/" element={<MercadoLocalViagg />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
 

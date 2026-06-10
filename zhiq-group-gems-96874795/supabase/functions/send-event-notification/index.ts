@@ -94,6 +94,7 @@ interface EventPayload {
   visitor_message?: string | null;
   city?: string | null;
   // Campos de pedido (source = "order")
+  intention_id?: string | null;
   customer_name?: string | null;
   customer_whatsapp?: string | null;
   customer_email?: string | null;
@@ -205,6 +206,22 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
   }
 }
 
+// Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
+// quando a edge function roda, pois o net.http_post é disparado após o commit).
+async function resolveOrderImage(supabase: any, ev: EventPayload): Promise<void> {
+  if (!ev.intention_id) return;
+  const { data: item } = await supabase
+    .from("purchase_intention_items")
+    .select("product_image_url, product_title")
+    .eq("intention_id", ev.intention_id)
+    .limit(1)
+    .maybeSingle();
+  if (item) {
+    ev.listing_image_url = item.product_image_url || null;
+    ev.listing_title = item.product_title || null;
+  }
+}
+
 function leadTemplate(ev: EventPayload, ownerName: string) {
   const action = INTEREST_LABELS[ev.interest_type || ""] || "demonstrou interesse";
   const greeting = ownerName ? `Olá, ${ownerName}!` : "Olá!";
@@ -301,6 +318,7 @@ function orderTemplate(ev: EventPayload, ownerName: string) {
         <h1 style="color:#18181b; font-size:22px;">Você recebeu um novo pedido! 🛒</h1>
         <p style="color:#52525b; font-size:15px;">${greeting}</p>
         <p style="color:#52525b; font-size:15px;"><strong>${customer}</strong> enviou um pedido na sua loja.</p>
+        ${productBlock(ev)}
         <div style="margin:24px 0; padding:20px; border-left:4px solid #f59e0b; background:#fffbeb; border-radius:6px;">
           <p style="margin:0 0 6px; font-size:14px;"><strong>Total:</strong> ${subtotal} (${items} ${itemWord})</p>
           <p style="margin:0 0 6px; font-size:14px;"><strong>Forma:</strong> ${modeLabel}</p>
@@ -419,6 +437,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Imagem/título do produto (best-effort) p/ lead e ledger
     if (ev.source === "lead" || ev.source === "ledger") {
       await resolveListing(supabase, ev);
+    } else if (ev.source === "order") {
+      await resolveOrderImage(supabase, ev);
     }
 
     const { subject, html } =

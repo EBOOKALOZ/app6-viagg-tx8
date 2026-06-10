@@ -37,6 +37,7 @@ begin
     body    := jsonb_build_object(
       'source',            'order',
       'store_id',          NEW.store_id,
+      'intention_id',      NEW.id,
       'customer_name',     NEW.customer_name,
       'customer_whatsapp', NEW.customer_whatsapp,
       'customer_email',    NEW.customer_email,
