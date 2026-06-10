@@ -33,8 +33,8 @@ export const InstitutionalSafetyBanner: React.FC = () => {
                             </div>
 
                             <div className="flex flex-wrap gap-4 pt-4">
-                                <div className="inline-flex items-center justify-center bg-white text-zinc-900 font-bold px-5 py-2.5 rounded-xl text-sm border border-emerald-500/20 shadow-sm cursor-default">
-                                    Fale com o lojista antes de comprar
+                                <div className="inline-flex items-center justify-center bg-[#F5E62B] text-zinc-900 font-black px-5 py-2.5 rounded-xl text-sm border border-black/10 shadow-sm cursor-default uppercase tracking-wide animate-vtx-blink">
+                                    A plataforma não é responsável por pagamentos
                                 </div>
                             </div>
                         </div>

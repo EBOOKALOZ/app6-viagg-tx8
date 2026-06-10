@@ -40,6 +40,7 @@ interface MarketLayoutProps {
     mainClassName?: string;
     onSearchSubmit?: (val: string) => void;
     hideCart?: boolean;
+    hideFooter?: boolean;
 }
 
 export function MarketLayout({
@@ -52,7 +53,8 @@ export function MarketLayout({
     hideHeaderAuth = false,
     mainClassName,
     onSearchSubmit,
-    hideCart = false
+    hideCart = false,
+    hideFooter = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
     const { user, isLoading, availableProfiles, activeProfile } = useAuth();
@@ -227,14 +229,14 @@ export function MarketLayout({
             </div>
 
             {/* ═══ MAIN CONTENT ═══ */}
-            <main className={cn("flex-1", isMerchant && "pb-20", mainClassName)}>
+            <main className={cn("flex-1", isMerchant && "pb-20 md:pb-0", mainClassName)}>
                 {children}
             </main>
 
             {/* ═══ FOOTER / BOTTOM NAV ═══
                 Lojista vê o StoreBottomNav fixo (consistente com as demais telas).
                 Demais perfis e visitantes mantêm o FooterNeutral em fluxo. */}
-            {isMerchant ? <StoreBottomNav /> : <FooterNeutral />}
+            {isMerchant ? <StoreBottomNav /> : (!hideFooter && <FooterNeutral />)}
 
             {/* ── Drawers/Modals ── */}
             {!hideCart && <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />}

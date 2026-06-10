@@ -353,7 +353,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             const uniqueUserIds = [...new Set(userIds)];
             if (uniqueUserIds.length > 0) {
                 const { data: profiles } = await (supabase.from("profiles") as any)
-                    .select("id, nome_loja, logo_url, cidade, estado, bairro, rua, cep, telefone, whatsapp, full_name, name")
+                    .select("id, nome_loja, logo_url, cidade, estado, bairro, rua, cep, telefone, whatsapp, name")
                     .in("id", uniqueUserIds);
                 if (profiles) {
                     profiles.forEach((pr: any) => { profilesMap[pr.id] = pr; });
@@ -392,7 +392,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                     merchant_store_id: effectiveStoreId || p.merchant_store_id,
                     store_name: store.store_name || store.nome_loja || profile.nome_loja || profile.full_name || profile.name || null,
                     store_logo: store.logo_url || profile.logo_url || null,
-                    neighborhood: store.neighborhood || profile.bairro || null,
+                    neighborhood: store.neighborhood || store.bairro || profile.bairro || null,
                     city: p.city || store.city || store.cidade || profile.cidade || null,
                     region: store.region || store.estado || profile.estado || null,
                     whatsapp: store.whatsapp || store.telefone || profile.whatsapp || profile.telefone || null,
@@ -829,6 +829,8 @@ const scrollToProducts = () => {
             setSearch={setSearch}
             showSearch={!isAdvertiser}
             headerRight={null}
+            mainClassName="flex flex-col bg-[#F5E62B]"
+            hideFooter
         >
             {isAdvertiser ? (
                 <div className="bg-[#F5E62B] min-h-[70vh]">
@@ -1567,18 +1569,9 @@ const scrollToProducts = () => {
                                                     }
                                                 }}
                                             >
-                                                <Store className="h-3.5 w-3.5 text-[#FF6A00] shrink-0" />
-                                                <span className="text-xs font-bold text-gray-600 truncate flex-1 leading-tight">{product.store_name || "Vendedor Local"}</span>
+                                                <MapPin className="h-3.5 w-3.5 text-[#FF6A00] shrink-0" />
+                                                <span className="text-xs font-bold text-gray-600 truncate flex-1 leading-tight">{[product.neighborhood, product.city].filter(Boolean).join(", ") || product.store_name || "Vendedor Local"}</span>
                                             </div>
-                                            
-                                            {(product.city || product.neighborhood) && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                                                    <span className="text-[10px] text-gray-500 truncate font-medium">
-                                                        {[product.city, product.neighborhood].filter(Boolean).join(" • ")}
-                                                    </span>
-                                                </div>
-                                            )}
                                         </div>
 
                                         {/* CTA Buttons */}
@@ -1650,31 +1643,6 @@ const scrollToProducts = () => {
                                                 Saber mais
                                             </button>
 
-                                             {/* WhatsApp Direct Button */}
-                                             {product.whatsapp && (
-                                                 <button
-                                                     onClick={(e) => {
-                                                         e.stopPropagation();
-                                                         trackProductEvent({
-                                                             product_id: product.id,
-                                                             store_id: product.merchant_store_id,
-                                                             event_type: "click",
-                                                             city: product.city,
-                                                             source: "whatsapp_contact",
-                                                         });
-                                                         const cleanNumber = product.whatsapp.replace(/\D/g, "");
-                                                         const storeUrl = product.merchant_store_id 
-                                                             ? `${window.location.origin}/loja/${product.merchant_store_id}`
-                                                             : window.location.href;
-                                                         const text = `Olá! Vi o produto *${product.title}* e gostaria de mais informações.\n\nLink: ${storeUrl}`;
-                                                         window.open(`https://wa.me/55${cleanNumber}?text=${encodeURIComponent(text)}`, "_blank");
-                                                     }}
-                                                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold text-white bg-green-500 hover:bg-green-600 transition-all duration-200 shadow-sm"
-                                                 >
-                                                     <MessageCircle className="h-4 w-4" />
-                                                     Quer falar direto com o vendedor
-                                                 </button>
-                                             )}
 
                                              {/* Specialized Auction or Arremate Button */}
                                              {matchedAuction && (
@@ -1732,15 +1700,6 @@ const scrollToProducts = () => {
                 onClose={() => setDiscountProduct(null)}
             />
 
-            {/* Rodapé simples — só desktop (no celular o menu inferior já cobre) */}
-            <footer className="hidden md:block mt-10">
-                <div className="bg-blue-600 text-white py-7 px-6 text-center">
-                    <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
-                    <p className="text-sm text-blue-100 mt-1">Compre do comércio local — com segurança e entrega rápida.</p>
-                    <p className="text-xs text-blue-200 mt-2">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
-                </div>
-            </footer>
-
             <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />
 
             {/* Modal "Saber mais" — visitante manda pergunta direto pro vendedor */}
@@ -1749,6 +1708,14 @@ const scrollToProducts = () => {
                 onClose={() => { setInquiryOpen(false); setInquiryProduct(null); }}
                 product={inquiryProduct}
             />
+
+            {/* Rodapé simples — só desktop (no celular não mostra; menu inferior cobre) */}
+            <footer className="hidden md:block mt-auto">
+                <div className="bg-blue-600 text-white py-6 px-6 text-center">
+                    <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
+                    <p className="text-xs text-blue-100 mt-1">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
+                </div>
+            </footer>
         </MarketLayout>
     );
 }

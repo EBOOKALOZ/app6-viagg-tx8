@@ -270,6 +270,11 @@
   40% { opacity: 1; transform: scale(1.2); }
 }
 
+@keyframes vtx-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -277,5 +282,8 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+  .animate-vtx-blink {
+    animation: vtx-blink 1s ease-in-out infinite;
   }
 }

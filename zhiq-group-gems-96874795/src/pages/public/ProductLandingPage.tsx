@@ -527,7 +527,7 @@ export default function ProductLandingPage() {
             : <Globe className="h-4 w-4" />;
 
     return (
-        <MarketLayout mainClassName="bg-[#F5E62B]">
+        <MarketLayout mainClassName="bg-[#F5E62B] flex flex-col">
             <div className="flex-1 bg-[#F5E62B] flex flex-col">
             <div className="w-full px-4 lg:px-8 xl:px-12 py-6 lg:py-8 flex-1 flex flex-col">
 
@@ -718,7 +718,13 @@ export default function ProductLandingPage() {
                 onClose={() => setShowLeadModal(false)}
             />
 
-            {/* ---> FOOTER <--- */}
+            {/* Rodapé simples — só desktop (no celular não mostra; menu inferior cobre) */}
+            <footer className="hidden md:block">
+                <div className="bg-blue-600 text-white py-6 px-6 text-center">
+                    <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
+                    <p className="text-xs text-blue-100 mt-1">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
+                </div>
+            </footer>
         </MarketLayout>
     );
 }

@@ -165,7 +165,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
             {/* Store Card */}
             <div className={cn("w-full px-2 lg:px-3 xl:px-4 relative z-10 mb-8 flex justify-center", compact ? "mt-0" : "mt-4 lg:mt-6")}>
                 <div className="w-full max-w-[1920px]">
-                <Card className="border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#1B1F24] ring-1 ring-zinc-700 overflow-hidden">
+                <Card className="border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#2563EB] ring-1 ring-black/10 overflow-hidden">
                     <div className={cn("flex items-center", sidebarMode ? "flex-col text-center p-4 gap-3" : cn("flex-col xl:flex-row", compact ? "p-3 lg:p-4 gap-4 xl:items-end" : "p-6 lg:p-10 gap-6 lg:gap-10 xl:items-end"))}>
                         
                         {/* Logo Avatar */}
@@ -187,70 +187,70 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                         {/* Info Text */}
                         <div className={cn("flex-1 space-y-1", sidebarMode ? "text-center" : "text-center xl:text-left")}>
                             <div className={cn("flex items-center gap-2 flex-wrap mb-0.5", sidebarMode ? "justify-center" : "justify-center xl:justify-start")}>
-                                <Badge className="bg-[#FF6A00] hover:bg-[#E65C00] text-white border-none rounded-md px-1.5 py-0 font-bold uppercase text-[8px] lg:text-[9px] tracking-wider shadow-sm">
+                                <Badge className="bg-white hover:bg-zinc-100 text-[#2563EB] border-none rounded-md px-1.5 py-0 font-bold uppercase text-[8px] lg:text-[9px] tracking-wider shadow-sm">
                                     Loja Oficial
                                 </Badge>
-                                <div className="flex items-center gap-1 text-zinc-400 font-semibold text-[9px] lg:text-[10px] uppercase tracking-wider">
+                                <div className="flex items-center gap-1 text-blue-100 font-semibold text-[9px] lg:text-[10px] uppercase tracking-wider">
                                     <MapPin className="w-3 h-3" /> 
                                     {sCity || "Brasil"}{sRegion ? `, ${sRegion}` : ""}
                                 </div>
                                 {stats && (
-                                    <div className="flex items-center gap-1 text-amber-400 font-bold text-[9px] lg:text-[10px] bg-amber-500/10 px-1.5 py-0 rounded-md">
+                                    <div className="flex items-center gap-1 text-white font-bold text-[9px] lg:text-[10px] bg-white/15 px-1.5 py-0 rounded-md">
                                         <Star className="w-3 h-3 fill-current" />
                                         {stats.average} ({stats.count})
                                     </div>
                                 )}
                             </div>
-                            <h1 className={cn("font-black text-[#F5F7FA] tracking-tight leading-none", sidebarMode ? "text-lg" : compact ? "text-xl lg:text-2xl" : "text-3xl lg:text-5xl")}>
+                            <h1 className={cn("font-black text-white tracking-tight leading-none", sidebarMode ? "text-lg" : compact ? "text-xl lg:text-2xl" : "text-3xl lg:text-5xl")}>
                                 {safeStoreName}
                             </h1>
-                            <p className={cn("text-zinc-400 font-medium max-w-2xl mt-1", sidebarMode ? "text-[10px] block line-clamp-1" : compact ? "hidden xl:block text-[10px] lg:text-xs line-clamp-1" : "text-xs lg:text-sm line-clamp-2")}>
+                            <p className={cn("text-blue-100 font-medium max-w-2xl mt-1", sidebarMode ? "text-[10px] block line-clamp-1" : compact ? "hidden xl:block text-[10px] lg:text-xs line-clamp-1" : "text-xs lg:text-sm line-clamp-2")}>
                                 {safeDescription}
                             </p>
                             
                             {/* Privacy Filtered Address Block */}
                             {(sLogradouro || sBairro || sCity) && (
-                                <div className={cn("flex items-center gap-1.5 mt-2 text-zinc-400 font-medium", sidebarMode ? "hidden" : "text-[10px] lg:text-xs justify-center xl:justify-start")}>
-                                    <MapPin className="w-3.5 h-3.5 text-[#FF6A00] shrink-0"/> 
+                                <div className={cn("flex items-center gap-1.5 mt-2 text-blue-100 font-medium", sidebarMode ? "hidden" : "text-[10px] lg:text-xs justify-center xl:justify-start")}>
+                                    <MapPin className="w-3.5 h-3.5 text-white shrink-0"/>
                                     <span>{timidAddress}</span>
                                 </div>
                             )}
                         </div>
 
                         {/* Quick Stats Panel */}
-                        <div className={cn("flex justify-center w-full", sidebarMode ? "gap-4 pt-4 border-t border-zinc-700 mt-2" : cn("xl:justify-end xl:w-auto xl:border-l xl:border-zinc-700", compact ? "gap-4 lg:gap-6 pt-0 xl:pl-5" : "gap-6 lg:gap-10 pt-4 xl:pt-0 xl:pl-10"))}>
+                        <div className={cn("flex justify-center w-full", sidebarMode ? "gap-4 pt-4 border-t border-white/25 mt-2" : cn("xl:justify-end xl:w-auto xl:border-l xl:border-white/25", compact ? "gap-4 lg:gap-6 pt-0 xl:pl-5" : "gap-6 lg:gap-10 pt-4 xl:pt-0 xl:pl-10"))}>
                             <div className="text-center">
-                                <p className={cn("font-black text-[#F5F7FA] tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
+                                <p className={cn("font-black text-white tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     {productsCount}
                                 </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Produtos</p>
+                                <p className={cn("font-bold text-blue-100 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Produtos</p>
                             </div>
-                            <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
+                            <div className={cn("bg-white/25 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
-                                <p className={cn("font-black text-[#F5F7FA] tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
+                                <p className={cn("font-black text-white tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     {followersText}
                                 </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
+                                <p className={cn("font-bold text-blue-100 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
                             </div>
-                            <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
+                            <div className={cn("bg-white/25 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
-                                <p className={cn("font-black text-[#F5F7FA] tracking-tight flex items-center justify-center", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
+                                <p className={cn("font-black text-white tracking-tight flex items-center justify-center", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     98<span className={compact ? "text-xs" : "text-sm"}>%</span>
                                 </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Resposta</p>
+                                <p className={cn("font-bold text-blue-100 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Resposta</p>
                             </div>
                         </div>
 
                     </div>
 
                     {/* Footer Actions Desktop */}
-                    <div className={cn("bg-[#14171B]/80 border-t border-zinc-700 flex flex-wrap items-center gap-3", sidebarMode ? "hidden" : "justify-between", !sidebarMode && compact ? "px-4 py-2 lg:py-2.5 gap-3" : !sidebarMode ? "px-6 py-4 lg:py-5 gap-4" : "")}>
+                    <div className={cn("bg-black/15 border-t border-white/25 flex flex-wrap items-center gap-3", sidebarMode ? "hidden" : "justify-between", !sidebarMode && compact ? "px-4 py-2 lg:py-2.5 gap-3" : !sidebarMode ? "px-6 py-4 lg:py-5 gap-4" : "")}>
                         <div className={cn("items-center gap-4 lg:gap-5", sidebarMode ? "hidden" : "hidden lg:flex")}>
-                            <div className={cn("flex items-center gap-1.5 font-bold text-zinc-400 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
+                            <div className={cn("flex items-center gap-1.5 font-bold text-blue-100 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
                                 <ShieldCheck className={cn("text-emerald-500", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Compra com Comércio Local
                             </div>
-                            <div className={cn("flex items-center gap-1.5 font-bold text-zinc-400 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
-                                <Zap className={cn("text-[#FF6A00]", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Entrega Rápida
+                            <div className={cn("flex items-center gap-1.5 font-bold text-blue-100 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
+                                <Zap className={cn("text-white", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Entrega Rápida
                             </div>
                         </div>
                         <div className={cn("flex items-center w-full", sidebarMode ? "gap-2 justify-center flex-wrap" : "gap-2 lg:gap-3 lg:w-auto justify-center lg:justify-end")}>
