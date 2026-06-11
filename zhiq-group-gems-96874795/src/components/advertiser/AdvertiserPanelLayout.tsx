@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Building2,
   Package,
@@ -43,6 +43,12 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Trava a rolagem do fundo enquanto o menu mobile está aberto (evita scroll duplo)
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileMenuOpen]);
   const { intentions } = useContactIntentions();
   const pendingLeadCount = intentions.filter(i => i.status !== "unlocked").length;
 
@@ -150,7 +156,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       <button 
         onClick={item.action === "logout" ? handleSignOut : undefined}
         className={cn(
-          "w-full h-12 flex items-center gap-4 px-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all duration-300 group",
+          "w-full h-10 flex items-center gap-3 px-3 rounded-xl font-black text-[9px] uppercase tracking-[0.15em] transition-all duration-300 group",
           isActive 
             ? "bg-[#FF6A00] text-white shadow-lg shadow-[#FF6A00]/20" 
             : isLogout
@@ -158,7 +164,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
               : "text-[#A7B0BE] hover:bg-[#1B1F24] hover:text-[#F5F7FA]"
         )}
       >
-        <div className="w-6 h-6 flex items-center justify-center shrink-0">
+        <div className="w-5 h-5 flex items-center justify-center shrink-0">
           <item.icon className={cn(
             "w-4 h-4 transition-colors", 
             isActive ? "text-white" : isLogout ? "text-[#EF4444]/70 group-hover:text-[#EF4444]" : "text-[#A7B0BE] group-hover:text-[#F5F7FA]"
@@ -174,7 +180,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
             0;
           if (!badge || badge <= 0) return null;
           return (
-            <span className="ml-auto bg-[#22C55E] text-white text-base font-black min-w-[35px] h-[35px] flex items-center justify-center rounded-full px-2 shadow-lg shadow-emerald-500/30 animate-pulse">
+            <span className="ml-auto bg-[#22C55E] text-white text-[10px] font-black min-w-[20px] h-[20px] flex items-center justify-center rounded-full px-1.5 shadow-lg shadow-emerald-500/30 animate-pulse">
               {badge}
             </span>
           );
@@ -228,7 +234,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-20 md:hidden pt-20">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <nav className="relative bg-[#0D0F12] border-t border-[#2A3038]/60 p-6 space-y-1.5 shadow-2xl shadow-black/60 animate-in slide-in-from-top duration-300">
+          <nav className="relative bg-[#0D0F12] border-t border-[#2A3038]/60 p-4 space-y-1 shadow-2xl shadow-black/60 animate-in slide-in-from-top duration-300 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar">
             {navigation.map((item) => (
               <SidebarItem key={item.name} item={item} isMobile />
             ))}

@@ -28,7 +28,7 @@ export function OperationalSummarySection({ data }: OperationalSummarySectionPro
           {/* Quick Metrics Grid */}
           <div className="grid grid-cols-2 gap-4">
              {stats.map((stat, i) => (
-                <div key={i} className={cn("p-5 rounded-3xl border border-zinc-50 flex items-center gap-4 transition-all hover:scale-[1.02]", stat.bg)}>
+                <div key={i} className={cn("p-5 rounded-3xl border border-zinc-50 flex flex-col items-center justify-center text-center gap-2 transition-all hover:scale-[1.02]", stat.bg)}>
                    <div className={cn("w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm", stat.color)}>
                       <stat.icon className="w-5 h-5" />
                    </div>
