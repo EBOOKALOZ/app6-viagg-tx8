@@ -64,7 +64,7 @@ export function StoreAppLayout() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 pb-20 md:pb-0">
-      <main className="w-full max-w-7xl mx-auto min-h-screen">
+      <main className="w-full min-h-screen">
         {/* Aqui renderizamos as páginas internas protegidas pelo layout da loja */}
         <Outlet context={{ store }} />
       </main>

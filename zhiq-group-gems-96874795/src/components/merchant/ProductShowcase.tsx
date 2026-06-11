@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Plus, Pencil, Trash2, Upload, X, Loader2, CheckCircle,
     ImagePlus, Video, Link as LinkIcon, Palette, Eye,
@@ -97,6 +98,7 @@ interface ProductShowcaseProps {
 }
 
 export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
@@ -482,7 +484,7 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
                     <div className="flex items-center gap-2">
                         <span className="text-[9px] text-gray-400 font-bold">{products.length} produtos</span>
                         <Button size="sm" className="bg-orange-500/15 text-orange-600 hover:bg-orange-500/25 border border-orange-500/20 text-[10px] font-bold h-7 rounded-lg"
-                            onClick={openCreate}>
+                            onClick={() => navigate("/anunciante/meus-anuncios")}>
                             <Plus className="h-3 w-3 mr-1" /> Adicionar
                         </Button>
                     </div>
@@ -500,12 +502,12 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
                             Adicione produtos com fotos, vídeos, preços e personalização visual completa.
                         </p>
                         <Button size="sm" className="mt-4 bg-orange-500 text-white hover:bg-orange-600 text-xs font-bold rounded-lg"
-                            onClick={openCreate}>
+                            onClick={() => navigate("/anunciante/meus-anuncios")}>
                             <Plus className="h-3.5 w-3.5 mr-1" /> Criar Primeiro Produto
                         </Button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-[#F5E62B] p-4 rounded-3xl">
                         {products.map(p => {
                             const style = parseCardStyle(p.cta_label);
                             const imgSrc = normalizeImageUrl(p.image_url);
@@ -594,7 +596,7 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
                                         </a>
                                         {/* Action bar */}
                                         <div className="flex gap-1 pt-2 border-t" style={{ borderColor: style.textColor + '1A' }}>
-                                            <button onClick={() => openEdit(p)}
+                                            <button onClick={() => navigate(`/anunciante/anuncios/editar/produto/${p.id}`)}
                                                 className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-bold text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors">
                                                 <Pencil className="h-3 w-3" /> Editar
                                             </button>
@@ -619,7 +621,7 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
                         })}
                         {/* Add placeholder — always visible */}
                         <div className="rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-6 hover:border-orange-300 hover:bg-orange-50/30 cursor-pointer transition-all min-h-[200px]"
-                            onClick={openCreate}>
+                            onClick={() => navigate("/anunciante/meus-anuncios")}>
                             <Plus className="h-8 w-8 text-gray-300 mb-2" />
                             <p className="text-xs font-bold text-gray-400">Adicionar produto</p>
                         </div>

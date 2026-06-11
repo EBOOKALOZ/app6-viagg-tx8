@@ -234,7 +234,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-20 md:hidden pt-20">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <nav className="relative bg-[#0D0F12] border-t border-[#2A3038]/60 p-4 space-y-1 shadow-2xl shadow-black/60 animate-in slide-in-from-top duration-300 max-h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar">
+          <nav className="relative bg-[#0D0F12] border-t border-[#2A3038]/60 px-4 pt-4 pb-24 shadow-2xl shadow-black/60 animate-in slide-in-from-top duration-300 h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar flex flex-col justify-between gap-1">
             {navigation.map((item) => (
               <SidebarItem key={item.name} item={item} isMobile />
             ))}
