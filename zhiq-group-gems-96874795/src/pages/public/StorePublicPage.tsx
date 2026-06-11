@@ -408,7 +408,7 @@ export default function StorePublicPage() {
     }
 
     return (
-        <MarketLayout mainClassName="bg-[#F5E62B]">
+        <MarketLayout mainClassName="bg-[#F5E62B] flex flex-col">
             <div className="min-h-screen pb-24">
                 
                 {/* ─── HEADER PREMIUM ─── */}
@@ -745,6 +745,14 @@ export default function StorePublicPage() {
                     merchant_store_id: storeId || null,
                 } : null}
             />
+
+            {/* Rodapé simples — só desktop (no celular já tem o menu/rodapé) */}
+            <footer className="hidden md:block mt-auto">
+                <div className="bg-blue-600 text-white py-6 px-6 text-center">
+                    <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
+                    <p className="text-xs text-blue-100 mt-1">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
+                </div>
+            </footer>
         </MarketLayout>
     );
 }

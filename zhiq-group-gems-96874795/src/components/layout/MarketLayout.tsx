@@ -13,6 +13,7 @@ import {
     Menu,
     Home,
     LogIn,
+    LogOut,
     Gavel,
     HardHat,
     Store,
@@ -57,7 +58,7 @@ export function MarketLayout({
     hideFooter = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
-    const { user, isLoading, availableProfiles, activeProfile } = useAuth();
+    const { user, isLoading, availableProfiles, activeProfile, signOut } = useAuth();
     const isMerchant = activeProfile === 'merchant';
 
     const handleMotoboyClick = () => {
@@ -75,16 +76,12 @@ export function MarketLayout({
     };
 
     const handleVendedorClick = () => {
-        if (!user) {
-            localStorage.setItem("viagg_auth_entry", "advertiser");
-            navigate("/auth");
-            return;
-        }
-        if (availableProfiles?.includes("merchant")) {
-            navigate("/loja/minha-loja");
-        } else {
-            navigate("/auth");
-        }
+        navigate("/auth");
+    };
+
+    const handleSair = async () => {
+        await signOut();
+        navigate("/");
     };
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
@@ -133,13 +130,20 @@ export function MarketLayout({
                                 )}
                             </button>
 
-                            {/* LOJISTA — direita */}
+                            {/* ENTRAR / SAIR — direita */}
                             <button
-                                onClick={(e) => { e.stopPropagation(); handleVendedorClick(); }}
-                                className="group flex h-10 w-[92px] lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-emerald-200/50"
-                                title="Sou Lojista"
+                                onClick={(e) => { e.stopPropagation(); user ? handleSair() : handleVendedorClick(); }}
+                                className="group flex h-10 px-3 lg:h-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-emerald-200/50"
+                                title={user ? "Sair da conta" : "Entrar na plataforma"}
                             >
-                                <span className="text-[11px] lg:text-xs font-black whitespace-nowrap uppercase tracking-wide text-emerald-600">Lojista</span>
+                                {user ? (
+                                    <span className="flex flex-col items-center gap-0.5 text-red-600">
+                                        <span className="text-[11px] lg:text-xs font-black uppercase tracking-wide leading-[1.1]">Sair</span>
+                                        <LogOut className="w-3.5 h-3.5" />
+                                    </span>
+                                ) : (
+                                    <span className="text-[11px] lg:text-xs font-black uppercase tracking-wide text-emerald-600 leading-[1.1] text-center">Entrar</span>
+                                )}
                             </button>
 
                             {/* Desktop Logo (hidden on mobile) */}

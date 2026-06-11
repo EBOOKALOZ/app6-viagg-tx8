@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export default function StoreMinhaLojaPage() {
   const { store } = useOutletContext<{ store: MyStoreData }>();
@@ -79,11 +80,23 @@ export default function StoreMinhaLojaPage() {
                     <Search className="h-6 w-6 text-white" />
                 </button>
             </div>
-            <div className="flex items-center gap-4 cursor-not-allowed">
-                <Share2 className="w-5 h-5 opacity-80" />
-                <div className="flex items-center gap-2 bg-white/15 px-3 py-2 rounded-xl">
-                    <ShoppingBag className="w-6 h-6" />
-                </div>
+            <div className="flex items-center gap-4">
+                <button
+                    type="button"
+                    onClick={() => {
+                        const url = `${window.location.origin}/loja/${store?.id || ""}`;
+                        if (navigator.share) {
+                            navigator.share({ title: store?.nome_loja || "Minha Loja", url }).catch(() => {});
+                        } else {
+                            navigator.clipboard?.writeText(url);
+                            toast.success("Link da loja copiado!");
+                        }
+                    }}
+                    className="hover:opacity-80 transition-opacity"
+                    title="Compartilhar loja"
+                >
+                    <Share2 className="w-5 h-5" />
+                </button>
             </div>
         </div>
 
@@ -114,9 +127,9 @@ export default function StoreMinhaLojaPage() {
             </div>
             <Link 
               to="/anunciante/conta" 
-              className="flex items-center justify-center h-8 px-4 rounded-lg bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center h-[42px] px-[21px] rounded-lg bg-blue-600 text-white font-bold text-[15px] hover:bg-blue-700 transition-colors"
             >
-              <Settings className="w-3.5 h-3.5 mr-2" /> Editar Perfil
+              <Settings className="w-[18px] h-[18px] mr-2" /> Editar Perfil
             </Link>
         </div>
       </div>

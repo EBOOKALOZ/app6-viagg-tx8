@@ -281,14 +281,6 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                 <Share2 className={cn(compact ? "w-3.5 h-3.5" : "w-4 h-4")} />
                             </Button>
 
-                            {whatsappNumber && (
-                                <Button 
-                                    className={cn("flex-1 lg:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-bold uppercase tracking-wider shadow-md shadow-emerald-500/20", compact ? "rounded-lg text-[9px] h-8 lg:h-9 px-3 lg:px-4" : "rounded-xl text-[11px] h-11 lg:h-12 px-6")}
-                                    onClick={() => window.open(`https://wa.me/55${whatsappNumber.replace(/\D/g, "")}`, "_blank")}
-                                >
-                                    <Phone className={cn("mr-1.5", compact ? "w-3 h-3" : "w-4 h-4")} /> Contato
-                                </Button>
-                            )}
                         </div>
                     </div>
                 </Card>

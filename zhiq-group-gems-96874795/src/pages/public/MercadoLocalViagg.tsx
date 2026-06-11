@@ -1716,6 +1716,11 @@ const scrollToProducts = () => {
                     <p className="text-xs text-blue-100 mt-1">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
                 </div>
             </footer>
+
+            {/* Rodapé preto (FooterNeutral) — só no celular (no desktop mostra o azul acima) */}
+            <div className="md:hidden mt-auto">
+                <FooterNeutral />
+            </div>
         </MarketLayout>
     );
 }

@@ -8,6 +8,7 @@ import { PlanBenefitsSection } from "@/components/advertiser/account/PlanBenefit
 import { AccountPreferencesSection } from "@/components/advertiser/account/AccountPreferencesSection";
 import { OperationalSummarySection } from "@/components/advertiser/account/OperationalSummarySection";
 import MerchantSettingsContent from "@/pages/MerchantSettingsContent";
+import { FooterNeutral } from "@/components/FooterNeutral";
 import { ShieldAlert, Store } from "lucide-react";
 
 export default function AdvertiserAccountPage() {
@@ -19,7 +20,7 @@ export default function AdvertiserAccountPage() {
   const data = account!;
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700 pb-20">
+    <div className="space-y-10 animate-in fade-in duration-700 pb-20 flex-1 flex flex-col">
       
       {/* Row 1: Identity & Status Checklist */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 items-stretch">
@@ -63,11 +64,9 @@ export default function AdvertiserAccountPage() {
          </div>
       </div>
 
-      {/* Footer Identity */}
-      <div className="pt-10 border-t border-zinc-100 flex flex-col items-center justify-center text-center gap-4">
-         <div className="flex items-center gap-2 text-zinc-300 font-black text-[10px] uppercase tracking-[0.3em]">
-            Viagg-TX8 • Administrative Identity • 2026
-         </div>
+      {/* Rodapé preto */}
+      <div className="mt-auto pt-10 rounded-2xl overflow-hidden">
+         <FooterNeutral />
       </div>
     </div>
   );

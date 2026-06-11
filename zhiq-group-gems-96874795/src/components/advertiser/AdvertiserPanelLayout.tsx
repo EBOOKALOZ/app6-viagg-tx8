@@ -258,8 +258,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
         </header>
 
         {/* Content Wrapper */}
-        <div className="p-6 md:p-10 lg:p-12 pb-24 min-h-screen bg-[#14171B]">
-          <div className="max-w-7xl mx-auto">
+        <div className="p-6 md:p-10 lg:p-12 pb-24 min-h-screen bg-[#14171B] flex flex-col">
+          <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
             {children}
           </div>
         </div>
