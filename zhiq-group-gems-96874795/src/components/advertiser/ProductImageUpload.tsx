@@ -122,6 +122,44 @@ async function generatePreview(file: File): Promise<string> {
   return '';
 }
 
+/**
+ * Garante que advertiser_listings.cover_image_url sempre aponte para uma mídia
+ * que realmente existe (URL pública canônica). Se a capa atual não corresponde a
+ * nenhuma mídia (ex: foi excluída, ou era um arquivo quebrado), promove a primeira
+ * mídia válida como nova capa. Evita capas órfãs e URLs assinadas (que expiram).
+ */
+async function syncListingCover(listingId: string): Promise<void> {
+  const toPublicUrl = (raw: string | null | undefined): string | null => {
+    if (!raw) return null;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return supabase.storage.from('marketing-materials').getPublicUrl(raw).data.publicUrl;
+  };
+
+  const { data: media } = await supabase
+    .from('advertiser_listing_media')
+    .select('media_url, storage_path, created_at')
+    .eq('listing_id', listingId)
+    .order('created_at', { ascending: true });
+
+  const validUrls = (media || [])
+    .map((m: any) => toPublicUrl(m.media_url || m.storage_path))
+    .filter(Boolean) as string[];
+
+  const { data: listing } = await supabase
+    .from('advertiser_listings' as any)
+    .select('cover_image_url')
+    .eq('id', listingId)
+    .maybeSingle();
+  const currentCover = (listing as any)?.cover_image_url ?? null;
+
+  // Só atualiza se a capa atual não corresponde a nenhuma mídia existente.
+  if (!currentCover || !validUrls.includes(currentCover)) {
+    await supabase
+      .from('advertiser_listings' as any)
+      .update({ cover_image_url: validUrls[0] ?? null })
+      .eq('id', listingId);
+  }
+}
 
 export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   listingId,
@@ -535,13 +573,8 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         if (mediaError) throw mediaError;
 
         const newImage = { id: mediaData.id, path: publicUrl, storage_path: filePath };
-        // Atualiza cover_image_url do anúncio para a primeira nova imagem
-        if (uploadedImages.length === 0 && i === 0) {
-          await supabase
-            .from('advertiser_listings' as any)
-            .update({ cover_image_url: publicUrl })
-            .eq('id', listingId);
-        }
+        // Garante que a capa aponte para uma mídia válida (corrige capas quebradas/órfãs)
+        await syncListingCover(listingId);
         setUploadedImages(prev => [...prev, newImage]);
         if (onUploadComplete) onUploadComplete(newImage.id, newImage.path);
 
@@ -587,19 +620,9 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         .eq('id', img.id);
       if (dbErr) throw dbErr;
 
+      // Recalcula a capa de forma robusta: se a excluída era a capa, promove a próxima mídia válida.
       if (listingId) {
-        const { data: listing } = await supabase
-          .from('advertiser_listings' as any)
-          .select('cover_image_url')
-          .eq('id', listingId)
-          .maybeSingle();
-        if (listing && (listing as any).cover_image_url === img.path) {
-          const remaining = uploadedImages.filter(u => u.id !== img.id);
-          await supabase
-            .from('advertiser_listings' as any)
-            .update({ cover_image_url: remaining[0]?.path ?? null })
-            .eq('id', listingId);
-        }
+        await syncListingCover(listingId);
       }
 
       setUploadedImages(prev => prev.filter(u => u.id !== img.id));
@@ -869,7 +892,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
                      if (wrapper) {
                        wrapper.classList.add('opacity-40');
                        const overlay = document.createElement('div');
-                       overlay.className = 'absolute inset-0 flex flex-col items-center justify-center bg-red-50 text-red-600 text-[10px] font-bold text-center p-2';
+                       overlay.className = 'absolute inset-0 z-10 pointer-events-none flex flex-col items-center justify-center bg-red-50 text-red-600 text-[10px] font-bold text-center p-2';
                        overlay.textContent = 'Arquivo perdido — exclua e suba outra';
                        wrapper.appendChild(overlay);
                      }
@@ -878,7 +901,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
                  />
 
                  {/* Botões de ação */}
-                 <div className="absolute top-2 right-2 flex gap-1.5">
+                 <div className="absolute top-2 right-2 z-20 flex gap-1.5">
                    <button
                      type="button"
                      onClick={() => handleReplaceClick(img.id)}

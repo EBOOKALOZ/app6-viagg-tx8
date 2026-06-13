@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PRODUCT_CATEGORIES } from '@/lib/productCategories';
+import { processForUpload } from '@/lib/imageCompressor';
 import {
   Package as PackageIcon,
   ArrowLeft,
@@ -243,13 +244,24 @@ export const ProductForm = () => {
       if (productImages.length > 0 && listingIdResult) {
         toast.success('Anúncio salvo. Enviando imagens...');
         for (const [index, file] of productImages.entries()) {
-          let fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-          if (fileExt === 'heic' || fileExt === 'heif') fileExt = 'jpg';
+          // Converte qualquer formato (inclusive HEIC de iPhone) para JPEG real antes de subir.
+          // Sem isso, fotos HEIC eram salvas com extensão .jpg mas bytes HEIC, que o navegador não exibe.
+          let uploadBlob: Blob = file;
+          let fileExt = 'jpg';
+          try {
+            const processed = await processForUpload(file, { outputFormat: 'image/jpeg' });
+            uploadBlob = processed.blob;
+            fileExt = processed.extension;
+          } catch (convErr: any) {
+            console.error('[ProductForm] Falha ao converter imagem:', convErr);
+            toast.error(`Não foi possível processar a imagem "${file.name}". Tente um JPEG ou PNG.`);
+            continue;
+          }
           // Path com prefixo user.id para casar com RLS do bucket marketing-materials
           const fileName = `${user.id}/products/${listingIdResult}/${crypto.randomUUID()}.${fileExt}`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('marketing-materials')
-            .upload(fileName, file);
+            .upload(fileName, uploadBlob, { contentType: 'image/jpeg' });
           if (!uploadError && uploadData) {
             const { data: { publicUrl } } = supabase.storage
               .from('marketing-materials')

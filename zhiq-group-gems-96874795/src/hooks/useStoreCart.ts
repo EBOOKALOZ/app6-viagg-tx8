@@ -291,8 +291,13 @@ export function useStoreCart(storeId: string | undefined) {
     isSubmitting: submitMutation.isPending,
     isSubmitted: submitMutation.isSuccess,
     submitResult: submitMutation.data as SubmitResult | undefined,
-    addItem: (productId: string, quantity?: number) =>
-      addItemMutation.mutateAsync({ productId, quantity }),
+    // Aceita forma posicional (productId, quantity) ou objeto { productId, quantity }.
+    addItem: (productIdOrParams: string | { productId: string; quantity?: number }, quantity?: number) => {
+      const params = typeof productIdOrParams === "object" && productIdOrParams !== null
+        ? productIdOrParams
+        : { productId: productIdOrParams, quantity };
+      return addItemMutation.mutateAsync(params);
+    },
     updateItem: (itemId: string, quantity: number, note?: string) =>
       updateItemMutation.mutateAsync({ itemId, quantity, note }),
     removeItem: (itemId: string) =>

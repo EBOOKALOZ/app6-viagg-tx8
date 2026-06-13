@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { processForUpload } from '@/lib/imageCompressor';
 
 // ─── Image URL Helpers ─────────────────────────────────────────────────────────
 function normalizeImageUrl(url: string | null | undefined): string | null {
@@ -282,11 +283,21 @@ export function MerchantLocalMarketingSection() {
 
             // Upload image file if selected
             if (adImageFile) {
-                const ext = adImageFile.name.split('.').pop() || 'jpg';
+                // Converte qualquer formato (inclusive HEIC de iPhone) para JPEG real antes de subir.
+                let uploadBlob: Blob = adImageFile;
+                let ext = 'jpg';
+                try {
+                    const processed = await processForUpload(adImageFile, { outputFormat: 'image/jpeg' });
+                    uploadBlob = processed.blob;
+                    ext = processed.extension;
+                } catch (convErr: any) {
+                    console.error('[MerchantLocalMarketing] Falha ao converter imagem:', convErr);
+                    throw new Error('Não foi possível processar a imagem. Tente um JPEG ou PNG.');
+                }
                 const path = `merchant/${user?.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
                 const { error: uploadErr } = await supabase.storage
                     .from('marketing-materials')
-                    .upload(path, adImageFile, { contentType: adImageFile.type, upsert: false });
+                    .upload(path, uploadBlob, { contentType: 'image/jpeg', upsert: false });
                 if (uploadErr) throw new Error(`Falha no upload: ${uploadErr.message}`);
                 const { data: urlData } = supabase.storage.from('marketing-materials').getPublicUrl(path);
                 payload.image_url = urlData.publicUrl;

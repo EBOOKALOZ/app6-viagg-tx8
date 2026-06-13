@@ -205,6 +205,9 @@ export function useGlobalCart() {
       storeName?: string;
       storeLogo?: string | null;
     }) => {
+      if (!storeId || !productId) {
+        throw new Error("Dados do produto incompletos (loja ou produto ausente).");
+      }
       setAddingProductId(productId);
       console.log("[GlobalCart] ➕ Adding:", productId.slice(0, 8), "to store:", storeId.slice(0, 8));
 
@@ -472,16 +475,26 @@ export function useGlobalCart() {
       onError: (err: Error) => toast.error(`Erro: ${err.message}`, { duration: 5000 }),
     });
   // ── Convenience methods ───────────────────
+  // Aceita tanto a forma posicional (storeId, productId, ...) quanto um único objeto
+  // de parâmetros { storeId, productId, ... }. Evita o bug de passar o objeto inteiro
+  // como storeId (que deixava productId undefined → crash em productId.slice).
+  type AddItemParams = {
+    storeId: string; productId: string; quantity?: number;
+    productTitle?: string; productImageUrl?: string | null; productPrice?: number;
+    storeName?: string; storeLogo?: string | null;
+  };
   const addItem = useCallback((
-    storeId: string, productId: string, quantity?: number,
+    storeIdOrParams: string | AddItemParams, productId?: string, quantity?: number,
     productTitle?: string, productImageUrl?: string | null, productPrice?: number,
     storeName?: string, storeLogo?: string | null,
   ) => {
-    return addItemMutation.mutateAsync({
-      storeId, productId, quantity,
-      productTitle, productImageUrl, productPrice,
-      storeName, storeLogo,
-    });
+    const params: AddItemParams = typeof storeIdOrParams === "object" && storeIdOrParams !== null
+      ? storeIdOrParams
+      : {
+          storeId: storeIdOrParams, productId: productId!, quantity,
+          productTitle, productImageUrl, productPrice, storeName, storeLogo,
+        };
+    return addItemMutation.mutateAsync(params);
   }, [addItemMutation]);
 
   const refetchAll = useCallback(() => {
