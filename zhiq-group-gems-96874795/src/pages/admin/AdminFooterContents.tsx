@@ -92,7 +92,7 @@ export default function AdminFooterContents() {
   // Filtered contents
   const filteredContents = useMemo(() => {
     return contents.filter(c => {
-      if (filterProfile !== 'all' && c.profile_type !== filterProfile) return false;
+      if (filterProfile !== 'all' && c.profile_type && c.profile_type !== filterProfile) return false;
       if (filterContentType !== 'all' && c.content_type !== filterContentType) return false;
       return true;
     });
@@ -507,7 +507,7 @@ export default function AdminFooterContents() {
                   <div className="space-y-1.5">
                     <Label className="text-xs">Perfil</Label>
                     <Select value={filterProfile} onValueChange={setFilterProfile}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-white [&>span]:text-white data-[placeholder]:text-white/60">
                         <SelectValue placeholder="Todos os perfis" />
                       </SelectTrigger>
                       <SelectContent>
@@ -521,7 +521,7 @@ export default function AdminFooterContents() {
                   <div className="space-y-1.5">
                     <Label className="text-xs">Tipo de Conteúdo</Label>
                     <Select value={filterContentType} onValueChange={setFilterContentType}>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-white [&>span]:text-white data-[placeholder]:text-white/60">
                         <SelectValue placeholder="Todos os tipos" />
                       </SelectTrigger>
                       <SelectContent>
@@ -661,7 +661,7 @@ export default function AdminFooterContents() {
                         <div className="space-y-1.5">
                           <Label>Perfil</Label>
                           <Select value={formProfileType} onValueChange={(v) => setFormProfileType(v as ProfileType)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="text-white [&>span]:text-white"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {PROFILE_TYPES.map(p => (
                                 <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
@@ -672,7 +672,7 @@ export default function AdminFooterContents() {
                         <div className="space-y-1.5">
                           <Label>Tipo de Conteúdo</Label>
                           <Select value={formContentType} onValueChange={(v) => setFormContentType(v as ContentType)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="text-white [&>span]:text-white"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {CONTENT_TYPES.map(c => (
                                 <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
@@ -697,7 +697,7 @@ export default function AdminFooterContents() {
                           value={formContent}
                           onChange={(e) => setFormContent(e.target.value)}
                           placeholder="Digite o conteúdo aqui..."
-                          className="min-h-[250px] resize-y"
+                          className="min-h-[250px] resize-y text-white placeholder:text-white/40"
                         />
                       </div>
 

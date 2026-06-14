@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
 export interface LegalContent {
   id: string;
-  profile_type: string;
   content_type: string;
   title: string;
   content: string;
-  version: number;
 }
 
-// Map URL types to database content_type values (ENUM: about, privacy, terms, lgpd, cancellation, cookies, groups, complaints, custom)
+// Mapeia o tipo da URL (/legal/:type) para o content_type salvo no banco.
 const CONTENT_TYPE_MAP: Record<string, string> = {
   'privacy': 'privacy',
   'privacidade': 'privacy',
@@ -32,23 +29,10 @@ const CONTENT_TYPE_MAP: Record<string, string> = {
   'custom': 'custom',
 };
 
-// Map profile types to database values
-const PROFILE_TYPE_MAP: Record<string, string> = {
-  'passenger': 'passenger',
-  'motoboy': 'motoboy',
-  'mototaxi': 'mototaxi',
-  'driver': 'driver',
-  'freteiro': 'freight',
-  'freight': 'freight',
-  'merchant': 'merchant',
-  'comerciante': 'merchant',
-};
-
 export function useLegalContent(type: string | undefined) {
   const [content, setContent] = useState<LegalContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { activeProfile } = useAuth();
 
   useEffect(() => {
     async function fetchContent() {
@@ -58,59 +42,25 @@ export function useLegalContent(type: string | undefined) {
         return;
       }
 
-      const contentType = CONTENT_TYPE_MAP[type.toLowerCase()];
-      if (!contentType) {
-        setError('Tipo de conteúdo inválido');
-        setLoading(false);
-        return;
-      }
-
-      const profileType = activeProfile ? PROFILE_TYPE_MAP[activeProfile] || activeProfile : null;
+      const contentType = CONTENT_TYPE_MAP[type.toLowerCase()] ?? type.toLowerCase();
 
       setLoading(true);
       setError(null);
 
       try {
-        // First, try to fetch profile-specific content
-        if (profileType) {
-          const { data: profileContent, error: profileError } = await supabase
-            .from('footer_contents')
-            .select('id, profile_type, content_type, title, content, version')
-            .eq('profile_type', profileType)
-            .eq('content_type', contentType as 'about' | 'privacy' | 'terms' | 'lgpd' | 'cancellation' | 'cookies' | 'groups' | 'complaints' | 'support' | 'custom')
-            .eq('is_active', true)
-            .order('version', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-
-          if (profileError) throw profileError;
-
-          if (profileContent) {
-            setContent(profileContent);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Fallback to global content
-        const { data: globalContent, error: globalError } = await supabase
+        // footer_contents é global (sem profile_type). Pega o conteúdo ativo
+        // mais recente do tipo pedido.
+        const { data, error: qErr } = await supabase
           .from('footer_contents')
-          .select('id, profile_type, content_type, title, content, version')
-          .eq('profile_type', 'global')
-          .eq('content_type', contentType as 'about' | 'privacy' | 'terms' | 'lgpd' | 'cancellation' | 'cookies' | 'groups' | 'complaints' | 'support' | 'custom')
+          .select('id, content_type, title, content')
+          .eq('content_type', contentType)
           .eq('is_active', true)
-          .order('version', { ascending: false })
+          .order('updated_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (globalError) throw globalError;
-
-        if (globalContent) {
-          setContent(globalContent);
-        } else {
-          // Instead of an error, just leave content empty so LegalPage can render a fallback if it exists
-          setContent(null);
-        }
+        if (qErr) throw qErr;
+        setContent((data as LegalContent) || null);
       } catch (err: any) {
         console.error('Error fetching legal content:', err);
         setError(err.message || 'Erro ao carregar conteúdo');
@@ -120,7 +70,7 @@ export function useLegalContent(type: string | undefined) {
     }
 
     fetchContent();
-  }, [type, activeProfile]);
+  }, [type]);
 
   return { content, loading, error };
 }

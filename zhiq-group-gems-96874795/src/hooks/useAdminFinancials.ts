@@ -1,99 +1,145 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, endOfDay, subDays } from "date-fns";
+import { startOfDay } from "date-fns";
+
+/** Comissão padrão da plataforma sobre entregas (motoboy fica com o restante). */
+const DELIVERY_COMMISSION_RATE = 0.25;
+
+export interface AdminFinancialStats {
+    saldoPlataforma: number;
+    transacionadoHoje: number;
+    receitaPlataforma: number;
+    saldoMotoboys: number;
+    saldoLojistas: number;
+    saquesPendentesQtd: number;
+    saquesPendentesValor: number;
+    /** Quantidade de lojas cadastradas (subtítulo do card Total Lojistas). */
+    totalLojas: number;
+    /** Saldo disponível dos lojistas para chamar motoboy (recargas − gasto em entregas). */
+    saldoChamarMotoboy: number;
+    /** Total pago em pacotes de créditos + recargas (compras confirmadas). */
+    creditosAdquiridos: number;
+}
 
 export function useAdminFinancialStats() {
-    return useQuery({
+    return useQuery<AdminFinancialStats>({
         queryKey: ["admin", "financial-stats"],
         queryFn: async () => {
-            // Fonte da verdade = RPC admin_get_global_finances (pay_*).
-            // A leitura legada em ledger_entries permanece como fallback abaixo.
+            const sum = (arr: any[], f: (x: any) => any) =>
+                (arr || []).reduce((s, x) => s + Number(f(x) || 0), 0);
+
+            const todayStart = startOfDay(new Date());
+            const isToday = (d: string | null | undefined) => !!d && new Date(d) >= todayStart;
+
+            // Contagem de lojas (subtítulo do card Total Lojistas).
+            const { count: lojasCount } = await (supabase
+                .from("merchant_stores") as any)
+                .select("id", { count: "exact", head: true });
+            const totalLojas = Number(lojasCount || 0);
+
+            // ── 1. Compras de crédito / recargas de saldo PAGAS (pay_payment_orders) ──
+            const { data: paidOrders } = await (supabase.from("pay_payment_orders") as any)
+                .select("amount, product_type, paid_at, payer_owner_type, product_snapshot")
+                .eq("status", "paid");
+            const creditOrders = (paidOrders || []).filter(
+                (o: any) => o.product_type === "credit_package" || o.product_type === "advertiser_credits"
+            );
+            const creditRevenue = sum(creditOrders, (o) => o.amount);
+            const creditHoje = sum(creditOrders.filter((o: any) => isToday(o.paid_at)), (o) => o.amount);
+            const saldoLojistas = creditRevenue;
+
+            // Recargas de saldo: o dinheiro carregado especificamente p/ chamar motoboy.
+            const recargasSaldo = sum(
+                creditOrders.filter((o: any) =>
+                    o.product_type === "credit_package" &&
+                    /recarga/i.test(String(o.product_snapshot?.package_name || ""))
+                ),
+                (o) => o.amount
+            );
+
+            // ── 2. Entregas concluídas (comissão, ganho do motoboy, gasto total) ──
+            const { data: orders } = await (supabase.from("service_orders") as any)
+                .select("status, total_price, completed_at, created_at");
+            const delivered = (orders || []).filter(
+                (o: any) => String(o.status || "").toLowerCase() === "delivered"
+            );
+            const deliveredGMV = sum(delivered, (o) => o.total_price);
+            const deliveredHojeGMV = sum(
+                delivered.filter((o: any) => isToday(o.completed_at || o.created_at)),
+                (o) => o.total_price
+            );
+
+            // Comissão: usa o split real (payment_splits) se houver; senão estima pela taxa.
+            let deliveryCommission = deliveredGMV * DELIVERY_COMMISSION_RATE;
+            let motoboyEarnings = deliveredGMV - deliveryCommission;
+            let deliveryHoje = deliveredHojeGMV;
+            try {
+                const { data: splits } = await (supabase.from("payment_splits") as any)
+                    .select("professional_amount_cents, platform_fee_cents, created_at");
+                if (splits && splits.length > 0) {
+                    deliveryCommission = sum(splits, (s) => s.platform_fee_cents) / 100;
+                    motoboyEarnings = sum(splits, (s) => s.professional_amount_cents) / 100;
+                    deliveryHoje = sum(
+                        splits.filter((s: any) => isToday(s.created_at)),
+                        (s) => Number(s.platform_fee_cents || 0) + Number(s.professional_amount_cents || 0)
+                    ) / 100;
+                }
+            } catch { /* tabela pode não existir */ }
+
+            // Saldo disponível p/ chamar motoboy = recargas carregadas − gasto em entregas.
+            const saldoChamarMotoboy = Math.max(0, recargasSaldo - deliveredGMV);
+
+            // ── 3. Saques pendentes ──
+            let saquesPendentesQtd = 0;
+            let saquesPendentesValor = 0;
+            try {
+                const { data: pendingPayouts } = await (supabase.from("payout_requests") as any)
+                    .select("amount_cents").eq("status", "pending");
+                saquesPendentesQtd = pendingPayouts?.length || 0;
+                saquesPendentesValor = sum(pendingPayouts, (p) => p.amount_cents) / 100;
+            } catch { /* noop */ }
+
+            // ── RPC preferencial (sobrescreve os agregados se trouxer valor) ──
             try {
                 const { data: rpc } = await (supabase.rpc as any)("admin_get_global_finances");
                 if (rpc?.stats) {
                     const s = rpc.stats;
-                    return {
-                        saldoPlataforma: Number(s.saldoPlataforma || 0),
-                        transacionadoHoje: Number(s.transacionadoHoje || 0),
-                        receitaPlataforma: Number(s.receitaPlataforma || 0),
-                        saldoMotoboys: Number(s.saldoMotoboys || 0),
-                        saldoLojistas: Number(s.saldoLojistas || 0),
-                        saquesPendentesQtd: Number(s.saquesPendentesQtd || 0),
-                        saquesPendentesValor: Number(s.saquesPendentesValor || 0),
-                    };
+                    const total =
+                        Number(s.saldoPlataforma || 0) + Number(s.receitaPlataforma || 0) +
+                        Number(s.saldoLojistas || 0) + Number(s.transacionadoHoje || 0);
+                    if (total > 0) {
+                        return {
+                            saldoPlataforma: Number(s.saldoPlataforma || 0),
+                            transacionadoHoje: Number(s.transacionadoHoje || 0),
+                            receitaPlataforma: Number(s.receitaPlataforma || 0),
+                            saldoMotoboys: Number(s.saldoMotoboys || 0),
+                            saldoLojistas: Number(s.saldoLojistas || 0),
+                            saquesPendentesQtd: Number(s.saquesPendentesQtd || 0),
+                            saquesPendentesValor: Number(s.saquesPendentesValor || 0),
+                            totalLojas,
+                            saldoChamarMotoboy,
+                            creditosAdquiridos: creditRevenue,
+                        };
+                    }
                 }
             } catch (e) {
-                console.warn("[useAdminFinancialStats] RPC indisponível, caindo no legado", e);
+                console.warn("[useAdminFinancialStats] RPC indisponível, usando agregados", e);
             }
 
-            // 1. & 4. & 5. Contas Financeiras (Agregado via ledger_entries)
-            // @ts-ignore: bypass outdated types.ts missing direction and profile_type
-            const { data: rawLedgers } = await (supabase.from("ledger_entries") as any)
-                .select("amount_cents, direction, profile_type, source_type");
-
-            let saldoPlataforma = 0;
-            let saldoMotoboys = 0;
-            let saldoLojistas = 0;
-
-            rawLedgers?.forEach((entry: any) => {
-                const isCredit = entry.direction === 'credit';
-                const val = (Number(entry.amount_cents || 0) / 100) * (isCredit ? 1 : -1);
-
-                if (!entry.profile_type || entry.profile_type === 'platform') {
-                    saldoPlataforma += val;
-                } else if (entry.profile_type === 'merchant' || entry.profile_type === 'lojista') {
-                    saldoLojistas += val;
-                } else if (entry.profile_type === 'motoboy' || entry.profile_type === 'driver') {
-                    saldoMotoboys += val;
-                }
-            });
-
-            // 2. Total Transacionado Hoje (ledger_entries where created_at = hoje)
-            const todayStart = startOfDay(new Date()).toISOString();
-            const todayEnd = endOfDay(new Date()).toISOString();
-
-            const { data: todayLedgers } = await supabase
-                .from("ledger_entries")
-                .select("amount_cents")
-                .gte("created_at", todayStart)
-                .lte("created_at", todayEnd);
-
-            const transacionadoHoje =
-                (todayLedgers?.reduce((acc, curr) => acc + Number(curr.amount_cents || 0), 0) || 0) / 100;
-
-            // 3. Receita da Plataforma (source_type = 'platform_fee')
-            const { data: revenueData } = await supabase
-                .from("ledger_entries")
-                .select("amount_cents")
-                .eq("source_type", "platform_fee");
-
-            const receitaPlataforma =
-                (revenueData?.reduce((acc, curr) => acc + Number(curr.amount_cents || 0), 0) || 0) / 100;
-
-            // 6. Saques Pendentes
-            const { data: pendingPayouts } = await supabase
-                .from("payout_requests")
-                .select("amount_cents")
-                .eq("status", "pending");
-
-            const saquesPendentesQtd = pendingPayouts?.length || 0;
-            const saquesPendentesValor =
-                (pendingPayouts?.reduce((acc, curr) => acc + Number(curr.amount_cents || 0), 0) || 0) / 100;
-
-            // If platform account doesn't directly hold balance, fallback to sum of fees
-            if (saldoPlataforma === 0 && receitaPlataforma > 0) {
-                saldoPlataforma = receitaPlataforma;
-            }
+            const receitaPlataforma = creditRevenue + deliveryCommission;
 
             return {
-                saldoPlataforma,
-                transacionadoHoje,
+                saldoPlataforma: receitaPlataforma,
+                transacionadoHoje: creditHoje + deliveryHoje,
                 receitaPlataforma,
-                saldoMotoboys,
+                saldoMotoboys: motoboyEarnings,
                 saldoLojistas,
                 saquesPendentesQtd,
-                saquesPendentesValor
+                saquesPendentesValor,
+                totalLojas,
+                saldoChamarMotoboy,
+                creditosAdquiridos: creditRevenue,
             };
-        }
+        },
     });
 }

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminFinancialStats } from "@/hooks/useAdminFinancials";
-import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet } from "lucide-react";
+import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formatCurrency = (value: number) => {
@@ -57,21 +57,22 @@ export function AdminFinancialStats() {
             title: "Receita (Taxas)",
             value: data.receitaPlataforma,
             icon: <ArrowUpRight className="h-4 w-4 text-emerald-500" />,
-            tooltip: "Total histórico retido pela plataforma (Comissões).",
+            tooltip: "Receita da plataforma: venda de pacotes de créditos/recargas + comissão das entregas.",
             color: "#10b981"
         },
         {
             title: "Total Lojistas",
             value: data.saldoLojistas,
+            subtitle: `${data.totalLojas} loja(s) cadastrada(s)`,
             icon: <Store className="h-4 w-4 text-indigo-500" />,
-            tooltip: "Soma do saldo em carteira de todos os lojistas.",
+            tooltip: "Total gasto pelos lojistas/anunciantes em créditos. Subtítulo: nº de lojas cadastradas.",
             color: "#6366f1"
         },
         {
             title: "Total Motoboys",
             value: data.saldoMotoboys,
             icon: <Users className="h-4 w-4 text-orange-500" />,
-            tooltip: "Soma do saldo em carteira de todos os motoboys.",
+            tooltip: "Ganho dos motoboys nas entregas concluídas (após a comissão da plataforma).",
             color: "#f97316"
         },
         {
@@ -81,6 +82,20 @@ export function AdminFinancialStats() {
             icon: <ArrowDownRight className="h-4 w-4 text-rose-500" />,
             tooltip: "Valor total de saques solicitados aguardando aprovação.",
             color: "#f43f5e"
+        },
+        {
+            title: "Saldo p/ Chamar Motoboy",
+            value: data.saldoChamarMotoboy,
+            icon: <Bike className="h-4 w-4 text-amber-500" />,
+            tooltip: "Saldo disponível dos lojistas para chamar motoboy (recargas pagas menos o gasto em entregas).",
+            color: "#f59e0b"
+        },
+        {
+            title: "Pacotes de Créditos Adquiridos",
+            value: data.creditosAdquiridos,
+            icon: <Coins className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Total pago em pacotes de créditos e recargas de saldo (compras confirmadas).",
+            color: "#10b981"
         }
     ];
 

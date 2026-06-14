@@ -4,16 +4,17 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface FooterContent {
   id: string;
-  profile_type: string;
   content_type: string;
   title: string;
   content: string;
   is_active: boolean;
-  version: number;
   display_order: number;
   created_at: string;
   updated_at: string;
-  created_by: string | null;
+  // Campos não existentes na tabela atual (mantidos opcionais p/ compatibilidade da UI).
+  profile_type?: string;
+  version?: number;
+  created_by?: string | null;
 }
 
 export type ProfileType = 'passenger' | 'motoboy' | 'mototaxi' | 'driver' | 'freight' | 'merchant' | 'global';
@@ -54,9 +55,8 @@ export function useFooterContents() {
       const { data, error } = await supabase
         .from('footer_contents')
         .select('*')
-        .order('profile_type', { ascending: true })
         .order('content_type', { ascending: true })
-        .order('version', { ascending: false });
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
 
@@ -72,22 +72,18 @@ export function useFooterContents() {
             const lgpdText = `A Viagg-TX8 respeita a sua privacidade e está comprometida com a proteção dos dados pessoais de seus usuários, em conformidade com a Lei Geral de Proteção de Dados (LGPD – Lei nº 13.709/2018).\n\nNosso compromisso é tratar seus dados pessoais com segurança, transparência e apenas para as finalidades para as quais foram coletados.\n\n1. Coleta de Dados\nColetamos informações necessárias para a prestação de nossos serviços de intermediação de entregas.\n\n2. Uso dos Dados\nOs dados são utilizados exclusivamente para:\n- Viabilizar a coleta e entrega das mercadorias.\n- Comunicação de status.\n- Segurança e prevenção à fraude.\n\n3. Direitos do Titular\nVocê tem o direito de solicitar o acesso, correção, atualização ou exclusão dos seus dados a qualquer momento, acessando o menu de opções ou entrando em contato com nosso suporte.`;
 
             await supabase.from('footer_contents').insert({
-              profile_type: 'global',
               content_type: 'lgpd',
               title: 'Política LGPD',
               content: lgpdText,
               is_active: true,
-              version: 1,
               display_order: 5,
-              created_by: userData.user.id,
             });
             // Refetch after seeding
             const { data: newData } = await supabase
               .from('footer_contents')
               .select('*')
-              .order('profile_type', { ascending: true })
               .order('content_type', { ascending: true })
-              .order('version', { ascending: false });
+              .order('display_order', { ascending: true });
             if (newData) {
               setContents(newData);
             }
@@ -126,7 +122,6 @@ export function useFooterContents() {
         const { error } = await supabase
           .from('footer_contents')
           .update({
-            profile_type: content.profile_type,
             content_type: content.content_type as ContentType,
             title: content.title,
             content: content.content,
@@ -144,19 +139,14 @@ export function useFooterContents() {
         });
       } else {
         // Insert new
-        const { data: userData } = await supabase.auth.getUser();
-
         const { error } = await supabase
           .from('footer_contents')
           .insert({
-            profile_type: content.profile_type!,
             content_type: content.content_type as ContentType,
             title: content.title!,
             content: content.content!,
             is_active: content.is_active ?? true,
             display_order: content.display_order ?? 99,
-            version: 1,
-            created_by: userData.user?.id || null,
           });
 
         if (error) throw error;
@@ -167,12 +157,12 @@ export function useFooterContents() {
         });
       }
 
-      // If setting as active, deactivate other versions of same profile+content type
-      if (content.is_active && content.profile_type && content.content_type) {
+      // Se marcou como ativo, desativa os outros conteúdos do mesmo tipo
+      // (mantém apenas um ativo por content_type).
+      if (content.is_active && content.content_type) {
         await supabase
           .from('footer_contents')
           .update({ is_active: false, updated_at: now })
-          .eq('profile_type', content.profile_type)
           .eq('content_type', content.content_type as ContentType)
           .neq('id', content.id || '');
       }

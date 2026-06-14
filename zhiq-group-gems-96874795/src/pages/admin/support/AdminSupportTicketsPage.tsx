@@ -109,9 +109,8 @@ export default function AdminSupportTicketsPage() {
                   assunto, 
                   categoria, 
                   status, 
-                  created_at, 
+                  created_at,
                   updated_at,
-                  assigned_agent_id,
                   priority,
                   ai_status
                 `)
@@ -120,7 +119,7 @@ export default function AdminSupportTicketsPage() {
             if (ticketsError) throw ticketsError;
 
             // Extract unique user IDs and fetch profiles (both creators and assigned agents)
-            const userIds = [...new Set((ticketsData || []).flatMap(t => [t.user_id, t.assigned_agent_id]).filter(Boolean))];
+            const userIds = [...new Set((ticketsData || []).map(t => t.user_id).filter(Boolean))];
             const profileMap: Record<string, any> = {};
 
             if (userIds.length > 0) {
@@ -164,7 +163,8 @@ export default function AdminSupportTicketsPage() {
             // Merge data
             return (ticketsData || []).map(ticket => {
                 const p = profileMap[ticket.user_id];
-                const agent = ticket.assigned_agent_id ? profileMap[ticket.assigned_agent_id] : null;
+                const agentId = (ticket as any).assigned_agent_id;
+                const agent = agentId ? profileMap[agentId] : null;
                 return {
                     ...ticket,
                     user: {

@@ -313,6 +313,12 @@ export default function AdminTicketDetailPage() {
 
     const isClosed = ticket.status === 'resolvido' || ticket.status === 'fechado';
 
+    // Conta/perfil informado pelo cliente (vem embutido no início da mensagem).
+    const contaRelacionada = (() => {
+        const m = String((ticket as any).mensagem || '').match(/Conta relacionada:\s*([^\n]+)/);
+        return m ? m[1].trim() : null;
+    })();
+
     return (
         <div className="h-[calc(100vh-8rem)] max-h-screen flex flex-col pt-2 animate-fade-in">
             <div className="mb-4 flex items-center gap-4">
@@ -325,6 +331,11 @@ export default function AdminTicketDetailPage() {
                         <Badge className={`${STATUS_COLORS[ticket.status] || 'bg-gray-500'} text-white border-0`}>
                             {ticket.status.replace('_', ' ').toUpperCase()}
                         </Badge>
+                        {contaRelacionada && (
+                            <Badge variant="outline" className="border-blue-300 text-blue-700">
+                                Conta: {contaRelacionada}
+                            </Badge>
+                        )}
                     </h1>
                     <p className="text-muted-foreground text-sm truncate max-w-lg">{ticket.assunto}</p>
                 </div>

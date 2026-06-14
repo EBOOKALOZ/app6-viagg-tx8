@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, HelpCircle, Send, Loader2, CheckCircle, Ticket, User, Headphones, UploadCloud, X, FileIcon, ImageIcon } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProfileRoute } from '@/lib/profileTypes';
+import { getProfileRoute, PROFILE_TYPES } from '@/lib/profileTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { MotoboyPanelHeader } from '@/components/motoboy/MotoboyPanelHeader';
 import { OperationalWeatherCard } from '@/components/motoboy/OperationalWeatherCard';
@@ -25,6 +25,7 @@ type TicketFormData = {
   assunto: string;
   mensagem: string;
   categoria: string;
+  conta: string;
 };
 
 type SupportTicket = {
@@ -56,7 +57,7 @@ const formatFileSize = (bytes: number) => {
 
 export default function Support() {
   const navigate = useNavigate();
-  const { activeProfile, user } = useAuth();
+  const { activeProfile, availableProfiles, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMotoboy = activeProfile === 'motoboy';
@@ -65,9 +66,27 @@ export default function Support() {
     assunto: '',
     mensagem: '',
     categoria: 'geral',
+    conta: 'geral',
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Opções de "conta relacionada" = perfis que o usuário tem cadastrados.
+  const contaOptions = useMemo(() => {
+    const fromProfiles = (availableProfiles || [])
+      .filter((p) => PROFILE_TYPES[p])
+      .map((p) => ({ value: p, label: PROFILE_TYPES[p].label }));
+    return fromProfiles.length > 0
+      ? [...fromProfiles, { value: 'outro', label: 'Outra conta' }]
+      : [{ value: 'geral', label: 'Geral' }];
+  }, [availableProfiles]);
+
+  // Pré-seleciona o perfil que o usuário está usando.
+  useEffect(() => {
+    if (activeProfile && PROFILE_TYPES[activeProfile]) {
+      setFormData((prev) => ({ ...prev, conta: activeProfile }));
+    }
+  }, [activeProfile]);
   const [ticketSuccess, setTicketSuccess] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [clientResponse, setClientResponse] = useState('');
@@ -274,6 +293,14 @@ export default function Support() {
     try {
       const newTicketNumber = `VTX8-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000).toString().padStart(6, '0')}`;
 
+      // Inclui a conta/perfil escolhido no corpo da mensagem (a tabela não tem
+      // coluna específica), para o admin ver a qual conta o chamado se refere.
+      const contaLabel = contaOptions.find((o) => o.value === formData.conta)?.label;
+      const mensagemFinal =
+        contaLabel && formData.conta !== 'geral'
+          ? `Conta relacionada: ${contaLabel}\n\n${formData.mensagem.trim()}`
+          : formData.mensagem.trim();
+
       // 1. Create ticket (passing user_id explicitly since default trigger might be absent)
       const { data: ticketData, error: ticketError } = await supabase
         .from('support_tickets')
@@ -281,7 +308,7 @@ export default function Support() {
           ticket_number: newTicketNumber,
           user_id: user.id,
           assunto: formData.assunto.trim(),
-          mensagem: formData.mensagem.trim(),
+          mensagem: mensagemFinal,
           categoria: formData.categoria,
         })
         .select()
@@ -294,7 +321,7 @@ export default function Support() {
         .from('ticket_messages')
         .insert({
           ticket_id: ticketData.id,
-          conteudo: formData.mensagem.trim(),
+          conteudo: mensagemFinal,
           autor: 'cliente'
         });
 
@@ -338,7 +365,12 @@ export default function Support() {
       });
 
       setTicketSuccess(ticketData.ticket_number);
-      setFormData({ assunto: '', mensagem: '', categoria: 'geral' });
+      setFormData({
+        assunto: '',
+        mensagem: '',
+        categoria: 'geral',
+        conta: (activeProfile && PROFILE_TYPES[activeProfile]) ? activeProfile : 'geral',
+      });
       setSelectedFiles([]);
       queryClient.invalidateQueries({ queryKey: ['my-support-tickets'] });
 
@@ -416,10 +448,10 @@ export default function Support() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold text-gray-900">
               Suporte
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-gray-600">
               Como podemos ajudar?
             </p>
           </div>
@@ -427,7 +459,7 @@ export default function Support() {
       )}
 
       <div className="mx-auto max-w-lg w-full px-4 py-8 flex-1">
-        <div className="space-y-6">
+        <div className="space-y-6 text-gray-900 [&_label]:text-gray-800">
           {/* Hero */}
           <div className="rounded-xl border border-border bg-white p-6 text-center space-y-4 shadow-sm">
             <div className="mx-auto w-fit rounded-md bg-primary/10 p-4">
@@ -436,10 +468,10 @@ export default function Support() {
               </div>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Estamos aqui para ajudar
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm text-gray-600">
                 Envie um ticket ou acompanhe seus chamados.
               </p>
             </div>
@@ -447,7 +479,7 @@ export default function Support() {
 
           {/* Dynamic Admin Content */}
           {supportContent && supportContent.content && (
-            <div className="rounded-xl border border-border bg-white p-6 shadow-sm prose prose-sm max-w-none text-foreground [&_h1]:text-lg [&_h1]:font-bold [&_p]:text-sm">
+            <div className="rounded-xl border border-border bg-white p-6 shadow-sm prose prose-sm max-w-none text-gray-900 [&_h1]:text-lg [&_h1]:font-bold [&_p]:text-sm">
               <div dangerouslySetInnerHTML={{ __html: supportContent.content }} />
             </div>
           )}
@@ -465,8 +497,8 @@ export default function Support() {
                   <Ticket className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">Meus Chamados</h3>
-                  <p className="text-xs text-muted-foreground">Acompanhe seus tickets de suporte</p>
+                  <h3 className="font-semibold text-gray-900">Meus Chamados</h3>
+                  <p className="text-xs text-gray-600">Acompanhe seus tickets de suporte</p>
                 </div>
               </div>
               <Button size="sm" variant="ghost" className="text-primary hover:text-primary hover:bg-transparent">
@@ -482,8 +514,8 @@ export default function Support() {
                 <Ticket className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-foreground">Abrir um Ticket de Suporte</h3>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <h3 className="font-semibold text-gray-900">Abrir um Ticket de Suporte</h3>
+                <p className="mt-2 text-sm text-gray-600">
                   Para enviar um chamado, acesse sua conta. O histórico de todos os seus tickets ficará disponível aqui.
                 </p>
               </div>
@@ -498,17 +530,34 @@ export default function Support() {
             <div className="rounded-xl border border-border bg-white p-6 space-y-5 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <Ticket className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Abrir um Ticket</h3>
+                <h3 className="font-semibold text-gray-900">Abrir um Ticket</h3>
               </div>
 
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="conta">Conta / Perfil relacionado</Label>
+                  <Select
+                    value={formData.conta}
+                    onValueChange={(value) => handleInputChange('conta', value)}
+                  >
+                    <SelectTrigger className="text-white [&>span]:text-white data-[placeholder]:text-white/50">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contaOptions.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="categoria">Categoria</Label>
                   <Select
                     value={formData.categoria}
                     onValueChange={(value) => handleInputChange('categoria', value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-white [&>span]:text-white data-[placeholder]:text-white/50">
                       <SelectValue placeholder="Selecione uma categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -531,6 +580,7 @@ export default function Support() {
                     value={formData.assunto}
                     onChange={(e) => handleInputChange('assunto', e.target.value)}
                     maxLength={100}
+                    className="text-white placeholder:text-white/40"
                   />
                 </div>
 
@@ -543,8 +593,9 @@ export default function Support() {
                     onChange={(e) => handleInputChange('mensagem', e.target.value)}
                     rows={5}
                     maxLength={1000}
+                    className="text-white placeholder:text-white/40"
                   />
-                  <p className="text-xs text-muted-foreground text-right">
+                  <p className="text-xs text-gray-600 text-right">
                     {formData.mensagem.length}/1000
                   </p>
                 </div>
@@ -553,7 +604,7 @@ export default function Support() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Anexos</Label>
-                    <span className="text-xs text-muted-foreground">Opcional (Máx 5)</span>
+                    <span className="text-xs text-gray-600">Opcional (Máx 5)</span>
                   </div>
                   <div
                     onDragOver={onDragOver}
@@ -561,11 +612,11 @@ export default function Support() {
                     onClick={() => document.getElementById('file-upload')?.click()}
                     className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors"
                   >
-                    <UploadCloud className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm font-medium text-foreground">
+                    <UploadCloud className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-900">
                       Arraste arquivos ou clique para enviar
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-gray-600 mt-1">
                       PNG, JPG, PDF até 10MB
                     </p>
                     <input
@@ -581,7 +632,7 @@ export default function Support() {
                   {/* Previews */}
                   {selectedFiles.length > 0 && (
                     <div className="space-y-3 mt-4">
-                      <p className="text-sm font-medium text-foreground">Arquivos selecionados:</p>
+                      <p className="text-sm font-medium text-gray-900">Arquivos selecionados:</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {selectedFiles.map((file, idx) => (
                           <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-white shadow-sm">
@@ -589,15 +640,15 @@ export default function Support() {
                               {file.type.includes('image') ? (
                                 <img src={URL.createObjectURL(file)} alt={file.name} className="h-full w-full object-cover" />
                               ) : (
-                                <FileIcon className="h-6 w-6 text-muted-foreground" />
+                                <FileIcon className="h-6 w-6 text-gray-600" />
                               )}
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate text-foreground" title={file.name}>
+                              <p className="text-sm font-medium truncate text-gray-900" title={file.name}>
                                 {file.name}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
+                              <p className="text-xs text-gray-600 mt-0.5">
                                 {formatFileSize(file.size)}
                               </p>
                             </div>
@@ -647,9 +698,9 @@ export default function Support() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-4 pb-2">
-            <p className="text-[15px] text-center text-foreground font-medium">Seu ticket foi criado com sucesso.</p>
+            <p className="text-[15px] text-center text-gray-900 font-medium">Seu ticket foi criado com sucesso.</p>
             <div className="space-y-1">
-              <p className="text-sm text-center text-muted-foreground">Número do ticket:</p>
+              <p className="text-sm text-center text-gray-600">Número do ticket:</p>
               <div className="bg-muted rounded-xl p-3 flex justify-center border">
                 <span className="font-mono text-xl font-bold text-primary">
                   {ticketSuccess && ticketSuccess.startsWith('#') ? ticketSuccess : `#${ticketSuccess}`}
@@ -691,7 +742,7 @@ export default function Support() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{selectedTicket.assunto}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
+                  <p className="text-xs text-gray-600 capitalize">
                     {selectedTicket.categoria || 'Geral'} • Criado em{" "}
                     {format(new Date(selectedTicket.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
@@ -701,11 +752,11 @@ export default function Support() {
 
               {/* Messages - Email Style */}
               <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">Histórico de mensagens:</p>
+                <p className="text-sm font-medium text-gray-600">Histórico de mensagens:</p>
                 <div className="space-y-3 max-h-[300px] overflow-y-auto">
                   {messagesLoading ? (
                     <div className="flex justify-center py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
                     </div>
                   ) : ticketMessages && ticketMessages.length > 0 ? (
                     ticketMessages.map((msg) => (
@@ -718,14 +769,14 @@ export default function Support() {
                       >
                         <div className="flex items-center gap-2 mb-2">
                           {msg.autor === 'cliente' ? (
-                            <User className="h-4 w-4 text-muted-foreground" />
+                            <User className="h-4 w-4 text-gray-600" />
                           ) : (
                             <Headphones className="h-4 w-4 text-primary" />
                           )}
                           <span className="font-medium text-sm">
                             {msg.autor === 'cliente' ? 'Você' : 'Suporte Viagg-TX8'}
                           </span>
-                          <span className="text-xs text-muted-foreground ml-auto">
+                          <span className="text-xs text-gray-600 ml-auto">
                             {format(new Date(msg.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </span>
                         </div>
@@ -733,7 +784,7 @@ export default function Support() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-3">
+                    <p className="text-sm text-gray-600 text-center py-3">
                       Nenhuma mensagem encontrada.
                     </p>
                   )}
@@ -743,7 +794,7 @@ export default function Support() {
               {/* Reply Section */}
               {selectedTicket.status !== 'resolvido' && selectedTicket.status !== 'fechado' && (
                 <div className="space-y-3 pt-2 border-t">
-                  <Label className="text-sm text-muted-foreground">
+                  <Label className="text-sm text-gray-600">
                     Responder ao suporte:
                   </Label>
                   <Textarea
@@ -769,7 +820,7 @@ export default function Support() {
               )}
 
               {(selectedTicket.status === 'resolvido' || selectedTicket.status === 'fechado') && (
-                <div className="text-center py-3 text-sm text-muted-foreground bg-muted/50 rounded-lg">
+                <div className="text-center py-3 text-sm text-gray-600 bg-muted/50 rounded-lg">
                   Este ticket foi encerrado.
                 </div>
               )}

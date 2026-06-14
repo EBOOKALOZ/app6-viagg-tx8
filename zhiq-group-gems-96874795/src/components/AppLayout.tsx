@@ -6,7 +6,6 @@ import { FooterProfile } from "@/components/FooterProfile";
 import MotoboyBottomNav from "@/components/motoboy/MotoboyBottomNav";
 import BottomNav from "@/components/passenger/BottomNav";
 import { StoreBottomNav } from "@/components/store/StoreBottomNav";
-import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import { Home, History, User, Store, Wallet, Settings, Truck } from "lucide-react";
 
 /* ===============================
@@ -174,8 +173,6 @@ export function AppLayout() {
       </main>
       <FooterProfile profile={activeProfile || "passenger"} />
       {renderBottomNav()}
-      {/* ★ Não toca música de fundo para motoboy — interfere com notificações de chamada */}
-      {!isPublicRoute && activeProfile !== 'motoboy' && <GlobalAudioPlayer />}
     </div>
   );
 }
