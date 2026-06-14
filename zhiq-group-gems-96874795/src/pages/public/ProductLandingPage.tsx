@@ -57,6 +57,7 @@ interface Product {
     merchant_store_id: string | null;
     category: string | null;
     condition: string | null;
+    listing_status?: string | null;
 }
 
 interface StoreData {
@@ -143,7 +144,7 @@ export default function ProductLandingPage() {
             // Fallback: advertiser_listings
             if (!data) {
                 const { data: advData, error: advErr } = await (supabase.from("advertiser_listings") as any)
-                    .select("id, title, description, cover_image_url, price, advertiser_account_id, category, condition, advertiser_listing_media(media_url)")
+                    .select("id, title, description, cover_image_url, price, advertiser_account_id, category, condition, listing_status, advertiser_listing_media(media_url)")
                     .eq("id", id)
                     .maybeSingle();
 
@@ -177,7 +178,8 @@ export default function ProductLandingPage() {
                         merchant_store_id: advData.advertiser_account_id,
                         seller_user_id: accData?.user_id, // Ensure we pass the owner for profiles fallback
                         category: advData.category,
-                        condition: advData.condition
+                        condition: advData.condition,
+                        listing_status: advData.listing_status
                     };
                 }
             }
@@ -539,11 +541,25 @@ export default function ProductLandingPage() {
                             {imgSrc ? (
                                 <div className="relative w-full aspect-[4/3] md:aspect-[16/9] overflow-hidden bg-zinc-100 border-b border-zinc-100">
                                     <img src={imgSrc} aria-hidden="true" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-50" />
-                                    <img src={imgSrc} alt={product.title} className="relative z-10 w-full h-full object-contain" onError={e => { e.currentTarget.style.display = "none"; }} />
+                                    <img src={imgSrc} alt={product.title} className={`relative z-10 w-full h-full object-contain ${product.listing_status?.toLowerCase() === "paused" ? "opacity-30" : ""}`} onError={e => { e.currentTarget.style.display = "none"; }} />
+                                    {product.listing_status?.toLowerCase() === "paused" && (
+                                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50">
+                                            <span className="text-white text-2xl md:text-3xl font-black uppercase tracking-wider drop-shadow-lg -rotate-6 border-4 border-white rounded-2xl px-5 py-2">
+                                                Produto Pausado
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
-                                <div className="w-full aspect-[4/3] md:aspect-[16/9] bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center">
+                                <div className="relative w-full aspect-[4/3] md:aspect-[16/9] bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center">
                                     <ShoppingBag className="h-20 w-20 text-zinc-300" />
+                                    {product.listing_status?.toLowerCase() === "paused" && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                            <span className="text-white text-2xl md:text-3xl font-black uppercase tracking-wider drop-shadow-lg -rotate-6 border-4 border-white rounded-2xl px-5 py-2">
+                                                Produto Pausado
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             <div className="p-6 md:p-8 space-y-5">

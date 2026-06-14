@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMyStore } from "@/hooks/useMyStore";
-import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins, X, EyeOff, Bike } from "lucide-react";
+import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins, X, EyeOff, Bike, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,7 @@ export default function StoreOrdersPage() {
     try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "[]"); } catch { return []; }
   });
   const [showHidden, setShowHidden] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const hideOrder = (id: string) => setHiddenIds((prev) => {
     const next = Array.from(new Set([...prev, id]));
     try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
@@ -114,6 +115,24 @@ export default function StoreOrdersPage() {
       `Olá ${pi.customer_name || ""}! Sobre seu pedido de ${fmtBRL(pi.subtotal)} feito na Viagg-TX8, vamos combinar a entrega?`
     );
     window.open(`https://wa.me/55${clean}?text=${msg}`, "_blank");
+  };
+
+  // Exclui o pedido (intenção de compra) definitivamente do banco.
+  const handleDeleteOrder = async (pi: PurchaseIntentionCard) => {
+    if (!window.confirm("Excluir este pedido definitivamente? Esta ação não pode ser desfeita.")) return;
+    setDeletingId(pi.id);
+    try {
+      // Remove os itens primeiro (FK), depois a intenção de compra.
+      await (supabase.from("purchase_intention_items") as any).delete().eq("intention_id", pi.id);
+      const { error } = await (supabase.from("purchase_intentions") as any).delete().eq("id", pi.id);
+      if (error) throw error;
+      toast.success("Pedido excluído.");
+      queryClient.invalidateQueries({ queryKey: ["store-orders", store?.id] });
+    } catch (err: any) {
+      toast.error(`Erro ao excluir: ${err?.message || "tente novamente"}`);
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const { data: orders = [], isLoading } = useQuery<PurchaseIntentionCard[]>({
@@ -331,6 +350,20 @@ export default function StoreOrdersPage() {
                 className="w-full h-11 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-orange-900/30 mt-2"
               >
                 <Bike className="w-4 h-4" /> Chamar Motoboy
+              </Button>
+
+              <Button
+                onClick={() => handleDeleteOrder(pi)}
+                disabled={deletingId === pi.id}
+                variant="outline"
+                className="w-full h-11 border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl mt-2 disabled:opacity-50"
+              >
+                {deletingId === pi.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Excluir
               </Button>
             </div>
           ))}

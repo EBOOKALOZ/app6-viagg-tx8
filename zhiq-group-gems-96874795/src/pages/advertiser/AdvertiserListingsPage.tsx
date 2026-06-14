@@ -487,7 +487,7 @@ export default function AdvertiserListingsPage() {
       return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#2A3038] text-[#A7B0BE] text-[10px] font-black uppercase rounded-full border border-[#2A3038]"><Edit className="w-3 h-3" /> Rascunho</span>;
     }
     if (s === 'paused') {
-      return <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 text-amber-400 text-[10px] font-black uppercase rounded-full border border-amber-400/20"><Clock className="w-3 h-3" /> Pausado</span>;
+      return <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 text-amber-400 text-[10px] font-black uppercase rounded-full border border-amber-400/20"><Clock className="w-3 h-3" /> Anúncio Pausado</span>;
     }
     return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#EF4444]/10 text-[#EF4444] text-[10px] font-black uppercase rounded-full border border-[#EF4444]/20"><AlertCircle className="w-3 h-3" /> {status}</span>;
   };
@@ -533,7 +533,7 @@ export default function AdvertiserListingsPage() {
       if (newStatus === 'published' || newStatus === 'active') {
         toast.success("Anúncio ativado com sucesso!"); 
       } else {
-        toast.success("Anúncio pausado com sucesso.");
+        toast.success("Anúncio Pausado");
       }
     },
     onError: (err: any) => toast.error(`Erro ao alterar status: ${err.message}`)
@@ -651,22 +651,30 @@ export default function AdvertiserListingsPage() {
                       <tr key={listing.id} className="hover:bg-[#14171B] transition-colors group">
                         <td className="p-6">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-[#14171B] overflow-hidden shrink-0 border border-[#2A3038] flex items-center justify-center">
+                            <div className="relative w-12 h-12 rounded-xl bg-[#14171B] overflow-hidden shrink-0 border border-[#2A3038] flex items-center justify-center">
                               {listing.image ? (
                                 <img
                                   src={
-                                    listing.image.startsWith('http') 
-                                      ? listing.image 
+                                    listing.image.startsWith('http')
+                                      ? listing.image
                                       : listing.storageBucket
                                         ? `${supabase.storage.from(listing.storageBucket).getPublicUrl(listing.image).data.publicUrl}`
                                         : listing.image
                                   }
-                                  className="w-full h-full object-cover" alt=""
+                                  className={`w-full h-full object-cover ${listing.status?.toLowerCase() === 'paused' ? 'opacity-40' : ''}`}
+                                  alt=""
                                 />
                               ) : (
                                 listing.category === 'imovel' ? <Building2 className="w-5 h-5 text-[#2A3038]" /> :
                                 listing.category === 'veiculo' ? <Car className="w-5 h-5 text-[#2A3038]" /> :
                                 <ShoppingBag className="w-5 h-5 text-[#2A3038]" />
+                              )}
+                              {listing.status?.toLowerCase() === 'paused' && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                  <span className="text-white text-[7px] font-black uppercase leading-tight text-center px-0.5">
+                                    Pausado
+                                  </span>
+                                </div>
                               )}
                             </div>
                             <div>
