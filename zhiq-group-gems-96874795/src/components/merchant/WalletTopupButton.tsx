@@ -13,6 +13,8 @@ import { useState, useEffect } from "react";
 import { useMerchantCredits } from "@/hooks/useMerchantCredits";
 import { usePaymentsOrchestrator } from "@/hooks/usePaymentsOrchestrator";
 import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
+import { isEmbeddedCardCheckout, mercadoPagoPublicKey } from "@/lib/payments/checkoutConfig";
+import { MercadoPagoBrickCheckout } from "@/components/payments/MercadoPagoBrickCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +37,7 @@ import {
   Clock,
 } from "lucide-react";
 
-type Step = "input" | "awaiting" | "confirmed" | "failed";
+type Step = "input" | "card" | "awaiting" | "confirmed" | "failed";
 
 interface TopupOrder {
   id: string;
@@ -84,6 +86,12 @@ export function WalletTopupButton({
       toast.error("Loja não encontrada");
       return;
     }
+    // Modo embutido (flag VITE_MP_EMBEDDED_CHECKOUT): coleta o cartão na própria
+    // tela via Payment Brick, em vez de redirecionar para a página hospedada.
+    if (isEmbeddedCardCheckout() && mercadoPagoPublicKey()) {
+      setStep("card");
+      return;
+    }
     const priceCents = Math.round(val * 100);
     setProcessing(true);
     try {
@@ -119,6 +127,41 @@ export function WalletTopupButton({
       toast.error("Erro ao gerar cobrança", { description: err?.message });
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Cobrança do cartão tokenizado pelo Brick (modo embutido).
+  const handleCardSubmit = async (formData: Record<string, unknown>) => {
+    const val = parseFloat(reais.replace(",", "."));
+    const priceCents = Math.round(val * 100);
+    if (!storeId) {
+      toast.error("Loja não encontrada");
+      throw new Error("Loja não encontrada");
+    }
+    try {
+      const payer = formData.payer as { email?: string } | undefined;
+      const res = await purchaseCredits({
+        merchant_owner_id: storeId,
+        package_price_cents: priceCents,
+        package_name: `Recarga de Saldo — R$ ${formatBRL(priceCents)}`,
+        method: "credit_card",
+        payer_email: payer?.email,
+        metadata: {},
+        card: formData,
+      });
+      const pp = res.charge.payment_payload ?? {};
+      setOrder({
+        id: res.order_id,
+        pix_code: pp.pix_copy_paste ?? null,
+        pix_qr: pp.pix_qr_base64 ?? null,
+        checkout_url: pp.checkout_url ?? null,
+      });
+      setStep("awaiting");
+      toast.info("Pagamento enviado! Confirmando...", { duration: 3000 });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Falha no pagamento";
+      toast.error("Erro ao processar o cartão", { description: msg });
+      throw err; // deixa o Brick exibir o erro também
     }
   };
 
@@ -209,6 +252,37 @@ export function WalletTopupButton({
                 ) : (
                   "Continuar para o pagamento"
                 )}
+              </Button>
+            </div>
+          )}
+
+          {/* STEP: card (modo embutido — Payment Brick na própria tela) */}
+          {step === "card" && (
+            <div className="space-y-3 pt-2">
+              <p className="text-xs text-[#A7B0BE]">
+                Pagamento de{" "}
+                <strong className="text-white">R$ {formatBRL(previewCents)}</strong>
+              </p>
+              {mercadoPagoPublicKey() ? (
+                <div className="rounded-xl bg-white p-2">
+                  <MercadoPagoBrickCheckout
+                    publicKey={mercadoPagoPublicKey()!}
+                    amount={previewCents / 100}
+                    onSubmit={handleCardSubmit}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-amber-300">
+                  Configure <code>VITE_MERCADOPAGO_PUBLIC_KEY</code> para exibir o
+                  formulário de cartão.
+                </p>
+              )}
+              <Button
+                variant="ghost"
+                onClick={() => setStep("input")}
+                className="w-full text-[#A7B0BE] hover:text-white hover:bg-[#2A3038]"
+              >
+                Voltar
               </Button>
             </div>
           )}

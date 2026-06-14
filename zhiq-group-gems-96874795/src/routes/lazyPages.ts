@@ -77,6 +77,7 @@ export const ProductRedirectPage = lazy(() => import("@/pages/public/ProductRedi
 export const MercadoLocalViagg = lazy(() => import("@/pages/public/MercadoLocalViagg"));
 export const ProductPublicPage = lazy(() => import("@/pages/public/ProductPublicPage"));
 export const ProductCheckoutPage = lazy(() => import("@/pages/public/ProductCheckoutPage"));
+export const CheckoutCartaoPage = lazy(() => import("@/pages/public/CheckoutCartaoPage"));
 export const MyDigitalLibrary = lazy(() => import("@/pages/public/MyDigitalLibrary"));
 export const DigitalDeliveryGateway = lazy(() => import("@/pages/public/DigitalDeliveryGateway"));
 export const StorePublicPage = lazy(() => import("@/pages/public/StorePublicPage"));

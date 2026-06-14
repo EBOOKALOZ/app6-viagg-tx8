@@ -115,6 +115,11 @@ export function usePaymentsOrchestrator() {
        * Ex: { grant_kind:'real_estate', real_estate_purchase_id:'...' }
        */
       metadata?: Record<string, unknown>;
+      /**
+       * Dados tokenizados do Payment Brick (cartão) p/ cobrar direto via
+       * /v1/payments. Quando presente, o backend ignora o Checkout Pro.
+       */
+      card?: Record<string, unknown>;
     }): Promise<{
       order_id: string;
       status: string;
@@ -141,6 +146,7 @@ export function usePaymentsOrchestrator() {
             },
             payer_email: input.payer_email,
             metadata: input.metadata ?? {},
+            ...(input.card ? { card: input.card } : {}),
             idempotency_key,
           },
         },

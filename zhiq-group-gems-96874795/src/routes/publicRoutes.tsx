@@ -42,6 +42,7 @@ import {
   LegalPage,
   ProductPublicPage,
   ProductCheckoutPage,
+  CheckoutCartaoPage,
   MyDigitalLibrary,
   DigitalDeliveryGateway,
   AllVehiclesPage,
@@ -99,6 +100,7 @@ export const publicRoutes = (
     {/* ── Páginas de produto/biblioteca (public) ── */}
     <Route path="/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductPublicPage /></Suspense>} />
     <Route path="/checkout/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductCheckoutPage /></Suspense>} />
+    <Route path="/pagamento/cartao" element={<Suspense fallback={<PageFallback />}><CheckoutCartaoPage /></Suspense>} />
     <Route path="/minha-biblioteca" element={<Suspense fallback={<PageFallback />}><MyDigitalLibrary /></Suspense>} />
     <Route path="/entrega/digital/:itemId" element={<Suspense fallback={<PageFallback />}><DigitalDeliveryGateway /></Suspense>} />
 

@@ -159,6 +159,68 @@ export async function mpCharge(
   }
 }
 
+/** Dados tokenizados vindos do Payment Brick (front) p/ cobrar cartão direto. */
+export interface MpCardInput {
+  amount_brl: number;
+  description: string;
+  reference: string;
+  idempotency_key: string;
+  notification_url?: string;
+  token: string;
+  payment_method_id: string;
+  installments: number;
+  issuer_id?: string;
+  payer?: {
+    email?: string;
+    identification?: { type?: string; number?: string };
+  };
+}
+
+/**
+ * Cobrança de cartão via POST /v1/payments usando o token do Brick.
+ * Diferente do Checkout Pro (preference), aqui a cobrança é processada na hora
+ * e o status já volta (approved/rejected/in_process).
+ */
+export async function mpChargeCard(
+  creds: MpCreds,
+  input: MpCardInput,
+): Promise<MpChargeOutput & { status_detail?: string }> {
+  try {
+    const res = await mpFetch(creds, "/v1/payments", {
+      method: "POST",
+      idempotencyKey: input.idempotency_key,
+      body: {
+        transaction_amount: input.amount_brl,
+        token: input.token,
+        description: input.description,
+        installments: input.installments || 1,
+        payment_method_id: input.payment_method_id,
+        ...(input.issuer_id ? { issuer_id: input.issuer_id } : {}),
+        external_reference: input.reference,
+        ...(input.notification_url
+          ? { notification_url: input.notification_url }
+          : {}),
+        payer: {
+          email: input.payer?.email || "no-reply@viagg.com.br",
+          ...(input.payer?.identification
+            ? { identification: input.payer.identification }
+            : {}),
+        },
+      },
+    });
+    if (!res.ok) return { ok: false, error: errMsg(res.status, res.body) };
+    const b = res.body;
+    return {
+      ok: true,
+      provider_payment_id: String(b.id ?? ""),
+      status: String(b.status ?? "pending"),
+      status_detail: b.status_detail as string | undefined,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export async function mpGetPaymentStatus(
   creds: MpCreds,
   paymentId: string,

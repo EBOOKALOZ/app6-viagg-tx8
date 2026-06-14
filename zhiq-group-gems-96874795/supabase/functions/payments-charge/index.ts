@@ -18,7 +18,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
-import { mpCharge, type MpCreds } from "./mp.ts";
+import { mpCharge, mpChargeCard, type MpCreds, type MpCardInput } from "./mp.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -126,20 +126,45 @@ Deno.serve(async (req) => {
     const orderRow = order as { id: string; status: string };
 
     // 4. Charge no MP.
-    const charge = await mpCharge(creds, {
-      method: method as "pix" | "credit_card" | "debit_card" | "boleto",
-      amount_brl: amountBrl,
-      description: String(input.description ?? "Recarga de saldo"),
-      reference: `${input.reference_type ?? "recharge"}:${
-        input.reference_id ?? orderRow.id
-      }`,
-      idempotency_key: idempotencyKey,
-      payer_email: input.payer_email as string | undefined,
-      notification_url: (gw.config as Record<string, unknown>)
-        ?.webhook_url as string | undefined,
-      back_url: input.back_url as string | undefined,
-      sandbox: gw.mode === "sandbox",
-    });
+    const reference = `${input.reference_type ?? "recharge"}:${
+      input.reference_id ?? orderRow.id
+    }`;
+    const notificationUrl = (gw.config as Record<string, unknown>)
+      ?.webhook_url as string | undefined;
+
+    // 4a. Cartão tokenizado pelo Payment Brick → cobra direto via /v1/payments.
+    //     (caso contrário, mantém o fluxo atual: PIX ou Checkout Pro hospedado.)
+    const card = (input.card ?? {}) as Record<string, unknown>;
+    const cardToken = typeof card.token === "string" ? card.token : "";
+    const isCardToken =
+      (method === "credit_card" || method === "debit_card") &&
+      cardToken.length > 0;
+
+    const charge = isCardToken
+      ? await mpChargeCard(creds, {
+        amount_brl: amountBrl,
+        description: String(input.description ?? "Pagamento"),
+        reference,
+        idempotency_key: idempotencyKey,
+        notification_url: notificationUrl,
+        token: cardToken,
+        payment_method_id: String(card.payment_method_id ?? ""),
+        installments: Number(card.installments ?? 1),
+        issuer_id: card.issuer_id ? String(card.issuer_id) : undefined,
+        payer: (card.payer as MpCardInput["payer"]) ??
+          { email: input.payer_email as string | undefined },
+      })
+      : await mpCharge(creds, {
+        method: method as "pix" | "credit_card" | "debit_card" | "boleto",
+        amount_brl: amountBrl,
+        description: String(input.description ?? "Recarga de saldo"),
+        reference,
+        idempotency_key: idempotencyKey,
+        payer_email: input.payer_email as string | undefined,
+        notification_url: notificationUrl,
+        back_url: input.back_url as string | undefined,
+        sandbox: gw.mode === "sandbox",
+      });
 
     if (!charge.ok || !charge.provider_payment_id) {
       // Não pendura a ordem.
@@ -174,6 +199,9 @@ Deno.serve(async (req) => {
       order_id: orderRow.id,
       status: "waiting_payment",
       provider_payment_id: charge.provider_payment_id,
+      // status cru do MP (cartão volta approved/rejected/in_process na hora)
+      provider_status: charge.status ?? null,
+      status_detail: (charge as { status_detail?: string }).status_detail ?? null,
       pix_qr_base64: charge.pix_qr_base64 ?? null,
       pix_copy_paste: charge.pix_copy_paste ?? null,
       checkout_url: charge.checkout_url ?? null,
