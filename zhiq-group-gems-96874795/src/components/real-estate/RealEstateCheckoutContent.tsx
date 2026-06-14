@@ -19,6 +19,7 @@ import {
     Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
 
 type CheckoutStep = "select" | "awaiting" | "confirmed" | "failed";
 
@@ -318,6 +319,8 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     real_estate_purchase_id: purchase.id,
                 };
             }
+            // Auto-retorno ao app após pagar (só aplica em https público; ver helper).
+            chargeMeta.back_url = getCheckoutBackUrl();
 
             const { data: chargeData, error: chargeErr } = await supabase.functions.invoke(
                 "payments-charge",
@@ -351,7 +354,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             realPix = chargeData.pix_copy_paste ?? null;
             realQr = chargeData.pix_qr_base64 ?? null;
             realCheckout = chargeData.checkout_url ?? null;
-            if (realCheckout) window.open(realCheckout, "_blank", "noopener");
+            if (realCheckout) openCheckoutUrl(realCheckout);
 
             setIsExpired(false);
             setActiveOrder({
@@ -547,7 +550,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                     <div className="space-y-4">
                                         {activeOrder.checkout_url && (
                                             <Button
-                                                onClick={() => window.open(activeOrder.checkout_url, "_blank", "noopener")}
+                                                onClick={() => openCheckoutUrl(activeOrder.checkout_url)}
                                                 className="w-full h-14 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm uppercase shadow-xl shadow-orange-500/20"
                                             >
                                                 Abrir Mercado Pago

@@ -12,6 +12,7 @@
 import { useState, useEffect } from "react";
 import { useMerchantCredits } from "@/hooks/useMerchantCredits";
 import { usePaymentsOrchestrator } from "@/hooks/usePaymentsOrchestrator";
+import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -100,7 +101,7 @@ export function WalletTopupButton({
         package_price_cents: priceCents,
         package_name: `Recarga de Saldo — R$ ${formatBRL(priceCents)}`,
         method: "credit_card",
-        metadata: {},
+        metadata: { back_url: getCheckoutBackUrl() },
       });
       const pp = res.charge.payment_payload ?? {};
       setOrder({
@@ -110,7 +111,7 @@ export function WalletTopupButton({
         checkout_url: pp.checkout_url ?? null,
       });
       if (pp.checkout_url) {
-        window.open(pp.checkout_url, "_blank", "noopener");
+        openCheckoutUrl(pp.checkout_url);
       }
       setStep("awaiting");
       toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
@@ -263,9 +264,7 @@ export function WalletTopupButton({
               {order.checkout_url && (
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    window.open(order.checkout_url!, "_blank", "noopener")
-                  }
+                  onClick={() => openCheckoutUrl(order.checkout_url)}
                   className="w-full border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 hover:text-emerald-100 font-bold"
                 >
                   <ExternalLink className="h-4 w-4 mr-1.5" />

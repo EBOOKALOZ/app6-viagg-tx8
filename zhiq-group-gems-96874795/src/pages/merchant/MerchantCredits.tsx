@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useMerchantCredits, CreditProduct, LedgerEntry } from "@/hooks/useMerchantCredits";
 import { useMerchantPayWallet } from "@/hooks/useMerchantPayWallet";
 import { usePaymentsOrchestrator } from "@/hooks/usePaymentsOrchestrator";
+import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
 import { HowCreditsWorkModal } from "@/components/merchant/HowCreditsWorkModal";
@@ -427,7 +428,7 @@ export default function MerchantCredits() {
           package_price_cents: checkoutProduct.price_cents,
           package_name: checkoutProduct.name,
           method,
-          metadata: {},
+          metadata: { back_url: getCheckoutBackUrl() },
         });
       } else {
         // 1) cria a linha legada credit_purchases (o webhook chama
@@ -443,6 +444,7 @@ export default function MerchantCredits() {
           metadata: {
             grant_kind: "merchant",
             credit_purchase_id: legacyOrder.id,
+            back_url: getCheckoutBackUrl(),
           },
         });
       }
@@ -458,7 +460,7 @@ export default function MerchantCredits() {
         expires_at: res.charge.expires_at ?? null,
       });
       if (pp.checkout_url) {
-        window.open(pp.checkout_url, "_blank", "noopener");
+        openCheckoutUrl(pp.checkout_url);
       }
       setCheckoutStep("awaiting");
       toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
