@@ -613,12 +613,7 @@ export default function ProductLandingPage() {
                                 <button onClick={() => setShowDiscountModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors">
                                     <Percent className="h-4 w-4" /> Fazer uma oferta
                                 </button>
-                                <button onClick={() => {
-                                    const phone = (store?.whatsapp || store?.phone || "").replace(/\D/g, "");
-                                    const cleanPhone = phone.replace(/^55/, '');
-                                    const msg = encodeURIComponent('Olá! Gostaria de saber mais sobre o produto "' + (product?.title || '') + '" anunciado no Viagg-TX8. Pode me dar mais detalhes?');
-                                    if (cleanPhone) { window.open('https://wa.me/55' + cleanPhone + '?text=' + msg, "_blank"); } else { setShowLeadModal(true); }
-                                }} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl border-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                                <button onClick={() => setShowLeadModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl border-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
                                     <MessageCircle className="h-4 w-4" /> Falar com o vendedor
                                 </button>
                             </div>

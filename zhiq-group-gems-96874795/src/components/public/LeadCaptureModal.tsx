@@ -347,7 +347,7 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                                     placeholder="Como deve te chamar?"
                                     value={customerName}
                                     onChange={(e) => setCustomerName(e.target.value)}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all"
                                     maxLength={100}
                                 />
                             </div>
@@ -360,7 +360,7 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                                     placeholder="(47) 99999-9999"
                                     value={customerPhone}
                                     onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all"
                                     maxLength={15}
                                 />
                             </div>
