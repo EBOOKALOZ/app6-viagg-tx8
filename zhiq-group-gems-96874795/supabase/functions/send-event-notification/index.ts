@@ -75,7 +75,7 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 interface EventPayload {
-  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup";
+  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup" | "package_purchase";
   advertiser_account_id?: string;
   advertiser_user_id?: string;
   store_id?: string;
@@ -109,7 +109,10 @@ interface EventPayload {
   offer_amount?: number | null;
   offer_note?: string | null;
   // Recarga de saldo p/ chamar motoboy (source = "wallet_topup")
+  // e compra de pacote de créditos (source = "package_purchase")
   amount_brl?: number | null;
+  package_name?: string | null;
+  credits?: number | null;
 }
 
 interface Recipient {
@@ -417,6 +420,36 @@ function walletTopupTemplate(ev: EventPayload, ownerName: string) {
   return { subject, html };
 }
 
+function packagePurchaseTemplate(ev: EventPayload, ownerName: string) {
+  const greeting = ownerName ? `Olá, ${ownerName}!` : "Olá!";
+  const amount = formatBRL(ev.amount_brl);
+  const pkg = ev.package_name || "Pacote de créditos";
+  const credits = Number(ev.credits || 0);
+  const creditLine = credits > 0
+    ? `<p style="color:#18181b; font-size:16px; font-weight:700; margin:6px 0 0;">+ ${credits.toLocaleString("pt-BR")} créditos</p>`
+    : "";
+  const subject = `Viagg-TX8 • Compra de créditos confirmada: ${amount} 💰`;
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f5; margin:0; padding:20px;">
+      <div style="max-width:600px; margin:0 auto; background:white; border-radius:12px; padding:40px;">
+        ${LOGO_HEADER}
+        <h1 style="color:#18181b; font-size:22px;">Compra confirmada! 💰</h1>
+        <p style="color:#52525b; font-size:15px;">${greeting}</p>
+        <p style="color:#52525b; font-size:15px;">Recebemos o seu pagamento e os créditos já estão disponíveis no seu painel.</p>
+        <div style="margin:24px 0; padding:20px; border-left:4px solid #f59e0b; background:#fffbeb; border-radius:6px;">
+          <p style="color:#18181b; font-size:15px; font-weight:600; margin:0;">${pkg}</p>
+          ${creditLine}
+          <p style="color:#52525b; font-size:14px; margin:8px 0 0;">Valor pago: <strong>${amount}</strong></p>
+        </div>
+        ${ctaButton("/anunciante/creditos", "Ver meus créditos")}
+        <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
+        <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
+      </div>
+    </body></html>`;
+  return { subject, html };
+}
+
 async function sendViaResend(to: string, subject: string, html: string) {
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -468,7 +501,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const { subject, html } =
-      ev.source === "wallet_topup" ? walletTopupTemplate(ev, recipient.name)
+      ev.source === "package_purchase" ? packagePurchaseTemplate(ev, recipient.name)
+      : ev.source === "wallet_topup" ? walletTopupTemplate(ev, recipient.name)
       : ev.source === "balance_alert" ? balanceAlertTemplate(ev, recipient.name)
       : ev.source === "offer" ? offerTemplate(ev, recipient.name)
       : ev.source === "order" ? orderTemplate(ev, recipient.name)
