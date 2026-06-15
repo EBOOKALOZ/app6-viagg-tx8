@@ -94,7 +94,8 @@ export default function AdminTicketDetailPage() {
 
             return { ...data, user: finalUser };
         },
-        enabled: !!id
+        enabled: !!id,
+        refetchInterval: 5000,
     });
 
     // 2. Fetch Messages
@@ -109,7 +110,9 @@ export default function AdminTicketDetailPage() {
             if (error) throw error;
             return data as TicketMessage[];
         },
-        enabled: !!id
+        enabled: !!id,
+        refetchInterval: 4000,
+        refetchOnWindowFocus: true,
     });
 
     // Auto-scroll to bottom of chat
@@ -399,7 +402,7 @@ export default function AdminTicketDetailPage() {
                                                         ? msg.is_ai
                                                             ? 'bg-purple-50 text-purple-900 border border-purple-100 rounded-tr-sm'
                                                             : 'bg-primary text-primary-foreground rounded-tr-sm'
-                                                        : 'bg-muted border border-border/50 rounded-tl-sm'
+                                                        : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
                                                         }`}
                                                 >
                                                     {msg.attachment_url && (
@@ -480,7 +483,7 @@ export default function AdminTicketDetailPage() {
                                 )}
                                 <Textarea
                                     placeholder="Escreva sua resposta para o cliente..."
-                                    className="min-h-[100px] resize-none pr-12 pb-12 bg-background border-muted"
+                                    className="min-h-[100px] resize-none pr-12 pb-12 bg-background border-muted text-white placeholder:text-white/40"
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyDown={(e) => {
@@ -502,13 +505,13 @@ export default function AdminTicketDetailPage() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        className="h-8 w-8 text-white/70 hover:text-white"
                                         onClick={() => fileInputRef.current?.click()}
                                         disabled={isUploading || sendMessageMutation.isPending}
                                     >
                                         {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                                     </Button>
-                                    <span className="text-[10px] text-muted-foreground hidden sm:inline">Enviar imagem/PDF PDF</span>
+                                    <span className="text-[10px] text-white/70 hidden sm:inline">Enviar imagem/PDF</span>
                                 </div>
 
                                 <div className="absolute bottom-3 right-3">

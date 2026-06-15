@@ -58,7 +58,8 @@ export default function ClientTicketConversationPage() {
             return data;
         },
         enabled: !!id && !!user?.id,
-        retry: false
+        retry: false,
+        refetchInterval: 5000
     });
 
     // 2. Fetch Messages
@@ -75,7 +76,9 @@ export default function ClientTicketConversationPage() {
             if (error) throw error;
             return data as TicketMessage[];
         },
-        enabled: !!id
+        enabled: !!id,
+        refetchInterval: 4000,
+        refetchOnWindowFocus: true
     });
 
     // Auto-scroll to bottom of chat
@@ -303,10 +306,10 @@ export default function ClientTicketConversationPage() {
                                     <div className="flex flex-col gap-1 min-w-0">
                                         <div
                                             className={`p-3 text-[14px] whitespace-pre-wrap break-words border relative shadow-sm ${isClient
-                                                ? 'bg-muted border-border text-foreground rounded-2xl rounded-tr-md'
+                                                ? 'bg-muted border-border text-gray-900 rounded-2xl rounded-tr-md'
                                                 : msg.is_ai
                                                     ? 'bg-purple-50 border-purple-100 text-purple-900 rounded-2xl rounded-tl-md'
-                                                    : 'bg-[#FF6A00]/10 border-[#FF6A00]/20 text-foreground rounded-2xl rounded-tl-md'
+                                                    : 'bg-[#FF6A00]/10 border-[#FF6A00]/20 text-gray-900 rounded-2xl rounded-tl-md'
                                                 }`}
                                         >
                                             {msg.attachment_url && (
@@ -379,14 +382,14 @@ export default function ClientTicketConversationPage() {
             {ticket && !isClosed && (
                 <div className={`fixed left-0 right-0 bg-muted/30 border-t px-4 py-3 z-[30] transition-all shadow-sm flex flex-col items-center
                     ${isMotoboy ? 'bottom-[164px]' : 'bottom-[72px]'}`}>
-                    <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
+                    <p className="text-xs text-gray-700 font-medium mb-2 text-center">
                         Como está o andamento do seu problema?
                     </p>
                     <div className="flex gap-2 justify-center w-full max-w-sm">
                         <Button
                             variant={ticket.status === 'em_analise' ? "default" : "outline"}
                             size="sm"
-                            className={`flex-1 text-xs h-8 ${ticket.status === 'em_analise' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : ''}`}
+                            className={`flex-1 text-xs h-8 ${ticket.status === 'em_analise' ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'text-gray-800'}`}
                             onClick={() => updateStatusMutation.mutate({ status: 'em_analise' })}
                             disabled={updateStatusMutation.isPending}
                         >
@@ -395,7 +398,7 @@ export default function ClientTicketConversationPage() {
                         <Button
                             variant={ticket.status === 'resolvido' ? "default" : "outline"}
                             size="sm"
-                            className={`flex-1 text-xs h-8 ${ticket.status === 'resolvido' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                            className={`flex-1 text-xs h-8 ${ticket.status === 'resolvido' ? 'bg-green-600 hover:bg-green-700 text-white' : 'text-gray-800'}`}
                             onClick={() => updateStatusMutation.mutate({ status: 'resolvido' })}
                             disabled={updateStatusMutation.isPending}
                         >
@@ -404,7 +407,7 @@ export default function ClientTicketConversationPage() {
                         <Button
                             variant="outline"
                             size="sm"
-                            className={`flex-1 text-xs h-8 hover:bg-zinc-900 hover:text-white`}
+                            className={`flex-1 text-xs h-8 text-gray-800 hover:bg-zinc-900 hover:text-white`}
                             onClick={() => updateStatusMutation.mutate({ status: 'fechado' })}
                             disabled={updateStatusMutation.isPending}
                         >
@@ -441,7 +444,7 @@ export default function ClientTicketConversationPage() {
 
                         <Textarea
                             placeholder="Digite sua mensagem..."
-                            className="min-h-[48px] max-h-[120px] rounded-3xl resize-none py-3 px-4 bg-muted/50 border-transparent focus-visible:ring-primary/50 text-base"
+                            className="min-h-[48px] max-h-[120px] rounded-3xl resize-none py-3 px-4 bg-muted/50 border-transparent focus-visible:ring-primary/50 text-base text-gray-900 placeholder:text-gray-500"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             onKeyDown={(e) => {
