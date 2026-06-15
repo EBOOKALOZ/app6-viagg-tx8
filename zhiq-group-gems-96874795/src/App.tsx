@@ -93,8 +93,8 @@ export default function App() {
                   {/* Carrinho flutuante global para páginas públicas */}
                   <FloatingCartButton />
 
-                  {/* Suporte flutuante global — visível em todas as páginas */}
-                  <FloatingSupportButton />
+                  {/* Suporte flutuante DESATIVADO nas páginas públicas — só aparece nos painéis */}
+                  {/* <FloatingSupportButton /> */}
                 </Suspense>
               </TooltipProvider>
             </GlobalCallProvider>

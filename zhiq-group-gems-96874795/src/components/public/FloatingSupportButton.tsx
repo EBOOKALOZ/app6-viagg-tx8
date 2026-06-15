@@ -1,30 +1,50 @@
 /**
  * FloatingSupportButton — botão de suporte global.
  *
- * Aparece em todas as páginas (canto inferior esquerdo, para não colidir com o
- * carrinho flutuante à direita) e leva o usuário à área de suporte, onde pode
- * abrir um chamado / falar com o atendimento.
+ * Aparece SOMENTE dentro de áreas autenticadas (painéis internos)
+ * e nunca na página pública do marketplace.
  */
 import { useLocation, useNavigate } from "react-router-dom";
 import { Headphones } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Não mostra dentro da própria área de suporte e em telas de transição/login.
+// Rotas de painéis internos onde o botão DEVE aparecer
+const SHOW_PREFIXES = [
+  "/profile",
+  "/merchant",
+  "/motoboy",
+  "/driver",
+  "/admin",
+  "/advertiser",
+  "/passenger",
+  "/freteiro",
+  "/loading",
+  "/select-profile",
+];
+
+// Dentro dessas sub-rotas de suporte, esconde para evitar duplicação
 const HIDE_PREFIXES = [
   "/support",
   "/suporte",
   "/admin/support",
   "/motoboy/support",
-  "/auth",
-  "/loading",
-  "/select-profile",
 ];
 
 export function FloatingSupportButton() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { session } = useAuth();
 
+  // Só exibe para usuários logados
+  if (!session) return null;
+
+  // Esconde dentro da própria área de suporte
   const hidden = HIDE_PREFIXES.some((p) => location.pathname.startsWith(p));
   if (hidden) return null;
+
+  // Só mostra dentro de painéis internos autenticados
+  const inPanel = SHOW_PREFIXES.some((p) => location.pathname.startsWith(p));
+  if (!inPanel) return null;
 
   return (
     <button
@@ -41,3 +61,4 @@ export function FloatingSupportButton() {
 }
 
 export default FloatingSupportButton;
+

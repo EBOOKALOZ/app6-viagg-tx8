@@ -57,6 +57,19 @@ function maskEmail(email?: string | null): string {
   return (u.charAt(0) || "") + "•••@•••" + tld;
 }
 
+// O register_product_inquiry concatena o e-mail do visitante no fim do texto
+// ("E-mail: x@y.com"). Extrai esse e-mail e devolve a mensagem limpa (sem ele).
+function extractVisitorEmail(message?: string | null): { email: string; message: string } {
+  let msg = (message || "").trim();
+  let email = "";
+  const m = msg.match(/e-?mail:\s*([^\s]+@[^\s]+)/i);
+  if (m) {
+    email = m[1];
+    msg = msg.replace(/\n*\s*e-?mail:\s*[^\s]+@[^\s]+/i, "").trim();
+  }
+  return { email, message: msg };
+}
+
 const EVENT_LABELS: Record<string, string> = {
   visitor_store_entry: "Visitante entrou na sua loja",
   visitor_product_click: "Clique em um produto seu",
@@ -210,6 +223,28 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
   return { email: null, name: "", optedOut: false };
 }
 
+// Nome da loja (p/ o e-mail de confirmação ao comprador: "a loja X recebeu...").
+async function resolveStoreName(supabase: any, ev: EventPayload): Promise<string> {
+  if (ev.advertiser_user_id) {
+    const { data } = await supabase
+      .from("merchant_stores")
+      .select("nome_loja")
+      .eq("user_id", ev.advertiser_user_id)
+      .not("nome_loja", "is", null)
+      .maybeSingle();
+    if (data?.nome_loja) return data.nome_loja;
+  }
+  if (ev.store_id) {
+    const { data } = await supabase
+      .from("merchant_stores")
+      .select("nome_loja")
+      .eq("id", ev.store_id)
+      .maybeSingle();
+    if (data?.nome_loja) return data.nome_loja;
+  }
+  return "";
+}
+
 // Best-effort: busca título (+ preço) e imagem do anúncio pelo listing_id,
 // cobrindo os módulos product / real_estate / vehicle. Assim o bloco do produto
 // aparece no e-mail de lead independente do tipo de anúncio.
@@ -217,20 +252,55 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
   if (!ev.listing_id) return;
   const mod = ev.listing_module || "product";
 
+  const storageBase = SUPABASE_URL.replace(/\/$/, "");
+
   if (mod === "product") {
-    const { data: prod } = await supabase
+    // Um produto pode viver em DUAS tabelas distintas:
+    //  • merchant_marketing_products → campanhas/ofertas (image_url, price_label texto)
+    //  • advertiser_listings         → produtos do marketplace (cover_image_url + mídia, price número)
+    // O listing_id existe em apenas uma delas; tenta a campanha primeiro.
+    const { data: mkt } = await supabase
       .from("merchant_marketing_products")
-      .select("title, image_url")
+      .select("title, image_url, price_label")
       .eq("id", ev.listing_id)
       .maybeSingle();
-    if (prod) {
-      ev.listing_image_url = prod.image_url || null;
-      ev.listing_title = prod.title || null;
+    if (mkt) {
+      ev.listing_title = mkt.title || null;
+      ev.listing_image_url = mkt.image_url || null;
+      const raw = String(mkt.price_label ?? "").replace(/[^\d,.]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".");
+      const p = Number(raw);
+      if (raw && !Number.isNaN(p) && p > 0) ev.listing_price_brl = p;
+      return;
+    }
+
+    // Não é campanha → produto do marketplace (advertiser_listings).
+    const { data: adv } = await supabase
+      .from("advertiser_listings")
+      .select("title, cover_image_url, price")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (adv) {
+      ev.listing_title = adv.title || null;
+      ev.listing_price_brl = adv.price ?? null;
+      ev.listing_image_url = adv.cover_image_url || null;
+      if (!ev.listing_image_url) {
+        // Sem capa? usa a 1ª mídia (media_url já é URL pública; storage_path como fallback).
+        const { data: media } = await supabase
+          .from("advertiser_listing_media")
+          .select("media_url, storage_path")
+          .eq("listing_id", ev.listing_id)
+          .limit(1);
+        const first = (media || [])[0];
+        if (first) {
+          ev.listing_image_url = first.media_url
+            || (first.storage_path
+              ? `${storageBase}/storage/v1/object/public/marketing-materials/${first.storage_path}`
+              : null);
+        }
+      }
     }
     return;
   }
-
-  const storageBase = SUPABASE_URL.replace(/\/$/, "");
 
   if (mod === "real_estate") {
     const { data: re } = await supabase
@@ -312,10 +382,7 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
   const nameMasked = maskName(ev.visitor_name);
   const phoneMasked = maskPhone(ev.visitor_phone);
   // O register_product_inquiry concatena o e-mail do visitante no texto — extrai e mascara.
-  let msg = (ev.visitor_message || "").trim();
-  let email = "";
-  const m = msg.match(/e-?mail:\s*([^\s]+@[^\s]+)/i);
-  if (m) { email = m[1]; msg = msg.replace(/\n*\s*e-?mail:\s*[^\s]+@[^\s]+/i, "").trim(); }
+  const { email, message: msg } = extractVisitorEmail(ev.visitor_message);
   const emailMasked = maskEmail(email);
   const subject = "Viagg-TX8 • Você tem um novo interessado! 🎯";
   const html = `
@@ -336,6 +403,35 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
         </div>
         <p style="color:#71717a; font-size:13px;">🔒 Desbloqueie no painel para ver <strong>nome, WhatsApp e e-mail completos</strong> e responder.</p>
         ${ctaButton("/anunciante/mensagens", "Desbloquear contato")}
+        <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
+        <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
+      </div>
+    </body></html>`;
+  return { subject, html };
+}
+
+// Confirmação enviada ao PRÓPRIO interessado (comprador/visitante) quando ele
+// demonstra interesse num produto. Mesmo visual do e-mail do lojista, porém
+// SEM mascarar (é o dado dele) e com mensagem de "recebemos seu contato".
+function buyerLeadTemplate(ev: EventPayload, buyerName: string | null | undefined, storeName: string) {
+  const greeting = buyerName ? `Olá, ${buyerName}!` : "Olá!";
+  const loja = storeName ? `a loja <strong>${storeName}</strong>` : "o vendedor";
+  const { message: msg } = extractVisitorEmail(ev.visitor_message);
+  const subject = "Viagg-TX8 • Recebemos o seu interesse! ✅";
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f5; margin:0; padding:20px;">
+      <div style="max-width:600px; margin:0 auto; background:white; border-radius:12px; padding:40px;">
+        ${LOGO_HEADER}
+        <h1 style="color:#18181b; font-size:22px;">Recebemos o seu interesse! ✅</h1>
+        <p style="color:#52525b; font-size:15px;">${greeting}</p>
+        <p style="color:#52525b; font-size:15px;">Enviamos o seu contato para ${loja}. Em breve o vendedor responde pelo WhatsApp que você informou.</p>
+        ${productBlock(ev)}
+        ${msg ? `<div style="margin:24px 0; padding:20px; border-left:4px solid #16a34a; background:#f0fdf4; border-radius:6px;">
+          <p style="margin:0; font-size:14px;"><strong>Sua mensagem:</strong> ${msg}</p>
+        </div>` : ""}
+        <p style="color:#71717a; font-size:13px;">Obrigado por usar o Viagg-TX8! 💚</p>
+        ${ctaButton("/mercado", "Explorar mais ofertas")}
         <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
         <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
       </div>
@@ -559,38 +655,52 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    const recipient = await resolveRecipient(supabase, ev);
 
-    if (!recipient.email) {
-      return new Response(JSON.stringify({ skipped: "sem_email" }), {
-        status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-    if (recipient.optedOut) {
-      return new Response(JSON.stringify({ skipped: "opt_out" }), {
-        status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    // Imagem/título do produto (best-effort) p/ lead e ledger
+    // Imagem/título do produto (best-effort) p/ lead e ledger — resolvido antes
+    // pois serve tanto ao e-mail do lojista quanto ao de confirmação do comprador.
     if (ev.source === "lead" || ev.source === "ledger") {
       await resolveListing(supabase, ev);
     } else if (ev.source === "order") {
       await resolveOrderImage(supabase, ev);
     }
 
-    const { subject, html } =
-      ev.source === "package_purchase" ? packagePurchaseTemplate(ev, recipient.name)
-      : ev.source === "wallet_topup" ? walletTopupTemplate(ev, recipient.name)
-      : ev.source === "balance_alert" ? balanceAlertTemplate(ev, recipient.name)
-      : ev.source === "offer" ? offerTemplate(ev, recipient.name)
-      : ev.source === "order" ? orderTemplate(ev, recipient.name)
-      : ev.source === "lead" ? leadTemplate(ev, recipient.name)
-      : ledgerTemplate(ev, recipient.name);
+    const recipient = await resolveRecipient(supabase, ev);
+    const sentTo: string[] = [];
 
-    await sendViaResend(recipient.email, subject, html);
+    // 1) E-mail ao LOJISTA (dono do produto/loja).
+    if (recipient.email && !recipient.optedOut) {
+      const { subject, html } =
+        ev.source === "package_purchase" ? packagePurchaseTemplate(ev, recipient.name)
+        : ev.source === "wallet_topup" ? walletTopupTemplate(ev, recipient.name)
+        : ev.source === "balance_alert" ? balanceAlertTemplate(ev, recipient.name)
+        : ev.source === "offer" ? offerTemplate(ev, recipient.name)
+        : ev.source === "order" ? orderTemplate(ev, recipient.name)
+        : ev.source === "lead" ? leadTemplate(ev, recipient.name)
+        : ledgerTemplate(ev, recipient.name);
+      await sendViaResend(recipient.email, subject, html);
+      sentTo.push(recipient.email);
+    }
 
-    return new Response(JSON.stringify({ success: true, to: recipient.email }), {
+    // 2) E-mail de CONFIRMAÇÃO ao COMPRADOR — só em leads (interesse no produto),
+    //    quando o visitante informou e-mail. Mesmo visual do e-mail do lojista,
+    //    porém sem mascarar (é o dado do próprio comprador).
+    if (ev.source === "lead") {
+      const { email: buyerEmail } = extractVisitorEmail(ev.visitor_message);
+      if (buyerEmail) {
+        const storeName = await resolveStoreName(supabase, ev);
+        const { subject, html } = buyerLeadTemplate(ev, ev.visitor_name, storeName);
+        await sendViaResend(buyerEmail, subject, html);
+        sentTo.push(buyerEmail);
+      }
+    }
+
+    if (sentTo.length === 0) {
+      return new Response(JSON.stringify({ skipped: "sem_email" }), {
+        status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, to: sentTo }), {
       status: 200, headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: unknown) {
