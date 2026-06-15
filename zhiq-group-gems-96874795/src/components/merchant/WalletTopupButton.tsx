@@ -160,8 +160,15 @@ export function WalletTopupButton({
       setStep("awaiting");
       toast.info("Pagamento enviado! Confirmando...", { duration: 3000 });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Falha no pagamento";
-      toast.error("Erro ao processar o cartão", { description: msg });
+      const raw = err instanceof Error ? err.message : "";
+      // Instabilidade do Mercado Pago (ex.: "MP 500: internal_error" ou o
+      // genérico "non-2xx" do invoke): mostra um aviso claro ao lojista.
+      const isMpInstavel =
+        /non-2xx|internal_error|MP 5\d\d|comunica|timeout|failed to fetch/i.test(raw);
+      const description = isMpInstavel
+        ? "O Mercado Pago está com instabilidade momentânea e não confirmou o cartão. Isso costuma ser temporário — aguarde alguns segundos e tente novamente. Se continuar, use o PIX ou tente mais tarde."
+        : raw || "Falha no pagamento";
+      toast.error("Não foi possível concluir o pagamento", { description });
       throw err; // deixa o Brick exibir o erro também
     }
   };
@@ -292,6 +299,16 @@ export function WalletTopupButton({
                 Pagamento de{" "}
                 <strong className="text-white">R$ {formatBRL(previewCents)}</strong>
               </p>
+              <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2">
+                <span aria-hidden className="text-amber-300">⚠️</span>
+                <p className="text-xs text-amber-200/90">
+                  Em alguns momentos o Mercado Pago pode apresentar uma{" "}
+                  <strong>instabilidade temporária</strong> e recusar o cartão.
+                  Se isso acontecer, aguarde alguns segundos e tente novamente —
+                  ou use o PIX. Seu dinheiro não é cobrado quando o pagamento
+                  falha.
+                </p>
+              </div>
               {mercadoPagoPublicKey() ? (
                 <div className="rounded-xl bg-white p-2">
                   <MercadoPagoBrickCheckout

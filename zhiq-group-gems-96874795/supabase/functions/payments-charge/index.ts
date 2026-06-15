@@ -167,6 +167,14 @@ Deno.serve(async (req) => {
       });
 
     if (!charge.ok || !charge.provider_payment_id) {
+      // Loga o motivo real do MP p/ diagnóstico (aparece nos logs da função).
+      console.error("payments-charge: cobranca falhou no MP:", JSON.stringify({
+        method,
+        isCardToken,
+        amount_brl: amountBrl,
+        mp_error: charge.error,
+        provider_payment_id: charge.provider_payment_id ?? null,
+      }));
       // Não pendura a ordem.
       await userClient.rpc("pay_update_payment_order_status", {
         p_order_id: orderRow.id,
