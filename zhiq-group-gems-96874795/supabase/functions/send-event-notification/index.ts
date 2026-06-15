@@ -28,9 +28,13 @@ function ctaButton(path: string, label: string) {
 
 function productBlock(ev: EventPayload) {
   if (!ev.listing_image_url && !ev.listing_title) return "";
+  const priceLine = (ev.listing_price_brl !== null && ev.listing_price_brl !== undefined)
+    ? `<p style="color:#16a34a; font-size:16px; font-weight:700; margin:4px 0 0;">${formatBRL(ev.listing_price_brl)}</p>`
+    : "";
   return `<div style="margin:0 0 20px; text-align:center;">
     ${ev.listing_image_url ? `<img src="${ev.listing_image_url}" alt="${ev.listing_title || "Produto"}" width="220" style="max-width:220px; width:100%; height:auto; border-radius:12px; border:1px solid #e4e4e7;" />` : ""}
     ${ev.listing_title ? `<p style="color:#18181b; font-size:15px; font-weight:600; margin:10px 0 0;">${ev.listing_title}</p>` : ""}
+    ${priceLine}
   </div>`;
 }
 
@@ -105,6 +109,7 @@ interface EventPayload {
   // Resolvidos internamente (imagem/título do produto)
   listing_image_url?: string | null;
   listing_title?: string | null;
+  listing_price_brl?: number | null;
   // Oferta (source = "offer")
   offer_amount?: number | null;
   offer_note?: string | null;
@@ -205,18 +210,83 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
   return { email: null, name: "", optedOut: false };
 }
 
-// Best-effort: busca imagem/título do produto pelo listing_id (módulo product).
+// Best-effort: busca título (+ preço) e imagem do anúncio pelo listing_id,
+// cobrindo os módulos product / real_estate / vehicle. Assim o bloco do produto
+// aparece no e-mail de lead independente do tipo de anúncio.
 async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
   if (!ev.listing_id) return;
-  if (ev.listing_module && ev.listing_module !== "product") return;
-  const { data: prod } = await supabase
-    .from("merchant_marketing_products")
-    .select("title, image_url")
-    .eq("id", ev.listing_id)
-    .maybeSingle();
-  if (prod) {
-    ev.listing_image_url = prod.image_url || null;
-    ev.listing_title = prod.title || null;
+  const mod = ev.listing_module || "product";
+
+  if (mod === "product") {
+    const { data: prod } = await supabase
+      .from("merchant_marketing_products")
+      .select("title, image_url")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (prod) {
+      ev.listing_image_url = prod.image_url || null;
+      ev.listing_title = prod.title || null;
+    }
+    return;
+  }
+
+  const storageBase = SUPABASE_URL.replace(/\/$/, "");
+
+  if (mod === "real_estate") {
+    const { data: re } = await supabase
+      .from("real_estate_listings")
+      .select("title, price_brl")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (re) {
+      ev.listing_title = re.title || null;
+      ev.listing_price_brl = re.price_brl ?? null;
+    }
+    // 1ª imagem mascarada APROVADA (bucket público real-estate-public).
+    const { data: media } = await supabase
+      .from("real_estate_media")
+      .select("public_masked_storage_path, moderation_status, sort_order")
+      .eq("listing_id", ev.listing_id)
+      .order("sort_order", { ascending: true });
+    const ok = (media || []).find((m: any) =>
+      m.public_masked_storage_path &&
+      ["approved", "approved_clean", "approved_masked"].includes(m.moderation_status)
+    );
+    if (ok) {
+      ev.listing_image_url =
+        `${storageBase}/storage/v1/object/public/real-estate-public/${ok.public_masked_storage_path}`;
+    }
+    return;
+  }
+
+  if (mod === "vehicle") {
+    const { data: ve } = await supabase
+      .from("vehicle_listings")
+      .select("title, brand, model, year, price_brl, cover_image_url")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (ve) {
+      const desc = [ve.brand, ve.model, ve.year].filter(Boolean).join(" ");
+      ev.listing_title = ve.title || desc || null;
+      ev.listing_price_brl = ve.price_brl ?? null;
+      if (ve.cover_image_url) ev.listing_image_url = ve.cover_image_url;
+    }
+    // Sem capa? usa a 1ª mídia do veículo (bucket real-estate-original).
+    if (!ev.listing_image_url) {
+      const { data: vmedia } = await supabase
+        .from("vehicle_media")
+        .select("public_masked_storage_path, original_storage_path, sort_order")
+        .eq("listing_id", ev.listing_id)
+        .order("sort_order", { ascending: true });
+      const first = (vmedia || [])[0];
+      const p = first?.public_masked_storage_path || first?.original_storage_path;
+      if (p) {
+        ev.listing_image_url = String(p).startsWith("http")
+          ? p
+          : `${storageBase}/storage/v1/object/public/real-estate-original/${p}`;
+      }
+    }
+    return;
   }
 }
 
