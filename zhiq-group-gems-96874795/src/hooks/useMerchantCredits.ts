@@ -163,7 +163,7 @@ export function useMerchantCredits() {
         const { data: balData } = await (supabase.from("merchant_credit_balances") as any)
           .select("available_credits, reserved_credits, consumed_credits")
           .eq("store_id", storeId)
-          .single();
+          .maybeSingle();
         if (balData) {
           balance = {
             available_credits: balData.available_credits ?? 0,

@@ -306,10 +306,10 @@ export default function ClientTicketConversationPage() {
                                     <div className="flex flex-col gap-1 min-w-0">
                                         <div
                                             className={`p-3 text-[14px] whitespace-pre-wrap break-words border relative shadow-sm ${isClient
-                                                ? 'bg-muted border-border text-gray-900 rounded-2xl rounded-tr-md'
+                                                ? 'bg-[#FF6A00] border-[#FF6A00] text-white rounded-2xl rounded-tr-md'
                                                 : msg.is_ai
                                                     ? 'bg-purple-50 border-purple-100 text-purple-900 rounded-2xl rounded-tl-md'
-                                                    : 'bg-[#FF6A00]/10 border-[#FF6A00]/20 text-gray-900 rounded-2xl rounded-tl-md'
+                                                    : 'bg-white border-gray-200 text-gray-900 shadow-sm rounded-2xl rounded-tl-md'
                                                 }`}
                                         >
                                             {msg.attachment_url && (

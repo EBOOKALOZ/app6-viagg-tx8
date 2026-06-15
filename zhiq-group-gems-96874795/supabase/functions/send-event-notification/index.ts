@@ -75,7 +75,7 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 interface EventPayload {
-  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer";
+  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup";
   advertiser_account_id?: string;
   advertiser_user_id?: string;
   store_id?: string;
@@ -108,6 +108,8 @@ interface EventPayload {
   // Oferta (source = "offer")
   offer_amount?: number | null;
   offer_note?: string | null;
+  // Recarga de saldo p/ chamar motoboy (source = "wallet_topup")
+  amount_brl?: number | null;
 }
 
 interface Recipient {
@@ -391,6 +393,30 @@ function offerTemplate(ev: EventPayload, ownerName: string) {
   return { subject, html };
 }
 
+function walletTopupTemplate(ev: EventPayload, ownerName: string) {
+  const greeting = ownerName ? `Olá, ${ownerName}!` : "Olá!";
+  const amount = formatBRL(ev.amount_brl);
+  const subject = `Viagg-TX8 • Saldo adicionado: ${amount} 🛵`;
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f5; margin:0; padding:20px;">
+      <div style="max-width:600px; margin:0 auto; background:white; border-radius:12px; padding:40px;">
+        ${LOGO_HEADER}
+        <h1 style="color:#18181b; font-size:22px;">Recarga confirmada! 🛵</h1>
+        <p style="color:#52525b; font-size:15px;">${greeting}</p>
+        <p style="color:#52525b; font-size:15px;">Recebemos o seu pagamento e o saldo já está disponível na sua carteira.</p>
+        <div style="margin:24px 0; padding:20px; border-left:4px solid #10b981; background:#ecfdf5; border-radius:6px;">
+          <p style="color:#18181b; font-size:18px; font-weight:700; margin:0 0 6px;">+ ${amount} de saldo</p>
+          <p style="color:#52525b; font-size:14px; margin:0;">Use este saldo para <strong>chamar o motoboy</strong> e pagar suas entregas.</p>
+        </div>
+        ${ctaButton("/merchant/billing", "Ver minha carteira")}
+        <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
+        <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
+      </div>
+    </body></html>`;
+  return { subject, html };
+}
+
 async function sendViaResend(to: string, subject: string, html: string) {
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -442,7 +468,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const { subject, html } =
-      ev.source === "balance_alert" ? balanceAlertTemplate(ev, recipient.name)
+      ev.source === "wallet_topup" ? walletTopupTemplate(ev, recipient.name)
+      : ev.source === "balance_alert" ? balanceAlertTemplate(ev, recipient.name)
       : ev.source === "offer" ? offerTemplate(ev, recipient.name)
       : ev.source === "order" ? orderTemplate(ev, recipient.name)
       : ev.source === "lead" ? leadTemplate(ev, recipient.name)

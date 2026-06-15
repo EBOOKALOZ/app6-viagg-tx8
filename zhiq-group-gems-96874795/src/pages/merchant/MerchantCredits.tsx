@@ -428,7 +428,7 @@ export default function MerchantCredits() {
           package_price_cents: checkoutProduct.price_cents,
           package_name: checkoutProduct.name,
           method,
-          metadata: { back_url: getCheckoutBackUrl() },
+          metadata: { kind: "wallet_topup", back_url: getCheckoutBackUrl() },
         });
       } else {
         // 1) cria a linha legada credit_purchases (o webhook chama

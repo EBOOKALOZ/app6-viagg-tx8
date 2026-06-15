@@ -194,10 +194,40 @@ Deno.serve(async (req) => {
       }, 500);
     }
 
+    // 5b. Cartão tokenizado: o /v1/payments processa NA HORA (status já volta
+    //     approved/rejected). Não dá pra depender do webhook p/ creditar — em
+    //     sandbox/sem webhook configurado a ordem ficaria presa em
+    //     waiting_payment e o saldo nunca apareceria. Então, quando o cartão
+    //     volta `approved`, aplicamos a confirmação aqui mesmo via a MESMA RPC
+    //     do webhook (idempotente: o webhook real depois vira no-op).
+    let syncedPaid = false;
+    if (isCardToken && charge.status === "approved") {
+      const { error: applyErr } = await svc.rpc("pay_webhook_apply_event", {
+        p_provider_name: "mercadopago",
+        p_provider_payment_id: charge.provider_payment_id,
+        p_provider_event_id: `sync:${charge.provider_payment_id}:approved`,
+        p_event_type: "charge.paid",
+        p_raw_payload: {
+          id: charge.provider_payment_id,
+          status: "approved",
+          source: "charge_sync",
+        },
+        p_normalized_payload: { status: "approved", event_type: "charge.paid" },
+        p_external_reference: reference,
+      });
+      if (applyErr) {
+        // Não falha a cobrança (o cartão JÁ foi aprovado no MP). Loga p/ o
+        // webhook reconciliar; o cliente vê o status pelo poll.
+        console.error("sync apply_event falhou:", applyErr.message);
+      } else {
+        syncedPaid = true;
+      }
+    }
+
     return json({
       ok: true,
       order_id: orderRow.id,
-      status: "waiting_payment",
+      status: syncedPaid ? "paid" : "waiting_payment",
       provider_payment_id: charge.provider_payment_id,
       // status cru do MP (cartão volta approved/rejected/in_process na hora)
       provider_status: charge.status ?? null,

@@ -165,7 +165,7 @@ export function useCreditCatalog() {
       const { data } = await (supabase.from("merchant_credit_balances") as any)
         .select("available_credits, reserved_credits, consumed_credits")
         .eq("store_id", storeId)
-        .single();
+        .maybeSingle();
       return {
         available_credits: data?.available_credits ?? 0,
         reserved_credits: data?.reserved_credits ?? 0,

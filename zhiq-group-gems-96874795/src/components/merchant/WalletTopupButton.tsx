@@ -109,7 +109,7 @@ export function WalletTopupButton({
         package_price_cents: priceCents,
         package_name: `Recarga de Saldo — R$ ${formatBRL(priceCents)}`,
         method: "credit_card",
-        metadata: { back_url: getCheckoutBackUrl() },
+        metadata: { kind: "wallet_topup", back_url: getCheckoutBackUrl() },
       });
       const pp = res.charge.payment_payload ?? {};
       setOrder({
@@ -146,7 +146,7 @@ export function WalletTopupButton({
         package_name: `Recarga de Saldo — R$ ${formatBRL(priceCents)}`,
         method: "credit_card",
         payer_email: payer?.email,
-        metadata: {},
+        metadata: { kind: "wallet_topup" },
         card: formData,
       });
       const pp = res.charge.payment_payload ?? {};
@@ -205,7 +205,7 @@ export function WalletTopupButton({
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md bg-[#1B1F24] border-[#2A3038] text-[#F5F7FA]">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#1B1F24] border-[#2A3038] text-[#F5F7FA]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#F5F7FA]">
               <Banknote className="h-5 w-5 text-emerald-400" />

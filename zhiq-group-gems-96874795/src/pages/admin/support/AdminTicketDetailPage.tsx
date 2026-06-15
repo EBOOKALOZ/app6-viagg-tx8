@@ -401,7 +401,7 @@ export default function AdminTicketDetailPage() {
                                                     className={`p-3 rounded-2xl text-sm whitespace-pre-wrap break-words ${isAdmin
                                                         ? msg.is_ai
                                                             ? 'bg-purple-50 text-purple-900 border border-purple-100 rounded-tr-sm'
-                                                            : 'bg-primary text-primary-foreground rounded-tr-sm'
+                                                            : 'bg-[#FF6A00] text-white rounded-tr-sm'
                                                         : 'bg-white border border-gray-200 text-gray-900 rounded-tl-sm shadow-sm'
                                                         }`}
                                                 >

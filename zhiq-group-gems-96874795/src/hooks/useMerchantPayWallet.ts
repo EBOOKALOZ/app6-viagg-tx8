@@ -230,7 +230,7 @@ export function useMerchantPayWallet() {
       const { data: balData } = await (supabase.from("merchant_credit_balances") as any)
         .select("available_credits")
         .eq("store_id", storeId)
-        .single();
+        .maybeSingle();
 
       const available = balData?.available_credits ?? 0;
 
