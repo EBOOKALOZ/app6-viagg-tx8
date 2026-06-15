@@ -61,7 +61,19 @@ export function MercadoPagoBrickCheckout({
             ...(payerEmail ? { payer: { email: payerEmail } } : {}),
           },
           customization: {
-            visual: { hidePaymentButton: false },
+            visual: {
+              hidePaymentButton: false,
+              // Botão "Pagar" no verde da marca (inclui o estado de carregando).
+              style: {
+                theme: "default",
+                customVariables: {
+                  baseColor: "#10b981",            // emerald-500 (botão Pagar)
+                  baseColorFirstVariant: "#059669", // emerald-600 (hover)
+                  baseColorSecondVariant: "#047857", // emerald-700 (ativo/loading)
+                  buttonTextColor: "#ffffff",
+                },
+              },
+            },
             paymentMethods: {
               creditCard: "all",
               debitCard: "all",
