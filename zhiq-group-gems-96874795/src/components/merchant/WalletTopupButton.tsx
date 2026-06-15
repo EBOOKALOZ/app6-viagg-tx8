@@ -62,6 +62,7 @@ export function WalletTopupButton({
   const [step, setStep] = useState<Step>("input");
   const [reais, setReais] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [order, setOrder] = useState<TopupOrder | null>(null);
 
   const reset = () => {
@@ -162,6 +163,34 @@ export function WalletTopupButton({
       const msg = err instanceof Error ? err.message : "Falha no pagamento";
       toast.error("Erro ao processar o cartão", { description: msg });
       throw err; // deixa o Brick exibir o erro também
+    }
+  };
+
+  // "Já paguei / verificar" — consulta o status REAL no Mercado Pago e credita
+  // se aprovado, sem depender do webhook (que pode não chegar em sandbox).
+  const handleVerify = async () => {
+    if (!order?.id) return;
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("payments-reconcile", {
+        body: { order_id: order.id },
+      });
+      if (error) throw new Error(error.message);
+      const status = (data as { status?: string; pending?: boolean } | null)?.status;
+      if (status === "paid") {
+        setStep("confirmed");
+        toast.success("Saldo adicionado à carteira! 🎉", { duration: 5000 });
+        onSuccess?.();
+      } else if ((data as { pending?: boolean })?.pending) {
+        toast.info("Pagamento ainda em processamento. Tente de novo em instantes.");
+      } else {
+        toast.info("Pagamento ainda não confirmado pelo Mercado Pago.");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Falha ao verificar";
+      toast.error("Não foi possível verificar agora", { description: msg });
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -345,6 +374,18 @@ export function WalletTopupButton({
                   Abrir pagamento no Mercado Pago
                 </Button>
               )}
+
+              <Button
+                onClick={handleVerify}
+                disabled={verifying}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
+              >
+                {verifying ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Já paguei — verificar agora"
+                )}
+              </Button>
 
               <Button
                 variant="ghost"
