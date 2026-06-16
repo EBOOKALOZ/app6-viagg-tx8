@@ -331,6 +331,11 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                         account_type: "platform_main",
                         amount_cents: Math.round((pkg.price_brl || 0) * 100),
                         method: mpMethod,
+                        // back_url também no nível raiz: a payments-charge lê
+                        // input.back_url (não input.metadata.back_url). Sem isto,
+                        // o MP não recebe auto_return e o cliente fica preso na
+                        // tela "congrats" do checkout.
+                        back_url: getCheckoutBackUrl(),
                         description:
                             walletContext === "advertiser"
                                 ? `Créditos anunciante: ${pkg.name}`
@@ -354,7 +359,13 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             realPix = chargeData.pix_copy_paste ?? null;
             realQr = chargeData.pix_qr_base64 ?? null;
             realCheckout = chargeData.checkout_url ?? null;
-            if (realCheckout) openCheckoutUrl(realCheckout);
+            if (realCheckout) {
+                openCheckoutUrl(
+                    realCheckout,
+                    chargeData.order_id,
+                    walletContext === "advertiser" ? "/anunciante/creditos" : "/anunciante/creditos",
+                );
+            }
 
             setIsExpired(false);
             setActiveOrder({

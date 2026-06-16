@@ -460,7 +460,11 @@ export default function MerchantCredits() {
         expires_at: res.charge.expires_at ?? null,
       });
       if (pp.checkout_url) {
-        openCheckoutUrl(pp.checkout_url);
+        openCheckoutUrl(
+          pp.checkout_url,
+          res.order_id,
+          isWalletTopup ? "/merchant/billing" : "/merchant/creditos",
+        );
       }
       setCheckoutStep("awaiting");
       toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });

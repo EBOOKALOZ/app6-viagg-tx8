@@ -130,28 +130,41 @@ Deno.serve(async (req) => {
 
   // 3. Resolve o pagamento real no MP.
   let payment: MpPayment | null = null;
-  if (/^\d+$/.test(pid)) {
-    // payment_id numérico direto.
-    const r = await mpFetch(token, `/v1/payments/${encodeURIComponent(pid)}`);
+
+  // 3a. PREFERIR o payment_id passado (vem na URL de retorno do MP). Consultar
+  //     /v1/payments/{id} direto é muito mais confiável que a busca por
+  //     preference_id (que no sandbox costuma voltar vazia → "não encontrado").
+  const directPid = String(input.payment_id ?? "").trim();
+  if (/^\d+$/.test(directPid)) {
+    const r = await mpFetch(token, `/v1/payments/${encodeURIComponent(directPid)}`);
     if (r.ok) payment = r.body as MpPayment;
-  } else {
-    // preference_id (Checkout Pro) → busca o merchant order e seus pagamentos.
-    const r = await mpFetch(
-      token,
-      `/merchant_orders/search?preference_id=${encodeURIComponent(pid)}`,
-    );
-    if (r.ok) {
-      const elements = (r.body.elements as Array<Record<string, unknown>>) ?? [];
-      const allPayments: MpPayment[] = [];
-      let extRef: string | undefined;
-      for (const mo of elements) {
-        extRef = extRef ?? (mo.external_reference as string | undefined);
-        const pays = (mo.payments as MpPayment[]) ?? [];
-        for (const p of pays) {
-          allPayments.push({ ...p, external_reference: p.external_reference ?? extRef });
+  }
+
+  // 3b. Fallback: usa o provider_payment_id guardado na ordem.
+  if (!payment) {
+    if (/^\d+$/.test(pid)) {
+      // payment_id numérico direto.
+      const r = await mpFetch(token, `/v1/payments/${encodeURIComponent(pid)}`);
+      if (r.ok) payment = r.body as MpPayment;
+    } else {
+      // preference_id (Checkout Pro) → busca o merchant order e seus pagamentos.
+      const r = await mpFetch(
+        token,
+        `/merchant_orders/search?preference_id=${encodeURIComponent(pid)}`,
+      );
+      if (r.ok) {
+        const elements = (r.body.elements as Array<Record<string, unknown>>) ?? [];
+        const allPayments: MpPayment[] = [];
+        let extRef: string | undefined;
+        for (const mo of elements) {
+          extRef = extRef ?? (mo.external_reference as string | undefined);
+          const pays = (mo.payments as MpPayment[]) ?? [];
+          for (const p of pays) {
+            allPayments.push({ ...p, external_reference: p.external_reference ?? extRef });
+          }
         }
+        payment = pickPayment(allPayments);
       }
-      payment = pickPayment(allPayments);
     }
   }
 

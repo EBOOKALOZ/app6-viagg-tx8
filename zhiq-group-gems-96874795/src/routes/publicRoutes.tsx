@@ -6,6 +6,7 @@ import { Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
+import CheckoutReturnPage from "@/pages/public/CheckoutReturnPage";
 import {
   InstitutionalLayout,
   LoadingScreenPremium,
@@ -101,6 +102,7 @@ export const publicRoutes = (
     <Route path="/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductPublicPage /></Suspense>} />
     <Route path="/checkout/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductCheckoutPage /></Suspense>} />
     <Route path="/pagamento/cartao" element={<Suspense fallback={<PageFallback />}><CheckoutCartaoPage /></Suspense>} />
+    <Route path="/checkout/retorno" element={<CheckoutReturnPage />} />
     <Route path="/minha-biblioteca" element={<Suspense fallback={<PageFallback />}><MyDigitalLibrary /></Suspense>} />
     <Route path="/entrega/digital/:itemId" element={<Suspense fallback={<PageFallback />}><DigitalDeliveryGateway /></Suspense>} />
 

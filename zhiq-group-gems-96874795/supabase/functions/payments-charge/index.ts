@@ -162,7 +162,8 @@ Deno.serve(async (req) => {
         idempotency_key: idempotencyKey,
         payer_email: input.payer_email as string | undefined,
         notification_url: notificationUrl,
-        back_url: input.back_url as string | undefined,
+        // Alguns fluxos mandam back_url no nível raiz, outros dentro de metadata.
+        back_url: (input.back_url ?? (input.metadata as Record<string, unknown> | undefined)?.back_url) as string | undefined,
         sandbox: gw.mode === "sandbox",
       });
 

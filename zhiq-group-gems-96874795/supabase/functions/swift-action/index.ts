@@ -126,6 +126,7 @@ interface EventPayload {
   // Oferta (source = "offer")
   offer_amount?: number | null;
   offer_note?: string | null;
+  buyer_user_id?: string;   // comprador que fez a oferta (p/ e-mail de confirmação)
   // Recarga de saldo p/ chamar motoboy (source = "wallet_topup")
   // e compra de pacote de créditos (source = "package_purchase")
   amount_brl?: number | null;
@@ -243,6 +244,24 @@ async function resolveStoreName(supabase: any, ev: EventPayload): Promise<string
     if (data?.nome_loja) return data.nome_loja;
   }
   return "";
+}
+
+// E-mail + nome do COMPRADOR (oferta) a partir do user_id. profiles primeiro,
+// auth como fallback p/ o e-mail.
+async function resolveBuyer(supabase: any, userId?: string): Promise<{ email: string | null; name: string }> {
+  if (!userId) return { email: null, name: "" };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("email, name")
+    .eq("id", userId)
+    .maybeSingle();
+  let email: string | null = profile?.email || null;
+  const name = profile?.name || "";
+  if (!email) {
+    const { data: authData } = await supabase.auth.admin.getUserById(userId);
+    email = authData?.user?.email || null;
+  }
+  return { email, name };
 }
 
 // Best-effort: busca título (+ preço) e imagem do anúncio pelo listing_id,
@@ -571,6 +590,35 @@ function offerTemplate(ev: EventPayload, ownerName: string) {
   return { subject, html };
 }
 
+// Confirmação enviada ao PRÓPRIO comprador quando ele faz uma oferta. Mesmo
+// visual do e-mail do lojista, com "torça para a loja aceitar".
+function buyerOfferTemplate(ev: EventPayload, buyerName: string, storeName: string) {
+  const greeting = buyerName ? `Olá, ${buyerName}!` : "Olá!";
+  const amount = formatBRL(ev.offer_amount);
+  const loja = storeName ? `a loja <strong>${storeName}</strong>` : "o vendedor";
+  const subject = "Viagg-TX8 • Sua oferta foi enviada! 🤞";
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f5; margin:0; padding:20px;">
+      <div style="max-width:600px; margin:0 auto; background:white; border-radius:12px; padding:40px;">
+        ${LOGO_HEADER}
+        <h1 style="color:#18181b; font-size:22px;">Sua oferta foi enviada! 🤞</h1>
+        <p style="color:#52525b; font-size:15px;">${greeting}</p>
+        <p style="color:#52525b; font-size:15px;">Enviamos a sua oferta para ${loja}. Agora é torcer para o vendedor aceitar! 🍀</p>
+        ${productBlock(ev)}
+        <div style="margin:24px 0; padding:20px; border-left:4px solid #8b5cf6; background:#f5f3ff; border-radius:6px;">
+          <p style="color:#18181b; font-size:18px; font-weight:700; margin:0 0 6px;">Sua oferta: ${amount}</p>
+          ${ev.offer_note ? `<p style="color:#52525b; font-size:14px; margin:0;"><strong>Sua mensagem:</strong> ${ev.offer_note}</p>` : ""}
+        </div>
+        <p style="color:#71717a; font-size:13px;">Você será avisado assim que a loja responder.</p>
+        ${ctaButton("/minhas-ofertas", "Acompanhar minhas ofertas")}
+        <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
+        <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
+      </div>
+    </body></html>`;
+  return { subject, html };
+}
+
 function walletTopupTemplate(ev: EventPayload, ownerName: string) {
   const greeting = ownerName ? `Olá, ${ownerName}!` : "Olá!";
   const amount = formatBRL(ev.amount_brl);
@@ -656,9 +704,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Imagem/título do produto (best-effort) p/ lead e ledger — resolvido antes
-    // pois serve tanto ao e-mail do lojista quanto ao de confirmação do comprador.
-    if (ev.source === "lead" || ev.source === "ledger") {
+    // Imagem/título do produto (best-effort) p/ lead, ledger e oferta de desconto
+    // (que manda listing_id). Arremate manda os campos do produto direto (sem
+    // listing_id) → resolveListing sai cedo e preserva os valores recebidos.
+    if (ev.source === "lead" || ev.source === "ledger" || (ev.source === "offer" && ev.listing_id)) {
       await resolveListing(supabase, ev);
     } else if (ev.source === "order") {
       await resolveOrderImage(supabase, ev);
@@ -689,6 +738,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (buyerEmail) {
         const storeName = await resolveStoreName(supabase, ev);
         const { subject, html } = buyerLeadTemplate(ev, ev.visitor_name, storeName);
+        await sendViaResend(buyerEmail, subject, html);
+        sentTo.push(buyerEmail);
+      }
+    }
+
+    // 3) E-mail de CONFIRMAÇÃO ao COMPRADOR — quando ele faz uma OFERTA.
+    //    Arremate: comprador logado → buyer_user_id (resolve e-mail/nome).
+    //    Desconto ("Minha Oferta é"): comprador anônimo → customer_email (se informou).
+    if (ev.source === "offer") {
+      let buyerEmail: string | null = null;
+      let buyerName = ev.customer_name || "";
+      if (ev.buyer_user_id) {
+        const buyer = await resolveBuyer(supabase, ev.buyer_user_id);
+        buyerEmail = buyer.email;
+        if (buyer.name) buyerName = buyer.name;
+      } else if (ev.customer_email) {
+        buyerEmail = ev.customer_email;
+      }
+      if (buyerEmail) {
+        const storeName = await resolveStoreName(supabase, ev);
+        const { subject, html } = buyerOfferTemplate(ev, buyerName, storeName);
         await sendViaResend(buyerEmail, subject, html);
         sentTo.push(buyerEmail);
       }

@@ -74,6 +74,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
     // Form
     const [customerName, setCustomerName] = useState("");
     const [customerPhone, setCustomerPhone] = useState("");
+    const [customerEmail, setCustomerEmail] = useState("");
     const [requestedPrice, setRequestedPrice] = useState("");
     const [message, setMessage] = useState("");
 
@@ -84,6 +85,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
             setSubmitted(false);
             setCustomerName("");
             setCustomerPhone("");
+            setCustomerEmail("");
             setRequestedPrice("");
             setMessage("");
             return;
@@ -153,6 +155,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                 product_price: product.price_label || null,
                 customer_name: customerName.trim(),
                 customer_phone: phoneClean,
+                customer_email: customerEmail.trim() || null,
                 requested_price: priceNum,
                 message: message.trim() || "Tenho interesse neste produto. A loja aceita este valor?",
                 status: "pending",
@@ -295,6 +298,19 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                                     onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
                                     maxLength={15}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                                    Seu e-mail <span className="font-normal text-gray-400">(opcional — pra você receber a confirmação)</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    placeholder="voce@email.com"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                                    maxLength={120}
                                 />
                             </div>
                             <div className="space-y-1.5">

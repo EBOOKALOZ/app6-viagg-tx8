@@ -16,13 +16,48 @@ export function isMobileViewport(): boolean {
   return narrow || ua;
 }
 
+/** Guarda o id da ordem em aberto p/ a página de retorno (/checkout/retorno)
+ *  reconciliar o pagamento sem depender de RLS (o back_url não carrega o id). */
+const PENDING_ORDER_KEY = "viagg_pending_order";
+const PENDING_RETURN_KEY = "viagg_pending_return";
+
+export function rememberPendingOrder(
+  orderId: string | null | undefined,
+  returnTo?: string | null,
+): void {
+  try {
+    if (orderId) localStorage.setItem(PENDING_ORDER_KEY, orderId);
+    if (returnTo) localStorage.setItem(PENDING_RETURN_KEY, returnTo);
+  } catch { /* ignore */ }
+}
+export function getPendingOrderId(): string | null {
+  try { return localStorage.getItem(PENDING_ORDER_KEY); } catch { return null; }
+}
+/** Pra onde mandar o cliente depois de pagar (depende do que ele comprou). */
+export function getPendingReturnTo(): string | null {
+  try { return localStorage.getItem(PENDING_RETURN_KEY); } catch { return null; }
+}
+export function clearPendingOrderId(): void {
+  try {
+    localStorage.removeItem(PENDING_ORDER_KEY);
+    localStorage.removeItem(PENDING_RETURN_KEY);
+  } catch { /* ignore */ }
+}
+
 /**
  * Abre a checkout_url do gateway.
  *  - Celular: navega na mesma aba (página do MP em modo mobile).
  *  - Desktop: abre nova aba, preservando o contexto do app.
+ * Passe `orderId` (p/ confirmar o pagamento na volta) e `returnTo` (a página de
+ * destino conforme o que foi comprado: créditos do anunciante, carteira, etc.).
  */
-export function openCheckoutUrl(url: string | null | undefined): void {
+export function openCheckoutUrl(
+  url: string | null | undefined,
+  orderId?: string | null,
+  returnTo?: string | null,
+): void {
   if (!url) return;
+  rememberPendingOrder(orderId, returnTo);
   if (isMobileViewport()) {
     window.location.href = url;
   } else {
@@ -41,8 +76,10 @@ export function openCheckoutUrl(url: string | null | undefined): void {
  */
 export function getCheckoutBackUrl(): string | undefined {
   if (typeof window === "undefined") return undefined;
-  const { protocol, hostname, href } = window.location;
+  const { protocol, hostname, origin } = window.location;
   if (protocol !== "https:") return undefined;
   if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(hostname)) return undefined;
-  return href;
+  // Página dedicada que confirma o pagamento (payments-reconcile) e mostra o
+  // resultado, em vez de cair de volta numa rota qualquer sem feedback.
+  return `${origin}/checkout/retorno`;
 }

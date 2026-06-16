@@ -264,14 +264,17 @@ export default function AdvertiserMessagesPage() {
                   <Bike className="w-4 h-4" /> Chamar Motoboy
                 </Button>
 
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDelete(lead.id)}
-                  className="w-full h-9 rounded-lg border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black text-[10px] uppercase gap-1"
-                >
-                  <Trash2 className="w-3 h-3" /> Excluir
-                </Button>
+                {/* Excluir só aparece depois que o lojista desbloqueia a mensagem */}
+                {isUnlocked && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(lead.id)}
+                    className="w-full h-9 rounded-lg border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black text-[10px] uppercase gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> Excluir
+                  </Button>
+                )}
               </div>
             );
           })}

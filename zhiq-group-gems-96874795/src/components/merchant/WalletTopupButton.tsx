@@ -120,7 +120,7 @@ export function WalletTopupButton({
         checkout_url: pp.checkout_url ?? null,
       });
       if (pp.checkout_url) {
-        openCheckoutUrl(pp.checkout_url);
+        openCheckoutUrl(pp.checkout_url, res.order_id, "/merchant/billing");
       }
       setStep("awaiting");
       toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
