@@ -138,7 +138,6 @@ const menuSections: MenuSection[] = [
       { title: "Produtos Marketplace", url: "/admin/marketplace/products", icon: Package },
       { title: "Imagens Produtos", url: "/admin/moderacao-imagens", icon: Camera },
       { title: "Financeiro", url: "/admin/financeiro", icon: Wallet },
-      { title: "Profit", url: "/admin/stats", icon: TrendingUp },
     ],
   },
   {

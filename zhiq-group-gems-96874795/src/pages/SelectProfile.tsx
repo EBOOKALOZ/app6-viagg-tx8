@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, CarFront } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -35,9 +35,38 @@ const PROFILE_HERO_IMAGES: Record<string, string> = {
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
   motoboy: "Entregas rápidas de moto",
   merchant: "Aqui você gerencia sua loja, vende seus produtos e solicita aqui sua entrega",
+  imoveis: "Anuncie imóveis e fale direto com os interessados",
+  veiculos: "Anuncie veículos e fale direto com os interessados",
 };
 
-const CARD_ORDER = ["motoboy", "merchant"];
+// Mosaico de 6 imagens (misturadas) usado como fundo do card de Imóveis.
+const IMOVEIS_MOSAIC = [
+  // casa
+  "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=400&q=70&auto=format&fit=crop",
+  // sítio / campo
+  "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&q=70&auto=format&fit=crop",
+  // casa
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&q=70&auto=format&fit=crop",
+  // fazenda / campo
+  "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=70&auto=format&fit=crop",
+  // casa
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&q=70&auto=format&fit=crop",
+  // sítio / fazenda
+  "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&q=70&auto=format&fit=crop",
+];
+
+// Mosaico de 3 imagens (carro, moto, utilitário) usado como fundo do card de Veículos.
+const VEICULOS_MOSAIC = [
+  // carro
+  "https://images.unsplash.com/photo-1502877338535-766e1452684a?w=500&q=70&auto=format&fit=crop",
+  // moto
+  "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500&q=70&auto=format&fit=crop",
+  // utilitário / van
+  "https://images.unsplash.com/photo-1606577924006-27d39b132ae2?w=500&q=70&auto=format&fit=crop",
+];
+
+// Cards de oportunidades: Motoboy (entregas), Lojista (mercado) e Imóveis.
+const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================
@@ -147,6 +176,20 @@ export default function SelectProfile() {
       }
     }
 
+    // Imóveis: vai pro painel resumido de vendedores de imóveis.
+    if (selected === "imoveis") {
+      navigationTarget.current = "/anunciante/imoveis";
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
+    }
+
+    // Veículos: vai pro painel resumido de vendedores de veículos.
+    if (selected === "veiculos") {
+      navigationTarget.current = "/anunciante/veiculos";
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
+    }
+
     try {
       await requestAudioAndNotificationPermissions();
 
@@ -221,14 +264,16 @@ export default function SelectProfile() {
           </div>
 
           <div className="flex justify-center">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl">
             {profileList.map((profile) => {
               const isComingSoon = profile.id === "passenger" && !isPassengerEnabled;
               const isSel = selected === profile.id && !isComingSoon;
               const heroImage = PROFILE_HERO_IMAGES[profile.id];
               const isMotoboy = profile.id === "motoboy";
               const isMerchant = profile.id === "merchant";
-              const isHighlighted = isMotoboy || isMerchant;
+              const isImoveis = profile.id === "imoveis";
+              const isVeiculos = profile.id === "veiculos";
+              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos;
 
               return (
                 <div
@@ -250,12 +295,18 @@ export default function SelectProfile() {
                           ? "ring-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.5)]"
                           : isMerchant
                             ? "ring-yellow-400 shadow-[0_0_24px_rgba(234,179,8,0.5)]"
-                            : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
+                            : isImoveis
+                              ? "ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.5)]"
+                              : isVeiculos
+                                ? "ring-blue-400 shadow-[0_0_24px_rgba(59,130,246,0.5)]"
+                                : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                       )
                       : cn(
                         "ring-1 ring-white/15",
                         isMotoboy && "hover:ring-orange-400/50 hover:shadow-[0_0_12px_rgba(249,115,22,0.2)]",
                         isMerchant && "hover:ring-yellow-300/50 hover:shadow-[0_0_12px_rgba(234,179,8,0.2)]",
+                        isImoveis && "hover:ring-emerald-400/50 hover:shadow-[0_0_12px_rgba(16,185,129,0.2)]",
+                        isVeiculos && "hover:ring-blue-400/50 hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]",
                       )),
                   )}
                 >
@@ -264,12 +315,66 @@ export default function SelectProfile() {
                     <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700" />
                   ) : isMerchant && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600" />
+                  ) : isImoveis && isSel ? (
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700" />
+                  ) : isVeiculos ? (
+                    /* Veículos: card SEM imagem — fundo gradiente azul sólido */
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-br transition-all duration-300",
+                      isSel ? "from-blue-500 via-blue-600 to-blue-800" : "from-blue-700 via-blue-800 to-slate-900"
+                    )} />
                   ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-black/60" />
                   )}
 
-                  {/* Hero image */}
-                  {heroImage && (
+                  {/* Imagem de fundo: mosaico de 6 imagens (imóveis) ou hero único */}
+                  {isImoveis ? (
+                    <div
+                      className={cn(
+                        "absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-100",
+                      )}
+                    >
+                      {IMOVEIS_MOSAIC.map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                          className="h-full w-full object-cover"
+                        />
+                      ))}
+                    </div>
+                  ) : isVeiculos ? (
+                    /* Card de Veículos: mosaico de 3 imagens (carro, moto, utilitário).
+                       Ícone fica como fallback atrás caso as imagens não carreguem. */
+                    <>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <CarFront className={cn(
+                          "transition-all duration-300",
+                          isSel ? "w-28 h-28 text-white/30" : "w-24 h-24 text-white/15"
+                        )} />
+                      </div>
+                      <div className={cn(
+                        "absolute inset-0 grid grid-cols-1 grid-rows-3 gap-0.5 transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-100"
+                      )}>
+                        {VEICULOS_MOSAIC.map((src, i) => (
+                          <img
+                            key={i}
+                            src={src}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                            className="h-full w-full object-cover"
+                          />
+                        ))}
+                      </div>
+                    </>
+                  ) : heroImage ? (
                     <img
                       src={heroImage}
                       alt=""
@@ -280,7 +385,7 @@ export default function SelectProfile() {
                         isHighlighted && isSel ? "opacity-25 blur-[2px]" : "opacity-100",
                       )}
                     />
-                  )}
+                  ) : null}
 
                   {/* Bottom gradient for text readability */}
                   <div className={cn(
@@ -289,7 +394,9 @@ export default function SelectProfile() {
                       ? "bg-gradient-to-t from-orange-900/70 via-transparent to-transparent"
                       : isMerchant && isSel
                         ? "bg-gradient-to-t from-yellow-900/70 via-transparent to-transparent"
-                        : "bg-gradient-to-t from-black/80 to-transparent",
+                        : isImoveis && isSel
+                          ? "bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent"
+                          : "bg-gradient-to-t from-black/80 to-transparent",
                   )} />
 
                   {/* Coming soon overlay */}
@@ -301,13 +408,13 @@ export default function SelectProfile() {
 
                   {/* Text content */}
                   <div className={cn(
-                    "absolute inset-x-0 bottom-0 p-4 text-white text-center transition-opacity duration-300",
+                    "absolute inset-x-0 bottom-0 p-5 text-white text-center transition-opacity duration-300",
                     isSel ? "opacity-0 pointer-events-none" : "opacity-100"
                   )}>
-                    <h3 className="font-bold">{profile.label}</h3>
+                    <h3 className="font-extrabold text-xl tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">{profile.label}</h3>
                     <p className={cn(
-                      "text-xs",
-                      isHighlighted && isSel ? "text-white/80" : "text-white/70",
+                      "text-sm leading-snug mt-1 min-h-[2.5rem] drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]",
+                      isHighlighted && isSel ? "text-white/90" : "text-white/80",
                     )}>{PROFILE_DESCRIPTIONS[profile.id]}</p>
                   </div>
 

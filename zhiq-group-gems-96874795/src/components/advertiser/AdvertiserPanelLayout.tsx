@@ -23,7 +23,8 @@ import { Building2,
   Truck,
   MessageSquare,
   ShoppingBag,
-  Eye
+  Eye,
+  Headphones
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +40,7 @@ interface AdvertiserPanelLayoutProps {
 }
 
 export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, activeProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -50,7 +51,16 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     return () => { document.body.style.overflow = ""; };
   }, [mobileMenuOpen]);
   const { intentions } = useContactIntentions();
-  const pendingLeadCount = intentions.filter(i => i.status !== "unlocked").length;
+  // Badge de Mensagens por segmento (igual ao filtro da AdvertiserMessagesPage):
+  // imóveis→real_estate, veículos→vehicles, loja→demais (produtos/mercado).
+  const isImoveisCtx = location.pathname.startsWith("/anunciante/imoveis");
+  const isVeiculosCtx = location.pathname.startsWith("/anunciante/veiculos");
+  const pendingLeadCount = intentions.filter((i) => {
+    if (i.status === "unlocked") return false;
+    if (isImoveisCtx) return i.listing_module === "real_estate";
+    if (isVeiculosCtx) return i.listing_module === "vehicles";
+    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles";
+  }).length;
 
   const { data: marketplaceCount = 0 } = useQuery({
     queryKey: ["advertiser-marketplace-messages-count", user?.id],
@@ -126,20 +136,52 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     },
   });
 
-  const navigation = [
+  // Modo IMÓVEIS detectado pela ROTA (não vaza pro painel lojista): só quando a
+  // URL está em /anunciante/imoveis/... o menu fica enxuto (sem itens de loja).
+  const imoveisMode = location.pathname.startsWith("/anunciante/imoveis");
+  const veiculosMode = location.pathname.startsWith("/anunciante/veiculos");
+
+  // Persiste o contexto do painel para que páginas compartilhadas (ex.: Suporte,
+  // que fica fora dos prefixos /anunciante/imoveis|veiculos) saibam para onde voltar.
+  useEffect(() => {
+    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : (activeProfile || "");
+    sessionStorage.setItem("viagg_panel_context", ctx);
+  }, [imoveisMode, veiculosMode, activeProfile]);
+
+  const showMerchantOnlyItems = activeProfile === "merchant";
+
+  const navigation = veiculosMode ? [
+    { name: "Painel Geral", href: "/anunciante/veiculos", icon: LayoutDashboard },
+    { name: "Meus Anúncios", href: "/anunciante/veiculos/meus-anuncios", icon: Package },
+    { name: "Divulgar Grátis", href: "/anunciante/veiculos/divulgar-gratis", icon: Megaphone },
+    { name: "Mensagens", href: "/anunciante/veiculos/mensagens", icon: MessageSquare },
+    { name: "Gestão e Pacotes", href: "/anunciante/veiculos/creditos", icon: Coins },
+    { name: "Suporte", href: "/anunciante/veiculos/suporte", icon: Headphones },
+    { name: "Sair", href: "#", icon: LogOut, action: "logout" },
+  ] : imoveisMode ? [
+    { name: "Painel Geral", href: "/anunciante/imoveis", icon: LayoutDashboard },
+    { name: "Meus Anúncios", href: "/anunciante/imoveis/meus-anuncios", icon: Package },
+    { name: "Divulgar Grátis", href: "/anunciante/imoveis/divulgar-gratis", icon: Megaphone },
+    { name: "Mensagens", href: "/anunciante/imoveis/mensagens", icon: MessageSquare },
+    { name: "Gestão e Pacotes", href: "/anunciante/imoveis/creditos", icon: Coins },
+    { name: "Suporte", href: "/anunciante/imoveis/suporte", icon: Headphones },
+    { name: "Sair", href: "#", icon: LogOut, action: "logout" },
+  ] : [
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
-    { name: "Minha Loja", href: "/loja/minha-loja", icon: Store },
+    ...(showMerchantOnlyItems ? [{ name: "Minha Loja", href: "/loja/minha-loja", icon: Store }] : []),
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
-    { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
+    ...(showMerchantOnlyItems ? [{ name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone }] : []),
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
-    { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },
-    { name: "Pedidos", href: "/anunciante/pedidos", icon: ShoppingBag },
-    { name: "Visitas", href: "/anunciante/visitas", icon: Eye },
-    // Leilão / Arremate / Nova Entrega ocultados
-    { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
-    { name: "Créditos", href: "/anunciante/creditos", icon: Coins },
-    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
+    ...(showMerchantOnlyItems ? [
+      { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },
+      { name: "Pedidos", href: "/anunciante/pedidos", icon: ShoppingBag },
+      { name: "Visitas", href: "/anunciante/visitas", icon: Eye },
+      { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
+      { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
+    ] : []),
+    { name: "Gestão e Pacotes", href: "/anunciante/creditos", icon: Coins },
     { name: "Minha Conta", href: "/anunciante/conta", icon: User },
+    { name: "Suporte", href: "/anunciante/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ];
 
@@ -198,7 +240,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   };
 
   return (
-    <div className="min-h-screen bg-[#14171B] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#14171B] flex flex-col md:flex-row overflow-x-clip">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-72 bg-[#0D0F12] text-white flex-col border-r border-[#2A3038]/60 z-20 sticky top-0 h-screen">
         <div className="h-32 flex items-center justify-center p-8 border-b border-[#2A3038]/60">
@@ -222,8 +264,13 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
           <img 
             src="/assets/brand/logo-advertiser.jpg" 
             alt="Viagg-Tx8" 
-            className="h-16 w-auto rounded-lg shadow-md"
+            className="h-12 w-auto rounded-lg shadow-md"
           />
+          <div className="flex flex-col ml-1">
+             <h2 className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] leading-tight">Painel Vendedor</h2>
+             {veiculosMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Veículos</span>}
+             {imoveisMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
+          </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:bg-white/10">
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -234,7 +281,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-20 md:hidden pt-20">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
-          <nav className="relative bg-[#0D0F12] border-t border-[#2A3038]/60 px-4 pt-4 pb-24 shadow-2xl shadow-black/60 animate-in slide-in-from-top duration-300 h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar flex flex-col justify-between gap-1">
+          <nav className="relative bg-[#0D0F12] border-t border-[#2A3038]/60 px-4 pt-3 pb-24 shadow-2xl shadow-black/60 animate-in slide-in-from-top duration-300 h-[calc(100vh-5rem)] overflow-y-auto custom-scrollbar flex flex-col justify-start gap-0.5">
             {navigation.map((item) => (
               <SidebarItem key={item.name} item={item} isMobile />
             ))}
@@ -243,11 +290,13 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+      <main className="flex-1 min-w-0 flex flex-col min-h-screen overflow-x-clip">
         {/* Top Desktop Bar */}
         <header className="hidden md:flex h-20 bg-[#0D0F12]/95 border-b border-[#2A3038]/60 px-10 items-center justify-between sticky top-0 z-10 backdrop-blur-md">
-          <div>
-             <h2 className="text-sm font-black text-[#A7B0BE] uppercase tracking-[0.2em]">Área Administrativa</h2>
+          <div className="flex flex-col">
+             <h2 className="text-sm font-black text-[#A7B0BE] uppercase tracking-[0.2em]">Painel Vendedor</h2>
+             {veiculosMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Veículos</span>}
+             {imoveisMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
           </div>
           <div className="flex items-center gap-6">
             <div className="h-8 w-px bg-[#2A3038]" />
@@ -264,8 +313,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
         </header>
 
         {/* Content Wrapper */}
-        <div className="p-6 md:p-10 lg:p-12 pb-24 min-h-screen bg-[#14171B] flex flex-col">
-          <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col">
+        <div className="p-4 sm:p-6 md:p-10 lg:p-12 pb-24 min-h-screen bg-[#14171B] flex flex-col">
+          <div className="max-w-7xl mx-auto w-full min-w-0 flex-1 flex flex-col">
             {children}
           </div>
         </div>

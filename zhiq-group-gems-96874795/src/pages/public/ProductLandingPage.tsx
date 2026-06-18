@@ -360,7 +360,7 @@ export default function ProductLandingPage() {
         }
     }, [product, store, trackProductVisit]);
 
-    // ── Credit Deduction: -1 credit per product view ──
+    // ── Credit Deduction: -1 credit per product view (via RPC atômica) ──
     useEffect(() => {
         if (!product?.id || !store?.store_id) return;
 
@@ -369,68 +369,36 @@ export default function ProductLandingPage() {
 
         const deductCredit = async () => {
             try {
-                // Resolve the real merchant_store_id
-                let realStoreId = store.store_id!;
+                // Resolve o merchant_store_id real a partir do que já temos
+                // (store.store_id já vem resolvido pela query de store acima).
+                const realStoreId = store.store_id!;
 
-                const { data: storeCheck } = await (supabase.from("merchant_stores") as any)
-                    .select("id")
-                    .or(`id.eq.${realStoreId},user_id.eq.${realStoreId}`)
-                    .maybeSingle();
+                // Débito atômico via RPC SECURITY DEFINER (backend-driven).
+                // Substitui o antigo cálculo wallet.balance - 1 feito no client.
+                const { data: rpcResult, error: rpcError } = await (supabase as any)
+                    .rpc("deduct_store_product_view_credit", {
+                        p_product_id: product.id,
+                        p_store_id: realStoreId,
+                        p_session_key: deductKey,
+                        p_product_title: product.title ?? null,
+                    });
 
-                if (!storeCheck) {
-                    // Try via advertiser_accounts → user_id → merchant_stores
-                    const { data: accRow } = await (supabase.from("advertiser_accounts") as any)
-                        .select("user_id")
-                        .eq("id", realStoreId)
-                        .maybeSingle();
-                    if (accRow?.user_id) {
-                        const { data: msRow } = await (supabase.from("merchant_stores") as any)
-                            .select("id")
-                            .eq("user_id", accRow.user_id)
-                            .maybeSingle();
-                        if (msRow) realStoreId = msRow.id;
-                        else return; // No store found
-                    } else {
-                        return;
-                    }
-                } else {
-                    realStoreId = storeCheck.id;
-                }
-
-                // Get current wallet balance
-                const { data: wallet } = await (supabase.from("store_credit_wallet") as any)
-                    .select("balance")
-                    .eq("store_id", realStoreId)
-                    .maybeSingle();
-
-                if (!wallet || (wallet.balance ?? 0) < 1) {
-                    console.log("[CreditDeduct] Store has no credits, skipping");
+                if (rpcError) {
+                    console.error("[CreditDeduct] RPC error:", rpcError);
                     return;
                 }
 
-                // Deduct 1 credit
-                const newBalance = wallet.balance - 1;
-                await (supabase.from("store_credit_wallet") as any)
-                    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-                    .eq("store_id", realStoreId);
-
-                // Record transaction
-                await (supabase.from("credit_transactions") as any).insert({
-                    store_id: realStoreId,
-                    credits: 1,
-                    transaction_type: "product_view",
-                    description: `Visualização: "${product.title}" por visitante`,
-                });
-
-                sessionStorage.setItem(deductKey, "1");
-                console.log(`[CreditDeduct] -1 credit from store ${realStoreId} for product ${product.id}`);
+                if (rpcResult?.success) {
+                    sessionStorage.setItem(deductKey, "1");
+                    console.log(`[CreditDeduct] -1 credit from store ${realStoreId} for product ${product.id}`, rpcResult);
+                }
             } catch (err) {
                 console.error("[CreditDeduct] Error:", err);
             }
         };
 
         deductCredit();
-    }, [product?.id, store?.store_id]);
+    }, [product?.id, product?.title, store?.store_id]);
 
     const handleCTA = async () => {
         console.log("[handleCTA] store:", store, "product:", product?.id);

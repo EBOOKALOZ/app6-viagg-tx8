@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, Store, MessageSquare, Megaphone, Tag, Package } from "lucide-react";
+import { Home, Store, MessageSquare, Megaphone, Tag, Package, Headphones } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -105,6 +105,12 @@ export function StoreBottomNav() {
       icon: <Tag className="w-[18px] h-[18px] mb-1" />,
       path: "/anunciante/ofertas-recebidas",
       badge: pendingOffers,
+    },
+    {
+      label: "Suporte",
+      icon: <Headphones className="w-[18px] h-[18px] mb-1" />,
+      path: "/anunciante/suporte",
+      badge: 0,
     },
   ];
 

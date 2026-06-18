@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,45 +7,89 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   Car,
   ArrowLeft,
-  ArrowRight,
-  Loader2,
-  CreditCard,
-  ShieldCheck,
   CheckCircle2,
-  Fuel,
-  Settings2,
-  Gavel,
-  Tag,
+  Check,
+  Camera,
   Coins,
+  Phone,
+  MessageCircle,
+  Image as ImageIcon,
+  Sparkles,
+  Star,
+  RefreshCw,
 } from 'lucide-react';
-import { cn, formatCurrencyBRL } from '@/lib/utils';
-import { useRealEstatePackages, type RealEstatePackage } from '@/hooks/useRealEstatePackages';
-import { VehicleAutoPackages, type VehiclePackage } from '@/components/advertiser/VehicleAutoPackages';
-import { ModeSelector, AuctionFields, CreditInfoBanner, type ListingMode, type AuctionFormState, defaultAuctionForm } from '@/components/advertiser/ListingModeSelector';
+import { cn, parseBRLCurrency, toE164, formatBrazilianPhone } from '@/lib/utils';
+import { VehicleImageUpload } from '@/components/advertiser/VehicleImageUpload';
+import { VEHICLE_BRANDS, MOTO_BRANDS, BOAT_BRANDS } from '@/lib/vehicles/vehicleBrands';
+
+// Grupo de marcas por tipo (listas diferentes p/ moto, barco e demais).
+const brandGroupOf = (type: string) => (type === 'moto' ? 'moto' : type === 'barco' ? 'barco' : 'veh');
+
+const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
+const VEHICLE_TYPES = [
+  { value: 'carro', label: 'Carro' },
+  { value: 'moto', label: 'Moto' },
+  { value: 'barco', label: 'Barco' },
+  { value: 'utilitario', label: 'Utilitário' },
+];
+
+const CONDITIONS = [
+  { value: 'novo', label: 'Novo', desc: 'Zero km / sem uso', icon: Sparkles },
+  { value: 'seminovo', label: 'Seminovo', desc: 'Pouco uso, ótimo estado', icon: Star },
+  { value: 'usado', label: 'Usado', desc: 'Já utilizado', icon: RefreshCw },
+];
+
+const INPUT_CLS = "h-12 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40";
+
+const InputLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
+  <label className="text-sm font-semibold text-zinc-700 flex items-center gap-1">
+    {children}
+    {required && <span className="text-red-500">*</span>}
+  </label>
+);
+
+const Section = ({ step, title, description, icon: Icon, done, children }: {
+  step: number; title: string; description?: string; icon: React.ComponentType<{ className?: string }>; done?: boolean; children: React.ReactNode;
+}) => (
+  <section id={`section-${step}`} className="scroll-mt-24">
+    <div className="mb-4 flex items-start gap-3">
+      <div className={cn(
+        "h-10 w-10 shrink-0 rounded-full flex items-center justify-center font-black text-sm border-2 transition-all",
+        done ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-zinc-200 text-zinc-600"
+      )}>
+        {done ? <Check className="h-4 w-4" /> : String(step).padStart(2, '0')}
+      </div>
+      <div className="flex-1 pt-1">
+        <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+          <Icon className="h-5 w-5 text-[#3483FA]" />
+          {title}
+        </h2>
+        {description && <p className="text-sm text-zinc-500 mt-0.5">{description}</p>}
+      </div>
+    </div>
+    <Card className="border border-zinc-200 bg-white shadow-sm rounded-xl overflow-hidden">
+      <CardContent className="p-5 sm:p-7 space-y-5">{children}</CardContent>
+    </Card>
+  </section>
+);
 
 export const VehicleForm = () => {
   const { user } = useAuth();
   const { listingId: urlListingId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
 
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [listingId, setListingId] = useState<string | null>(urlListingId || null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
-  // ── Modalidade de anúncio ──
-  const [listingMode, setListingMode] = useState<ListingMode>('normal');
-  const [auctionForm, setAuctionForm] = useState<AuctionFormState>(defaultAuctionForm);
-  const [createdEndsAt, setCreatedEndsAt] = useState<string | null>(null);
-
-  // ── Pacote selecionado ──
-  const [selectedPackage, setSelectedPackage] = useState<VehiclePackage | null>(null);
-
-  // ── Form States ──
   const [vehicleData, setVehicleData] = useState({
     title: '',
     description: '',
@@ -59,8 +103,6 @@ export const VehicleForm = () => {
     fuel_type: 'flex',
     transmission: 'manual',
     color: '',
-    docs_ok: false,
-    insured: false,
   });
 
   const [locationData, setLocationData] = useState({
@@ -76,352 +118,528 @@ export const VehicleForm = () => {
     phone_e164: '',
   });
 
+  const isMoto = vehicleData.vehicle_type === 'moto';
+  const isBarco = vehicleData.vehicle_type === 'barco';
+  const brandOptions = isMoto ? MOTO_BRANDS : isBarco ? BOAT_BRANDS : VEHICLE_BRANDS;
+
   useEffect(() => {
     if (user && !contactData.contact_name) {
       setContactData(prev => ({ ...prev, contact_name: user.email?.split('@')[0] || '' }));
     }
   }, [user]);
 
-  // ── Handler para seleção de pacote ──
-  const handleSelectPackage = (pkg: VehiclePackage) => {
-    setSelectedPackage(pkg);
-    toast.success(`Pacote ${pkg.name} selecionado! Redirecionando para pagamento...`);
-    navigate(`/anunciante/checkout?packageId=${pkg.id}&from=vehicle`);
+  // Pré-seleciona a categoria vinda do link (?tipo=carro/moto/barco/utilitario).
+  useEffect(() => {
+    const tipo = new URLSearchParams(location.search).get('tipo');
+    if (tipo && ['carro', 'moto', 'barco', 'utilitario'].includes(tipo)) {
+      setVehicleData(prev => ({ ...prev, vehicle_type: tipo }));
+    }
+  }, [location.search]);
+
+  // Carrega dados existentes (modo edição).
+  useEffect(() => {
+    async function loadData() {
+      if (!urlListingId || !user) return;
+      try {
+        setLoading(true);
+        const { data: listing, error } = await supabase
+          .from('vehicle_listings' as any)
+          .select('*, contacts:vehicle_listing_contacts(*)')
+          .eq('id', urlListingId)
+          .single();
+        if (error) throw error;
+        const l = listing as any;
+        if (l) {
+          setVehicleData({
+            title: l.title || '',
+            description: l.description || '',
+            vehicle_type: l.vehicle_type || 'carro',
+            condition: l.condition || 'seminovo',
+            brand: l.brand || '',
+            model: l.model || '',
+            year: l.year ? String(l.year) : '',
+            price_brl: l.price_brl
+              ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(l.price_brl)
+              : '',
+            kilometers: l.kilometers ? Number(l.kilometers).toLocaleString("pt-BR") : '',
+            fuel_type: l.fuel_type || 'flex',
+            transmission: l.transmission || 'manual',
+            color: l.color || '',
+          });
+          setLocationData({
+            city: l.city || 'Blumenau',
+            state: l.state || 'SC',
+            neighborhood: l.neighborhood || '',
+            public_address_label: l.public_address_label || '',
+          });
+          if (l.contacts && l.contacts.length > 0) {
+            const c = l.contacts[0];
+            setContactData({
+              contact_name: c.contact_name || '',
+              whatsapp_e164: c.whatsapp_e164 || '',
+              phone_e164: c.phone_e164 || '',
+            });
+          }
+        }
+      } catch (err: any) {
+        console.error('[VehicleForm] erro ao carregar:', err);
+        toast.error('Não foi possível carregar os dados do veículo.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [urlListingId, user]);
+
+  // ── Checklist de progresso (estilo Mercado Livre) ──
+  const completion = useMemo(() => ({
+    dados: Boolean(vehicleData.title.trim() && vehicleData.brand && vehicleData.model.trim() && /^\d{4}$/.test(vehicleData.year)),
+    fotos: pendingFiles.length > 0 || !!urlListingId,
+    descricao: vehicleData.description.trim().length > 0,
+    preco: !!vehicleData.price_brl,
+    local: Boolean(locationData.city.trim() && locationData.state.trim()),
+    contato: Boolean(contactData.contact_name.trim() && contactData.whatsapp_e164.trim()),
+  }), [vehicleData, pendingFiles, urlListingId, locationData, contactData]);
+
+  const checklist = [
+    { key: 'dados', label: 'Dados do veículo', step: 1 },
+    { key: 'fotos', label: 'Pelo menos 1 foto', step: 2 },
+    { key: 'descricao', label: 'Descrição', step: 3 },
+    { key: 'preco', label: 'Preço', step: 4 },
+    { key: 'local', label: 'Localização', step: 5 },
+    { key: 'contato', label: 'Nome e WhatsApp', step: 5 },
+  ];
+  const completedCount = Object.values(completion).filter(Boolean).length;
+  const totalChecks = Object.keys(completion).length;
+  const progressPct = Math.round((completedCount / totalChecks) * 100);
+
+  const canSubmit = urlListingId
+    ? completion.dados
+    : completion.dados && completion.local && completion.contato;
+
+  const handlePublish = async () => {
+    if (!user) return;
+    if (!vehicleData.title.trim()) { toast.error('Informe o título do anúncio.'); return; }
+    if (!vehicleData.brand) { toast.error('Selecione a montadora.'); return; }
+    if (!vehicleData.model.trim()) { toast.error('Informe o modelo.'); return; }
+    const yearNum = parseInt(vehicleData.year, 10);
+    if (!yearNum || yearNum < 1900) { toast.error('Informe um ano válido.'); return; }
+    if (!locationData.city.trim() || !locationData.state.trim()) { toast.error('Informe cidade e estado.'); return; }
+
+    try {
+      setLoading(true);
+
+      const payload = {
+        owner_user_id: user.id,
+        title: vehicleData.title.trim(),
+        description: vehicleData.description || null,
+        vehicle_type: vehicleData.vehicle_type,
+        condition: vehicleData.condition,
+        brand: vehicleData.brand,
+        model: vehicleData.model.trim(),
+        year: yearNum,
+        color: vehicleData.color || null,
+        price_brl: vehicleData.price_brl ? parseBRLCurrency(vehicleData.price_brl) : null,
+        kilometers: vehicleData.kilometers ? parseInt(vehicleData.kilometers.replace(/\D/g, ""), 10) || 0 : 0,
+        fuel_type: vehicleData.fuel_type,
+        transmission: vehicleData.transmission,
+        city: locationData.city.trim(),
+        state: locationData.state.trim(),
+        neighborhood: locationData.neighborhood || null,
+        public_address_label: locationData.public_address_label
+          || `${locationData.neighborhood ? locationData.neighborhood + ', ' : ''}${locationData.city}/${locationData.state}`,
+        visibility_status: 'published',
+        published_at: new Date().toISOString(),
+      };
+
+      let currentListingId = listingId;
+
+      if (!currentListingId) {
+        const { data, error } = await supabase
+          .from('vehicle_listings' as any)
+          .insert(payload as any)
+          .select()
+          .single();
+        if (error) throw error;
+        currentListingId = (data as any).id;
+        setListingId(currentListingId);
+      } else {
+        const { error } = await supabase
+          .from('vehicle_listings' as any)
+          .update(payload as any)
+          .eq('id', currentListingId);
+        if (error) throw error;
+      }
+
+      // Contato protegido
+      await supabase
+        .from('vehicle_listing_contacts' as any)
+        .upsert({
+          listing_id: currentListingId,
+          owner_user_id: user.id,
+          contact_name: contactData.contact_name,
+          whatsapp_e164: contactData.whatsapp_e164 ? toE164(contactData.whatsapp_e164) : '',
+          phone_e164: contactData.phone_e164 ? toE164(contactData.phone_e164) : '',
+        } as any, { onConflict: 'listing_id' });
+
+      // Upload de fotos pendentes (modo novo)
+      if (pendingFiles.length > 0 && currentListingId) {
+        toast.info(`Enviando ${pendingFiles.length} foto(s)...`);
+        for (const file of pendingFiles) {
+          const timestamp = new Date().getTime();
+          const fileName = `${timestamp}-${file.name.normalize('NFD').replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const filePath = `${user.id}/${currentListingId}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('real-estate-original')
+            .upload(filePath, file);
+
+          if (!uploadError) {
+            const { data: mediaData } = await supabase.from('vehicle_media' as any).insert({
+              listing_id: currentListingId,
+              owner_user_id: user.id,
+              original_storage_path: filePath,
+            } as any).select().single();
+
+            if (mediaData) {
+              await supabase.storage.from('real-estate-public').upload(filePath, file, { upsert: true });
+              await supabase.from('vehicle_media' as any).update({
+                moderation_status: 'approved',
+                public_masked_storage_path: filePath,
+              } as any).eq('id', (mediaData as any).id);
+            }
+          }
+        }
+        setPendingFiles([]);
+      }
+
+      toast.success('Veículo publicado com sucesso! 🚗');
+      queryClient.invalidateQueries({ queryKey: ['veiculos-meus-anuncios'] });
+      queryClient.invalidateQueries({ queryKey: ['veiculos-painel-lista'] });
+      navigate('/anunciante/veiculos/meus-anuncios');
+    } catch (err: any) {
+      console.error('[VehicleForm] erro ao publicar:', err);
+      toast.error(`Erro ao publicar: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen pb-20 animate-in fade-in duration-700">
-      <div className="container max-w-5xl mx-auto px-4 py-8 space-y-10">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-2xl hover:bg-blue-50 hover:text-blue-600 transition-all">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-black text-zinc-900 tracking-tighter uppercase flex items-center gap-3">
-                <Car className="w-8 h-8 text-blue-500" />
-                Anunciar Veículo
-              </h1>
-              <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Marketplace Automotivo Viagg-TX8</p>
-            </div>
+    <div className="min-h-screen bg-[#EBEBEB] pb-32">
+      {/* Top bar — Mercado Livre style */}
+      <div className="sticky top-0 z-30 bg-[#FFE600] border-b border-yellow-300 shadow-sm">
+        <div className="container max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-zinc-900 font-bold hover:opacity-70 transition-opacity">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="hidden sm:inline text-sm">Voltar</span>
+          </button>
+          <div className="flex items-center gap-2 text-zinc-900">
+            <Car className="h-5 w-5" />
+            <span className="font-black text-sm sm:text-base">{urlListingId ? 'Editar veículo' : 'Anunciar veículo'}</span>
           </div>
-          <div className="hidden md:flex items-center gap-3">
-            {[
-              { id: 1, name: 'Dados', icon: Car },
-              { id: 2, name: 'Localização', icon: Tag },
-              { id: 3, name: 'Pacote', icon: CreditCard },
-            ].map((s, idx) => (
-              <React.Fragment key={idx}>
-                <div className={cn(
-                  'flex items-center gap-2 px-6 py-3 rounded-2xl transition-all font-black text-[10px] uppercase tracking-widest border-2',
-                  step === s.id ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-600/20' : 'bg-white border-zinc-100 text-zinc-400'
-                )}>
-                  <s.icon className="w-4 h-4" /> {s.name}
-                </div>
-                {idx < 2 && <div className="w-4 h-0.5 bg-zinc-100 rounded-full" />}
-              </React.Fragment>
-            ))}
-          </div>
+          <div className="text-xs font-bold text-zinc-700">{progressPct}% concluído</div>
         </div>
+        <div className="h-1 bg-yellow-300">
+          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-8 space-y-10">
+      <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main column */}
+          <div className="lg:col-span-8 space-y-6">
 
-            {/* STEP 1: ESPECIFICAÇÕES + MODALIDADE */}
-            {step === 1 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <section className="space-y-8">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm">01</span>
-                    <h2 className="text-2xl font-black text-zinc-900 uppercase tracking-tight">Especificações do Veículo</h2>
-                  </div>
+            {/* 1 — Dados do veículo */}
+            <Section step={1} title="Dados do veículo" description="Conte o que você está anunciando." icon={Car} done={completion.dados}>
+              <div className="space-y-2">
+                <InputLabel required>Título do anúncio</InputLabel>
+                <Input
+                  placeholder="Ex.: Honda Civic 2020, 40.000km, automático"
+                  className={INPUT_CLS}
+                  value={vehicleData.title}
+                  onChange={(e) => setVehicleData(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
 
-                  <Card className="rounded-3xl border-zinc-100 bg-white shadow-sm">
-                    <CardContent className="p-8 space-y-8">
-                      {/* Título */}
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Título do Anúncio</label>
-                        <Input
-                          placeholder="Ex: Honda Civic 2020, 40.000km, automático"
-                          className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 transition-all font-bold text-zinc-900"
-                          value={vehicleData.title}
-                          onChange={(e) => setVehicleData(prev => ({ ...prev, title: e.target.value }))}
-                        />
-                      </div>
-
-                      {/* Tipo + Condição */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Tipo</label>
-                          <Select value={vehicleData.vehicle_type} onValueChange={(v) => setVehicleData(prev => ({ ...prev, vehicle_type: v }))}>
-                            <SelectTrigger className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="carro">Carro</SelectItem>
-                              <SelectItem value="moto">Moto</SelectItem>
-                              <SelectItem value="caminhao">Caminhão</SelectItem>
-                              <SelectItem value="van">Van/Utilitário</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Condição</label>
-                          <Select value={vehicleData.condition} onValueChange={(v) => setVehicleData(prev => ({ ...prev, condition: v }))}>
-                            <SelectTrigger className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="novo">Novo</SelectItem>
-                              <SelectItem value="seminovo">Seminovo</SelectItem>
-                              <SelectItem value="usado">Usado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Marca/Modelo/Ano */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Marca</label>
-                          <Input placeholder="Ex: Honda" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={vehicleData.brand} onChange={(e) => setVehicleData(prev => ({ ...prev, brand: e.target.value }))} />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Modelo</label>
-                          <Input placeholder="Ex: Civic" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={vehicleData.model} onChange={(e) => setVehicleData(prev => ({ ...prev, model: e.target.value }))} />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Ano</label>
-                          <Input placeholder="2020" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={vehicleData.year} onChange={(e) => setVehicleData(prev => ({ ...prev, year: e.target.value }))} />
-                        </div>
-                      </div>
-
-                      {/* Preço + KM */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Preço (R$)</label>
-                          <Input placeholder="0,00" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={vehicleData.price_brl} onChange={(e) => setVehicleData(prev => ({ ...prev, price_brl: e.target.value }))} />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Quilometragem</label>
-                          <Input placeholder="0" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={vehicleData.kilometers} onChange={(e) => setVehicleData(prev => ({ ...prev, kilometers: e.target.value }))} />
-                        </div>
-                      </div>
-
-                      {/* Combustível + Câmbio */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Combustível</label>
-                          <Select value={vehicleData.fuel_type} onValueChange={(v) => setVehicleData(prev => ({ ...prev, fuel_type: v }))}>
-                            <SelectTrigger className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="flex">Flex</SelectItem>
-                              <SelectItem value="gasolina">Gasolina</SelectItem>
-                              <SelectItem value="etanol">Etanol</SelectItem>
-                              <SelectItem value="diesel">Diesel</SelectItem>
-                              <SelectItem value="eletrico">Elétrico</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Câmbio</label>
-                          <Select value={vehicleData.transmission} onValueChange={(v) => setVehicleData(prev => ({ ...prev, transmission: v }))}>
-                            <SelectTrigger className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="manual">Manual</SelectItem>
-                              <SelectItem value="automatico">Automático</SelectItem>
-                              <SelectItem value="semi-automatico">Semi-Automático</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* Cor */}
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Cor</label>
-                        <Input placeholder="Ex: Prata, Branco Perolado..." className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 transition-all font-bold text-zinc-900" value={vehicleData.color} onChange={(e) => setVehicleData(prev => ({ ...prev, color: e.target.value }))} />
-                      </div>
-
-                      {/* Documentação */}
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                          <ShieldCheck className="w-3 h-3" /> Situação do Veículo
-                        </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setVehicleData(prev => ({ ...prev, docs_ok: !prev.docs_ok }))}
-                            className={cn(
-                              'flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left',
-                              vehicleData.docs_ok
-                                ? 'border-emerald-500 bg-emerald-50'
-                                : 'border-zinc-100 bg-zinc-50 hover:border-zinc-300'
-                            )}
-                          >
-                            <div className={cn(
-                              'w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all',
-                              vehicleData.docs_ok ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-300 bg-white'
-                            )}>
-                              {vehicleData.docs_ok && <CheckCircle2 className="w-4 h-4 text-white" />}
-                            </div>
-                            <div>
-                              <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">Documentos em Dia</p>
-                              <p className="text-[9px] text-zinc-400 font-medium">IPVA, licenciamento e multas quitados</p>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setVehicleData(prev => ({ ...prev, insured: !prev.insured }))}
-                            className={cn(
-                              'flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left',
-                              vehicleData.insured
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-zinc-100 bg-zinc-50 hover:border-zinc-300'
-                            )}
-                          >
-                            <div className={cn(
-                              'w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all',
-                              vehicleData.insured ? 'bg-blue-500 border-blue-500' : 'border-zinc-300 bg-white'
-                            )}>
-                              {vehicleData.insured && <CheckCircle2 className="w-4 h-4 text-white" />}
-                            </div>
-                            <div>
-                              <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">Segurado</p>
-                              <p className="text-[9px] text-zinc-400 font-medium">Veículo com seguro ativo</p>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Descrição */}
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Observações do Vendedor</label>
-                        <Textarea
-                          placeholder="Descreva detalhes como estado dos pneus, revisões, opcionais exclusivos..."
-                          className="min-h-[150px] rounded-[30px] border-zinc-100 bg-zinc-50 font-medium p-6 border-2 focus:border-blue-500 transition-all text-zinc-900"
-                          value={vehicleData.description}
-                          onChange={(e) => setVehicleData(prev => ({ ...prev, description: e.target.value }))}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </section>
-
-                <div className="flex justify-end">
-                  <Button onClick={() => setStep(2)} className="h-16 px-12 rounded-[24px] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl shadow-blue-600/20 group gap-3">
-                    Próximo Passo <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-all" />
-                  </Button>
+              {/* Tipo */}
+              <div className="space-y-2">
+                <InputLabel required>Tipo</InputLabel>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {VEHICLE_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setVehicleData(prev => ({
+                        ...prev,
+                        vehicle_type: t.value,
+                        // limpa a marca quando muda o grupo de marcas (moto/barco/veículos)
+                        brand: brandGroupOf(t.value) !== brandGroupOf(prev.vehicle_type) ? '' : prev.brand,
+                      }))}
+                      className={cn(
+                        "rounded-lg border-2 px-3 py-2.5 font-bold text-sm transition-all",
+                        vehicleData.vehicle_type === t.value
+                          ? "border-[#3483FA] bg-blue-50 text-zinc-900"
+                          : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300"
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
 
-            {/* STEP 2: LOCALIZAÇÃO + CONTATO */}
-            {step === 2 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <section className="space-y-8">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm">02</span>
-                    <h2 className="text-2xl font-black text-zinc-900 uppercase tracking-tight">Localização e Contato</h2>
-                  </div>
-
-                  <Card className="rounded-3xl border-zinc-100 bg-white shadow-sm">
-                    <CardContent className="p-8 space-y-8">
-                      {/* Localização */}
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Cidade</label>
-                            <Input placeholder="Cidade" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={locationData.city} onChange={(e) => setLocationData(prev => ({ ...prev, city: e.target.value }))} />
-                          </div>
-                          <div className="space-y-3">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Estado</label>
-                            <Input placeholder="UF" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={locationData.state} onChange={(e) => setLocationData(prev => ({ ...prev, state: e.target.value }))} />
-                          </div>
+              {/* Condição */}
+              <div className="space-y-2">
+                <InputLabel required>Condição</InputLabel>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {CONDITIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setVehicleData(prev => ({ ...prev, condition: opt.value }))}
+                        className={cn(
+                          "rounded-lg border-2 p-3 text-left transition-all",
+                          vehicleData.condition === opt.value ? "border-[#3483FA] bg-blue-50 shadow-sm" : "border-zinc-200 bg-white hover:border-zinc-300"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Icon className="h-3.5 w-3.5 text-[#3483FA]" />
+                          <div className="font-bold text-sm text-zinc-900">{opt.label}</div>
                         </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Bairro</label>
-                          <Input placeholder="Bairro" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={locationData.neighborhood} onChange={(e) => setLocationData(prev => ({ ...prev, neighborhood: e.target.value }))} />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Endereço Completo (opcional)</label>
-                          <Input placeholder="Rua, número, complemento..." className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={locationData.public_address_label} onChange={(e) => setLocationData(prev => ({ ...prev, public_address_label: e.target.value }))} />
-                        </div>
-                      </div>
-
-                      {/* Contato */}
-                      <div className="space-y-6 pt-6 border-t border-zinc-100">
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Nome do Responsável</label>
-                          <Input placeholder="Seu nome completo" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={contactData.contact_name} onChange={(e) => setContactData(prev => ({ ...prev, contact_name: e.target.value }))} />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">WhatsApp</label>
-                          <Input placeholder="(47) 99999-9999" className="h-14 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={contactData.whatsapp_e164} onChange={(e) => setContactData(prev => ({ ...prev, whatsapp_e164: e.target.value }))} />
-                        </div>
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] ml-1">Telefone (opcional)</label>
-                          <Input placeholder="(47) 99999-9999" className="h-12 rounded-2xl border-zinc-100 bg-zinc-50 border-2 focus:border-blue-500 font-bold" value={contactData.phone_e164} onChange={(e) => setContactData(prev => ({ ...prev, phone_e164: e.target.value }))} />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </section>
-
-                <div className="flex justify-end">
-                  <Button onClick={() => setStep(3)} className="h-16 px-12 rounded-[24px] bg-blue-600 hover:bg-blue-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl shadow-blue-600/20 group gap-3">
-                    Próximo Passo <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-all" />
-                  </Button>
+                        <div className="text-[11px] text-zinc-500 mt-0.5">{opt.desc}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            )}
 
-            {/* STEP 3: PACOTES */}
-            {step === 3 && (
-              <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <section className="space-y-8">
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-sm">03</span>
-                    <h2 className="text-2xl font-black text-zinc-900 uppercase tracking-tight">Escolha seu Pacote</h2>
-                  </div>
-
-                  <Card className="rounded-3xl border-zinc-100 bg-white shadow-sm p-8">
-                    <CreditInfoBanner />
-                  </Card>
-
-                  {/* Pacotes ocultados — anúncio é publicado gratuitamente */}
-                </section>
+              {/* Marca / Modelo / Ano */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <InputLabel required>Marca / Montadora</InputLabel>
+                  <Select value={vehicleData.brand} onValueChange={(v) => setVehicleData(prev => ({ ...prev, brand: v }))}>
+                    <SelectTrigger className={INPUT_CLS}><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent className="max-h-72 bg-white">
+                      {brandOptions.map((b) => (
+                        <SelectItem key={b} value={b} className="!text-zinc-900 font-medium">{b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <InputLabel required>Modelo</InputLabel>
+                  <Input placeholder="Ex.: Civic" className={INPUT_CLS} value={vehicleData.model} onChange={(e) => setVehicleData(prev => ({ ...prev, model: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <InputLabel required>Ano</InputLabel>
+                  <Input placeholder="2020" inputMode="numeric" maxLength={4} className={INPUT_CLS} value={vehicleData.year} onChange={(e) => setVehicleData(prev => ({ ...prev, year: e.target.value.replace(/\D/g, "").slice(0, 4) }))} />
+                </div>
               </div>
-            )}
 
+              {/* Cor / Quilometragem */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <InputLabel>Cor</InputLabel>
+                  <Input placeholder="Ex.: Prata, Branco Perolado..." className={INPUT_CLS} value={vehicleData.color} onChange={(e) => setVehicleData(prev => ({ ...prev, color: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <InputLabel>Quilometragem (km)</InputLabel>
+                  <Input placeholder="0" inputMode="numeric" className={INPUT_CLS} value={vehicleData.kilometers} onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    setVehicleData(prev => ({ ...prev, kilometers: digits ? Number(digits).toLocaleString("pt-BR") : "" }));
+                  }} />
+                </div>
+              </div>
+
+              {/* Combustível / Câmbio (Câmbio oculto p/ Moto) */}
+              <div className={cn("grid grid-cols-1 gap-4", !isMoto && "sm:grid-cols-2")}>
+                <div className="space-y-2">
+                  <InputLabel>Combustível</InputLabel>
+                  <Select value={vehicleData.fuel_type} onValueChange={(v) => setVehicleData(prev => ({ ...prev, fuel_type: v }))}>
+                    <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="flex">Flex</SelectItem>
+                      <SelectItem value="gasolina">Gasolina</SelectItem>
+                      <SelectItem value="diesel">Diesel</SelectItem>
+                      <SelectItem value="eletrico">Elétrico</SelectItem>
+                      <SelectItem value="hibrido">Híbrido</SelectItem>
+                      <SelectItem value="gnv">GNV</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {!isMoto && (
+                  <div className="space-y-2">
+                    <InputLabel>Câmbio</InputLabel>
+                    <Select value={vehicleData.transmission} onValueChange={(v) => setVehicleData(prev => ({ ...prev, transmission: v }))}>
+                      <SelectTrigger className={INPUT_CLS}><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="manual">Manual</SelectItem>
+                        <SelectItem value="automatico">Automático</SelectItem>
+                        <SelectItem value="semi-automatico">Semi-Automático</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </Section>
+
+            {/* 2 — Fotos */}
+            <Section step={2} title="Adicione fotos" description="A primeira foto será a capa. Use imagens nítidas e reais." icon={Camera} done={completion.fotos}>
+              <VehicleImageUpload
+                listingId={urlListingId || undefined}
+                onFilesSelected={(files) => setPendingFiles(files)}
+              />
+              <div className="flex items-start gap-2 text-xs text-zinc-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <ImageIcon className="h-4 w-4 text-[#3483FA] shrink-0 mt-0.5" />
+                <div><strong className="text-zinc-700">Dica:</strong> anúncios com mais fotos recebem mais contatos. Mínimo: 1 foto.</div>
+              </div>
+            </Section>
+
+            {/* 3 — Descrição */}
+            <Section step={3} title="Descrição" description="Detalhes como estado dos pneus, revisões, opcionais." icon={MessageCircle} done={completion.descricao}>
+              <div className="space-y-2">
+                <InputLabel>Observações do vendedor</InputLabel>
+                <Textarea
+                  placeholder="Descreva detalhes do veículo, histórico de revisões, opcionais exclusivos..."
+                  className="min-h-[150px] resize-y bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40 text-sm"
+                  value={vehicleData.description}
+                  onChange={(e) => setVehicleData(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+            </Section>
+
+            {/* 4 — Preço */}
+            <Section step={4} title="Preço" description="Quanto custa o seu veículo?" icon={Coins} done={completion.preco}>
+              <div className="space-y-2 max-w-xs">
+                <InputLabel>Preço (R$)</InputLabel>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-semibold pointer-events-none">R$</span>
+                  <Input
+                    placeholder="0,00"
+                    inputMode="numeric"
+                    className={cn(INPUT_CLS, "pl-12 text-lg font-bold")}
+                    value={vehicleData.price_brl}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "");
+                      const formatted = digits ? (Number(digits) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+                      setVehicleData(prev => ({ ...prev, price_brl: formatted }));
+                    }}
+                  />
+                </div>
+              </div>
+            </Section>
+
+            {/* 5 — Localização e Contato */}
+            <Section step={5} title="Localização e contato" description="Onde está o veículo e como falar com você." icon={Phone} done={completion.local && completion.contato}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2 sm:col-span-2">
+                  <InputLabel required>Cidade</InputLabel>
+                  <Input placeholder="Cidade" className={INPUT_CLS} value={locationData.city} onChange={(e) => setLocationData(prev => ({ ...prev, city: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <InputLabel required>Estado (UF)</InputLabel>
+                  <Select value={locationData.state} onValueChange={(v) => setLocationData(prev => ({ ...prev, state: v }))}>
+                    <SelectTrigger className={INPUT_CLS}><SelectValue placeholder="UF" /></SelectTrigger>
+                    <SelectContent className="max-h-72 bg-white">
+                      {UF_LIST.map((uf) => (
+                        <SelectItem key={uf} value={uf} className="!text-zinc-900 font-medium">{uf}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <InputLabel>Bairro</InputLabel>
+                <Input placeholder="Ex.: Centro" className={INPUT_CLS} value={locationData.neighborhood} onChange={(e) => setLocationData(prev => ({ ...prev, neighborhood: e.target.value }))} />
+              </div>
+
+              <div className="pt-4 border-t border-zinc-100 space-y-4">
+                <div className="space-y-2">
+                  <InputLabel required>Nome do responsável</InputLabel>
+                  <Input placeholder="Seu nome" className={INPUT_CLS} value={contactData.contact_name} onChange={(e) => setContactData(prev => ({ ...prev, contact_name: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <InputLabel required>WhatsApp</InputLabel>
+                    <Input placeholder="(47) 99999-9999" inputMode="tel" className={INPUT_CLS} value={contactData.whatsapp_e164} onChange={(e) => setContactData(prev => ({ ...prev, whatsapp_e164: formatBrazilianPhone(e.target.value) }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <InputLabel>Telefone (opcional)</InputLabel>
+                    <Input placeholder="(47) 99999-9999" inputMode="tel" className={INPUT_CLS} value={contactData.phone_e164} onChange={(e) => setContactData(prev => ({ ...prev, phone_e164: formatBrazilianPhone(e.target.value) }))} />
+                  </div>
+                </div>
+              </div>
+            </Section>
+
+            {/* Submit */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+              <Button variant="outline" onClick={() => navigate(-1)} className="h-12 px-6 border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 order-2 sm:order-1">
+                Cancelar
+              </Button>
+              <Button
+                disabled={!canSubmit || loading}
+                onClick={handlePublish}
+                className={cn(
+                  "h-12 px-8 font-bold text-base order-1 sm:order-2 shadow-md",
+                  canSubmit ? "bg-[#3483FA] hover:bg-[#2968c8] text-white" : "bg-zinc-400 text-white cursor-not-allowed hover:bg-zinc-400 opacity-80"
+                )}
+              >
+                {loading ? 'Publicando...' : (urlListingId ? 'Salvar alterações' : 'Publicar veículo')}
+                {!loading && <CheckCircle2 className="h-5 w-5 ml-2" />}
+              </Button>
+            </div>
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-8">
-            <div className="sticky top-28 space-y-8">
-              <Card className="bg-gradient-to-br from-emerald-700 to-emerald-900 border-none shadow-3xl rounded-[40px] text-white overflow-hidden p-10 space-y-6">
-                <div className="p-1 border border-white/20 rounded-3xl w-fit bg-white/10">
-                  <ShieldCheck className="w-8 h-8 text-white shadow-3xl shadow-white/30" />
-                </div>
-                <div className="space-y-3">
-                  <h3 className="text-2xl font-black tracking-tighter leading-tight uppercase">Anúncio Gratuito</h3>
-                  <p className="text-white/80 text-xs leading-relaxed font-bold tracking-wide">
-                    Prezado anunciante, seus anúncios são veiculados gratuitamente, porém, o acesso de interesse em seu produto só será liberado perante uso de créditos disponível abaixo.
+          <aside className="lg:col-span-4">
+            <div className="lg:sticky lg:top-24 space-y-4">
+              <Card className="border border-zinc-200 bg-white shadow-sm rounded-xl">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-zinc-900 text-sm">Progresso do anúncio</h3>
+                    <span className="text-xs font-bold text-emerald-600">{completedCount}/{totalChecks}</span>
+                  </div>
+                  <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <ul className="space-y-1.5 pt-2">
+                    {checklist.map(item => (
+                      <li key={item.key}>
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`section-${item.step}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                          className="w-full flex items-center gap-2 text-xs text-left hover:text-zinc-900 transition-colors"
+                        >
+                          <div className={cn("h-4 w-4 shrink-0 rounded-full flex items-center justify-center", (completion as any)[item.key] ? "bg-emerald-500 text-white" : "bg-zinc-200")}>
+                            {(completion as any)[item.key] && <Check className="h-2.5 w-2.5" />}
+                          </div>
+                          <span className={(completion as any)[item.key] ? 'text-zinc-500 line-through' : 'text-zinc-700 font-medium'}>
+                            {item.label}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-emerald-100 bg-emerald-50 shadow-sm rounded-xl">
+                <CardContent className="p-5 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <Sparkles className="h-4 w-4" />
+                    <h3 className="font-bold text-sm">Anúncio Grátis</h3>
+                  </div>
+                  <p className="text-xs text-emerald-700/80">
+                    Você publica sem custo. Só usa créditos quando alguém clica/desbloqueia o seu contato.
                   </p>
-                </div>
-                <div className="space-y-4 pt-6 border-t border-white/10 uppercase font-black text-[9px] tracking-widest text-white/70">
-                  <div className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white" /> Veiculação 100% Grátis</div>
-                  <div className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white" /> Créditos Liberam o Contato</div>
-                  <div className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white" /> O Anunciante Paga pelo Acesso</div>
-                </div>
+                </CardContent>
               </Card>
             </div>
-          </div>
+          </aside>
+
         </div>
       </div>
     </div>

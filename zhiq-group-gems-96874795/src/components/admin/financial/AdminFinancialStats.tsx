@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminFinancialStats } from "@/hooks/useAdminFinancials";
-import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins } from "lucide-react";
+import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formatCurrency = (value: number) => {
@@ -61,6 +61,30 @@ export function AdminFinancialStats() {
             color: "#10b981"
         },
         {
+            title: "Pacotes de Marketplace",
+            value: data.pacotesLojistas,
+            subtitle: `${data.pacotesLojistasQtd} pacote(s) comprado(s)`,
+            icon: <Store className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Entrada de compras de pacotes de créditos do marketplace (lojistas/anunciantes — compras confirmadas).",
+            color: "#10b981"
+        },
+        {
+            title: "Pacotes de Imóveis",
+            value: data.pacotesImoveis,
+            subtitle: `${data.pacotesImoveisQtd} pacote(s) comprado(s)`,
+            icon: <Building2 className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Entrada de compras de pacotes de créditos de imóveis (compras confirmadas).",
+            color: "#10b981"
+        },
+        {
+            title: "Entrada Total (Pacotes)",
+            value: data.pacotesLojistas + data.pacotesImoveis,
+            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd} pacote(s) · Marketplace + Imóveis`,
+            icon: <Coins className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Entrada total de compras de pacotes somando Marketplace (lojistas/anunciantes) + Imóveis.",
+            color: "#10b981"
+        },
+        {
             title: "Total Lojistas",
             value: data.saldoLojistas,
             subtitle: `${data.totalLojas} loja(s) cadastrada(s)`,
@@ -89,13 +113,6 @@ export function AdminFinancialStats() {
             icon: <Bike className="h-4 w-4 text-amber-500" />,
             tooltip: "Saldo disponível dos lojistas para chamar motoboy (recargas pagas menos o gasto em entregas).",
             color: "#f59e0b"
-        },
-        {
-            title: "Pacotes de Créditos Adquiridos",
-            value: data.creditosAdquiridos,
-            icon: <Coins className="h-4 w-4 text-emerald-500" />,
-            tooltip: "Total pago em pacotes de créditos e recargas de saldo (compras confirmadas).",
-            color: "#10b981"
         }
     ];
 

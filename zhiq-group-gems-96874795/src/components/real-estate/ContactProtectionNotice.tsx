@@ -13,16 +13,16 @@ export const ContactProtectionNotice = () => {
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="flex gap-3 p-4 bg-zinc-50 rounded-xl border border-zinc-200">
           <div className="shrink-0">
             <div className="p-2 bg-white rounded-lg shadow-sm">
               <EyeOff className="w-5 h-5 text-zinc-600" />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <h4 className="font-bold text-zinc-900 text-sm">Contato Oculto</h4>
-            <p className="text-zinc-600 text-xs leading-relaxed">
+            <p className="text-zinc-600 text-xs leading-relaxed break-words">
               Seu WhatsApp e telefone <strong>não são exibidos publicamente</strong>. Os interessados devem solicitar a liberação via plataforma.
             </p>
           </div>
@@ -34,9 +34,9 @@ export const ContactProtectionNotice = () => {
               <Lock className="w-5 h-5 text-zinc-600" />
             </div>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 min-w-0">
             <h4 className="font-bold text-zinc-900 text-sm">Imagens Protegidas</h4>
-            <p className="text-zinc-600 text-xs leading-relaxed">
+            <p className="text-zinc-600 text-xs leading-relaxed break-words">
               Nossa IA detecta e <strong>mascara automaticamente</strong> contatos em placas, banners ou marcas d'água nas suas fotos.
             </p>
           </div>

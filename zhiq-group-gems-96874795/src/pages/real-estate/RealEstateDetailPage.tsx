@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,6 +64,20 @@ export const RealEstateDetailPage = () => {
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
   });
+
+  // ─── Cobrança por CLIQUE no anúncio (6 cr do dono, anti-spam no backend) ──
+  const clickChargedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!id || !property) return;
+    if (clickChargedRef.current === id) return; // 1x por carga deste anúncio
+    clickChargedRef.current = id;
+    (async () => {
+      try {
+        const fp = await getVisitorFingerprint();
+        await supabase.rpc('charge_real_estate_listing_click' as any, { p_listing_id: id, p_fingerprint: fp });
+      } catch { /* best-effort: nunca bloqueia a visualização */ }
+    })();
+  }, [id, property]);
 
   // ─── QUERY: Mídias ───────────────────────────────────────────────────────
   const { data: media = [], isLoading: isMediaLoading } = useQuery({
@@ -173,8 +187,11 @@ export const RealEstateDetailPage = () => {
   const mainImageUrl = activeImage || (media.length > 0 ? getListingImageUrl(media[0].original_storage_path) : null);
 
   const priceFormatted = formatCurrencyBRL(property.price_brl);
-  const areaHa = property.total_area_m2
-    ? (property.total_area_m2 / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  const isLoteArea = ['lote', 'terreno'].includes(String(property.property_type || '').toLowerCase());
+  const areaLabel = property.total_area_m2
+    ? (isLoteArea
+        ? `${property.total_area_m2.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m²`
+        : `${(property.total_area_m2 / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ha`)
     : null;
 
   return (
@@ -307,11 +324,11 @@ export const RealEstateDetailPage = () => {
 
               {/* Chips de informação rápida */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                {areaHa && (
+                {areaLabel && (
                   <InfoChip
                     icon={<Maximize2 className="w-4 h-4" />}
                     label="Área Total"
-                    value={`${areaHa} ha`}
+                    value={areaLabel}
                   />
                 )}
                 {property.bedrooms > 0 && (

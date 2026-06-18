@@ -189,9 +189,11 @@ Deno.serve(async (req) => {
     });
   }
 
-  // 4. Aplica via a MESMA RPC do webhook (idempotente). Passa o external_reference
-  //    p/ o fallback de reconciliação casar a ordem mesmo quando o
-  //    provider_payment_id guardado é o preference_id.
+  // 4. Aplica via a MESMA RPC do webhook (idempotente).
+  //    ⚠️ O fallback da pay_webhook_apply_event extrai o ORDER_ID da 2ª parte do
+  //    external_reference ("<x>:<order_id>"). O external_reference REAL do MP traz
+  //    o reference_id (id da compra), NÃO o order_id → não casava. Como aqui já
+  //    sabemos o order_id, mandamos "order:<orderId>" p/ o fallback casar direto.
   const realPaymentId = String(payment.id ?? pid);
   const { data: applied, error: applyErr } = await svc.rpc("pay_webhook_apply_event", {
     p_provider_name: order.provider_name ?? "mercadopago",
@@ -200,7 +202,7 @@ Deno.serve(async (req) => {
     p_event_type: eventType,
     p_raw_payload: { id: realPaymentId, status: payment.status, source: "reconcile" },
     p_normalized_payload: { status: payment.status, event_type: eventType },
-    p_external_reference: payment.external_reference ?? null,
+    p_external_reference: `order:${orderId}`,
   });
   if (applyErr) {
     return json({ error: `apply_event: ${applyErr.message}`, order_id: orderId }, 500);

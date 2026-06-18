@@ -35,9 +35,12 @@ interface RealEstateCheckoutContentProps {
     /** Qual carteira recebe o crédito. 'advertiser' = carteira do anunciante
      *  (/anunciante/carteira); 'real_estate' = créditos imobiliários. */
     walletContext?: 'advertiser' | 'real_estate';
+    /** Para onde voltar após o pagamento aprovado (depende do painel de origem:
+     *  lojista, imóveis ou veículos). Default: /anunciante/creditos. */
+    returnTo?: string;
 }
 
-export function RealEstateCheckoutContent({ listingId: propListingId, onBack, onSuccess, layout = 'public', walletContext = 'real_estate' }: RealEstateCheckoutContentProps) {
+export function RealEstateCheckoutContent({ listingId: propListingId, onBack, onSuccess, layout = 'public', walletContext = 'real_estate', returnTo = '/anunciante/creditos' }: RealEstateCheckoutContentProps) {
     const { listingId: paramListingId } = useParams();
     const listingId = propListingId || paramListingId;
     const navigate = useNavigate();
@@ -349,6 +352,12 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                             walletContext === "advertiser"
                                 ? "advertiser_credits"
                                 : "real_estate_credits",
+                        // Guardado na ordem p/ o e-mail de confirmação descriminar
+                        // o pacote e a quantidade de créditos.
+                        product_snapshot: {
+                            package_name: pkg.name,
+                            package_credits: (pkg.credits_amount || 0) + (pkg.bonus_credits || 0),
+                        },
                         metadata: chargeMeta,
                     },
                 },
@@ -363,7 +372,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                 openCheckoutUrl(
                     realCheckout,
                     chargeData.order_id,
-                    walletContext === "advertiser" ? "/anunciante/creditos" : "/anunciante/creditos",
+                    returnTo,
                 );
             }
 

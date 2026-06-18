@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -152,13 +152,22 @@ export const VehicleDetailPage = () => {
     }
   };
 
+  // Visita do anúncio de veículo → cobra o clique (dívida sem pacote, igual imóveis).
+  // O dono visitando o próprio anúncio NÃO é cobrado (regra no backend).
+  useEffect(() => {
+    if (!id) return;
+    supabase.rpc('charge_vehicle_listing_click' as any, {
+      p_listing_id: id,
+      p_fingerprint: getVisitorFingerprint(),
+    }).then(({ data }: any) => console.log('[VEHICLE_CLICK]', data)).catch(() => { /* noop */ });
+  }, [id]);
+
   const handleInterest = () => {
-    // Tenta descontar 5 créditos pelo botão de interesse da página de detalhes
+    // Tenta descontar 9 créditos pelo botão de interesse da página de detalhes
     try {
-      supabase.rpc('rpc_register_property_click', {
+      supabase.rpc('charge_vehicle_interest_click' as any, {
         p_listing_id: id,
-        p_visitor_fingerprint: getVisitorFingerprint(),
-        p_amount: 5
+        p_fingerprint: getVisitorFingerprint()
       }).then((result) => console.log("[CPC_RESULT_VEHICLE_INTEREST]", result));
     } catch (err) {
       console.error("[CPC_TRY_CATCH]", err);

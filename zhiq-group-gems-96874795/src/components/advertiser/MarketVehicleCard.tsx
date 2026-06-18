@@ -56,10 +56,19 @@ export const MarketVehicleCard: React.FC<MarketVehicleCardProps> = ({ vehicle })
     return colors[type] || 'bg-[#FF6A00] text-white';
   };
 
+  const handleNavigate = () => {
+    navigate(`/veiculos/${vehicle.id}`);
+    // A própria página VehicleDetailPage.tsx se encarrega de cobrar a visita 
+    // usando charge_vehicle_listing_click, então não precisamos cobrar aqui.
+  };
+
   return (
     <div className="flex justify-center w-full">
       <div className="w-full max-w-sm">
-        <Card className="group overflow-hidden border-none shadow-xl rounded-3xl transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white ring-1 ring-zinc-100 hover:ring-[#FF6A00]/40">
+        <Card 
+          onClick={handleNavigate}
+          className="group overflow-hidden border-none shadow-xl rounded-3xl transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 bg-white ring-1 ring-zinc-100 hover:ring-[#FF6A00]/40 cursor-pointer"
+        >
           {/* 🖼️ IMAGE AREA 🖼️ */}
           <div className="relative aspect-[4/3] overflow-hidden">
             {vehicle.thumbnail_url ? (
@@ -137,23 +146,7 @@ export const MarketVehicleCard: React.FC<MarketVehicleCardProps> = ({ vehicle })
             <Button 
               onClick={(e) => {
                 e.stopPropagation();
-                // Navega IMEDIATAMENTE (prioridade)
-                navigate(`/veiculos/${vehicle.id}`);
-                
-                // Dispara o CPC em background
-                try {
-                  supabase.rpc('rpc_register_property_click', {
-                    p_listing_id: vehicle.id,
-                    p_visitor_fingerprint: getVisitorFingerprint(),
-                    p_amount: 3
-                  }).then((result) => {
-                    console.log("[CPC_RESULT_VEHICLE]", result);
-                  }).catch((e) => {
-                    console.error("[CPC_ERROR_VEHICLE]", e);
-                  });
-                } catch (err) {
-                  console.error("[CPC_TRY_CATCH]", err);
-                }
+                handleNavigate();
               }}
               className="w-full bg-[#FF6A00] hover:bg-orange-700 text-white rounded-2xl font-black text-sm h-12 group/btn shadow-lg"
             >

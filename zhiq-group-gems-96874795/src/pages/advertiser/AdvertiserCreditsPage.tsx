@@ -26,16 +26,46 @@ import { useRealEstatePackages } from "@/hooks/useRealEstatePackages";
 import { useMerchantCredits } from "@/hooks/useMerchantCredits";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { CREDIT_EVENT_LABELS } from "@/lib/credits/creditPricing";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { RealEstateCreditReportCard } from "@/components/real-estate/RealEstateCreditReportCard";
+import { VehicleCreditReportCard } from "@/components/vehicle/VehicleCreditReportCard";
 
 export default function AdvertiserCreditsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Modo IMÓVEIS / VEÍCULOS: mostra pacotes do segmento e esconde os históricos do lojista.
+  const isImoveis = location.pathname.startsWith("/anunciante/imoveis");
+  const isVeiculos = location.pathname.startsWith("/anunciante/veiculos");
+  const isSpecialModule = isImoveis || isVeiculos;
+
+  // Custos por evento — RESPEITA os valores configurados no painel admin
+  // (merchant_credit_usage_rules). Fallback só se a regra não existir.
+  const { data: ruleCosts = { click: 6, interest: 9, whatsapp: 12 } } = useQuery({
+    queryKey: ["credit-rule-costs", isVeiculos ? "vehicle" : "real_estate"],
+    enabled: isSpecialModule,
+    queryFn: async () => {
+      const seg = isVeiculos ? "vehicle" : "real_estate";
+      const codes = [`${seg}_listing_click`, `${seg}_interest_click`, `${seg}_unlock_whatsapp`];
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("feature_code, credits_cost")
+        .in("feature_code", codes);
+      const out = { click: 6, interest: 9, whatsapp: 12 };
+      (data || []).forEach((r: any) => {
+        const c = Number(r.credits_cost);
+        if (!Number.isFinite(c)) return;
+        if (r.feature_code === `${seg}_listing_click`) out.click = c;
+        else if (r.feature_code === `${seg}_interest_click`) out.interest = c;
+        else if (r.feature_code === `${seg}_unlock_whatsapp`) out.whatsapp = c;
+      });
+      return out;
+    },
+  });
   const { data: packages, isLoading: packagesLoading } = useRealEstatePackages();
   const merchantCredits = useMerchantCredits();
   const merchantLoading = merchantCredits.isLoading;
@@ -43,8 +73,8 @@ export default function AdvertiserCreditsPage() {
   // Histórico de créditos (advertiser_credit_ledger) — já buscado pelo hook
   const { ledger } = useAdvertiserCredits();
   const consumo = useMemo(
-    () => (ledger || []).filter((e: any) => e.entry_type === "debit"),
-    [ledger]
+    () => isSpecialModule ? [] : (ledger || []).filter((e: any) => e.entry_type === "debit"),
+    [ledger, isSpecialModule]
   );
 
   // Aquisições = compras de pacotes (tabela credit_purchases, por store_id).
@@ -120,7 +150,7 @@ export default function AdvertiserCreditsPage() {
     category: 'products'
   }));
 
-  const renderSection = (title: string, subtitle: string, tagline: string | null, icon: any, pkgs: any[]) => {
+  const renderSection = (title: string, subtitle: string, tagline: string | null, icon: any, pkgs: any[], recurring = false) => {
     const Icon = icon;
     
     return (
@@ -173,7 +203,8 @@ export default function AdvertiserCreditsPage() {
                   <div className="space-y-1">
                     <CardTitle className="text-[32px] font-black uppercase tracking-tight text-[#F5F7FA] leading-none">{p.name}</CardTitle>
                     <p className="text-[13px] text-[#A7B0BE] font-black uppercase tracking-widest">
-                      {p.package_type === 'standard' || p.package_type === 'STANDARD' ? 'Padrão'
+                      {recurring ? 'Plano Mensal'
+                       : p.package_type === 'standard' || p.package_type === 'STANDARD' ? 'Padrão'
                        : p.package_type === 'real_estate' || p.package_type === 'REAL_ESTATE' ? 'Imóveis'
                        : p.package_type === 'vehicles' || p.package_type === 'VEHICLES' ? 'Veículos'
                        : p.package_type}
@@ -186,7 +217,15 @@ export default function AdvertiserCreditsPage() {
                     <div className="space-y-1 text-center">
                       <p className="text-[47px] font-black text-[#F5F7FA] tracking-tighter">
                         {p.price_brl === 0 ? "Grátis" : formatCurrencyBRL(p.price_brl)}
+                        {recurring && p.price_brl !== 0 && (
+                          <span className="text-xl text-[#A7B0BE] font-bold tracking-normal">/mês</span>
+                        )}
                       </p>
+                      {recurring && (
+                        <div className="flex items-center justify-center gap-2 mt-3 text-[11px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-xl py-2 px-3">
+                          <Coins className="w-4 h-4 shrink-0" /> Créditos não expiram — acumulam todo mês
+                        </div>
+                      )}
                       <p className="text-[14px] text-white font-black uppercase tracking-widest bg-gradient-to-br from-[#FF6A00] to-[#E55A00] py-3 px-4 text-center rounded-[20px] border border-orange-700 shadow-lg shadow-orange-900/30 mt-4 flex flex-col items-center gap-1">
                         <span className="flex items-center gap-2">
                           <Zap className="w-5 h-5 fill-current text-yellow-200" />
@@ -221,7 +260,7 @@ export default function AdvertiserCreditsPage() {
                         ? "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/30"
                         : "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/20 border border-yellow-500/40"
                     )}
-                    onClick={() => navigate(`/anunciante/checkout/${p.id}`)}
+                    onClick={() => navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : ''}`)}
                   >
                     {p.button_label || "ADQUIRIR AGORA"} <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-all" />
                   </Button>
@@ -240,7 +279,7 @@ export default function AdvertiserCreditsPage() {
       <div className="space-y-3">
         <h1 className="text-4xl font-black text-[#F5F7FA] tracking-tighter uppercase flex items-center gap-3">
            <CreditCard className="w-10 h-10 text-[#FF6A00]" />
-           Créditos e Faturas
+           Gestão e Pacotes
         </h1>
         <p className="text-[#A7B0BE] font-bold uppercase text-xs tracking-widest ml-14 opacity-70">Potencialize seus anúncios em múltiplos segmentos</p>
         
@@ -252,6 +291,80 @@ export default function AdvertiserCreditsPage() {
         </div>
       </div>
 
+      {/* Aviso do modelo de cobrança (imóveis/veículos) — antes de iniciar a compra */}
+      {isSpecialModule && (
+        <div className="ml-0 md:ml-14 -mt-10 p-5 md:p-6 bg-emerald-500/10 border border-emerald-500/30 rounded-3xl max-w-3xl flex items-start gap-4">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-emerald-300 font-black text-sm uppercase tracking-wide">Como a plataforma trabalha por você</p>
+            <p className="text-[#C9D2DE] text-[13px] leading-relaxed">
+              Assim que um potencial cliente <strong>navega e clica no seu anúncio</strong>, ele chega até você —
+              <strong> mesmo que você ainda não tenha adquirido um pacote</strong>, sem exigir créditos na hora.
+              Esses créditos ficam <strong>registrados como consumo</strong> e, ao adquirir um pacote, são
+              <strong> descontados automaticamente do seu saldo</strong>. Assim você nunca perde um interessado por falta de crédito.
+            </p>
+            <p className="text-emerald-200/90 text-[13px] leading-relaxed mt-2 pt-2 border-t border-emerald-500/20">
+              E mais: <strong>até você desbloquear o WhatsApp do seu cliente, tudo fica sem cobrança</strong> — o consumo
+              é apenas somado e só <strong>entra na conta no momento do desbloqueio do contato</strong>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Regras de crédito (imóveis/veículos) — valores vêm do painel admin */}
+      {isSpecialModule && (
+        <div className="ml-0 md:ml-14 -mt-10 bg-[#1B1F24] border border-[#2A3038] rounded-3xl p-6 md:p-7 max-w-3xl space-y-5">
+          <p className="text-[#FF6A00] font-black text-sm uppercase tracking-wide">Como funcionam os créditos</p>
+
+          {/* Benefícios */}
+          <ul className="space-y-2.5">
+            {[
+              "Divulgação gratuita do seu anúncio.",
+              "Adquira pacotes de créditos apenas quando precisar.",
+              "Todos os pacotes possuem validade de 30 dias.",
+              "Proteção automática contra cliques inválidos.",
+            ].map((b) => (
+              <li key={b} className="flex items-start gap-2.5 text-[#C9D2DE] text-sm leading-relaxed">
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0 mt-0.5" /> {b}
+              </li>
+            ))}
+          </ul>
+
+          <p className="text-[13px] text-[#A7B0BE] leading-relaxed">
+            Ao adquirir pacotes, os créditos ficam disponíveis e pontuados no seu painel de <strong>visitas</strong> e <strong>interessados</strong>.
+          </p>
+
+          {/* Custos por evento (valores do admin) */}
+          <ul className="space-y-3 pt-1">
+            {[
+              { cr: ruleCosts.click, label: "serão descontados quando um usuário clicar no seu anúncio." },
+              { cr: ruleCosts.interest, label: "serão descontados quando um usuário clicar no botão INTERESSE." },
+              { cr: ruleCosts.whatsapp, label: "serão descontados quando você desbloquear o WhatsApp do cliente interessado." },
+            ].map((r, i) => (
+              <li key={i} className="flex items-center gap-3">
+                <span className="shrink-0 inline-flex items-center justify-center min-w-[44px] h-9 px-2 rounded-lg bg-[#FF6A00]/15 text-[#FF6A00] font-black text-sm border border-[#FF6A00]/30">
+                  {r.cr}
+                </span>
+                <span className="text-[#C9D2DE] text-[13px] leading-snug"><strong>{r.cr} créditos</strong> {r.label}</span>
+              </li>
+            ))}
+          </ul>
+
+          <div className="space-y-2 pt-3 border-t border-[#2A3038]">
+            <p className="flex items-start gap-2 text-[12px] text-[#A7B0BE] leading-relaxed">
+              <span className="shrink-0">📊</span>
+              Todos os consumos são registrados no seu painel — acompanhe em detalhe os créditos usados e o saldo disponível.
+            </p>
+            <p className="flex items-start gap-2 text-[12px] text-[#A7B0BE] leading-relaxed">
+              <span className="shrink-0">💳</span>
+              Os créditos são descontados automaticamente conforme a utilização dos serviços dos pacotes adquiridos.
+            </p>
+          </div>
+        </div>
+      )}
+
       {(packagesLoading || merchantLoading) ? (
         <div className="flex flex-col items-center justify-center py-32 bg-[#1B1F24] rounded-[32px] border border-[#2A3038] shadow-xl shadow-black/30">
            <Loader2 className="w-12 h-12 text-[#FF6A00] animate-spin" />
@@ -259,13 +372,23 @@ export default function AdvertiserCreditsPage() {
         </div>
       ) : (
         <div className="space-y-24">
-          {/* Pacotes Imóveis e Veículos ocultados */}
-          {renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
+          {/* Modo imóveis/veículos: pacotes do segmento; senão: pacotes do mercado */}
+          {isImoveis
+            ? renderSection("Pacotes de Imóveis", "Plano mensal — renove todo mês", "CRÉDITOS NÃO EXPIRAM — ACUMULAM TODO MÊS", Building2, realEstatePkgs, true)
+            : isVeiculos
+              ? renderSection("Pacotes de Veículos", "Plano mensal — renove todo mês", "CRÉDITOS NÃO EXPIRAM — ACUMULAM TODO MÊS", CarFront, vehiclePkgs, true)
+              : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
         </div>
       )}
 
-      {/* ═══ HISTÓRICO DE CONSUMO ═══ */}
-      <section className="space-y-6">
+      {/* Relatório de créditos (imóveis): débitos de navegação + compras atuais */}
+      {isImoveis && <RealEstateCreditReportCard />}
+      
+      {/* Relatório de créditos (veículos): débitos de navegação, interesses + compras atuais */}
+      {isVeiculos && <VehicleCreditReportCard />}
+
+      {/* ═══ HISTÓRICO DE CONSUMO (oculto no modo imóveis e veículos, exibido para mercado) ═══ */}
+      {!isSpecialModule && (<section className="space-y-6">
         <div className="space-y-3">
           <h2 className="text-3xl font-black text-[#F5F7FA] tracking-tighter uppercase flex items-center gap-3">
             <div className="p-3 bg-[#0D0F12] rounded-2xl shadow-xl shadow-black/30">
@@ -307,11 +430,11 @@ export default function AdvertiserCreditsPage() {
             ))}
           </div>
         )}
-      </section>
+      </section>)}
 
       {/* Trust and Shield Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-10 border-t border-[#2A3038]">
-          <section className="space-y-6">
+          {!isSpecialModule && (<section className="space-y-6">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-xl font-black text-[#F5F7FA] uppercase tracking-tight flex items-center gap-2">
                  <History className="w-6 h-6 text-[#A7B0BE]" /> Histórico de Aquisições
@@ -388,7 +511,7 @@ export default function AdvertiserCreditsPage() {
                 )}
               </div>
             )}
-         </section>
+         </section>)}
 
          <div className="space-y-6">
             <h3 className="text-xl font-black text-[#F5F7FA] uppercase tracking-tight flex items-center gap-2">

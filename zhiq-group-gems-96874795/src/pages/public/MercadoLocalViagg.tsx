@@ -21,6 +21,7 @@ import {
     CheckCircle,
     ChevronDown,
     Building2,
+    Bike,
     TrendingUp,
     Sparkles,
     Megaphone,
@@ -263,7 +264,17 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
     const { trackSearch, trackCategoryView } = useMarketplaceTracking();
-    const { user } = useAuth();
+    const { user, availableProfiles } = useAuth();
+
+    // Mesmo destino do botão Motoboy do topo (agora exibido na linha amarela).
+    const handleMotoboyClick = () => {
+        if (!user) {
+            localStorage.setItem("viagg_auth_entry", "motoboy");
+            navigate("/auth?entry=motoboy&signup=1");
+            return;
+        }
+        navigate(availableProfiles?.includes("motoboy") ? "/motoboy/dashboard" : "/motoboy/completar");
+    };
 
     // ── Fetch active auction listings ──
     const { data: auctionListings = [] } = useQuery<any[]>({
@@ -895,6 +906,35 @@ const scrollToProducts = () => {
             setSearch={setSearch}
             showSearch={!isAdvertiser}
             headerRight={null}
+            headerChildren={!isAdvertiser ? (
+                <div className="pb-3 flex gap-2 justify-center">
+                    <button
+                        onClick={handleMotoboyClick}
+                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                        <Bike className="h-3.5 w-3.5 shrink-0" /> Motoboy
+                    </button>
+                    <button
+                        onClick={() => navigate("/mercado")}
+                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md ring-2 ring-white/40 hover:scale-105 active:scale-95 transition-all"
+                    >
+                        <ShoppingBag className="h-3.5 w-3.5 shrink-0" /> Mercado
+                    </button>
+                    <button
+                        onClick={() => navigate("/imoveis")}
+                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                        <Building2 className="h-3.5 w-3.5 shrink-0" /> Imóveis
+                    </button>
+                    <button
+                        onClick={() => navigate("/automoveis")}
+                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                        <Car className="h-3.5 w-3.5 shrink-0" /> Veículos
+                    </button>
+                </div>
+            ) : null}
+            hideTopMotoboy={!isAdvertiser}
             mainClassName="flex flex-col bg-[#F5E62B]"
             hideFooter
         >
@@ -1040,7 +1080,8 @@ const scrollToProducts = () => {
                         } as any);
                         if (user) {
                           localStorage.setItem("viagg_auth_entry", "advertiser");
-                          navigate("/anunciante/painel");
+                          // Tela de vendas: escolher Lojista ou Imóveis.
+                          navigate("/select-profile");
                         } else {
                           navigate("/auth");
                         }

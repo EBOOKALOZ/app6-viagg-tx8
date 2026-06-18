@@ -1,7 +1,21 @@
 import React, { useState, useMemo } from 'react';
 import { SellRealEstateCTA } from '@/components/real-estate/SellRealEstateCTA';
-import { ShieldCheck, Zap, Users, SlidersHorizontal } from 'lucide-react';
+import { ShieldCheck, Zap, Users, SlidersHorizontal, Trees, Tractor, MapPin, Wheat, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+// Tira acento + minúsculas, p/ casar "Sítio" com "sitio" etc.
+const normType = (s: unknown) =>
+  String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+
+// Categorias de imóvel (cards). key = valor normalizado p/ filtrar property_type.
+const REAL_ESTATE_CATEGORIES = [
+  { key: "all", label: "Todos", icon: LayoutGrid, color: "bg-zinc-700" },
+  { key: "sitio", label: "Sítios", icon: Trees, color: "bg-emerald-600" },
+  { key: "chacara", label: "Chácaras", icon: Tractor, color: "bg-lime-600" },
+  { key: "lote", label: "Lotes Urbanos", icon: MapPin, color: "bg-amber-600" },
+  { key: "fazenda", label: "Fazendas", icon: Wheat, color: "bg-orange-600" },
+];
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from '@tanstack/react-query';
@@ -112,7 +126,7 @@ export const PublicRealEstateHome = () => {
     return rawPropertyListings.filter(p => {
       if (cityFilter !== "all" && p.city?.trim().toLowerCase() !== cityFilter) return false;
       if (neighborhoodFilter !== "all" && p.neighborhood?.trim().toLowerCase() !== neighborhoodFilter) return false;
-      if (propertyTypeFilter !== "all" && p.property_type?.trim().toLowerCase() !== propertyTypeFilter) return false;
+      if (propertyTypeFilter !== "all" && !normType(p.property_type).includes(propertyTypeFilter)) return false;
       
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -162,7 +176,38 @@ export const PublicRealEstateHome = () => {
 
         {/* Main Content Area */}
         <main className="container px-4 py-20 space-y-32">
-          
+
+          {/* Categorias de imóvel */}
+          <div className="space-y-8">
+            <div className="flex flex-col gap-3 items-center text-center">
+              <h3 className="text-4xl font-black tracking-tighter uppercase">Explore por Categoria</h3>
+              <div className="h-1.5 w-24 bg-primary rounded-full" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {REAL_ESTATE_CATEGORIES.map((c) => {
+                const Icon = c.icon;
+                const active = propertyTypeFilter === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    onClick={() => setPropertyTypeFilter(c.key)}
+                    className={cn(
+                      "group relative overflow-hidden rounded-[28px] p-6 flex flex-col items-center gap-3 border transition-all",
+                      active
+                        ? "border-primary bg-primary/10 ring-2 ring-primary scale-[1.02]"
+                        : "border-white/10 bg-zinc-900/60 hover:border-primary/40 hover:bg-zinc-900"
+                    )}
+                  >
+                    <div className={cn("w-16 h-16 rounded-3xl flex items-center justify-center shadow-xl transition-transform group-hover:scale-110", c.color)}>
+                      <Icon className="w-8 h-8 text-white" />
+                    </div>
+                    <span className="font-black uppercase tracking-tight text-sm">{c.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Listings Grid */}
           <div className="space-y-12">
             <div className="flex flex-col gap-3 items-center text-center">

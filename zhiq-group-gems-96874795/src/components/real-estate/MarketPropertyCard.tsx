@@ -20,6 +20,7 @@ interface MarketPropertyCardProps {
   property: {
     id: string;
     title: string;
+    description?: string | null;
     property_type: string;
     price_brl: number;
     total_area_m2: number;
@@ -55,8 +56,25 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
     return colors[type] || 'from-zinc-500 to-zinc-700';
   };
 
-  const areaHa = property.total_area_m2
-    ? (property.total_area_m2 / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  // Navega para a página de descrição do anúncio (e registra o clique p/ CPC).
+  const goToDetail = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    navigate(`/imoveis/${property.id}`);
+    try {
+      supabase.rpc('rpc_register_property_click', {
+        p_listing_id: property.id,
+        p_visitor_fingerprint: getVisitorFingerprint(),
+      }).then((result) => console.log("[CPC_RESULT]", result)).catch((err) => console.error("[CPC_ERROR]", err));
+    } catch (err) {
+      console.error("[CPC_TRY_CATCH]", err);
+    }
+  };
+
+  const isLoteArea = ['lote', 'terreno'].includes(String(property.property_type || '').toLowerCase());
+  const areaLabel = property.total_area_m2
+    ? (isLoteArea
+        ? `${property.total_area_m2.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m²`
+        : `${(property.total_area_m2 / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ha`)
     : '—';
 
   return (
@@ -169,6 +187,45 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
           {property.title}
         </h3>
 
+        {/* Description preview — foto do anúncio ao fundo (clicável) + overlay p/ legibilidade */}
+        {property.description && property.description.trim() && (
+          <div
+            onClick={goToDetail}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter') goToDetail(); }}
+            aria-label={`Ver detalhes de ${property.title}`}
+            className="relative overflow-hidden rounded-2xl ring-1 ring-zinc-200/60 min-h-[92px] flex items-end cursor-pointer transition-transform duration-300 hover:scale-[1.01]"
+          >
+            {property.thumbnail_url ? (
+              <>
+                <img
+                  src={property.thumbnail_url}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full object-cover scale-105"
+                  onError={(e) => {
+                    const fb = getMediaFallbackUrl((e.target as HTMLImageElement).src);
+                    if (fb) (e.target as HTMLImageElement).src = fb;
+                  }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/65 to-black/50" />
+              </>
+            ) : (
+              <div className="absolute inset-0 bg-zinc-100" />
+            )}
+            <p className={cn(
+              "relative px-3.5 py-3 leading-relaxed line-clamp-2",
+              property.thumbnail_url
+                ? "text-white/95 drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]"
+                : "text-zinc-600",
+              isFeatured ? "text-sm md:text-[15px]" : "text-[13px]"
+            )}>
+              {property.description}
+            </p>
+          </div>
+        )}
+
         {/* Specs row */}
         <div className="flex items-center gap-2 pt-3 border-t border-zinc-100">
           <div className="flex-1 flex items-center gap-2 rounded-xl bg-zinc-50 px-3 py-2">
@@ -177,7 +234,7 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Área</span>
-              <span className="text-xs font-black text-zinc-800">{areaHa} ha</span>
+              <span className="text-xs font-black text-zinc-800">{areaLabel}</span>
             </div>
           </div>
           {(property.bedrooms ?? 0) > 0 && (
@@ -196,25 +253,7 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
 
       <CardFooter className="px-5 pb-5 pt-1">
         <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            // Navega IMEDIATAMENTE (prioridade)
-            navigate(`/imoveis/${property.id}`);
-            
-            // MODO DE TESTE: Tenta o CPC em background e joga no console o resultado
-            try {
-              supabase.rpc('rpc_register_property_click', {
-                p_listing_id: property.id,
-                p_visitor_fingerprint: getVisitorFingerprint()
-              }).then((result) => {
-                console.log("[CPC_RESULT]", result);
-              }).catch((e) => {
-                console.error("[CPC_ERROR]", e);
-              });
-            } catch (err) {
-              console.error("[CPC_TRY_CATCH]", err);
-            }
-          }}
+          onClick={goToDetail}
           className="w-full relative overflow-hidden bg-zinc-900 hover:bg-zinc-900 text-white rounded-2xl font-black text-sm h-12 group/btn shadow-lg shadow-zinc-900/20 transition-all"
         >
           <span className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />

@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Phone,
   User,
+  Mail,
   ShieldCheck,
   Loader2,
   CheckCircle2,
@@ -76,18 +77,31 @@ export function ContactIntentionModal({
 }: ContactIntentionModalProps) {
   const { register, isLoading } = useRegisterContactIntention();
 
-  const [form, setForm] = useState({ name: "", phone: "", message: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const update = (field: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
-  const isValid = form.name.trim().length >= 2 && form.phone.replace(/\D/g, "").length >= 10;
+  const emailOk = /\S+@\S+\.\S+/.test(form.email.trim());
+  const isValid =
+    form.name.trim().length >= 2 &&
+    form.phone.replace(/\D/g, "").length >= 10 &&
+    emailOk;
 
   const handleSubmit = async () => {
     if (!isValid || isLoading) return;
     setError(null);
+
+    // Dobra o e-mail dentro da mensagem (mesmo padrão do register_product_inquiry),
+    // garantindo que o anunciante receba o contato de e-mail do interessado.
+    const composedMessage = [
+      form.message.trim(),
+      form.email.trim() ? `E-mail: ${form.email.trim()}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const result = await register({
       listingModule,
@@ -95,7 +109,7 @@ export function ContactIntentionModal({
       interestType,
       visitorName: form.name.trim(),
       visitorPhone: form.phone,
-      visitorMessage: form.message.trim() || undefined,
+      visitorMessage: composedMessage || undefined,
     });
 
     if (!result.success) {
@@ -114,7 +128,7 @@ export function ContactIntentionModal({
   };
 
   const handleClose = () => {
-    setForm({ name: "", phone: "", message: "" });
+    setForm({ name: "", phone: "", email: "", message: "" });
     setSubmitted(false);
     setError(null);
     onClose();
@@ -207,6 +221,22 @@ export function ContactIntentionModal({
                   onChange={(e) => update("phone", maskPhone(e.target.value))}
                   className="h-12 rounded-xl border-zinc-200 focus-visible:ring-orange-500/30 focus-visible:border-orange-500 font-medium"
                   inputMode="tel"
+                />
+              </div>
+
+              {/* E-mail */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> E-mail *
+                </label>
+                <Input
+                  type="email"
+                  placeholder="voce@email.com"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  className="h-12 rounded-xl border-zinc-200 focus-visible:ring-orange-500/30 focus-visible:border-orange-500 font-medium"
+                  inputMode="email"
+                  autoComplete="email"
                 />
               </div>
 

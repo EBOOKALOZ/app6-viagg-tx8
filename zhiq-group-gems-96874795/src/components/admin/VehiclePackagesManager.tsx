@@ -122,15 +122,33 @@ export function VehiclePackagesManager() {
 
   const deleteVehiclePkg = useMutation({
     mutationFn: async (id: string) => {
+      // Tenta excluir diretamente
       const { error } = await supabase
         .from("real_estate_credit_packages")
         .delete()
         .eq("id", id);
-      if (error) throw error;
+
+      if (error) {
+        // Se falhar por FK constraint, faz soft delete
+        if (error.message?.includes("foreign key") || error.code === "23503") {
+          const { error: updateErr } = await supabase
+            .from("real_estate_credit_packages")
+            .update({ is_active: false } as any)
+            .eq("id", id);
+          if (updateErr) throw updateErr;
+          return "deactivated" as const;
+        }
+        throw error;
+      }
+      return "deleted" as const;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["admin-vehicle-packages"] });
-      toast.success("Pacote excluído!");
+      if (result === "deactivated") {
+        toast.success("Pacote desativado (possui compras vinculadas e não pode ser excluído).");
+      } else {
+        toast.success("Pacote excluído!");
+      }
     },
     onError: (err: any) => toast.error(`Erro: ${err.message}`),
   });

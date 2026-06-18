@@ -17,6 +17,9 @@ const EMAIL_FROM = Deno.env.get("EMAIL_FROM") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+// API do Mercado Pago (para buscar o link oficial do comprovante do pagamento).
+const MP_API = "https://api.mercadopago.com";
+
 // Marca / links do app (e-mails só aceitam URLs absolutas e públicas).
 const APP_BASE = "https://viagg-tx8.com.br";
 const LOGO_URL = "https://viagg-tx8.com.br/images/viagg-tx8-logo.jpg";
@@ -132,6 +135,15 @@ interface EventPayload {
   amount_brl?: number | null;
   package_name?: string | null;
   credits?: number | null;
+  // Ordem de pagamento (p/ comprovante/recibo no e-mail). order_id vem do trigger;
+  // os demais são preenchidos por enrichPaymentReceipt() a partir da ordem.
+  order_id?: string | null;
+  provider_name?: string | null;
+  provider_payment_id?: string | null;
+  paid_at?: string | null;
+  payment_method?: string | null;
+  /** Link OFICIAL do comprovante no Mercado Pago (ticket_url / external_resource_url). */
+  mp_receipt_url?: string | null;
 }
 
 interface Recipient {
@@ -348,7 +360,7 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
     return;
   }
 
-  if (mod === "vehicle") {
+  if (mod === "vehicle" || mod === "vehicles") {
     const { data: ve } = await supabase
       .from("vehicle_listings")
       .select("title, brand, model, year, price_brl, cover_image_url")
@@ -403,6 +415,10 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
   // O register_product_inquiry concatena o e-mail do visitante no texto — extrai e mascara.
   const { email, message: msg } = extractVisitorEmail(ev.visitor_message);
   const emailMasked = maskEmail(email);
+  // Imóvel/veículo = anúncio de anunciante individual; produto = loja.
+  const isRealEstate = ev.listing_module === "real_estate";
+  const itemWord = ev.listing_module === "product" ? "produtos" : "anúncios";
+  const painelLink = isRealEstate ? "/anunciante/imoveis/mensagens" : "/anunciante/mensagens";
   const subject = "Viagg-TX8 • Você tem um novo interessado! 🎯";
   const html = `
     <!DOCTYPE html><html><head><meta charset="utf-8"></head>
@@ -411,7 +427,7 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
         ${LOGO_HEADER}
         <h1 style="color:#18181b; font-size:22px;">Você tem um novo interessado! 🎯</h1>
         <p style="color:#52525b; font-size:15px;">${greeting}</p>
-        <p style="color:#52525b; font-size:15px;"><strong>${nameMasked}</strong> ${action} em um dos seus produtos.</p>
+        <p style="color:#52525b; font-size:15px;"><strong>${nameMasked}</strong> ${action} em um dos seus ${itemWord}.</p>
         ${productBlock(ev)}
         <div style="margin:24px 0; padding:20px; border-left:4px solid #16a34a; background:#f0fdf4; border-radius:6px;">
           <p style="margin:0 0 6px; font-size:14px;"><strong>Nome:</strong> ${nameMasked}</p>
@@ -421,7 +437,7 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
           ${msg ? `<p style="margin:8px 0 0; font-size:14px;"><strong>Mensagem:</strong> ${msg}</p>` : ""}
         </div>
         <p style="color:#71717a; font-size:13px;">🔒 Desbloqueie no painel para ver <strong>nome, WhatsApp e e-mail completos</strong> e responder.</p>
-        ${ctaButton("/anunciante/mensagens", "Desbloquear contato")}
+        ${ctaButton(painelLink, "Desbloquear contato")}
         <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
         <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
       </div>
@@ -434,7 +450,9 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
 // SEM mascarar (é o dado dele) e com mensagem de "recebemos seu contato".
 function buyerLeadTemplate(ev: EventPayload, buyerName: string | null | undefined, storeName: string) {
   const greeting = buyerName ? `Olá, ${buyerName}!` : "Olá!";
-  const loja = storeName ? `a loja <strong>${storeName}</strong>` : "o vendedor";
+  // Imóvel/veículo = anunciante INDIVIDUAL (não é loja). Só produto vincula loja.
+  const isStore = ev.listing_module === "product";
+  const destino = (isStore && storeName) ? `a loja <strong>${storeName}</strong>` : "o anunciante";
   const { message: msg } = extractVisitorEmail(ev.visitor_message);
   const subject = "Viagg-TX8 • Recebemos o seu interesse! ✅";
   const html = `
@@ -444,7 +462,7 @@ function buyerLeadTemplate(ev: EventPayload, buyerName: string | null | undefine
         ${LOGO_HEADER}
         <h1 style="color:#18181b; font-size:22px;">Recebemos o seu interesse! ✅</h1>
         <p style="color:#52525b; font-size:15px;">${greeting}</p>
-        <p style="color:#52525b; font-size:15px;">Enviamos o seu contato para ${loja}. Em breve o vendedor responde pelo WhatsApp que você informou.</p>
+        <p style="color:#52525b; font-size:15px;">Enviamos o seu contato para ${destino}. Em breve o vendedor responde pelo WhatsApp que você informou.</p>
         ${productBlock(ev)}
         ${msg ? `<div style="margin:24px 0; padding:20px; border-left:4px solid #16a34a; background:#f0fdf4; border-radius:6px;">
           <p style="margin:0; font-size:14px;"><strong>Sua mensagem:</strong> ${msg}</p>
@@ -635,6 +653,7 @@ function walletTopupTemplate(ev: EventPayload, ownerName: string) {
           <p style="color:#18181b; font-size:18px; font-weight:700; margin:0 0 6px;">+ ${amount} de saldo</p>
           <p style="color:#52525b; font-size:14px; margin:0;">Use este saldo para <strong>chamar o motoboy</strong> e pagar suas entregas.</p>
         </div>
+        ${receiptBlock(ev)}
         ${ctaButton("/merchant/billing", "Ver minha carteira")}
         <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
         <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
@@ -665,12 +684,111 @@ function packagePurchaseTemplate(ev: EventPayload, ownerName: string) {
           ${creditLine}
           <p style="color:#52525b; font-size:14px; margin:8px 0 0;">Valor pago: <strong>${amount}</strong></p>
         </div>
+        ${receiptBlock(ev)}
         ${ctaButton("/anunciante/creditos", "Ver meus créditos")}
         <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
         <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
       </div>
     </body></html>`;
   return { subject, html };
+}
+
+// ── Comprovante / recibo de pagamento ──────────────────────────────────────
+function fmtDateBR(iso?: string | null): string {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
+  catch { return String(iso); }
+}
+function gatewayLabel(name?: string | null): string {
+  const n = String(name || "").toLowerCase();
+  if (n.includes("mercado") || n === "mp" || n === "mercado_pago") return "Mercado Pago";
+  return name || "Gateway de pagamento";
+}
+
+/** Busca o link OFICIAL do comprovante no Mercado Pago para o pagamento informado.
+ *  Usa o access_token do gateway ativo (tabela payment_gateways). Best-effort:
+ *  retorna null se não houver token, pagamento ou URL de comprovante. */
+async function fetchMpReceiptUrl(supabase: any, providerPaymentId: string): Promise<string | null> {
+  try {
+    if (!/^\d+$/.test(String(providerPaymentId))) return null; // só payment_id numérico do MP
+    const { data: gw } = await supabase
+      .from("payment_gateways")
+      .select("credentials")
+      .eq("provider_code", "mercadopago")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    const token = (gw?.credentials as { access_token?: string } | null)?.access_token;
+    if (!token) return null;
+
+    const res = await fetch(`${MP_API}/v1/payments/${encodeURIComponent(providerPaymentId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const p: any = await res.json().catch(() => ({}));
+    // Comprovante oficial: PIX/boleto expõem ticket_url / external_resource_url.
+    return (
+      p?.point_of_interaction?.transaction_data?.ticket_url ||
+      p?.transaction_details?.external_resource_url ||
+      null
+    );
+  } catch (_e) {
+    return null;
+  }
+}
+
+/** Preenche ev com os dados de pagamento da ordem (best-effort) p/ o comprovante. */
+async function enrichPaymentReceipt(supabase: any, ev: EventPayload): Promise<void> {
+  if (!ev.order_id) return;
+  try {
+    const { data: o } = await supabase
+      .from("pay_payment_orders")
+      .select("amount, provider_name, provider_payment_id, paid_at, metadata")
+      .eq("id", ev.order_id)
+      .maybeSingle();
+    if (o) {
+      ev.provider_name = ev.provider_name ?? o.provider_name ?? null;
+      ev.provider_payment_id = o.provider_payment_id ?? null;
+      ev.paid_at = o.paid_at ?? null;
+      if (ev.amount_brl == null) ev.amount_brl = Number(o.amount || 0);
+      ev.payment_method = (o.metadata?.method || o.metadata?.payment_method || null);
+
+      // Link oficial do comprovante no Mercado Pago (best-effort).
+      const isMp = String(o.provider_name || "").toLowerCase().includes("mercado");
+      if (isMp && o.provider_payment_id) {
+        ev.mp_receipt_url = await fetchMpReceiptUrl(supabase, String(o.provider_payment_id));
+      }
+    }
+  } catch (_e) { /* best-effort: sem comprovante detalhado */ }
+}
+
+/** Bloco HTML de comprovante de pagamento (recibo) para anexar ao e-mail. */
+function receiptBlock(ev: EventPayload): string {
+  if (!ev.order_id && !ev.provider_payment_id) return "";
+  const rows: Array<[string, string]> = [];
+  rows.push(["Forma de pagamento", gatewayLabel(ev.provider_name)]);
+  if (ev.payment_method) rows.push(["Método", String(ev.payment_method)]);
+  if (ev.provider_payment_id) rows.push(["ID do pagamento", String(ev.provider_payment_id)]);
+  if (ev.paid_at) rows.push(["Data", fmtDateBR(ev.paid_at)]);
+  rows.push(["Valor pago", formatBRL(ev.amount_brl)]);
+  if (ev.order_id) rows.push(["Pedido", String(ev.order_id).slice(0, 8).toUpperCase()]);
+  rows.push(["Status", "Aprovado ✅"]);
+  const trs = rows.map(([k, v]) =>
+    `<tr><td style="padding:4px 0;color:#71717a;font-size:13px;">${k}</td>` +
+    `<td style="padding:4px 0;color:#18181b;font-size:13px;font-weight:600;text-align:right;">${v}</td></tr>`
+  ).join("");
+  const officialBtn = ev.mp_receipt_url
+    ? `<div style="text-align:center; margin:16px 0 0;">
+         <a href="${ev.mp_receipt_url}" target="_blank" style="display:inline-block; background:#009ee3; color:#ffffff; text-decoration:none; font-weight:700; font-size:13px; padding:11px 22px; border-radius:8px;">Ver comprovante no Mercado Pago</a>
+       </div>`
+    : "";
+  return `
+    <div style="margin:24px 0; padding:20px; border:1px solid #e4e4e7; border-radius:8px; background:#fafafa;">
+      <p style="margin:0 0 12px; font-size:14px; font-weight:700; color:#18181b;">📄 Comprovante de pagamento</p>
+      <table style="width:100%; border-collapse:collapse;">${trs}</table>
+      ${officialBtn}
+      <p style="margin:12px 0 0; font-size:11px; color:#a1a1aa;">Guarde este comprovante. Pagamento processado por ${gatewayLabel(ev.provider_name)}.</p>
+    </div>`;
 }
 
 async function sendViaResend(to: string, subject: string, html: string) {
@@ -711,6 +829,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       await resolveListing(supabase, ev);
     } else if (ev.source === "order") {
       await resolveOrderImage(supabase, ev);
+    } else if (ev.source === "package_purchase" || ev.source === "wallet_topup") {
+      // Enriquecer com dados de pagamento p/ o comprovante/recibo no e-mail.
+      await enrichPaymentReceipt(supabase, ev);
     }
 
     const recipient = await resolveRecipient(supabase, ev);

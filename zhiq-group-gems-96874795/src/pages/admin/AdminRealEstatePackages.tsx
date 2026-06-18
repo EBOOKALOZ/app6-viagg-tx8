@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
+import AdminRealEstateCharges from "./AdminRealEstateCharges";
 
 export default function AdminRealEstatePackages() {
   const query = useAdminRealEstatePackages();
@@ -303,9 +304,11 @@ export default function AdminRealEstatePackages() {
             <p className="text-sm text-muted-foreground">Controle de pacotes para Imóveis, Veículos e Produtos</p>
           </div>
         </div>
-        <Button onClick={() => setShowCreate(activeTab)} className="gap-2 bg-[#FF6A00] hover:bg-[#e65c00]">
-          <Plus className="h-4 w-4" /> Novo Pacote
-        </Button>
+        {activeTab !== "charges" && (
+          <Button onClick={() => setShowCreate(activeTab)} className="gap-2 bg-[#FF6A00] hover:bg-[#e65c00]">
+            <Plus className="h-4 w-4" /> Novo Pacote
+          </Button>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -319,6 +322,9 @@ export default function AdminRealEstatePackages() {
           <TabsTrigger value="products" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm px-6">
             <ShoppingBag className="w-4 h-4" /> Produtos
           </TabsTrigger>
+          <TabsTrigger value="charges" className="rounded-lg gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm px-6">
+            <Zap className="w-4 h-4" /> Cobranças
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="real_estate" className="mt-0 outline-none">
@@ -331,6 +337,10 @@ export default function AdminRealEstatePackages() {
 
         <TabsContent value="products" className="mt-0 outline-none">
            {renderPackageTable(productPackages, "Produtos", ShoppingBag)}
+        </TabsContent>
+
+        <TabsContent value="charges" className="mt-0 outline-none">
+           <AdminRealEstateCharges />
         </TabsContent>
       </Tabs>
 
@@ -369,7 +379,7 @@ export default function AdminRealEstatePackages() {
   );
 }
 
-function PackageFormDialog({ pkg, onClose, onSave, isSubmitting, initialCategory }: any) {
+export function PackageFormDialog({ pkg, onClose, onSave, isSubmitting, initialCategory }: any) {
   const isProduct = (pkg?.is_merchant_product) || (initialCategory === 'products');
 
   const [form, setForm] = useState({

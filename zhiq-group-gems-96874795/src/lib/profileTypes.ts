@@ -1,4 +1,4 @@
-import { Car, Bike, Store, Truck, Zap } from 'lucide-react';
+import { Car, Bike, Store, Truck, Zap, Building2, CarFront } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
 export interface ProfileTypeConfig {
@@ -49,6 +49,22 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     description: 'Gerencie sua loja, solicite motoboys e acompanhe seus pedidos',
     icon: Store,
     route: '/merchant',
+    requiresVehicle: false,
+  },
+  imoveis: {
+    id: 'imoveis',
+    label: 'Imóveis',
+    description: 'Anuncie imóveis e fale com os interessados',
+    icon: Building2,
+    route: '/anunciante/imoveis',
+    requiresVehicle: false,
+  },
+  veiculos: {
+    id: 'veiculos',
+    label: 'Veículos',
+    description: 'Anuncie veículos e fale direto com os interessados',
+    icon: CarFront,
+    route: '/anunciante/veiculos',
     requiresVehicle: false,
   },
   freteiro: {

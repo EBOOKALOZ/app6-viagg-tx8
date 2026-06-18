@@ -1,7 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,18 +9,39 @@ import { toast } from "sonner";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 
-const UNLOCK_COST = 13;
+const UNLOCK_COST = 13; // custo fixo do desbloqueio na LOJA (anunciante)
+const RE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (admin → Cobranças)
+const VE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
 
 export default function AdvertiserMessagesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { intentions, isLoading, unlockIntention, deleteIntention } = useContactIntentions();
-  const { balance } = useAdvertiserCredits();
 
-  // Fallback de saldo caso useAdvertiserCredits ainda não tenha carregado
+  // Imóveis usam o PACOTE PRÓPRIO de créditos (não o do lojista).
+  // Decide pela origem do lead (real_estate) e, como fallback, pela rota.
+  const creditosRouteFor = (id: string) => {
+    const it = intentions.find((i) => i.id === id);
+    const isImovel =
+      it?.listing_module === "real_estate" ||
+      location.pathname.startsWith("/anunciante/imoveis");
+    return isImovel ? "/anunciante/imoveis/creditos" : "/anunciante/creditos";
+  };
+  const { balance } = useAdvertiserCredits();
+  const queryClient = useQueryClient();
+
+  // No painel de IMÓVEIS o saldo e o débito usam a carteira PRÓPRIA de imóveis
+  // (real_estate_credit_balances por owner_user_id), não a do lojista/anunciante.
+  const imoveisMode = location.pathname.startsWith("/anunciante/imoveis");
+  // No painel de VEÍCULOS o saldo e o débito usam a carteira PRÓPRIA de veículos
+  // (vehicle_credit_balances por owner_user_id), não a do lojista/anunciante.
+  const veiculosMode = location.pathname.startsWith("/anunciante/veiculos");
+
+  // Fallback de saldo do ANUNCIANTE (modo loja)
   const { data: fallbackBalance = 0 } = useQuery({
     queryKey: ["seller-credit-balance-for-msgs", user?.id],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !imoveisMode && !veiculosMode,
     refetchInterval: 15_000,
     queryFn: async () => {
       const { data: adv } = await (supabase.from("advertiser_accounts" as any)
@@ -33,7 +54,62 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  const creditBalance = balance?.available_credits ?? fallbackBalance;
+  // Saldo PRÓPRIO de imóveis (real_estate_credit_balances)
+  const { data: reBalance = 0 } = useQuery({
+    queryKey: ["real-estate-balance-msgs", user?.id],
+    enabled: !!user?.id && imoveisMode,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from("real_estate_credit_balances") as any)
+        .select("available_credits").eq("owner_user_id", user!.id).maybeSingle();
+      return Number((data as any)?.available_credits ?? 0);
+    },
+  });
+
+  // Custo FIXO p/ desbloquear WhatsApp do interessado (admin → Cobranças)
+  const { data: reUnlockCost = RE_UNLOCK_DEFAULT } = useQuery({
+    queryKey: ["real-estate-unlock-whatsapp-cost"],
+    enabled: imoveisMode,
+    queryFn: async () => {
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("credits_cost, is_active")
+        .eq("feature_code", "real_estate_unlock_whatsapp")
+        .maybeSingle();
+      if (!data) return RE_UNLOCK_DEFAULT;
+      return (data as any).is_active === false ? 0 : (Number((data as any).credits_cost) || RE_UNLOCK_DEFAULT);
+    },
+  });
+
+  // Saldo PRÓPRIO de veículos (vehicle_credit_balances)
+  const { data: veBalance = 0 } = useQuery({
+    queryKey: ["vehicle-balance-msgs", user?.id],
+    enabled: !!user?.id && veiculosMode,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from("vehicle_credit_balances") as any)
+        .select("available_credits").eq("owner_user_id", user!.id).maybeSingle();
+      return Number((data as any)?.available_credits ?? 0);
+    },
+  });
+
+  // Custo FIXO p/ desbloquear WhatsApp do interessado de VEÍCULO (admin → Cobranças)
+  const { data: veUnlockCost = VE_UNLOCK_DEFAULT } = useQuery({
+    queryKey: ["vehicle-unlock-whatsapp-cost"],
+    enabled: veiculosMode,
+    queryFn: async () => {
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("credits_cost, is_active")
+        .eq("feature_code", "vehicle_unlock_whatsapp")
+        .maybeSingle();
+      if (!data) return VE_UNLOCK_DEFAULT;
+      return (data as any).is_active === false ? 0 : (Number((data as any).credits_cost) || VE_UNLOCK_DEFAULT);
+    },
+  });
+
+  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : (balance?.available_credits ?? fallbackBalance);
+
+  // Custo por lead: imóvel/veículo = WhatsApp fixo da carteira própria; loja = custo do anunciante
+  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : UNLOCK_COST);
 
   // Máscaras
   const maskName = (n: string | null) => {
@@ -48,11 +124,64 @@ export default function AdvertiserMessagesPage() {
     const ddd = digits.slice(-11, -9) || "**";
     return `(${ddd}) *****-****`;
   };
+  // Remove a linha "E-mail: xxx" do texto (o e-mail é contato e fica no paywall);
+  // o restante da mensagem pode ser mostrado por inteiro ao vendedor.
+  const stripContactEmail = (msg: string | null) =>
+    (msg || "").replace(/\n*\s*e-?mail:\s*[^\s]+@[^\s]+/i, "").trim();
 
   const handleUnlock = async (id: string) => {
+    const lead = intentions.find((i) => i.id === id);
+    const cost = lead ? costForLead(lead) : (imoveisMode ? 50 : UNLOCK_COST);
+
+    // ── IMÓVEIS: debita a carteira PRÓPRIA via RPC (custo por categoria) ──
+    if (imoveisMode) {
+      if (creditBalance < cost) {
+        toast.error(`Sem saldo de imóveis (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+        setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200);
+        return;
+      }
+      const { data, error } = await supabase.rpc("unlock_real_estate_intention" as any, { p_intention_id: id });
+      const r = data as any;
+      if (!error && r?.success) {
+        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
+        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["real-estate-balance-msgs", user?.id] });
+      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
+        setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200);
+      } else {
+        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
+      }
+      return;
+    }
+
+    // ── VEÍCULOS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
+    if (veiculosMode) {
+      if (creditBalance < cost) {
+        toast.error(`Sem saldo de veículos (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+        setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200);
+        return;
+      }
+      const { data, error } = await supabase.rpc("unlock_vehicle_intention" as any, { p_intention_id: id });
+      const r = data as any;
+      if (!error && r?.success) {
+        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
+        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["vehicle-balance-msgs", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["veiculos-painel-saldo", user?.id] });
+      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
+        setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200);
+      } else {
+        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
+      }
+      return;
+    }
+
+    // ── LOJA (anunciante): fluxo existente ──
     if (creditBalance < UNLOCK_COST) {
       toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${creditBalance}). Redirecionando para compra...`, { duration: 3000 });
-      setTimeout(() => navigate("/anunciante/creditos"), 1200);
+      setTimeout(() => navigate(creditosRouteFor(id)), 1200);
       return;
     }
     const result = await unlockIntention(id, UNLOCK_COST);
@@ -61,7 +190,7 @@ export default function AdvertiserMessagesPage() {
     } else {
       if (result.buy_credits_cta) {
         toast.error(`Saldo insuficiente: ${result.available}/${result.required}. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/creditos"), 1200);
+        setTimeout(() => navigate(creditosRouteFor(id)), 1200);
       } else {
         toast.error("Erro ao desbloquear: " + result.error);
       }
@@ -83,7 +212,17 @@ export default function AdvertiserMessagesPage() {
     window.open(`https://wa.me/55${clean}?text=${msg}`, "_blank");
   };
 
-  const totalCount = intentions.length;
+  // Cada painel mostra só os leads do seu segmento:
+  //  • imóveis  → listing_module === 'real_estate'
+  //  • veículos → listing_module === 'vehicles'
+  //  • loja     → tudo MENOS imóveis e veículos (produtos/mercado)
+  const visibleIntentions = imoveisMode
+    ? intentions.filter((i) => i.listing_module === "real_estate")
+    : veiculosMode
+      ? intentions.filter((i) => i.listing_module === "vehicles")
+      : intentions.filter((i) => i.listing_module !== "real_estate" && i.listing_module !== "vehicles");
+
+  const totalCount = visibleIntentions.length;
 
   return (
     <div className="p-4 md:p-8 animate-fade-in space-y-6 mt-4">
@@ -110,7 +249,7 @@ export default function AdvertiserMessagesPage() {
         <div className="py-20 flex justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
         </div>
-      ) : intentions.length === 0 ? (
+      ) : visibleIntentions.length === 0 ? (
         <div className="bg-[#1B1F24] border border-dashed border-[#2A3038] rounded-2xl p-12 text-center space-y-3">
           <div className="w-16 h-16 rounded-full bg-[#14171B] flex items-center justify-center mx-auto">
             <MessageSquare className="w-8 h-8 text-[#A7B0BE]" />
@@ -122,9 +261,10 @@ export default function AdvertiserMessagesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {intentions.map((lead) => {
+          {visibleIntentions.map((lead) => {
             const isUnlocked = lead.status === "unlocked";
-            const hasEnough = creditBalance >= UNLOCK_COST;
+            const leadCost = costForLead(lead);
+            const hasEnough = creditBalance >= leadCost;
             const ModuleIcon = lead.listing_module === "real_estate" ? Building2
               : lead.listing_module === "product" ? Package
               : Car;
@@ -207,17 +347,21 @@ export default function AdvertiserMessagesPage() {
                   </div>
                 </div>
 
-                {/* Mensagem (só se desbloqueado) */}
-                {isUnlocked && lead.visitor_message && (
-                  <p className="text-xs text-emerald-800 italic line-clamp-3 px-1 bg-emerald-100/50 rounded-lg p-2">
+                {/* Mensagem do interessado — visível por inteiro ao vendedor.
+                   O e-mail (contato) é removido do texto enquanto não desbloqueia. */}
+                {isUnlocked && lead.visitor_message ? (
+                  <p className="text-xs text-emerald-800 italic px-1 bg-emerald-100/50 rounded-lg p-2 whitespace-pre-line">
                     "{lead.visitor_message}"
                   </p>
-                )}
-                {!isUnlocked && lead.masked_preview && (
+                ) : !isUnlocked && stripContactEmail(lead.visitor_message) ? (
+                  <p className="text-xs text-yellow-900 italic px-1 bg-yellow-100/60 rounded-lg p-2 whitespace-pre-line">
+                    "{stripContactEmail(lead.visitor_message)}"
+                  </p>
+                ) : !isUnlocked && lead.masked_preview ? (
                   <p className="text-xs text-yellow-800 font-mono text-center bg-black/5 rounded-lg p-2 border border-dashed border-yellow-400/50">
                     {lead.masked_preview}
                   </p>
-                )}
+                ) : null}
 
                 {/* Saldo atual */}
                 <div className={cn(
@@ -244,7 +388,7 @@ export default function AdvertiserMessagesPage() {
                     onClick={() => handleUnlock(lead.id)}
                     className="w-full h-11 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
                   >
-                    <Unlock className="w-4 h-4" /> Desbloquear (-{UNLOCK_COST} cr)
+                    <Unlock className="w-4 h-4" /> Desbloquear (-{leadCost} cr)
                   </Button>
                 ) : (
                   lead.visitor_phone && (
@@ -257,12 +401,15 @@ export default function AdvertiserMessagesPage() {
                   )
                 )}
 
-                <Button
-                  onClick={() => navigate('/anunciante/entregas')}
-                  className="w-full h-11 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-orange-900/30"
-                >
-                  <Bike className="w-4 h-4" /> Chamar Motoboy
-                </Button>
+                {/* Chamar Motoboy não faz sentido para imóveis */}
+                {!imoveisMode && (
+                  <Button
+                    onClick={() => navigate('/anunciante/entregas')}
+                    className="w-full h-11 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-orange-900/30"
+                  >
+                    <Bike className="w-4 h-4" /> Chamar Motoboy
+                  </Button>
+                )}
 
                 {/* Excluir só aparece depois que o lojista desbloqueia a mensagem */}
                 {isUnlocked && (

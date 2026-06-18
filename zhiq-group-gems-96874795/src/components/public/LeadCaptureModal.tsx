@@ -77,6 +77,8 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
     // Customer form
     const [customerName, setCustomerName] = useState("");
     const [customerPhone, setCustomerPhone] = useState("");
+    const [customerEmail, setCustomerEmail] = useState("");
+    const [customerMessage, setCustomerMessage] = useState("");
 
     // Fetch store info
     useEffect(() => {
@@ -85,6 +87,8 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
             setSubmitted(false);
             setCustomerName("");
             setCustomerPhone("");
+            setCustomerEmail("");
+            setCustomerMessage("");
             return;
         }
 
@@ -136,94 +140,20 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
         try {
             const phoneClean = customerPhone.replace(/\D/g, "");
 
-            // Try product_leads first, then fallback to product_interest_events
-            let inserted = false;
-
-            // Attempt 1: product_leads table
-            try {
-                // Check duplicate (2 min cooldown)
-                const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-                const { data: existing } = await (supabase.from("product_leads") as any)
-                    .select("id")
-                    .eq("product_id", product.id)
-                    .eq("customer_phone", phoneClean)
-                    .gte("created_at", twoMinAgo)
-                    .limit(1);
-
-                if (existing && existing.length > 0) {
-                    toast.info("Seu interesse já foi registrado! O vendedor será notificado.");
-                    setSubmitted(true);
-                    return;
-                }
-
-                // Get pricing (graceful)
-                let creditsCost = 1;
-                try {
-                    if (product.price_label) {
-                        const priceNum = parseFloat(product.price_label.replace(",", ".").replace(/[^\d.]/g, ""));
-                        if (!isNaN(priceNum)) {
-                            const { data: pricing } = await (supabase.from("lead_pricing_rules") as any)
-                                .select("credits")
-                                .lte("min_price", priceNum)
-                                .gte("max_price", priceNum)
-                                .limit(1)
-                                .single();
-                            if (pricing) creditsCost = pricing.credits;
-                        }
-                    }
-                } catch { /* pricing table may not exist */ }
-
-                const { error } = await (supabase.from("product_leads") as any).insert({
-                    product_id: product.id,
-                    store_id: product.merchant_store_id,
-                    product_title: product.title,
-                    product_price: product.price_label || null,
-                    customer_name: customerName.trim(),
-                    customer_phone: phoneClean,
-                    status: "locked",
-                    credits_cost: creditsCost,
-                    source: "landing",
-                    city: store?.city || product.city,
-                    neighborhood: store?.bairro,
-                });
-
-                if (error) throw error;
-                inserted = true;
-            } catch {
-                // product_leads table may not exist, try fallback
-            }
-
-            // Attempt 2: product_interest_events fallback (base table columns only)
-            if (!inserted) {
-                const baseInsert = {
-                    product_id: product.id,
-                    neighborhood: store?.bairro || product.city || "desconhecido",
-                    city: store?.city || product.city || "desconhecido",
-                    event_type: "click",
-                };
-
-                // Try with metadata first
-                try {
-                    const { error: err1 } = await (supabase.from("product_interest_events") as any).insert({
-                        ...baseInsert,
-                        metadata: JSON.stringify({
-                            type: "lead",
-                            customer_name: customerName.trim(),
-                            customer_phone: phoneClean,
-                        }),
-                    });
-                    if (err1) throw err1;
-                    inserted = true;
-                } catch {
-                    // metadata column might not exist either, try bare minimum
-                    const { error: err2 } = await (supabase.from("product_interest_events") as any).insert(baseInsert);
-                    if (err2) {
-                        console.error("[LeadCaptureModal] bare insert error:", err2);
-                        throw err2;
-                    }
-                    inserted = true;
-                }
-            }
+            // Caminho ÚNICO e que funciona: RPC register_product_inquiry → grava em
+            // advertiser_contact_intentions → aparece em /anunciante/mensagens e
+            // dispara e-mail ao lojista (e ao interessado, se informar e-mail).
+            const { data, error } = await supabase.rpc("register_product_inquiry", {
+                p_product_id: product.id,
+                p_visitor_name: customerName.trim(),
+                p_visitor_phone: phoneClean,
+                p_visitor_email: customerEmail.trim() || null,
+                p_visitor_message: customerMessage.trim() || null,
+                p_city: store?.city || product.city || null,
+            });
+            if (error) throw error;
+            const res = data as { success?: boolean; error?: string };
+            if (!res?.success) throw new Error(res?.error || "falha ao registrar");
 
             // Track analytics event
             trackProductEvent({
@@ -362,6 +292,32 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                                     onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
                                     className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all"
                                     maxLength={15}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                                    Seu e-mail <span className="font-normal text-gray-400 normal-case">(opcional — pra receber a confirmação)</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    placeholder="voce@email.com"
+                                    value={customerEmail}
+                                    onChange={(e) => setCustomerEmail(e.target.value)}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all"
+                                    maxLength={120}
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                                    Mensagem para o vendedor <span className="font-normal text-gray-400 normal-case">(opcional)</span>
+                                </label>
+                                <textarea
+                                    placeholder="Ex.: Tenho interesse neste produto. Ainda está disponível?"
+                                    value={customerMessage}
+                                    onChange={(e) => setCustomerMessage(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none transition-all resize-none"
+                                    maxLength={500}
                                 />
                             </div>
                         </div>

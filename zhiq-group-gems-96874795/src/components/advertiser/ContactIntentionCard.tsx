@@ -99,6 +99,12 @@ export function ContactIntentionCard({
   const isUnlocked = intention.status === "unlocked";
   const hasEnoughCredits = availableCredits >= intention.credits_cost;
 
+  // Imóveis usam o pacote PRÓPRIO (não o do lojista). Decide pela origem do lead.
+  const creditosRoute =
+    intention.listing_module === "real_estate"
+      ? "/anunciante/imoveis/creditos"
+      : "/anunciante/creditos";
+
   const handleUnlock = async () => {
     if (isUnlocking || !isLocked) return;
     setIsUnlocking(true);
@@ -118,7 +124,7 @@ export function ContactIntentionCard({
           {
             action: {
               label: "Comprar créditos",
-              onClick: () => navigate("/anunciante/creditos"),
+              onClick: () => navigate(creditosRoute),
             },
           }
         );
@@ -303,7 +309,7 @@ export function ContactIntentionCard({
                   </p>
                 </div>
                 <Button
-                  onClick={() => navigate("/anunciante/creditos")}
+                  onClick={() => navigate(creditosRoute)}
                   className="w-full h-12 rounded-2xl bg-zinc-900 text-white font-black text-[11px] uppercase tracking-widest gap-2"
                 >
                   <CreditCard className="w-4 h-4" />

@@ -54,3 +54,8 @@ verify_jwt = false
 
 [functions.webhook-bridge]
 verify_jwt = false
+
+# IA proxy: JWT obrigatório (verify_jwt = true por padrão). Mantém a chave
+# secreta da AIAPI no servidor e exige usuário autenticado.
+[functions.ai-chat]
+verify_jwt = true

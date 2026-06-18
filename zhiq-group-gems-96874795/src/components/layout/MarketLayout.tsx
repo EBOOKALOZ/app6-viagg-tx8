@@ -42,6 +42,8 @@ interface MarketLayoutProps {
     onSearchSubmit?: (val: string) => void;
     hideCart?: boolean;
     hideFooter?: boolean;
+    /** Esconde o botão Motoboy do topo (usado quando ele é exibido em outra linha). */
+    hideTopMotoboy?: boolean;
 }
 
 export function MarketLayout({
@@ -55,7 +57,8 @@ export function MarketLayout({
     mainClassName,
     onSearchSubmit,
     hideCart = false,
-    hideFooter = false
+    hideFooter = false,
+    hideTopMotoboy = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
     const { user, isLoading, availableProfiles, activeProfile, signOut } = useAuth();
@@ -104,14 +107,16 @@ export function MarketLayout({
                         </div>
 
                         <div className="flex-1 flex items-center justify-center gap-2 lg:flex-none lg:justify-start lg:gap-3 px-2 lg:px-0">
-                            {/* MOTOBOY — esquerda */}
-                            <button
+                            {/* MOTOBOY — esquerda (ocultável quando exibido em outra linha) */}
+                            {!hideTopMotoboy && (
+                              <button
                                 onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
                                 className="group flex h-10 w-[92px] lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
                                 title="Motoboy"
-                            >
+                              >
                                 <span className="text-[11px] lg:text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
-                            </button>
+                              </button>
+                            )}
 
                             {/* CESTA — centro */}
                             <button

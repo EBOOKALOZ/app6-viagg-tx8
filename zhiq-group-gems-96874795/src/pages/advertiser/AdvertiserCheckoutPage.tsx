@@ -12,6 +12,20 @@ export default function AdvertiserCheckoutPage() {
     // Se veio packageId na query, usa como listingId temporário
     const effectiveId = listingId || packageId;
 
+    // Segmento de origem (imoveis/veiculos/lojista) → define para onde voltar
+    // após o pagamento aprovado, mantendo o usuário no painel certo.
+    const seg = searchParams.get('ret');
+    const creditsRoute =
+        seg === 'imoveis' ? '/anunciante/imoveis/creditos'
+        : seg === 'veiculos' ? '/anunciante/veiculos/creditos'
+        : '/anunciante/creditos';
+
+    // Carteira de destino do crédito: imóveis credita a carteira imobiliária
+    // (real_estate_credit_balances) e marca a ordem como 'real_estate_credits'
+    // (admin → "Pacotes de Imóveis"). Demais segmentos vão para a carteira do
+    // anunciante (marketplace).
+    const walletCtx: 'advertiser' | 'real_estate' = seg === 'imoveis' ? 'real_estate' : 'advertiser';
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -23,7 +37,7 @@ export default function AdvertiserCheckoutPage() {
                     <p className="text-zinc-500 font-medium tracking-tight">Finalize seu pagamento para liberar créditos ou visibilidade.</p>
                 </div>
                 <button 
-                    onClick={() => navigate('/anunciante/creditos')}
+                    onClick={() => navigate(creditsRoute)}
                     className="flex items-center gap-2 text-zinc-400 hover:text-orange-600 transition-colors text-sm font-black uppercase tracking-widest"
                 >
                     <ArrowLeft className="w-4 h-4" />
@@ -35,8 +49,9 @@ export default function AdvertiserCheckoutPage() {
                 <RealEstateCheckoutContent
                     listingId={effectiveId}
                     layout="dashboard"
-                    walletContext="advertiser"
-                    onBack={() => navigate('/anunciante/creditos')}
+                    walletContext={walletCtx}
+                    returnTo={creditsRoute}
+                    onBack={() => navigate(creditsRoute)}
                     onSuccess={() => {
                         // Optional: additional logic on success inside dashboard
                     }}

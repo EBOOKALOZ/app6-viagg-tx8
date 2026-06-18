@@ -19,6 +19,14 @@ export interface AdminFinancialStats {
     saldoChamarMotoboy: number;
     /** Total pago em pacotes de créditos + recargas (compras confirmadas). */
     creditosAdquiridos: number;
+    /** Entrada de compras de pacotes de LOJISTAS/anunciante (credit_package + advertiser_credits). */
+    pacotesLojistas: number;
+    /** Qtd de compras de pacotes de lojistas/marketplace. */
+    pacotesLojistasQtd: number;
+    /** Entrada de compras de pacotes de IMÓVEIS (real_estate_credits). */
+    pacotesImoveis: number;
+    /** Qtd de compras de pacotes de imóveis. */
+    pacotesImoveisQtd: number;
 }
 
 export function useAdminFinancialStats() {
@@ -47,6 +55,17 @@ export function useAdminFinancialStats() {
             const creditRevenue = sum(creditOrders, (o) => o.amount);
             const creditHoje = sum(creditOrders.filter((o: any) => isToday(o.paid_at)), (o) => o.amount);
             const saldoLojistas = creditRevenue;
+
+            // ── Separação por segmento (cards dedicados no painel) ──
+            // Lojistas/anunciante = credit_package + advertiser_credits (mesmo conjunto acima).
+            const pacotesLojistas = creditRevenue;
+            const pacotesLojistasQtd = creditOrders.length;
+            // Imóveis = compras de pacotes imobiliários (product_type 'real_estate_credits').
+            const imovelOrders = (paidOrders || []).filter(
+                (o: any) => o.product_type === "real_estate_credits"
+            );
+            const pacotesImoveis = sum(imovelOrders, (o) => o.amount);
+            const pacotesImoveisQtd = imovelOrders.length;
 
             // Recargas de saldo: o dinheiro carregado especificamente p/ chamar motoboy.
             const recargasSaldo = sum(
@@ -119,6 +138,10 @@ export function useAdminFinancialStats() {
                             totalLojas,
                             saldoChamarMotoboy,
                             creditosAdquiridos: creditRevenue,
+                            pacotesLojistas,
+                            pacotesLojistasQtd,
+                            pacotesImoveis,
+                            pacotesImoveisQtd,
                         };
                     }
                 }
@@ -139,6 +162,10 @@ export function useAdminFinancialStats() {
                 totalLojas,
                 saldoChamarMotoboy,
                 creditosAdquiridos: creditRevenue,
+                pacotesLojistas,
+                pacotesLojistasQtd,
+                pacotesImoveis,
+                pacotesImoveisQtd,
             };
         },
     });

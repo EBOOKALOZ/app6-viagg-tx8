@@ -27,7 +27,10 @@ export default function CheckoutReturnPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [status, setStatus] = useState<Status>("checking");
-  const returnTo = getPendingReturnTo() || "/anunciante/creditos";
+  // Destino após o pagamento. Começa pelo que foi guardado no localStorage, mas é
+  // sobrescrito pelo TIPO da própria ordem (à prova de falha — localStorage/URL
+  // podem se perder no retorno do Mercado Pago).
+  const [returnTo, setReturnTo] = useState(getPendingReturnTo() || "/anunciante/creditos");
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +65,17 @@ export default function CheckoutReturnPage() {
         if (!cancelled) setStatus("notfound");
         return;
       }
+
+      // Destino correto pelo TIPO da ordem (imóveis volta ao painel de imóveis).
+      try {
+        const { data: ord } = await (supabase.from("pay_payment_orders") as any)
+          .select("product_type")
+          .eq("id", orderId)
+          .maybeSingle();
+        if (!cancelled && ord?.product_type === "real_estate_credits") {
+          setReturnTo("/anunciante/imoveis/creditos");
+        }
+      } catch { /* mantém o returnTo do localStorage */ }
 
       // Tenta reconciliar algumas vezes — o MP pode levar uns segundos.
       for (let i = 0; i < 5 && !cancelled; i++) {

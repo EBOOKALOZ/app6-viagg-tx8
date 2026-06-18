@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PropertyImageUpload } from '@/components/real-estate/PropertyImageUpload';
 import { ContactProtectionNotice } from '@/components/real-estate/ContactProtectionNotice';
-import { CreditPackageSelector } from '@/components/real-estate/CreditPackageSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,22 +12,68 @@ import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AdvertiserPanelLayout } from '@/components/advertiser/AdvertiserPanelLayout';
-import { 
-  Home, 
-  Save, 
-  ArrowLeft, 
-  ArrowRight, 
-  Loader2, 
-  Building2, 
-  MapPin, 
-  Camera, 
-  CreditCard,
-  ShieldCheck,
+import {
+  Home,
+  ArrowLeft,
   CheckCircle2,
+  Check,
+  Tag,
+  Building2,
+  Ruler,
+  MessageCircle,
+  MapPin,
+  Phone,
+  Camera,
+  Image as ImageIcon,
   Info,
-  Zap
+  Zap,
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
-import { cn, formatCurrencyBRL, parseBRLCurrency, formatBrazilianPhone, toE164 } from '@/lib/utils';
+import { cn, parseBRLCurrency, formatBrazilianPhone, toE164 } from '@/lib/utils';
+
+const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+
+const TYPE_LABEL: Record<string, string> = { terreno: "Terreno", lote: "Lote Urbano", chacara: "Chácara", sitio: "Sítio", fazenda: "Fazenda" };
+
+interface SectionProps {
+  step: number;
+  title: string;
+  description?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  done?: boolean;
+  children: React.ReactNode;
+}
+
+const Section = ({ step, title, description, icon: Icon, done, children }: SectionProps) => (
+  <section id={`re-section-${step}`} className="scroll-mt-24">
+    <div className="mb-4 flex items-start gap-3">
+      <div className={cn(
+        "h-10 w-10 shrink-0 rounded-full flex items-center justify-center font-black text-sm border-2 transition-all",
+        done ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-zinc-200 text-zinc-600"
+      )}>
+        {done ? <Check className="h-4 w-4" /> : String(step).padStart(2, '0')}
+      </div>
+      <div className="flex-1 pt-1">
+        <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+          <Icon className="h-5 w-5 text-[#3483FA]" />
+          {title}
+        </h2>
+        {description && <p className="text-sm text-zinc-500 mt-0.5">{description}</p>}
+      </div>
+    </div>
+    <Card className="border border-zinc-200 bg-white shadow-sm rounded-xl overflow-hidden">
+      <CardContent className="p-5 sm:p-7 space-y-5">{children}</CardContent>
+    </Card>
+  </section>
+);
+
+const InputLabel = ({ children, required }: { children: React.ReactNode; required?: boolean }) => (
+  <label className="text-sm font-semibold text-zinc-700 flex items-center gap-1">
+    {children}
+    {required && <span className="text-red-500">*</span>}
+  </label>
+);
 
 export const PropertyForm = () => {
   const { user } = useAuth();
@@ -37,12 +82,10 @@ export const PropertyForm = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
   const isAdvertiserContext = location.pathname.startsWith('/anunciante');
-  const [step, setStep] = useState(1);
+  const isImoveisForm = location.pathname.includes('/imoveis');
   const [loading, setLoading] = useState(false);
-  const [isAutosaving, setIsAutosaving] = useState(false);
-  const [isStepReady, setIsStepReady] = useState(false);
   const [listingId, setListingId] = useState<string | null>(urlListingId || null);
-  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [hasExistingMedia, setHasExistingMedia] = useState(false);
 
   // ── Upload Imagens Deferred ──
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -65,6 +108,36 @@ export const PropertyForm = () => {
     bathrooms: '0',
     lot_quantity: '1',
   });
+
+  // Pré-seleciona a categoria vinda do link de cadastro (?tipo=sitio/chacara/lote/fazenda).
+  useEffect(() => {
+    const tipo = new URLSearchParams(location.search).get("tipo");
+    if (tipo && ["terreno", "lote", "chacara", "sitio", "fazenda"].includes(tipo)) {
+      setPropertyData(prev => ({ ...prev, property_type: tipo }));
+    }
+  }, [location.search]);
+
+  // Custo de desbloqueio do contato POR CATEGORIA (admin → Cobranças).
+  const [unlockCosts, setUnlockCosts] = useState<Record<string, number>>({ sitio: 80, chacara: 80, lote: 50, fazenda: 150, terreno: 50 });
+  const [unlockActive, setUnlockActive] = useState(true);
+  useEffect(() => {
+    (async () => {
+      const codes = ["sitio", "chacara", "lote", "fazenda"].map((k) => `real_estate_unlock_${k}`);
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("feature_code, credits_cost, is_active")
+        .in("feature_code", codes);
+      if (data && data.length) {
+        const next: Record<string, number> = {};
+        let anyActive = false;
+        for (const r of data) {
+          next[String(r.feature_code).replace("real_estate_unlock_", "")] = Number(r.credits_cost) || 0;
+          if (r.is_active) anyActive = true;
+        }
+        setUnlockCosts((prev) => ({ ...prev, ...next }));
+        setUnlockActive(anyActive);
+      }
+    })();
+  }, []);
 
   const [locationData, setLocationData] = useState({
     city: 'Blumenau',
@@ -92,17 +165,15 @@ export const PropertyForm = () => {
   useEffect(() => {
     async function loadData() {
       if (!listingId || !user) return;
-      
+
       try {
         setLoading(true);
-        console.log("[AUDIT] Iniciando carregamento de dados do anúncio:", listingId);
-        // Load listing
         const { data: listing, error } = await supabase
           .from('real_estate_listings' as any)
-          .select('*, contacts:real_estate_listing_contacts(*)')
+          .select('*, contacts:real_estate_listing_contacts(*), media:real_estate_media(id)')
           .eq('id', listingId)
           .single();
-        
+
         if (error) throw error;
         if (listing) {
           setPropertyData({
@@ -110,13 +181,15 @@ export const PropertyForm = () => {
             description: listing.description || '',
             property_type: listing.property_type || 'terreno',
             price_brl: listing.price_brl ? new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(listing.price_brl) : '',
-            total_area_m2: listing.total_area_m2 ? (listing.total_area_m2 / 10000).toString() : '',
+            total_area_m2: listing.total_area_m2
+              ? (listing.property_type === 'lote' ? listing.total_area_m2.toString() : (listing.total_area_m2 / 10000).toString())
+              : '',
             built_area_m2: listing.built_area_m2?.toString() || '',
             bedrooms: listing.bedrooms?.toString() || '0',
             bathrooms: listing.bathrooms?.toString() || '0',
             lot_quantity: listing.lot_quantity?.toString() || '',
           });
-          
+
           setLocationData({
             city: listing.city || 'Blumenau',
             state: listing.state || 'SC',
@@ -134,39 +207,56 @@ export const PropertyForm = () => {
               phone_e164: c.phone_e164 || '',
             });
           }
+
+          setHasExistingMedia((listing.media?.length ?? 0) > 0);
         }
       } catch (err: any) {
-        console.error("[AUDIT] Erro ao carregar dados:", err);
+        console.error("[PropertyForm] Erro ao carregar dados:", err);
         toast.error("Não foi possível carregar os dados do anúncio.");
       } finally {
         setLoading(false);
       }
     }
-    
-    // Only load if it's an explicit edit (listingId exists but was not just created)
-    if (urlListingId) {
-      console.log("[AUDIT] ETAPA DE FOTOS: PropertyForm montado para EDIT: ", urlListingId);
-      loadData().then(() => {
-        setIsStepReady(true);
-        console.log("[AUDIT] ETAPA DE FOTOS: Pronto para interação.");
-      });
-    } else {
-      console.log("[AUDIT] PropertyForm montado para NOVO ANÚNCIO");
-      setIsStepReady(true);
-    }
+
+    if (urlListingId) loadData();
   }, [urlListingId, user]);
 
-  const handleCreateListing = async (shouldMoveStep = true) => {
+  const showElectronicsFields = false; // placeholder removido — sem campos eletrônicos em imóveis
+  const isLote = propertyData.property_type === 'lote';
+
+  const completion = useMemo(() => ({
+    title: propertyData.title.trim().length >= 5,
+    price: !!propertyData.price_brl,
+    area: !!propertyData.total_area_m2,
+    description: propertyData.description.trim().length >= 20,
+    location: !!locationData.city && !!locationData.state && !!locationData.neighborhood,
+    contact: !!contactData.contact_name && !!contactData.whatsapp_e164,
+    photos: pendingFiles.length > 0 || hasExistingMedia,
+  }), [propertyData, locationData, contactData, pendingFiles, hasExistingMedia]);
+
+  const completedCount = Object.values(completion).filter(Boolean).length;
+  const totalChecks = Object.keys(completion).length;
+  const progressPct = Math.round((completedCount / totalChecks) * 100);
+
+  const canSubmit = listingId
+    ? completion.title
+    : completion.title && completion.price && completion.area && completion.location && completion.contact && completion.photos;
+
+  const handleSave = async () => {
     if (!user) return;
+    if (!canSubmit) {
+      toast.error('Complete os campos obrigatórios antes de publicar.');
+      return;
+    }
+
     try {
-      setIsAutosaving(true);
-      console.log("[AUDIT] Autosave manual disparado. Gravando dados...");
-      
+      setLoading(true);
+
       // 1. Create/Update Listing
       const listingPayload = {
         owner_user_id: user.id,
         title: propertyData.title,
-        description: propertyData.property_type === 'lote' 
+        description: isLote
           ? [
               propertyData.description,
               propertyData.total_area_m2 ? `Dimensões: ${propertyData.total_area_m2}` : '',
@@ -175,10 +265,10 @@ export const PropertyForm = () => {
           : propertyData.description,
         property_type: propertyData.property_type,
         price_brl: propertyData.price_brl ? parseBRLCurrency(propertyData.price_brl) : 0,
-        total_area_m2: propertyData.total_area_m2 
-          ? (propertyData.property_type === 'lote' 
-              ? null  // Lote usa lot_dimensions (texto)
-              : parseFloat(propertyData.total_area_m2) * 10000 || null)
+        total_area_m2: propertyData.total_area_m2
+          ? (isLote
+              ? parseFloat(propertyData.total_area_m2) || null  // Lote: valor já está em m²
+              : parseFloat(propertyData.total_area_m2) * 10000 || null)  // Demais: hectares → m²
           : null,
         built_area_m2: propertyData.built_area_m2 ? parseFloat(propertyData.built_area_m2) * 10000 : null,
         bedrooms: parseInt(propertyData.bedrooms),
@@ -189,41 +279,32 @@ export const PropertyForm = () => {
         address_line: locationData.address_line,
         address_number: locationData.address_number,
         public_address_label: locationData.public_address_label || `${locationData.neighborhood}, ${locationData.city}/${locationData.state}`,
-        visibility_status: 'draft'
+        visibility_status: 'published',
+        published_at: new Date().toISOString(),
       };
 
       let currentListingId = listingId;
 
       if (!currentListingId) {
-        console.log("[AUDIT] Criando NOVO anúncio...");
         const { data, error } = await supabase
           .from('real_estate_listings' as any)
           .insert(listingPayload as any)
           .select()
           .single();
-        if (error) {
-          console.error("[AUDIT] Falha ao inserir anúncio:", error);
-          throw error;
-        }
+        if (error) throw error;
         currentListingId = (data as any).id;
-        console.log("[AUDIT] Novo anúncio criado com ID:", currentListingId);
         setListingId(currentListingId);
       } else {
-        console.log("[AUDIT] Atualizando anúncio existente:", currentListingId);
         const { error } = await supabase
           .from('real_estate_listings' as any)
           .update(listingPayload as any)
           .eq('id', currentListingId);
-        if (error) {
-          console.error("[AUDIT] Falha ao atualizar anúncio:", error);
-          throw error;
-        }
+        if (error) throw error;
       }
 
+      if (!currentListingId) throw new Error("Erro de integridade: Listing ID não gerado.");
+
       // 2. Create/Update Contact (Protected)
-      if (currentListingId) {
-        console.log("[AUDIT] Sincronizando dados de contato para:", currentListingId);
-       // Update/Upsert Contact
       await supabase
         .from('real_estate_listing_contacts' as any)
         .upsert({
@@ -235,20 +316,18 @@ export const PropertyForm = () => {
         } as any);
 
       // ── Upload de fotos pendentes ──
-      if (pendingFiles.length > 0 && currentListingId) {
+      if (pendingFiles.length > 0) {
         toast.info(`Processando ${pendingFiles.length} fotos... Aguarde análise de segurança.`);
         for (const file of pendingFiles) {
           const timestamp = new Date().getTime();
-          const fileName = `${timestamp}-${file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const fileName = `${timestamp}-${file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_')}`;
           const filePath = `${user.id}/${currentListingId}/${fileName}`;
 
-          // Upload para ORIGINAL
           const { error: uploadError } = await supabase.storage
             .from('real-estate-original')
             .upload(filePath, file);
 
           if (!uploadError) {
-             // Criar registro no banco
              const { data: mediaData } = await supabase.from('real_estate_media' as any).insert({
                listing_id: currentListingId,
                owner_user_id: user.id,
@@ -256,11 +335,6 @@ export const PropertyForm = () => {
              } as any).select().single();
 
              if (mediaData) {
-                // ── MODERAÇÃO TEMPORARIAMENTE DESATIVADA PARA TESTES ──
-                // await supabase.functions.invoke('viagg-tx8-sentinela-visual', {
-                //   body: { media_id: (mediaData as any).id }
-                // });
-
                 // Auto-approve: copia para public e marca como aprovado
                 await supabase.storage.from('real-estate-public').upload(filePath, file, { upsert: true });
                 await supabase.from('real_estate_media' as any).update({
@@ -273,480 +347,351 @@ export const PropertyForm = () => {
         setPendingFiles([]);
       }
 
-      toast.success('Anúncio salvo com sucesso!');
-      } else {
-        throw new Error("Erro de integridade: Listing ID não gerado.");
-      }
-
-      // Log claro para auditoria
-      console.log("[AUDIT] Autosave concluído para Listing ID:", currentListingId);
-      
-      // PERSISTÊNCIA: Atualiza a URL para incluir o ID, evitando perda no F5
-      if (!listingId && currentListingId) {
-        navigate(`/anunciante/anuncios/editar/imovel/${currentListingId}`, { replace: true });
-      }
-      
-      if (shouldMoveStep) {
-        setStep(3); // Move to Images & Credits
-      }
-    } catch (err: any) {
-      console.error("[AUDIT] Erro no Autosave:", err);
-      toast.error(`Erro ao salvar: ${err.message}`);
-    } finally {
-      setIsAutosaving(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    if (!listingId) {
-      toast.error('Ocorreu um erro: o anúncio não foi localizado.');
-      return;
-    }
-
-    if (!selectedPackage) {
-      toast.info('Seu anúncio será publicado em modo gratuito. Ative um plano depois para ver os leads.');
-    }
-
-    try {
-      setLoading(true);
-      // In a real flow, this would trigger payment. 
-      // For now, we simulate success and mark as published/pending review.
-      const { error } = await supabase
-        .from('real_estate_listings' as any)
-        .update({ visibility_status: 'pending_review' } as any)
-        .eq('id', listingId);
-
-      if (error) throw error;
-
-      toast.success('Anúncio enviado para moderação com sucesso!');
-      // Invalida a listagem do anunciante para que ela recarregue automaticamente
+      toast.success('Anúncio publicado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ["advertiser-unified-listings"] });
-      navigate(isAdvertiserContext ? '/anunciante/anuncios' : '/mercado');
+      navigate(isImoveisForm ? '/anunciante/imoveis/meus-anuncios' : (isAdvertiserContext ? '/anunciante/anuncios' : '/mercado'));
     } catch (err: any) {
-      toast.error(`Erro ao publicar: ${err.message}`);
+      console.error("[PropertyForm] Erro ao salvar:", err);
+      toast.error(`Erro ao salvar: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const steps = [
-    { id: 1, name: 'Informações', icon: Building2 },
-    { id: 2, name: 'Localização', icon: MapPin },
-    { id: 3, name: 'Fotos & Créditos', icon: CreditCard },
-  ];
-
   const FormContent = (
-    <div className={cn("min-h-screen pb-20", !isAdvertiserContext && "bg-zinc-50/50")}>
-      {/* ═══ HEADER PREMIUM ═══ */}
-      {!isAdvertiserContext && (
-        <div className="bg-white border-b border-zinc-200 sticky top-0 z-30 shadow-sm">
-          <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-full">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-              <div className="flex flex-col">
-                <h1 className="text-xl font-black text-zinc-900 tracking-tight leading-none">Anunciar Imóvel</h1>
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Marketplace Viagg-TX8</span>
-              </div>
+    <div className="min-h-screen bg-[#EBEBEB] pb-32">
+      {/* Top bar — Mercado Livre style (mesmo padrão do formulário de Produtos) */}
+      <div className="sticky top-0 z-30 bg-[#FFE600] border-b border-yellow-300 shadow-sm">
+        <div className="container max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-zinc-900 font-bold hover:opacity-70 transition-opacity">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="hidden sm:inline text-sm">Voltar</span>
+          </button>
+          <div className="flex items-center gap-2 text-zinc-900">
+            <Home className="h-5 w-5" />
+            <span className="font-black text-sm sm:text-base">{listingId ? 'Editar anúncio' : 'Anunciar imóvel'}</span>
+          </div>
+          <div className="text-xs font-bold text-zinc-700">{progressPct}% concluído</div>
+        </div>
+        <div className="h-1 bg-yellow-300">
+          <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+        </div>
+      </div>
+
+      <div className="container max-w-6xl mx-auto px-4 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Main column */}
+          <div className="lg:col-span-8 space-y-6">
+
+            {/* Aviso de responsabilidade do anunciante */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+              <Info className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-800 leading-relaxed">
+                <strong>Responsabilidade do anunciante:</strong> todas as informações, fotos e dados
+                inseridos neste anúncio são de inteira responsabilidade do anunciante. A Viagg-TX8
+                apenas hospeda o conteúdo e não se responsabiliza pela veracidade das informações publicadas.
+              </p>
             </div>
 
-            {/* Progress Steps (Desktop) */}
-            <div className="hidden md:flex items-center gap-2">
-              {steps.map((s, idx) => (
-                <React.Fragment key={s.id}>
-                  <div 
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-full transition-all",
-                      step === s.id ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" : "text-zinc-400 bg-zinc-100"
-                    )}
-                  >
-                    <s.icon className="w-4 h-4" />
-                    <span className="text-xs font-black uppercase tracking-tight">{s.name}</span>
+            {/* 1 — Título */}
+            <Section step={1} title="Conte sobre o seu imóvel" description="Comece pelo título. Seja claro e direto." icon={Tag} done={completion.title}>
+              <div className="space-y-2">
+                <InputLabel required>Título do anúncio</InputLabel>
+                <Input
+                  placeholder="Ex.: Lindo Sítio com Açude e Pomar em Gaspar"
+                  className="h-12 text-base bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40"
+                  value={propertyData.title}
+                  onChange={e => setPropertyData(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+            </Section>
+
+            {/* 2 — Tipo & Preço */}
+            <Section step={2} title="Tipo e preço" description="Categoria já definida no cadastro e valor pretendido." icon={Building2} done={completion.price}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <InputLabel>Tipo de imóvel</InputLabel>
+                  <div className="h-12 flex items-center border border-zinc-200 rounded-lg font-bold px-4 bg-zinc-100 text-zinc-900">
+                    {TYPE_LABEL[propertyData.property_type] || "Imóvel"}
                   </div>
-                  {idx < steps.length - 1 && <div className="w-4 h-px bg-zinc-200" />}
-                </React.Fragment>
-              ))}
-            </div>
+                </div>
+                <div className="space-y-2">
+                  <InputLabel required>Preço Pretendido</InputLabel>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-semibold pointer-events-none">R$</span>
+                    <Input
+                      type="text"
+                      placeholder="0,00"
+                      className="h-12 pl-12 text-lg font-bold bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                      value={propertyData.price_brl}
+                      onChange={e => {
+                        const cleanValue = e.target.value.replace(/\D/g, '');
+                        if (cleanValue === '') {
+                          setPropertyData(prev => ({ ...prev, price_brl: '' }));
+                          return;
+                        }
+                        const numeric = parseInt(cleanValue, 10) / 100;
+                        const formatted = new Intl.NumberFormat('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        }).format(numeric);
+                        setPropertyData(prev => ({ ...prev, price_brl: formatted }));
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {(() => {
+                if (!unlockActive) return null;
+                const cost = unlockCosts[propertyData.property_type] ?? 0;
+                if (!cost) return null;
+                return (
+                  <div className="flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2.5">
+                    <Zap className="w-4 h-4 text-[#3483FA] shrink-0" />
+                    <p className="text-xs text-zinc-600 leading-tight">
+                      Desbloquear o WhatsApp do interessado custa <strong className="text-zinc-900">{cost} créditos</strong> (custo fixo desta categoria).
+                    </p>
+                  </div>
+                );
+              })()}
+            </Section>
 
-            <div className="flex items-center gap-2">
-               <ShieldCheck className="w-5 h-5 text-green-500" />
-               <span className="text-[10px] font-black text-zinc-400 uppercase hidden sm:block">Proteção Ativa</span>
+            {/* 3 — Área e Lotes */}
+            <Section step={3} title={isLote ? 'Tamanho e quantidade de lotes' : 'Área do imóvel'} description="Informe a área para filtrar curiosos." icon={Ruler} done={completion.area}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <InputLabel required>{isLote ? 'Tamanho do Lote (m²)' : 'Área Total (Hectares)'}</InputLabel>
+                  <Input
+                    type={isLote ? 'text' : 'number'}
+                    step="0.01"
+                    placeholder={isLote ? 'Ex.: 12 x 30' : 'Ex.: 2,5 hectares'}
+                    className="h-12 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                    value={propertyData.total_area_m2}
+                    onChange={e => setPropertyData(prev => ({ ...prev, total_area_m2: e.target.value }))}
+                  />
+                </div>
+                {isLote && (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-left-2">
+                    <InputLabel>Quantidade de Lotes</InputLabel>
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Ex.: 5"
+                      className="h-12 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                      value={propertyData.lot_quantity}
+                      onChange={e => setPropertyData(prev => ({ ...prev, lot_quantity: e.target.value }))}
+                    />
+                  </div>
+                )}
+              </div>
+            </Section>
+
+            {/* 4 — Descrição */}
+            <Section step={4} title="Descrição" description="Explique tudo sobre o imóvel, sem repetir o título." icon={MessageCircle} done={completion.description}>
+              <div className="space-y-2">
+                <InputLabel>Descrição completa</InputLabel>
+                <Textarea
+                  placeholder="Descreva detalhes do solo, água, árvores frutíferas, benfeitorias..."
+                  className="min-h-[150px] resize-y bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40 text-sm"
+                  value={propertyData.description}
+                  onChange={e => setPropertyData(prev => ({ ...prev, description: e.target.value }))}
+                />
+                <p className="text-xs text-zinc-500">Mínimo: 20 caracteres. Não inclua telefone ou e-mail aqui.</p>
+              </div>
+            </Section>
+
+            {/* 5 — Localização */}
+            <Section step={5} title="Onde fica o imóvel?" description="Defina a localização que aparecerá no Mercado." icon={MapPin} done={completion.location}>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <InputLabel required>Estado</InputLabel>
+                  <Select value={locationData.state} onValueChange={val => setLocationData(prev => ({ ...prev, state: val }))}>
+                    <SelectTrigger className="h-12 bg-white border-zinc-300 text-zinc-900 font-bold">
+                      <SelectValue placeholder="UF" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white max-h-[300px]">
+                      {UF_LIST.map(uf => <SelectItem key={uf} value={uf} className="!text-zinc-900 font-medium">{uf}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <InputLabel required>Cidade</InputLabel>
+                  <Input
+                    value={locationData.city}
+                    onChange={e => setLocationData(prev => ({ ...prev, city: e.target.value }))}
+                    className="h-12 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                  />
+                </div>
+                <div className="space-y-2 col-span-2 md:col-span-1">
+                  <InputLabel required>Bairro/Região</InputLabel>
+                  <Input
+                    placeholder="Ex: Zona Norte"
+                    value={locationData.neighborhood}
+                    onChange={e => setLocationData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                    className="h-12 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <InputLabel>Como aparecerá no Mercado (Rótulo)</InputLabel>
+                  <Info className="w-4 h-4 text-zinc-300" />
+                </div>
+                <Input
+                  placeholder="Ex: Próximo à Ponte de Ferro, Blumenau/SC"
+                  value={locationData.public_address_label}
+                  onChange={e => setLocationData(prev => ({ ...prev, public_address_label: e.target.value }))}
+                  className="h-12 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 italic"
+                />
+                <p className="text-[11px] text-zinc-400">Este é o único dado de endereço que o público verá antes da liberação.</p>
+              </div>
+            </Section>
+
+            {/* 6 — Contato Protegido */}
+            <Section step={6} title="Como o interessado entra em contato?" description="Esses dados aparecem para o comprador depois da liberação." icon={Phone} done={completion.contact}>
+              <div className="space-y-2">
+                <InputLabel required>Nome do Anunciante</InputLabel>
+                <Input
+                  placeholder="Seu nome ou Imobiliária"
+                  value={contactData.contact_name}
+                  onChange={e => setContactData(prev => ({ ...prev, contact_name: e.target.value }))}
+                  className="h-11 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <InputLabel required>WhatsApp</InputLabel>
+                  <Input
+                    placeholder="(XX) XXXXX-XXXX"
+                    value={contactData.whatsapp_e164}
+                    onChange={e => setContactData(prev => ({ ...prev, whatsapp_e164: formatBrazilianPhone(e.target.value) }))}
+                    className="h-11 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <InputLabel>Telefone Alternativo</InputLabel>
+                  <Input
+                    placeholder="(XX) XXXXX-XXXX"
+                    value={contactData.phone_e164}
+                    onChange={e => setContactData(prev => ({ ...prev, phone_e164: formatBrazilianPhone(e.target.value) }))}
+                    className="h-11 bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400"
+                  />
+                </div>
+              </div>
+            </Section>
+
+            {/* 7 — Fotos */}
+            <Section step={7} title="Adicione fotos" description="A primeira foto será a capa do anúncio. Use imagens nítidas." icon={Camera} done={completion.photos}>
+              <PropertyImageUpload
+                listingId={listingId || undefined}
+                onFilesSelected={setPendingFiles}
+                propertyType={propertyData.property_type}
+              />
+              <div className="flex items-start gap-2 text-xs text-zinc-500 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                <ImageIcon className="h-4 w-4 text-[#3483FA] shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-zinc-700">Dica:</strong> anúncios com mais fotos vendem mais rápido. Mínimo: 1 foto.
+                </div>
+              </div>
+            </Section>
+
+            {/* Submit */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+              <Button variant="outline" onClick={() => navigate(-1)} className="h-12 px-6 border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 order-2 sm:order-1">
+                Cancelar
+              </Button>
+              <Button
+                disabled={!canSubmit || loading}
+                onClick={handleSave}
+                className={cn(
+                  "h-12 px-8 font-bold text-base order-1 sm:order-2 shadow-md",
+                  canSubmit
+                    ? "bg-[#3483FA] hover:bg-[#2968c8] text-white"
+                    : "bg-zinc-400 text-white cursor-not-allowed hover:bg-zinc-400 opacity-80"
+                )}
+              >
+                {loading ? 'Publicando...' : (listingId ? 'Salvar Alterações' : 'Publicar Anúncio')}
+                {!loading && <CheckCircle2 className="h-5 w-5 ml-2" />}
+              </Button>
             </div>
           </div>
-        </div>
-      )}
 
-      <div className="container max-w-5xl mx-auto px-4 py-10 space-y-10">
-        
-        {/* Step Indicators (Mobile) */}
-        <div className="md:hidden flex justify-between p-2 bg-white rounded-2xl shadow-sm border border-zinc-100 mb-6">
-           {steps.map(s => (
-             <div key={s.id} className={cn(
-               "flex flex-col items-center gap-1 flex-1 transition-all",
-               step === s.id ? "text-primary scale-110" : "text-zinc-300"
-             )}>
-                <s.icon className="w-5 h-5" />
-                <span className="text-[8px] font-black uppercase">{s.name}</span>
-             </div>
-           ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          
-          {/* ═══ MAIN FORM AREA ═══ */}
-          <div className="lg:col-span-8 space-y-10">
-            
-            {/* ── STEP 1: Basic Info ── */}
-            {step === 1 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <section className="space-y-2">
-                   <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">O QUE VOCÊ ESTÁ <span className="text-primary">VENDENDO</span>?</h2>
-                   <p className="text-zinc-500 font-medium">Preencha os dados principais do seu anúncio para começar.</p>
-                </section>
-
-                <Card className="border-none shadow-2xl rounded-3xl overflow-hidden ring-1 ring-zinc-200">
-                  <CardHeader className="bg-zinc-50 border-b border-zinc-100 pb-6">
-                     <CardTitle className="text-lg font-black tracking-tight">Informações do Imóvel</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-8 space-y-6">
-                     <div className="space-y-4">
-                        <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Título do Anúncio</label>
-                        <Input 
-                          placeholder="Ex: Lindo Sítio com Açude e Pomar em Gaspar" 
-                          className="h-14 text-lg border-zinc-200 focus:ring-primary rounded-2xl font-bold text-white bg-[#14171B]"
-                          value={propertyData.title}
-                          onChange={e => setPropertyData(prev => ({ ...prev, title: e.target.value }))}
-                        />
-                     </div>
-
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                           <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Tipo de Imóvel</label>
-                           <Select 
-                              value={propertyData.property_type}
-                              onValueChange={val => setPropertyData(prev => ({ ...prev, property_type: val }))}
-                           >
-                              <SelectTrigger className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]">
-                                 <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                 <SelectItem value="terreno" className="font-bold">Terreno</SelectItem>
-                                 <SelectItem value="lote" className="font-bold">Lote Urbano</SelectItem>
-                                 <SelectItem value="chacara" className="font-bold">Chácara</SelectItem>
-                                 <SelectItem value="sitio" className="font-bold">Sítio</SelectItem>
-                                 <SelectItem value="fazenda" className="font-bold">Fazenda</SelectItem>
-                              </SelectContent>
-                           </Select>
-                        </div>
-                        <div className="space-y-4">
-                           <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Preço Pretendido (R$)</label>
-                            <Input 
-                              type="text" 
-                              placeholder="0,00"
-                              className="h-14 border-zinc-200 rounded-2xl font-bold text-lg text-white bg-[#14171B]"
-                              value={propertyData.price_brl}
-                              onChange={e => {
-                                const cleanValue = e.target.value.replace(/\D/g, '');
-                                if (cleanValue === '') {
-                                  setPropertyData(prev => ({ ...prev, price_brl: '' }));
-                                  return;
-                                }
-                                const numeric = parseInt(cleanValue, 10) / 100;
-                                const formatted = new Intl.NumberFormat('pt-BR', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2
-                                }).format(numeric);
-                                setPropertyData(prev => ({ ...prev, price_brl: formatted }));
-                              }}
-                           />
-                        </div>
-                     </div>
-
-                     <div className="space-y-4">
-                        <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Descrição Completa</label>
-                        <Textarea 
-                          placeholder="Descreva detalhes do solo, água, árvores frutíferas, benfeitorias..." 
-                          className="min-h-[150px] border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]"
-                          value={propertyData.description}
-                          onChange={e => setPropertyData(prev => ({ ...prev, description: e.target.value }))}
-                        />
-                     </div>
-
-                     <div className="pt-4 border-t border-zinc-100">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           <div className="space-y-4">
-                              <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">
-                                {propertyData.property_type === 'lote' ? 'Tamanho do Lote (m²)' : 'Área Total (Hectares)'}
-                              </label>
-                              <Input 
-                                 type={propertyData.property_type === 'lote' ? 'text' : 'number'}
-                                 step="0.01"
-                                 placeholder={propertyData.property_type === 'lote' ? 'Ex.: 12 x 30' : 'Ex.: 2,5 hectares'}
-                                 className="border-zinc-200 rounded-xl font-bold text-white bg-[#14171B]"
-                                 value={propertyData.total_area_m2}
-                                 onChange={e => setPropertyData(prev => ({ ...prev, total_area_m2: e.target.value }))}
-                              />
-                           </div>
-                           {propertyData.property_type === 'lote' && (
-                              <div className="space-y-4 animate-in fade-in slide-in-from-left-2">
-                                 <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Quantidade de Lotes</label>
-                                 <Input 
-                                    type="number" 
-                                    min="1"
-                                    placeholder="Ex.: 5"
-                                    className="border-zinc-200 rounded-xl font-bold text-white bg-[#14171B]"
-                                    value={propertyData.lot_quantity}
-                                    onChange={e => setPropertyData(prev => ({ ...prev, lot_quantity: e.target.value }))}
-                                 />
-                              </div>
-                           )}
-                        </div>
-                     </div>
-                  </CardContent>
-                </Card>
-
-                <div className="flex justify-end pt-6">
-                   <Button 
-                    onClick={() => setStep(2)}
-                    className="h-14 px-10 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 group gap-2"
-                   >
-                     PRÓXIMO PASSO
-                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                   </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ── STEP 2: Location & Contact ── */}
-            {step === 2 && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <section className="space-y-2">
-                   <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">ONDE FICA O <span className="text-primary">IMÓVEL</span>?</h2>
-                   <p className="text-zinc-500 font-medium">Defina a localização e seus dados de contato protegidos.</p>
-                </section>
-
-                <div className="grid grid-cols-1 gap-8">
-                   <Card className="border-none shadow-2xl rounded-3xl overflow-hidden ring-1 ring-zinc-200">
-                      <CardHeader className="bg-zinc-50 border-b border-zinc-100 pb-6">
-                        <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
-                           <MapPin className="w-5 h-5 text-primary" />
-                           Endereço e Localização
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-8 space-y-6">
-                         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                            <div className="space-y-4">
-                               <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Estado</label>
-                               <Input value={locationData.state} readOnly className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]" />
-                            </div>
-                            <div className="space-y-4">
-                               <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Cidade</label>
-                               <Input 
-                                 value={locationData.city} 
-                                 onChange={e => setLocationData(prev => ({ ...prev, city: e.target.value }))}
-                                 className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]" 
-                               />
-                            </div>
-                            <div className="space-y-4 col-span-2 md:col-span-1 text-xs">
-                               <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Bairro/Região</label>
-                               <Input 
-                                 placeholder="Ex: Zona Norte"
-                                 value={locationData.neighborhood}
-                                 onChange={e => setLocationData(prev => ({ ...prev, neighborhood: e.target.value }))}
-                                 className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]" 
-                               />
-                            </div>
-                         </div>
-
-                         <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                               <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Como aparecerá no Mercado (Rótulo)</label>
-                               <Info className="w-4 h-4 text-zinc-300" />
-                            </div>
-                            <Input 
-                              placeholder="Ex: Próximo à Ponte de Ferro, Blumenau/SC"
-                              value={locationData.public_address_label}
-                              onChange={e => setLocationData(prev => ({ ...prev, public_address_label: e.target.value }))}
-                              className="h-14 border-zinc-200 rounded-2xl font-bold italic text-white bg-[#14171B]" 
-                            />
-                            <p className="text-[10px] text-zinc-400 font-bold uppercase">Este é o único dado de endereço que o público verá antes da liberação.</p>
-                         </div>
-                      </CardContent>
-                   </Card>
-
-                   <Card className="border-none shadow-2xl rounded-3xl overflow-hidden ring-1 ring-zinc-200">
-                      <CardHeader className="bg-zinc-50 border-b border-zinc-100 pb-6">
-                        <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
-                           <ShieldCheck className="w-5 h-5 text-green-600" />
-                           Contato Protegido
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-8 space-y-6">
-                         <div className="space-y-4">
-                            <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Nome do Anunciante</label>
-                            <Input 
-                              placeholder="Seu nome ou Imobiliária"
-                              value={contactData.contact_name}
-                              onChange={e => setContactData(prev => ({ ...prev, contact_name: e.target.value }))}
-                              className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]" 
-                            />
-                         </div>
-
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                               <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">WhatsApp (E164)</label>
-                               <Input 
-                                 placeholder="(XX) XXXXX-XXXX"
-                                 value={contactData.whatsapp_e164}
-                                 onChange={e => setContactData(prev => ({ ...prev, whatsapp_e164: formatBrazilianPhone(e.target.value) }))}
-                                 className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]" 
-                               />
-                            </div>
-                            <div className="space-y-4">
-                               <label className="text-xs font-black text-zinc-400 uppercase tracking-widest">Telefone Alternativo</label>
-                               <Input 
-                                 placeholder="(XX) XXXXX-XXXX"
-                                 value={contactData.phone_e164}
-                                 onChange={e => setContactData(prev => ({ ...prev, phone_e164: formatBrazilianPhone(e.target.value) }))}
-                                 className="h-14 border-zinc-200 rounded-2xl font-bold text-white bg-[#14171B]"
-                               />
-                            </div>
-                         </div>
-                      </CardContent>
-                   </Card>
-                </div>
-
-                <div className="flex justify-between pt-6">
-                   <Button variant="ghost" className="font-bold h-14" onClick={() => setStep(1)}>
-                      VOLTAR
-                   </Button>
-                   <Button 
-                    onClick={() => handleCreateListing()}
-                    disabled={isAutosaving}
-                    className="h-14 px-10 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 group gap-2"
-                   >
-                     {isAutosaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                       <>
-                         SALVAR E CONTINUAR
-                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                       </>
-                     )}
-                   </Button>
-                </div>
-              </div>
-            )}
-
-            {/* ── STEP 3: Images & Credits ── */}
-            {step === 3 && (
-              <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <section className="space-y-2">
-                   <h2 className="text-3xl font-black text-zinc-900 tracking-tighter">FOTOS E <span className="text-primary">ATIVAÇÃO</span></h2>
-                   <p className="text-zinc-500 font-medium">Suba suas fotos e finalize seu anúncio.</p>
-                </section>
-
-                <div className="space-y-8">
-                  {(listingId || pendingFiles.length >= 0) && (
-                    <Card className="border-none shadow-2xl rounded-[40px] overflow-hidden bg-white ring-1 ring-zinc-100">
-                      <PropertyImageUpload
-                        listingId={listingId || undefined}
-                        onFilesSelected={setPendingFiles}
-                        propertyType={propertyData.property_type}
-                      />
-                    </Card>
-                  )}
-                </div>
-
-                <div className="flex flex-col items-end gap-6 pt-6">
-                   <div className="max-w-md text-right">
-                      <p className="text-xs font-bold text-zinc-500 leading-relaxed uppercase tracking-tight">
-                        Seu anúncio será divulgado, mas qualquer contato ou informações de interessados você não terá acesso, pois necessita de um plano de ativação.
-                      </p>
-                   </div>
-                   
-                   <div className="flex items-center justify-between w-full">
-                      <Button variant="ghost" className="font-bold h-14 px-8 rounded-2xl" onClick={() => setStep(2)}>
-                         VOLTAR
-                      </Button>
-                      <Button 
-                       onClick={handlePublish}
-                       disabled={loading}
-                       className="h-14 px-12 rounded-2xl font-black text-xl shadow-xl shadow-primary/20 group gap-3 bg-zinc-900 hover:bg-black text-white transition-all active:scale-95"
-                      >
-                        {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
-                          <>
-                            CONCLUIR E PUBLICAR
-                            <CheckCircle2 className="w-6 h-6 text-green-400" />
-                          </>
-                        )}
-                      </Button>
-                   </div>
-                </div>
-              </div>
-            )}
-            
-          </div>
-
-          {/* ═══ SIDEBAR: PROTECTION & TIPS ═══ */}
-          <div className="lg:col-span-4 space-y-8">
-            <div className="sticky top-28 space-y-8">
-              <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 border-none shadow-2xl rounded-3xl text-white overflow-hidden p-8 space-y-6">
-                <div className="p-1 border border-primary/30 rounded-full w-fit bg-primary/10">
-                   <ShieldCheck className="w-8 h-8 text-primary shadow-xl shadow-primary/50" />
-                </div>
-                <div className="space-y-4">
-                  <h3 className="text-2xl font-black tracking-tighter leading-tight">TECNOLOGIA DE PROTEÇÃO VIAGG IA</h3>
-                  <p className="text-zinc-400 text-sm leading-relaxed font-medium">
-                    Nossa plataforma utiliza Inteligência Artificial para proteger sua privacidade e monetização em tempo real.
-                  </p>
-                </div>
-                <div className="space-y-4 pt-4 border-t border-white/5">
-                   <div className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                      <p className="text-xs text-zinc-300 font-bold uppercase">MASCARAMENTO DE CONTATOS EM FOTOS</p>
-                   </div>
-                   <div className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                      <p className="text-xs text-zinc-300 font-bold uppercase">OCULTAÇÃO DE TELEFONE PÚBLICO</p>
-                   </div>
-                   <div className="flex items-start gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
-                      <p className="text-xs text-zinc-300 font-bold uppercase">LIBERAÇÃO CONTROLADA POR CRÉDITOS</p>
-                   </div>
-                </div>
+          {/* Sidebar */}
+          <aside className="lg:col-span-4">
+            <div className="lg:sticky lg:top-24 space-y-4">
+              {/* Progress checklist */}
+              <Card className="border border-zinc-200 bg-white shadow-sm rounded-xl">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-zinc-900 text-sm">Progresso do anúncio</h3>
+                    <span className="text-xs font-bold text-emerald-600">{completedCount}/{totalChecks}</span>
+                  </div>
+                  <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <ul className="space-y-1.5 pt-2">
+                    {[
+                      { key: 'title', label: 'Título', step: 1 },
+                      { key: 'price', label: 'Preço', step: 2 },
+                      { key: 'area', label: 'Área', step: 3 },
+                      { key: 'description', label: 'Descrição (20+ caracteres)', step: 4 },
+                      { key: 'location', label: 'Localização', step: 5 },
+                      { key: 'contact', label: 'Nome e WhatsApp', step: 6 },
+                      { key: 'photos', label: 'Pelo menos 1 foto', step: 7 },
+                    ].map(item => (
+                      <li key={item.key}>
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(`re-section-${item.step}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                          className="w-full flex items-center gap-2 text-xs text-left hover:text-zinc-900 transition-colors"
+                        >
+                          <div className={cn(
+                            "h-4 w-4 shrink-0 rounded-full flex items-center justify-center",
+                            (completion as any)[item.key] ? "bg-emerald-500 text-white" : "bg-zinc-200"
+                          )}>
+                            {(completion as any)[item.key] && <Check className="h-2.5 w-2.5" />}
+                          </div>
+                          <span className={(completion as any)[item.key] ? 'text-zinc-500 line-through' : 'text-zinc-700 font-medium'}>
+                            {item.label}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
               </Card>
 
-              <ContactProtectionNotice />
+              {/* Tip card */}
+              <Card className="border border-emerald-100 bg-emerald-50 shadow-sm rounded-xl">
+                <CardContent className="p-5 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-700">
+                    <Sparkles className="h-4 w-4" />
+                    <h3 className="font-bold text-sm">Anúncio Grátis</h3>
+                  </div>
+                  <p className="text-xs text-emerald-700/80">
+                    Você publica sem custo. Os créditos só são contabilizados quando alguém clicar ou se interessar — e descontados do seu saldo ao desbloquear o contato.
+                  </p>
+                </CardContent>
+              </Card>
 
-              <div className="p-6 bg-white rounded-3xl border border-zinc-100 shadow-xl space-y-4">
-                 <div className="flex items-center gap-2">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                       <Zap className="w-4 h-4 text-primary fill-primary" />
-                    </div>
-                    <span className="text-xs font-black text-zinc-900 uppercase">Dicas de Sucesso</span>
-                 </div>
-                 <ul className="space-y-3">
-                    <li className="text-[11px] text-zinc-600 font-medium flex gap-2">
-                       <span className="text-primary font-black">•</span>
-                       Use títulos descritivos e claros.
-                    </li>
-                    <li className="text-[11px] text-zinc-600 font-medium flex gap-2">
-                       <span className="text-primary font-black">•</span>
-                       Informe a área em hectares para filtrar curiosos.
-                    </li>
-                    <li className="text-[11px] text-zinc-600 font-medium flex gap-2">
-                       <span className="text-primary font-black">•</span>
-                       Fotos de boa qualidade agilizam a venda.
-                    </li>
-                 </ul>
-              </div>
+              {/* Proteção de contato */}
+              <Card className="border border-zinc-200 bg-white shadow-sm rounded-xl">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 text-zinc-900 mb-3">
+                    <ShieldCheck className="h-4 w-4 text-[#3483FA]" />
+                    <h3 className="font-bold text-sm">Proteção de Contato</h3>
+                  </div>
+                  <ContactProtectionNotice />
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          </aside>
+
         </div>
       </div>
     </div>
   );
-
 
   // Quando acessado via rota /anunciante/..., o layout já é fornecido pelo router.
   // Só envolve com AdvertiserPanelLayout quando acessado fora do contexto anunciante

@@ -202,6 +202,17 @@ export default function Support() {
   });
 
   const handleBack = () => {
+    // Se o usuário veio do painel de Imóveis (detectado por rota, não por perfil),
+    // volta para o painel de Imóveis — mesmo que ele também tenha conta lojista.
+    const panelContext = sessionStorage.getItem('viagg_panel_context');
+    if (panelContext === 'imoveis') {
+      navigate('/anunciante/imoveis');
+      return;
+    }
+    if (panelContext === 'veiculos') {
+      navigate('/anunciante/veiculos');
+      return;
+    }
     if (activeProfile) {
       const route = getProfileRoute(activeProfile);
       navigate(route);
@@ -414,13 +425,7 @@ export default function Support() {
   };
 
   const getBgClass = () => {
-    switch (activeProfile) {
-      case 'motoboy': return 'bg-[#FF6A00]';
-      case 'merchant': return 'bg-[#F2FCE2]'; // Lojista: Verde claro
-      case 'passenger': return 'bg-[#E5DEFF]'; // Passageiro: Roxo/Azul claro (based on themes)
-      case 'admin': return 'bg-[#F1F0FB]'; // Admin: Grafite/cinza claro
-      default: return 'bg-background';
-    }
+    return 'bg-[#14171B]';
   };
 
   return (
@@ -448,10 +453,10 @@ export default function Support() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-white">
               Suporte
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-400">
               Como podemos ajudar?
             </p>
           </div>
@@ -459,19 +464,19 @@ export default function Support() {
       )}
 
       <div className="mx-auto max-w-lg w-full px-4 py-8 flex-1">
-        <div className="space-y-6 text-gray-900 [&_label]:text-gray-800">
+        <div className="space-y-6 text-white [&_label]:text-gray-300">
           {/* Hero */}
-          <div className="rounded-xl border border-border bg-white p-6 text-center space-y-4 shadow-sm">
+          <div className="rounded-xl border border-[#2A3038]/60 bg-[#1B1F24] p-6 text-center space-y-4 shadow-sm">
             <div className="mx-auto w-fit rounded-md bg-primary/10 p-4">
               <div className="scale-[1.7] transform origin-center">
                 <Logo size="sm" />
               </div>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-white">
                 Estamos aqui para ajudar
               </h2>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm text-gray-400">
                 Envie um ticket ou acompanhe seus chamados.
               </p>
             </div>
@@ -479,7 +484,7 @@ export default function Support() {
 
           {/* Dynamic Admin Content */}
           {supportContent && supportContent.content && (
-            <div className="rounded-xl border border-border bg-white p-6 shadow-sm prose prose-sm max-w-none text-gray-900 [&_h1]:text-lg [&_h1]:font-bold [&_p]:text-sm">
+            <div className="rounded-xl border border-[#2A3038]/60 bg-[#1B1F24] p-6 shadow-sm prose prose-sm max-w-none text-white [&_h1]:text-lg [&_h1]:font-bold [&_p]:text-sm">
               <div dangerouslySetInnerHTML={{ __html: supportContent.content }} />
             </div>
           )}
@@ -489,7 +494,7 @@ export default function Support() {
           {/* My Tickets Section (Redirect to new page) */}
           {user && (
             <div
-              className="rounded-xl border border-border bg-white p-4 flex items-center justify-between shadow-sm cursor-pointer hover:bg-muted/50 transition-colors"
+              className="rounded-xl border border-[#2A3038]/60 bg-[#1B1F24] p-4 flex items-center justify-between shadow-sm cursor-pointer hover:bg-[#242830] transition-colors"
               onClick={() => navigate('/suporte')}
             >
               <div className="flex items-center gap-3">
@@ -497,8 +502,8 @@ export default function Support() {
                   <Ticket className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Meus Chamados</h3>
-                  <p className="text-xs text-gray-600">Acompanhe seus tickets de suporte</p>
+                  <h3 className="font-semibold text-white">Meus Chamados</h3>
+                  <p className="text-xs text-gray-400">Acompanhe seus tickets de suporte</p>
                 </div>
               </div>
               <Button size="sm" variant="ghost" className="text-primary hover:text-primary hover:bg-transparent">
@@ -509,13 +514,13 @@ export default function Support() {
 
           {/* Not logged in — prompt to authenticate */}
           {!user && (
-            <div className="rounded-xl border border-border bg-white p-6 text-center space-y-4 shadow-sm">
+            <div className="rounded-xl border border-[#2A3038]/60 bg-[#1B1F24] p-6 text-center space-y-4 shadow-sm">
               <div className="mx-auto w-fit rounded-full bg-primary/10 p-4">
                 <Ticket className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">Abrir um Ticket de Suporte</h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <h3 className="font-semibold text-white">Abrir um Ticket de Suporte</h3>
+                <p className="mt-2 text-sm text-gray-400">
                   Para enviar um chamado, acesse sua conta. O histórico de todos os seus tickets ficará disponível aqui.
                 </p>
               </div>
@@ -527,10 +532,10 @@ export default function Support() {
 
           {/* Ticket Form */}
           {user && (
-            <div className="rounded-xl border border-border bg-white p-6 space-y-5 shadow-sm">
+            <div className="rounded-xl border border-[#2A3038]/60 bg-[#1B1F24] p-6 space-y-5 shadow-sm">
               <div className="flex items-center gap-2 mb-2">
                 <Ticket className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-gray-900">Abrir um Ticket</h3>
+                <h3 className="font-semibold text-white">Abrir um Ticket</h3>
               </div>
 
               <div className="space-y-4">
@@ -595,7 +600,7 @@ export default function Support() {
                     maxLength={1000}
                     className="text-white placeholder:text-white/40"
                   />
-                  <p className="text-xs text-gray-600 text-right">
+                  <p className="text-xs text-gray-400 text-right">
                     {formData.mensagem.length}/1000
                   </p>
                 </div>
@@ -604,19 +609,19 @@ export default function Support() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Anexos</Label>
-                    <span className="text-xs text-gray-600">Opcional (Máx 5)</span>
+                    <span className="text-xs text-gray-400">Opcional (Máx 5)</span>
                   </div>
                   <div
                     onDragOver={onDragOver}
                     onDrop={onDrop}
                     onClick={() => document.getElementById('file-upload')?.click()}
-                    className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+                    className="border-2 border-dashed border-[#2A3038] rounded-lg p-6 text-center cursor-pointer hover:bg-[#242830] transition-colors"
                   >
-                    <UploadCloud className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-gray-900">
+                    <UploadCloud className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-white">
                       Arraste arquivos ou clique para enviar
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-400 mt-1">
                       PNG, JPG, PDF até 10MB
                     </p>
                     <input

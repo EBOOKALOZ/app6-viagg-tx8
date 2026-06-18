@@ -17,7 +17,8 @@ import {
   Store,
   Building2,
   Car,
-  Gavel
+  Gavel,
+  Headphones
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Footer } from '@/components/Footer';
@@ -42,6 +43,7 @@ export function Layout({ children }: LayoutProps) {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/groups', label: 'Grupos', icon: MessageSquare },
     { href: '/wallet', label: 'Carteira', icon: Wallet },
+    { href: '/suporte', label: 'Suporte', icon: Headphones },
     { href: '/profile', label: 'Perfil', icon: User },
   ];
 
@@ -49,6 +51,7 @@ export function Layout({ children }: LayoutProps) {
   const merchantLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/wallet', label: 'Carteira', icon: Wallet },
+    { href: '/suporte', label: 'Suporte', icon: Headphones },
     { href: '/profile', label: 'Perfil', icon: User },
   ];
 
@@ -57,6 +60,7 @@ export function Layout({ children }: LayoutProps) {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/refer-friends', label: 'Indicar Amigos', icon: UserPlus },
     { href: '/wallet', label: 'Carteira', icon: Wallet },
+    { href: '/suporte', label: 'Suporte', icon: Headphones },
     { href: '/profile', label: 'Perfil', icon: User },
   ];
 

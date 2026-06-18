@@ -144,6 +144,11 @@ export const AdvertiserMessagesPage = lazy(() => import("@/pages/advertiser/Adve
 export const AdvertiserDeliveriesPage = lazy(() => import("@/pages/advertiser/AdvertiserDeliveriesPage"));
 export const AdvertiserPromotionPage = lazy(() => import("@/pages/advertiser/AdvertiserPromotionPage"));
 export const AdvertiserWalletPage = lazy(() => import("@/pages/advertiser/AdvertiserWalletPage"));
+export const AdvertiserImoveisPage = lazy(() => import("@/pages/advertiser/AdvertiserImoveisPage"));
+export const AdvertiserImoveisListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserImoveisListingsPage"));
+export const AdvertiserVeiculosPage = lazy(() => import("@/pages/advertiser/AdvertiserVeiculosPage"));
+export const AdvertiserVeiculosListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserVeiculosListingsPage"));
+export const AdvertiserSupportPage = lazy(() => import("@/pages/advertiser/AdvertiserSupportPage"));
 
 /* ── Loja Unificada ── */
 export const MerchantDeliveryView = lazy(() => import("@/pages/merchant/MerchantDeliveryView"));
