@@ -27,6 +27,10 @@ export interface AdminFinancialStats {
     pacotesImoveis: number;
     /** Qtd de compras de pacotes de imóveis. */
     pacotesImoveisQtd: number;
+    /** Entrada de compras de pacotes de VEÍCULOS (vehicle_credits). */
+    pacotesVeiculos: number;
+    /** Qtd de compras de pacotes de veículos. */
+    pacotesVeiculosQtd: number;
 }
 
 export function useAdminFinancialStats() {
@@ -66,6 +70,12 @@ export function useAdminFinancialStats() {
             );
             const pacotesImoveis = sum(imovelOrders, (o) => o.amount);
             const pacotesImoveisQtd = imovelOrders.length;
+            // Veículos = compras de pacotes de veículos (product_type 'vehicle_credits').
+            const veiculoOrders = (paidOrders || []).filter(
+                (o: any) => o.product_type === "vehicle_credits"
+            );
+            const pacotesVeiculos = sum(veiculoOrders, (o) => o.amount);
+            const pacotesVeiculosQtd = veiculoOrders.length;
 
             // Recargas de saldo: o dinheiro carregado especificamente p/ chamar motoboy.
             const recargasSaldo = sum(
@@ -142,6 +152,8 @@ export function useAdminFinancialStats() {
                             pacotesLojistasQtd,
                             pacotesImoveis,
                             pacotesImoveisQtd,
+                            pacotesVeiculos,
+                            pacotesVeiculosQtd,
                         };
                     }
                 }
@@ -166,6 +178,8 @@ export function useAdminFinancialStats() {
                 pacotesLojistasQtd,
                 pacotesImoveis,
                 pacotesImoveisQtd,
+                pacotesVeiculos,
+                pacotesVeiculosQtd,
             };
         },
     });

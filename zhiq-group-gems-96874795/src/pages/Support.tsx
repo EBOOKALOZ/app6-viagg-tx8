@@ -71,22 +71,35 @@ export default function Support() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Contexto do painel de anunciante (veículos/imóveis/lojista) — gravado pelo
+  // AdvertiserPanelLayout. Anunciante não é um "profile" tradicional (não entra
+  // em availableProfiles), então sem isso a conta dele nunca aparecia aqui.
+  const panelContext = sessionStorage.getItem('viagg_panel_context');
+  const advertiserContaOption =
+    panelContext === 'veiculos' ? { value: 'anunciante_veiculos', label: 'Vendedor de Veículos' }
+    : panelContext === 'imoveis' ? { value: 'anunciante_imoveis', label: 'Anunciante de Imóveis' }
+    : panelContext && !PROFILE_TYPES[panelContext] ? { value: 'anunciante', label: 'Lojista / Anunciante' }
+    : null;
+
   // Opções de "conta relacionada" = perfis que o usuário tem cadastrados.
   const contaOptions = useMemo(() => {
     const fromProfiles = (availableProfiles || [])
       .filter((p) => PROFILE_TYPES[p])
       .map((p) => ({ value: p, label: PROFILE_TYPES[p].label }));
-    return fromProfiles.length > 0
-      ? [...fromProfiles, { value: 'outro', label: 'Outra conta' }]
+    const combined = advertiserContaOption ? [advertiserContaOption, ...fromProfiles] : fromProfiles;
+    return combined.length > 0
+      ? [...combined, { value: 'outro', label: 'Outra conta' }]
       : [{ value: 'geral', label: 'Geral' }];
-  }, [availableProfiles]);
+  }, [availableProfiles, advertiserContaOption]);
 
-  // Pré-seleciona o perfil que o usuário está usando.
+  // Pré-seleciona o perfil que o usuário está usando (ou o painel de anunciante).
   useEffect(() => {
-    if (activeProfile && PROFILE_TYPES[activeProfile]) {
+    if (advertiserContaOption) {
+      setFormData((prev) => ({ ...prev, conta: advertiserContaOption.value }));
+    } else if (activeProfile && PROFILE_TYPES[activeProfile]) {
       setFormData((prev) => ({ ...prev, conta: activeProfile }));
     }
-  }, [activeProfile]);
+  }, [activeProfile, advertiserContaOption]);
   const [ticketSuccess, setTicketSuccess] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [clientResponse, setClientResponse] = useState('');

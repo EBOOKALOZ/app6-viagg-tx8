@@ -21,10 +21,11 @@ export default function AdvertiserCheckoutPage() {
         : '/anunciante/creditos';
 
     // Carteira de destino do crédito: imóveis credita a carteira imobiliária
-    // (real_estate_credit_balances) e marca a ordem como 'real_estate_credits'
-    // (admin → "Pacotes de Imóveis"). Demais segmentos vão para a carteira do
-    // anunciante (marketplace).
-    const walletCtx: 'advertiser' | 'real_estate' = seg === 'imoveis' ? 'real_estate' : 'advertiser';
+    // (real_estate_credit_balances), veículos credita a carteira própria de
+    // veículos (vehicle_credit_balances). Demais segmentos vão para a carteira
+    // do anunciante (marketplace).
+    const walletCtx: 'advertiser' | 'real_estate' | 'vehicle' =
+        seg === 'imoveis' ? 'real_estate' : seg === 'veiculos' ? 'vehicle' : 'advertiser';
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

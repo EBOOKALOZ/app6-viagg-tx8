@@ -2,6 +2,7 @@ import { Outlet, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyStore } from "@/hooks/useMyStore";
 import { StoreBottomNav } from "./StoreBottomNav";
+import { FooterProfile } from "@/components/FooterProfile";
 import { Loader2 } from "lucide-react";
 
 export function StoreAppLayout() {
@@ -68,7 +69,8 @@ export function StoreAppLayout() {
         {/* Aqui renderizamos as páginas internas protegidas pelo layout da loja */}
         <Outlet context={{ store }} />
       </main>
-      
+
+      <FooterProfile profile="merchant" />
       <StoreBottomNav />
     </div>
   );

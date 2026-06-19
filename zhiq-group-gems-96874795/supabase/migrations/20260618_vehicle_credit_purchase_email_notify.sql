@@ -1,22 +1,22 @@
 -- ═══════════════════════════════════════════════════════════════
--- E-mail de confirmação quando o ANUNCIANTE DE IMÓVEIS compra um pacote.
+-- E-mail de confirmação quando o ANUNCIANTE DE VEÍCULOS compra um pacote.
 -- Viagg-TX8 Platform
 --
--- Contexto: após o fix do checkout, a compra de pacote de IMÓVEIS passa a usar
--- walletContext='real_estate' → metadata.grant_kind='real_estate' e
--- product_type='real_estate_credits'. Os triggers existentes NÃO cobrem esse caso:
---   • trg_notify_merchant_on_credit_purchase  → exige payer_owner_type='merchant_store'
---   • trg_notify_advertiser_on_credit_purchase → exige grant_kind='advertiser_credit'
--- Sem este trigger, a compra de imóveis ficaria SEM e-mail de confirmação.
+-- Espelha notify_real_estate_on_credit_purchase (20260618_real_estate_credit_
+-- purchase_email_notify.sql). A compra de pacote de VEÍCULOS usa
+-- walletContext='vehicle' → metadata.grant_kind='vehicle' e
+-- product_type='vehicle_credits'. Sem este trigger, a compra de veículos fica
+-- SEM e-mail de confirmação/recibo (mesmo problema que imóveis tinha).
 --
--- Destinatário = comprador (NEW.created_by). A edge function resolve o e-mail por
--- advertiser_user_id (advertiser_accounts → merchant_stores → profiles).
--- O comprovante/recibo é montado na própria edge function a partir da ordem.
+-- Destinatário = comprador (NEW.created_by). A edge function (swift-action,
+-- source='package_purchase') resolve o e-mail por advertiser_user_id e monta
+-- o comprovante/recibo a partir da própria ordem (genérico, sem nada
+-- específico de segmento).
 -- ═══════════════════════════════════════════════════════════════
 
 create extension if not exists pg_net;
 
-create or replace function public.notify_real_estate_on_credit_purchase()
+create or replace function public.notify_vehicle_on_credit_purchase()
 returns trigger
 language plpgsql
 security definer
@@ -28,7 +28,7 @@ declare
   v_buyer uuid := NEW.created_by;
 begin
   -- NÃO manda store_id: o swift-action prioriza nome/e-mail da LOJA sobre o do
-  -- comprador quando store_id vem preenchido. Compra de imóveis não tem
+  -- comprador quando store_id vem preenchido. Compra de veículos não tem
   -- relação com a loja de marketplace que o usuário possa ter — só
   -- advertiser_user_id, que resolve o nome certo (advertiser_accounts).
   perform net.http_post(
@@ -49,18 +49,18 @@ begin
   return NEW;
 exception
   when others then
-    raise warning 'notify_real_estate_on_credit_purchase falhou: %', sqlerrm;
+    raise warning 'notify_vehicle_on_credit_purchase falhou: %', sqlerrm;
     return NEW;
 end;
 $$;
 
-drop trigger if exists trg_notify_real_estate_on_credit_purchase on public.pay_payment_orders;
-create trigger trg_notify_real_estate_on_credit_purchase
+drop trigger if exists trg_notify_vehicle_on_credit_purchase on public.pay_payment_orders;
+create trigger trg_notify_vehicle_on_credit_purchase
   after update on public.pay_payment_orders
   for each row
   when (
     NEW.status = 'paid'
     and OLD.status is distinct from NEW.status
-    and NEW.metadata->>'grant_kind' = 'real_estate'
+    and NEW.metadata->>'grant_kind' = 'vehicle'
   )
-  execute function public.notify_real_estate_on_credit_purchase();
+  execute function public.notify_vehicle_on_credit_purchase();

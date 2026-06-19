@@ -401,15 +401,7 @@ export default function AdvertiserMessagesPage() {
                   )
                 )}
 
-                {/* Chamar Motoboy não faz sentido para imóveis */}
-                {!imoveisMode && (
-                  <Button
-                    onClick={() => navigate('/anunciante/entregas')}
-                    className="w-full h-11 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-orange-900/30"
-                  >
-                    <Bike className="w-4 h-4" /> Chamar Motoboy
-                  </Button>
-                )}
+
 
                 {/* Excluir só aparece depois que o lojista desbloqueia a mensagem */}
                 {isUnlocked && (

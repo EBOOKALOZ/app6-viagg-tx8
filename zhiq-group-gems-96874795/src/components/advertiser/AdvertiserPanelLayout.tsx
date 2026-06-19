@@ -32,6 +32,8 @@ import { cn } from "@/lib/utils";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { FloatingMessageButton } from "./FloatingMessageButton";
 import { StoreBottomNav } from "@/components/store/StoreBottomNav";
+import { FooterProfile } from "@/components/FooterProfile";
+import { FooterNeutral } from "@/components/FooterNeutral";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -51,10 +53,16 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     return () => { document.body.style.overflow = ""; };
   }, [mobileMenuOpen]);
   const { intentions } = useContactIntentions();
+  // O checkout (/anunciante/checkout/:id) fica FORA dos prefixos /imoveis|/veiculos,
+  // mas carrega ?ret=imoveis|veiculos (ver AdvertiserCreditsPage) para saber de onde
+  // veio. Sem isso, o painel "perde" o contexto e cai no menu genérico da loja.
+  const checkoutRet = location.pathname.startsWith("/anunciante/checkout")
+    ? new URLSearchParams(location.search).get("ret")
+    : null;
   // Badge de Mensagens por segmento (igual ao filtro da AdvertiserMessagesPage):
   // imóveis→real_estate, veículos→vehicles, loja→demais (produtos/mercado).
-  const isImoveisCtx = location.pathname.startsWith("/anunciante/imoveis");
-  const isVeiculosCtx = location.pathname.startsWith("/anunciante/veiculos");
+  const isImoveisCtx = location.pathname.startsWith("/anunciante/imoveis") || checkoutRet === "imoveis";
+  const isVeiculosCtx = location.pathname.startsWith("/anunciante/veiculos") || checkoutRet === "veiculos";
   const pendingLeadCount = intentions.filter((i) => {
     if (i.status === "unlocked") return false;
     if (isImoveisCtx) return i.listing_module === "real_estate";
@@ -138,8 +146,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
 
   // Modo IMÓVEIS detectado pela ROTA (não vaza pro painel lojista): só quando a
   // URL está em /anunciante/imoveis/... o menu fica enxuto (sem itens de loja).
-  const imoveisMode = location.pathname.startsWith("/anunciante/imoveis");
-  const veiculosMode = location.pathname.startsWith("/anunciante/veiculos");
+  const imoveisMode = isImoveisCtx;
+  const veiculosMode = isVeiculosCtx;
 
   // Persiste o contexto do painel para que páginas compartilhadas (ex.: Suporte,
   // que fica fora dos prefixos /anunciante/imoveis|veiculos) saibam para onde voltar.
@@ -156,7 +164,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Divulgar Grátis", href: "/anunciante/veiculos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/veiculos/mensagens", icon: MessageSquare },
     { name: "Gestão e Pacotes", href: "/anunciante/veiculos/creditos", icon: Coins },
-    { name: "Suporte", href: "/anunciante/veiculos/suporte", icon: Headphones },
+    { name: "Suporte", href: "/suporte/novo", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : imoveisMode ? [
     { name: "Painel Geral", href: "/anunciante/imoveis", icon: LayoutDashboard },
@@ -164,7 +172,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Divulgar Grátis", href: "/anunciante/imoveis/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/imoveis/mensagens", icon: MessageSquare },
     { name: "Gestão e Pacotes", href: "/anunciante/imoveis/creditos", icon: Coins },
-    { name: "Suporte", href: "/anunciante/imoveis/suporte", icon: Headphones },
+    { name: "Suporte", href: "/suporte/novo", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : [
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
@@ -181,7 +189,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     ] : []),
     { name: "Gestão e Pacotes", href: "/anunciante/creditos", icon: Coins },
     { name: "Minha Conta", href: "/anunciante/conta", icon: User },
-    { name: "Suporte", href: "/anunciante/suporte", icon: Headphones },
+    { name: "Suporte", href: "/suporte/novo", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ];
 
@@ -318,6 +326,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
             {children}
           </div>
         </div>
+
+        {veiculosMode ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
       </main>
 
       {/* Botão flutuante para Mensagens */}

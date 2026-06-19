@@ -74,6 +74,8 @@ export default function CheckoutReturnPage() {
           .maybeSingle();
         if (!cancelled && ord?.product_type === "real_estate_credits") {
           setReturnTo("/anunciante/imoveis/creditos");
+        } else if (!cancelled && ord?.product_type === "vehicle_credits") {
+          setReturnTo("/anunciante/veiculos/creditos");
         }
       } catch { /* mantém o returnTo do localStorage */ }
 

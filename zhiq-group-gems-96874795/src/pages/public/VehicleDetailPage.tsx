@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -153,9 +153,12 @@ export const VehicleDetailPage = () => {
   };
 
   // Visita do anúncio de veículo → cobra o clique (dívida sem pacote, igual imóveis).
-  // O dono visitando o próprio anúncio NÃO é cobrado (regra no backend).
+  // chargedIdRef evita cobrança dupla: o React.StrictMode (main.tsx) monta o
+  // componente 2x em dev, o que disparava esse efeito 2x (12cr em vez de 6cr).
+  const chargedIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!id) return;
+    if (!id || chargedIdRef.current === id) return;
+    chargedIdRef.current = id;
     supabase.rpc('charge_vehicle_listing_click' as any, {
       p_listing_id: id,
       p_fingerprint: getVisitorFingerprint(),

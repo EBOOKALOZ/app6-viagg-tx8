@@ -141,11 +141,11 @@ export function useContactIntentions() {
 
       if (vehicleIds.length > 0) {
         const { data: vehs } = await (supabase.from("vehicle_listings") as any)
-          .select("id, title, cover_image_url")
+          .select("id, title, brand, model")
           .in("id", vehicleIds);
         (vehs || []).forEach((v: any) => {
-          if (v.title) titleMap.set(v.id, v.title);
-          if (v.cover_image_url) imageMap.set(v.id, v.cover_image_url);
+          const title = v.title || [v.brand, v.model].filter(Boolean).join(" ") || null;
+          if (title) titleMap.set(v.id, title);
         });
 
         const missingVehicleIds = vehicleIds.filter(id => !imageMap.has(id));
@@ -157,9 +157,7 @@ export function useContactIntentions() {
             if (imageMap.has(m.listing_id)) return;
             const path = m.public_masked_storage_path || m.original_storage_path;
             if (!path) return;
-            const url = path.startsWith("http")
-              ? path
-              : supabase.storage.from("real-estate-original").getPublicUrl(path).data.publicUrl;
+            const url = path.startsWith("http") ? path : getListingImageUrl(path);
             if (url) imageMap.set(m.listing_id, url);
           });
         }

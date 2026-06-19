@@ -31,7 +31,9 @@ create policy profiles_select_self
   using (auth.uid() = id);
 
 -- 3. Admins continuam enxergando todos os perfis (necessário para painel).
---    Usa user_roles (fonte canônica) OU is_admin (legacy).
+--    Usa SÓ user_roles (fonte canônica). NUNCA reconsultar profiles aqui —
+--    isso causa "infinite recursion detected in policy for relation profiles"
+--    (a policy de profiles consultando a própria profiles dispara ela mesma).
 drop policy if exists profiles_select_admin on public.profiles;
 create policy profiles_select_admin
   on public.profiles
@@ -39,7 +41,6 @@ create policy profiles_select_admin
   to authenticated
   using (
     auth.uid() in (select user_id from public.user_roles where role = 'admin')
-    or coalesce((select is_admin from public.profiles where id = auth.uid()), false) = true
   );
 
 -- 4. Cria a VIEW pública de perfis de lojista (somente dados públicos).
@@ -51,18 +52,15 @@ select
   p.id,
   p.name,
   p.nome_loja,
-  coalesce(p.full_name, p.name) as display_name,
+  p.name as display_name,
   p.logo_url,
   p.cidade,
   p.estado,
   p.bairro,
   p.rua,
-  p.endereco,
   p.cep,
-  p.complemento,
   p.numero,
   p.categoria,
-  p.descricao,
   p.telefone,
   p.whatsapp,
   ms.id as merchant_store_id

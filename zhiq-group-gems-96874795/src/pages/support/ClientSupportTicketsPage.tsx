@@ -71,6 +71,16 @@ export default function ClientSupportTicketsPage() {
     const { user, activeProfile } = useAuth();
     const isMotoboy = activeProfile === 'motoboy' || activeProfile === 'mototaxi';
 
+    // Se veio do painel de anunciante (veículos/imóveis/lojista), mostra botão de
+    // volta pro painel certo — mesmo contexto salvo pelo AdvertiserPanelLayout.
+    const panelContext = sessionStorage.getItem('viagg_panel_context');
+    const isAdvertiserPanel = !!panelContext && !isMotoboy;
+    const handleBackToPanel = () => {
+        if (panelContext === 'veiculos') navigate('/anunciante/veiculos');
+        else if (panelContext === 'imoveis') navigate('/anunciante/imoveis');
+        else navigate('/anunciante/painel');
+    };
+
     const { data: tickets, isLoading } = useQuery({
         queryKey: ['client-support-tickets', user?.id],
         queryFn: async () => {
@@ -93,6 +103,14 @@ export default function ClientSupportTicketsPage() {
             <div className="flex flex-col min-h-screen bg-background pb-20 animate-fade-in">
                 {/* Header */}
                 <div className="bg-[#FF6A00] px-4 pt-12 pb-6 text-white">
+                    {isAdvertiserPanel && (
+                        <button
+                            onClick={handleBackToPanel}
+                            className="flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white mb-4 transition-colors"
+                        >
+                            <ChevronRight className="h-4 w-4 rotate-180" /> Voltar ao Painel
+                        </button>
+                    )}
                     <div className="flex items-center gap-3 mb-2">
                         <HeadphonesIcon className="h-6 w-6" />
                         <h1 className="text-xl font-bold">Central de Suporte</h1>

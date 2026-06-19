@@ -126,8 +126,10 @@ export default function AdvertiserCreditsPage() {
   const hiddenCount = aquisicoes.filter((e: any) => hiddenIds.includes(e.id)).length;
   const visibleAquisicoes = aquisicoes.filter((e: any) => showHidden || !hiddenIds.includes(e.id));
 
+  // Ocultos só na vitrine — pacotes seguem intactos no banco e no painel admin.
+  const HIDDEN_VEHICLE_PACKAGE_SLUGS = ['venda-rapida-veiculos', 'turbo-veiculos', 'revenda-pro-veiculos'];
   const realEstatePkgs = packages?.filter(p => p.category === 'real_estate') || [];
-  const vehiclePkgs = packages?.filter(p => p.category === 'vehicles') || [];
+  const vehiclePkgs = packages?.filter(p => p.category === 'vehicles' && !HIDDEN_VEHICLE_PACKAGE_SLUGS.includes(p.slug)) || [];
   
   // Real merchant products (Configured by Admin)
   const productPkgs = merchantCredits.products.filter(p => p.is_active).map(p => ({
@@ -376,7 +378,7 @@ export default function AdvertiserCreditsPage() {
           {isImoveis
             ? renderSection("Pacotes de Imóveis", "Plano mensal — renove todo mês", "CRÉDITOS NÃO EXPIRAM — ACUMULAM TODO MÊS", Building2, realEstatePkgs, true)
             : isVeiculos
-              ? renderSection("Pacotes de Veículos", "Plano mensal — renove todo mês", "CRÉDITOS NÃO EXPIRAM — ACUMULAM TODO MÊS", CarFront, vehiclePkgs, true)
+              ? renderSection("Pacotes de Veículos", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", CarFront, vehiclePkgs, false)
               : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
         </div>
       )}

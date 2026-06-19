@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminFinancialStats } from "@/hooks/useAdminFinancials";
-import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2 } from "lucide-react";
+import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2, Car } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formatCurrency = (value: number) => {
@@ -77,11 +77,19 @@ export function AdminFinancialStats() {
             color: "#10b981"
         },
         {
+            title: "Pacotes de Veículos",
+            value: data.pacotesVeiculos,
+            subtitle: `${data.pacotesVeiculosQtd} pacote(s) comprado(s)`,
+            icon: <Car className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Entrada de compras de pacotes de créditos de veículos (compras confirmadas).",
+            color: "#10b981"
+        },
+        {
             title: "Entrada Total (Pacotes)",
-            value: data.pacotesLojistas + data.pacotesImoveis,
-            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd} pacote(s) · Marketplace + Imóveis`,
+            value: data.pacotesLojistas + data.pacotesImoveis + data.pacotesVeiculos,
+            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd + data.pacotesVeiculosQtd} pacote(s) · Marketplace + Imóveis + Veículos`,
             icon: <Coins className="h-4 w-4 text-emerald-500" />,
-            tooltip: "Entrada total de compras de pacotes somando Marketplace (lojistas/anunciantes) + Imóveis.",
+            tooltip: "Entrada total de compras de pacotes somando Marketplace (lojistas/anunciantes) + Imóveis + Veículos.",
             color: "#10b981"
         },
         {

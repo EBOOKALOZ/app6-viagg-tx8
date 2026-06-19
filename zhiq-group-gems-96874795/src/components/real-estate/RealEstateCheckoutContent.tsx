@@ -33,8 +33,9 @@ interface RealEstateCheckoutContentProps {
     onSuccess?: () => void;
     layout?: 'public' | 'dashboard';
     /** Qual carteira recebe o crédito. 'advertiser' = carteira do anunciante
-     *  (/anunciante/carteira); 'real_estate' = créditos imobiliários. */
-    walletContext?: 'advertiser' | 'real_estate';
+     *  (/anunciante/carteira); 'real_estate' = créditos imobiliários;
+     *  'vehicle' = créditos de veículos (vehicle_credit_balances). */
+    walletContext?: 'advertiser' | 'real_estate' | 'vehicle';
     /** Para onde voltar após o pagamento aprovado (depende do painel de origem:
      *  lojista, imóveis ou veículos). Default: /anunciante/creditos. */
     returnTo?: string;
@@ -137,7 +138,9 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
         if (checkoutStep !== "awaiting" || !activeOrder?.id || isExpired) return;
 
         const interval = setInterval(async () => {
-            const table = purchaseType === 'merchant_product' ? 'credit_purchases' : 'real_estate_credit_purchases';
+            const table = purchaseType === 'merchant_product'
+                ? 'credit_purchases'
+                : walletContext === 'vehicle' ? 'vehicle_credit_purchases' : 'real_estate_credit_purchases';
             const { data, error } = await supabase
                 .from(table as any)
                 .select('*')
@@ -183,7 +186,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [checkoutStep, activeOrder, listingId, isExpired, listing, onSuccess]);
+    }, [checkoutStep, activeOrder, listingId, isExpired, listing, onSuccess, purchaseType, walletContext]);
 
     useEffect(() => {
         if (!activeOrder?.expires_at || isExpired) {
@@ -275,12 +278,13 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                 if (merchantErr) throw merchantErr;
                 purchase = merchantOrder;
             } else {
+                const targetTable = walletContext === 'vehicle' ? 'vehicle_credit_purchases' : 'real_estate_credit_purchases';
                 const { data: rePurchase, error: reError } = await (supabase
-                    .from('real_estate_credit_purchases')
+                    .from(targetTable)
                     .insert(purchasePayload)
                     .select()
                     .maybeSingle() as any);
-                
+
                 purchase = rePurchase;
                 purchaseError = reError;
             }
@@ -316,6 +320,11 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     credits,
                     real_estate_purchase_id: purchase.id, // só p/ trilha
                 };
+            } else if (walletContext === "vehicle") {
+                chargeMeta = {
+                    grant_kind: "vehicle",
+                    vehicle_purchase_id: purchase.id,
+                };
             } else {
                 chargeMeta = {
                     grant_kind: "real_estate",
@@ -342,16 +351,22 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                         description:
                             walletContext === "advertiser"
                                 ? `Créditos anunciante: ${pkg.name}`
-                                : `Créditos imobiliários: ${pkg.name}`,
+                                : walletContext === "vehicle"
+                                    ? `Créditos de veículos: ${pkg.name}`
+                                    : `Créditos imobiliários: ${pkg.name}`,
                         reference_type:
                             walletContext === "advertiser"
                                 ? "advertiser_credit_purchase"
-                                : "real_estate_credit_purchase",
+                                : walletContext === "vehicle"
+                                    ? "vehicle_credit_purchase"
+                                    : "real_estate_credit_purchase",
                         reference_id: purchase.id,
                         product_type:
                             walletContext === "advertiser"
                                 ? "advertiser_credits"
-                                : "real_estate_credits",
+                                : walletContext === "vehicle"
+                                    ? "vehicle_credits"
+                                    : "real_estate_credits",
                         // Guardado na ordem p/ o e-mail de confirmação descriminar
                         // o pacote e a quantidade de créditos.
                         product_snapshot: {
