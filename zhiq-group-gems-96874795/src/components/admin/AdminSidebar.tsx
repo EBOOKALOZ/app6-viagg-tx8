@@ -34,6 +34,8 @@ import {
   Shield,
   Camera,
   CreditCard,
+  Briefcase,
+  Bot,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -86,6 +88,7 @@ const menuSections: MenuSection[] = [
       { title: "Radar Territorial", url: "/admin/marketing/radar", icon: Zap },
       { title: "Postador", url: "/admin/posting", icon: Send },
       { title: "Central do Postador", url: "/admin/postador-central", icon: Target },
+      { title: "Robô Postador (IA)", url: "/admin/auto-poster", icon: Bot },
       { title: "Buscador de Grupos", url: "/admin/group-finder", icon: Search },
       { title: "Config. de Grupos", url: "/admin/group-settings", icon: Settings },
       { title: "Fila de Grupos", url: "/admin/marketing/fila-grupos", icon: Users },
@@ -103,7 +106,6 @@ const menuSections: MenuSection[] = [
     emoji: "🔷",
     items: [
       { title: "Dashboard Geral", url: "/admin/perfis/dashboard", icon: BarChart3 },
-      { title: "Motoboys", url: "/admin/perfis/motoboys", icon: Bike },
       { title: "Lojistas", url: "/admin/perfis/lojistas", icon: Store },
       { title: "Passageiros", url: "/admin/perfis/passageiros", icon: Car },
       { title: "Motoristas", url: "/admin/perfis/motoristas", icon: Truck },
@@ -128,8 +130,10 @@ const menuSections: MenuSection[] = [
     emoji: "🔶",
     items: [
       { title: "Usuários", url: "/admin/users", icon: Users },
+      { title: "Motoboys", url: "/admin/perfis/motoboys", icon: Bike },
       { title: "Lojas", url: "/admin/lojas", icon: Store },
       { title: "Veículos", url: "/admin/vehicles", icon: Car },
+      { title: "Serviços", url: "/admin/servicos", icon: Briefcase },
       { title: "Créditos", url: "/admin/creditos", icon: Coins },
       { title: "Pacotes Imóveis", url: "/admin/imoveis/pacotes", icon: Building2 },
       { title: "Moderação de Imóveis", url: "/admin/imoveis/moderacao", icon: Building2 },

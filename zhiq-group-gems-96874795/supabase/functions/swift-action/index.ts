@@ -95,7 +95,7 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 interface EventPayload {
-  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup" | "package_purchase";
+  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup" | "package_purchase" | "listing_published";
   advertiser_account_id?: string;
   advertiser_user_id?: string;
   store_id?: string;
@@ -389,6 +389,31 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
     }
     return;
   }
+
+  if (mod === "services") {
+    const { data: sv } = await supabase
+      .from("service_listings")
+      .select("title")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (sv) {
+      ev.listing_title = sv.title || null;
+    }
+    // 1ª mídia do serviço (bucket real-estate-original, mesmo padrão de veículos).
+    const { data: smedia } = await supabase
+      .from("service_media")
+      .select("public_masked_storage_path, original_storage_path, sort_order")
+      .eq("listing_id", ev.listing_id)
+      .order("sort_order", { ascending: true });
+    const first = (smedia || [])[0];
+    const p = first?.public_masked_storage_path || first?.original_storage_path;
+    if (p) {
+      ev.listing_image_url = String(p).startsWith("http")
+        ? p
+        : `${storageBase}/storage/v1/object/public/real-estate-original/${p}`;
+    }
+    return;
+  }
 }
 
 // Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
@@ -415,10 +440,15 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
   // O register_product_inquiry concatena o e-mail do visitante no texto — extrai e mascara.
   const { email, message: msg } = extractVisitorEmail(ev.visitor_message);
   const emailMasked = maskEmail(email);
-  // Imóvel/veículo = anúncio de anunciante individual; produto = loja.
+  // Imóvel/veículo/serviço = anúncio de anunciante individual; produto = loja.
   const isRealEstate = ev.listing_module === "real_estate";
-  const itemWord = ev.listing_module === "product" ? "produtos" : "anúncios";
-  const painelLink = isRealEstate ? "/anunciante/imoveis/mensagens" : "/anunciante/mensagens";
+  const isVehicle = ev.listing_module === "vehicles";
+  const isService = ev.listing_module === "services";
+  const itemWord = ev.listing_module === "product" ? "produtos" : isService ? "serviços" : "anúncios";
+  const painelLink = isRealEstate ? "/anunciante/imoveis/mensagens"
+    : isVehicle ? "/anunciante/veiculos/mensagens"
+    : isService ? "/anunciante/servicos/mensagens"
+    : "/anunciante/mensagens";
   const subject = "Viagg-TX8 • Você tem um novo interessado! 🎯";
   const html = `
     <!DOCTYPE html><html><head><meta charset="utf-8"></head>
@@ -469,6 +499,38 @@ function buyerLeadTemplate(ev: EventPayload, buyerName: string | null | undefine
         </div>` : ""}
         <p style="color:#71717a; font-size:13px;">Obrigado por usar o Viagg-TX8! 💚</p>
         ${ctaButton("/mercado", "Explorar mais ofertas")}
+        <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
+        <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
+      </div>
+    </body></html>`;
+  return { subject, html };
+}
+
+// Confirmação ao anunciante de que o anúncio dele foi publicado (dispara no
+// INSERT da tabela de listing, ex.: service_listings). Por enquanto só
+// Serviços usa esse trigger, mas a função já resolve o link certo por módulo.
+function listingPublishedTemplate(ev: EventPayload, ownerName: string) {
+  const greeting = ownerName ? `Olá, ${ownerName}!` : "Olá!";
+  const isRealEstate = ev.listing_module === "real_estate";
+  const isVehicle = ev.listing_module === "vehicles";
+  const isService = ev.listing_module === "services";
+  const itemWord = isService ? "serviço" : isRealEstate ? "imóvel" : isVehicle ? "veículo" : "anúncio";
+  const painelLink = isRealEstate ? "/anunciante/imoveis/meus-anuncios"
+    : isVehicle ? "/anunciante/veiculos/meus-anuncios"
+    : isService ? "/anunciante/servicos/meus-anuncios"
+    : "/anunciante/meus-anuncios";
+  const subject = "Viagg-TX8 • Seu anúncio foi publicado! ✅";
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f5; margin:0; padding:20px;">
+      <div style="max-width:600px; margin:0 auto; background:white; border-radius:12px; padding:40px;">
+        ${LOGO_HEADER}
+        <h1 style="color:#18181b; font-size:22px;">Seu anúncio foi publicado! ✅</h1>
+        <p style="color:#52525b; font-size:15px;">${greeting}</p>
+        <p style="color:#52525b; font-size:15px;">Seu ${itemWord} já está no ar e visível para todo mundo no Viagg-TX8.</p>
+        ${productBlock(ev)}
+        <p style="color:#71717a; font-size:13px;">Assim que alguém demonstrar interesse, a gente te avisa por e-mail.</p>
+        ${ctaButton(painelLink, "Ver meus anúncios")}
         <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
         <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8</p>
       </div>
@@ -825,7 +887,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Imagem/título do produto (best-effort) p/ lead, ledger e oferta de desconto
     // (que manda listing_id). Arremate manda os campos do produto direto (sem
     // listing_id) → resolveListing sai cedo e preserva os valores recebidos.
-    if (ev.source === "lead" || ev.source === "ledger" || (ev.source === "offer" && ev.listing_id)) {
+    if (ev.source === "lead" || ev.source === "ledger" || ev.source === "listing_published" || (ev.source === "offer" && ev.listing_id)) {
       await resolveListing(supabase, ev);
     } else if (ev.source === "order") {
       await resolveOrderImage(supabase, ev);
@@ -846,6 +908,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         : ev.source === "offer" ? offerTemplate(ev, recipient.name)
         : ev.source === "order" ? orderTemplate(ev, recipient.name)
         : ev.source === "lead" ? leadTemplate(ev, recipient.name)
+        : ev.source === "listing_published" ? listingPublishedTemplate(ev, recipient.name)
         : ledgerTemplate(ev, recipient.name);
       await sendViaResend(recipient.email, subject, html);
       sentTo.push(recipient.email);

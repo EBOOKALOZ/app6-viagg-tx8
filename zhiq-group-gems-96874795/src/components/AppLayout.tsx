@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { FooterProfile } from "@/components/FooterProfile";
+import { FooterNeutral } from "@/components/FooterNeutral";
 import MotoboyBottomNav from "@/components/motoboy/MotoboyBottomNav";
 import BottomNav from "@/components/passenger/BottomNav";
 import { StoreBottomNav } from "@/components/store/StoreBottomNav";
@@ -112,6 +113,13 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Se a pessoa chegou aqui vindo de um painel de anunciante (imóveis/veículos/
+  // serviços — gravado pelo AdvertiserPanelLayout), mostra o mesmo rodapé neutro
+  // do Painel Geral em vez do FooterProfile do perfil ativo (ex: motoboy).
+  const panelContext = sessionStorage.getItem("viagg_panel_context");
+  const cameFromAdvertiserPanel = ["imoveis", "veiculos", "servicos"].includes(panelContext || "");
+  const PageFooter = cameFromAdvertiserPanel ? <FooterNeutral /> : <FooterProfile profile={activeProfile || "passenger"} />;
+
   /* ===============================
      BLOQUEIO REGULATÓRIO GLOBAL
   ================================ */
@@ -141,7 +149,7 @@ export function AppLayout() {
         <main className="flex-1 flex flex-col">
           <Outlet />
         </main>
-        <FooterProfile profile={activeProfile || "passenger"} />
+        {PageFooter}
       </div>
     );
   }
@@ -171,7 +179,7 @@ export function AppLayout() {
       <main className="flex-1 flex flex-col pb-24">
         <Outlet />
       </main>
-      <FooterProfile profile={activeProfile || "passenger"} />
+      {PageFooter}
       {renderBottomNav()}
     </div>
   );

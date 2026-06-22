@@ -11,13 +11,10 @@ export function OperationalWeatherCard() {
   useEffect(() => {
     if (!user?.id) return;
     const fetchCity = async () => {
-      const { data } = await supabase
-        .from('motoboy_profiles')
-        .select('cidade')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (data?.cidade) {
-        setFallbackCity(data.cidade);
+      const { data, error } = await supabase.rpc('get_motoboy_operational_profile' as any);
+      if (error) console.error('[OperationalWeatherCard] erro RPC:', error);
+      if ((data as any)?.cidade) {
+        setFallbackCity((data as any).cidade);
       }
     };
     fetchCity();

@@ -13,6 +13,7 @@ import { GlobalRealtime } from "@/components/GlobalRealtime";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageFallback from "@/components/PageFallback";
 import { NotFound, MercadoLocalViagg } from "@/routes/lazyPages";
+import TestAI from "@/pages/TestAI";
 
 /* ── Módulos de rotas ── */
 import { publicRoutes } from "@/routes/publicRoutes";
@@ -87,6 +88,7 @@ export default function App() {
 
                     {/* ── Raiz mostra o Mercado Local (página principal) ── */}
                     <Route path="/" element={<MercadoLocalViagg />} />
+                    <Route path="/test-ai" element={<TestAI />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
 

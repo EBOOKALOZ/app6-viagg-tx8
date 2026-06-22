@@ -41,6 +41,16 @@ import {
   CartesianGrid,
 } from "recharts";
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
+import { cn } from "@/lib/utils";
+
+const COMMISSION_TIERS = [
+  { pct: 25, groupsMin: 0 },
+  { pct: 20, groupsMin: 1 },
+  { pct: 16, groupsMin: 2 },
+  { pct: 12, groupsMin: 3 },
+  { pct: 9, groupsMin: 4 },
+  { pct: 6, groupsMin: 5 },
+] as const;
 
 export default function MotoboyFinanceContent() {
   const {
@@ -283,6 +293,41 @@ export default function MotoboyFinanceContent() {
                   Parabéns! Você está na comissão mínima.
                 </p>
               )}
+
+              {/* Escada de faixas de comissão */}
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                {COMMISSION_TIERS.map((tier) => {
+                  const isCurrent = tier.pct === commissionPercent;
+                  return (
+                    <div
+                      key={tier.pct}
+                      className={cn(
+                        "text-center rounded-lg border p-2",
+                        isCurrent
+                          ? "border-motoboy bg-motoboy/10"
+                          : "border-muted bg-muted/30"
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          "text-lg font-black tabular-nums",
+                          isCurrent ? "text-motoboy" : "text-muted-foreground"
+                        )}
+                      >
+                        {tier.pct}%
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {tier.groupsMin === 0 ? "0 grupos" : `${tier.groupsMin}+ grupos`}
+                      </p>
+                      {isCurrent && (
+                        <p className="text-[9px] font-bold text-motoboy mt-0.5">
+                          Você está aqui
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </CardContent>

@@ -12,6 +12,7 @@ export const AdminPaymentGateways = lazy(() => import("@/pages/admin/AdminPaymen
 export const AdminPaymentDemo = lazy(() => import("@/pages/admin/AdminPaymentDemo"));
 export const AdminFase1Sim = lazy(() => import("@/pages/admin/AdminFase1Sim"));
 export const AdminMercadoPagoSecrets = lazy(() => import("@/pages/admin/AdminMercadoPagoSecrets"));
+export const AdminAutoPoster = lazy(() => import("@/pages/admin/AdminAutoPoster"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
 export const MotoboyLayout = lazy(() => import("@/components/motoboy/MotoboyLayout").then(m => ({ default: m.MotoboyLayout })));
 export const MotoboyOnboardingLayout = lazy(() => import("@/components/motoboy/MotoboyOnboardingLayout").then(m => ({ default: m.MotoboyOnboardingLayout })));
@@ -89,6 +90,8 @@ export const VenderImovelPage = lazy(() => import("@/pages/public/VenderImovelPa
 export const RealEstateCheckoutPage = lazy(() => import("@/pages/public/RealEstateCheckoutPage"));
 export const VehicleDetailPage = lazy(() => import("@/pages/public/VehicleDetailPage"));
 export const AllVehiclesPage = lazy(() => import("@/pages/public/AllVehiclesPage"));
+export const PublicServicesHome = lazy(() => import("@/pages/public/PublicServicesHome"));
+export const ServiceDetailPage = lazy(() => import("@/pages/public/ServiceDetailPage"));
 export const AllAuctionsPage = lazy(() => import("@/pages/public/AllAuctionsPage"));
 export const AuctionMarketDetailPage = lazy(() => import("@/pages/public/AuctionMarketDetailPage"));
 export const CampaignSharePage = lazy(() => import("@/pages/public/CampaignSharePage"));
@@ -148,6 +151,9 @@ export const AdvertiserImoveisPage = lazy(() => import("@/pages/advertiser/Adver
 export const AdvertiserImoveisListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserImoveisListingsPage"));
 export const AdvertiserVeiculosPage = lazy(() => import("@/pages/advertiser/AdvertiserVeiculosPage"));
 export const AdvertiserVeiculosListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserVeiculosListingsPage"));
+export const AdvertiserServicesPage = lazy(() => import("@/pages/advertiser/AdvertiserServicesPage"));
+export const AdvertiserServicesListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserServicesListingsPage"));
+export const ServiceForm = lazy(() => import("@/pages/advertiser/ServiceForm"));
 export const AdvertiserSupportPage = lazy(() => import("@/pages/advertiser/AdvertiserSupportPage"));
 
 /* ── Loja Unificada ── */
@@ -210,6 +216,7 @@ export const AdminRealEstateModeration = lazy(() => import("@/pages/admin/AdminR
 export const AdminRealEstateImageModeration = lazy(() => import("@/pages/admin/AdminRealEstateImageModeration"));
 export const AdminCreditGrants = lazy(() => import("@/pages/admin/AdminCreditGrants"));
 export const AdminVehicleOverview = lazy(() => import("@/pages/admin/AdminVehicleOverview"));
+export const AdminServiceOverview = lazy(() => import("@/pages/admin/AdminServiceOverview"));
 export const AdminMarketplaceCommerce = lazy(() => import("@/pages/admin/AdminMarketplaceCommerce"));
 
 /* ── Admin Marketing ── */

@@ -137,10 +137,9 @@ export const RealEstateDetailPage = () => {
 
   const handleInterest = () => {
     try {
-      supabase.rpc('rpc_register_property_click', {
+      supabase.rpc('charge_real_estate_interest_click' as any, {
         p_listing_id: id,
-        p_visitor_fingerprint: getVisitorFingerprint(),
-        p_amount: 5
+        p_fingerprint: getVisitorFingerprint(),
       }).then((result) => console.log("[CPC_RESULT_INTEREST]", result));
     } catch (err) {
       console.error("[CPC_TRY_CATCH]", err);
@@ -184,7 +183,7 @@ export const RealEstateDetailPage = () => {
     );
   }
 
-  const mainImageUrl = activeImage || (media.length > 0 ? getListingImageUrl(media[0].original_storage_path) : null);
+  const mainImageUrl = activeImage || (media.length > 0 ? getListingImageUrl(media[0].original_storage_path, 'original') : null);
 
   const priceFormatted = formatCurrencyBRL(property.price_brl);
   const isLoteArea = ['lote', 'terreno'].includes(String(property.property_type || '').toLowerCase());
@@ -281,7 +280,7 @@ export const RealEstateDetailPage = () => {
               {media.length > 1 && (
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   {media.map((m: any, idx: number) => {
-                    const url = getListingImageUrl(m.original_storage_path);
+                    const url = getListingImageUrl(m.original_storage_path, 'original');
                     const isActive = activeImage === url || (!activeImage && idx === 0);
                     return (
                       <button

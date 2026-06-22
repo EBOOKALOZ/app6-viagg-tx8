@@ -119,8 +119,45 @@ export default function AdvertiserVisitsPage() {
         (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
 
+      // Uso REAL por evento desde a ÚLTIMA compra de pacote (zera ao comprar
+      // pacote novo). Os 6 eventos do lojista gravam débito em
+      // advertiser_credit_ledger (pool unificado) OU merchant_credit_ledger
+      // (fallback legado) — conta nos dois.
+      const lastPackageAt = allPackages.length
+        ? allPackages[allPackages.length - 1].created_at
+        : null;
+
+      const usageSinceLastPackage: Record<string, number> = {};
+      const countByReason = (rows: any[] | null) => {
+        for (const r of rows || []) {
+          if (lastPackageAt && r.created_at <= lastPackageAt) continue;
+          const code = r.reason_code;
+          if (!code) continue;
+          usageSinceLastPackage[code] = (usageSinceLastPackage[code] || 0) + 1;
+        }
+      };
+
+      if ((adv as any)?.id) {
+        const { data: advLedger } = await (supabase.from("advertiser_credit_ledger" as any)
+          .select("reason_code, created_at")
+          .eq("advertiser_account_id", (adv as any).id)
+          .eq("entry_type", "debit")
+          .order("created_at", { ascending: true })
+          .limit(2000)) as any;
+        countByReason(advLedger);
+      }
+      if (storeId) {
+        const { data: merchLedger } = await (supabase.from("merchant_credit_ledger" as any)
+          .select("reason_code, created_at")
+          .eq("store_id", storeId)
+          .eq("entry_type", "debit")
+          .order("created_at", { ascending: true })
+          .limit(2000)) as any;
+        countByReason(merchLedger);
+      }
+
       return {
-        events, products, packages: allPackages,
+        events, products, packages: allPackages, usageSinceLastPackage,
         consumed: Number((bal as any)?.consumed_credits ?? 0),
         available: Number((bal as any)?.available_credits ?? 0),
       };
@@ -184,6 +221,7 @@ export default function AdvertiserVisitsPage() {
 
   // Consumo por pacote (FIFO): distribui o total consumido do lote mais antigo p/ o mais novo
   const packages = (data?.packages || []) as Array<{ id: string; product_name: string | null; credits_granted: number; created_at: string }>;
+  const usageSinceLastPackage = data?.usageSinceLastPackage || {};
   const availableCredits = data?.available || 0;
   const consumedCredits = data?.consumed || 0;
   const totalEverCredits = availableCredits + consumedCredits;
@@ -263,42 +301,42 @@ export default function AdvertiserVisitsPage() {
                     <p className="text-xl font-black text-white">1 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">crédito</span></p>
                     <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para o usuário clicar em cada produto</p>
                     <div className="mt-auto pt-2 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 1)} vezes</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Usado: {usageSinceLastPackage["visitor_product_click"] || 0} vezes</p>
                     </div>
                   </div>
                   <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
                     <p className="text-xl font-black text-white">5 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
                     <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para o usuário adicionar na cesta</p>
                     <div className="mt-auto pt-2 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 5)} vezes</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Usado: {usageSinceLastPackage["visitor_cart_add"] || 0} vezes</p>
                     </div>
                   </div>
                   <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
                     <p className="text-xl font-black text-white">5 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
                     <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para o usuário Finalizar o pedido</p>
                     <div className="mt-auto pt-2 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 5)} vezes</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Usado: {usageSinceLastPackage["purchase_intention_received"] || 0} vezes</p>
                     </div>
                   </div>
                   <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
                     <p className="text-xl font-black text-white">9 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
                     <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para você ver e aceitar Ofertas</p>
                     <div className="mt-auto pt-2 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 9)} vezes</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Usado: {usageSinceLastPackage["advertiser_accept_offer"] || 0} vezes</p>
                     </div>
                   </div>
                   <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
                     <p className="text-xl font-black text-white">13 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
                     <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para desbloquear WhatsApp do cliente no pedido</p>
                     <div className="mt-auto pt-2 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 13)} vezes</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Usado: {usageSinceLastPackage["advertiser_unlock_order_whatsapp"] || 0} vezes</p>
                     </div>
                   </div>
                   <div className="bg-white/5 border border-white/5 rounded-xl p-3 flex flex-col justify-center">
                     <p className="text-xl font-black text-white">13 <span className="text-[10px] text-[#A7B0BE] font-bold uppercase">créditos</span></p>
                     <p className="text-xs text-[#A7B0BE] mt-1 font-medium leading-tight mb-2">Para falar diretamente com o Vendedor</p>
                     <div className="mt-auto pt-2 border-t border-white/5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Rende: {Math.floor(availableCredits / 13)} vezes</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#22C55E]">Usado: {usageSinceLastPackage["advertiser_unlock_lead_whatsapp"] || 0} vezes</p>
                     </div>
                   </div>
                 </div>

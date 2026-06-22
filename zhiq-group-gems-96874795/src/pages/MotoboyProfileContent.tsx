@@ -38,6 +38,10 @@ function normalizeCapacity(raw: string | null | undefined): CanonicalCapacity {
   return '';
 }
 
+const DOB_MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const DOB_CURRENT_YEAR = new Date().getFullYear();
+const DOB_YEARS = Array.from({ length: 100 }, (_, i) => DOB_CURRENT_YEAR - i);
+
 const COLOR_OPTIONS = [
   { value: 'Preto', label: 'Preto' },
   { value: 'Branco', label: 'Branco' },
@@ -105,6 +109,21 @@ export default function MotoboyProfileContent() {
     longitude_residencia: null,
     endereco_residencia: '',
   });
+
+  const [dobParts, setDobParts] = useState<{ day: string; month: string; year: string }>({ day: '', month: '', year: '' });
+  useEffect(() => {
+    if (motoboyData.data_nascimento) {
+      const [year, month, day] = motoboyData.data_nascimento.split('-');
+      setDobParts({ day, month, year });
+    }
+  }, [motoboyData.data_nascimento]);
+  const handleDobChange = (part: 'day' | 'month' | 'year', value: string) => {
+    const next = { ...dobParts, [part]: value };
+    setDobParts(next);
+    if (next.day && next.month && next.year) {
+      setMotoboyData((prev) => ({ ...prev, data_nascimento: `${next.year}-${next.month}-${next.day}` }));
+    }
+  };
 
   const [confirmResidenceCaptchaOpen, setConfirmResidenceCaptchaOpen] = useState(false);
   const [pendingResidence, setPendingResidence] = useState<{ lat: number; lng: number; endereco?: string } | null>(null);
@@ -230,11 +249,10 @@ export default function MotoboyProfileContent() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data: motoboy } = await supabase
-          .from('motoboy_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const { data: motoboy, error: motoboyError } = await supabase.rpc(
+          'get_motoboy_operational_profile' as any,
+        );
+        if (motoboyError) console.error('Error fetching motoboy_profiles via RPC:', motoboyError);
 
         const { data: profile } = await supabase
           .from('profiles')
@@ -293,43 +311,11 @@ export default function MotoboyProfileContent() {
 
       if (profileError) throw profileError;
 
-      // 2. Atualizar Perfil Operacional
-      const { data: existingRow } = await supabase
-        .from('motoboy_profiles')
-        .select('id, region_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      // Tenta salvar com os novos campos; se a migration ainda não foi aplicada, retenta sem eles.
-      const tryPersist = async (fields: any) => {
-        if (existingRow) {
-          return await supabase
-            .from('motoboy_profiles')
-            .update(fields)
-            .eq('user_id', user.id)
-            .select('*')
-            .maybeSingle();
-        }
-        const regionId = 'fe784974-f428-45a0-8d67-c09bdb33c5ca';
-        return await supabase
-          .from('motoboy_profiles')
-          .insert({ ...fields, user_id: user.id, region_id: regionId })
-          .select('*')
-          .maybeSingle();
-      };
-
-      let { data: savedMotoboy, error } = await tryPersist(motoboyFields);
-      if (error && /column|schema cache|endereco_residencia|latitude_residencia|longitude_residencia/i.test(error.message || '')) {
-        console.error('[Motoboy] Save bateu em erro de coluna. Detalhes COMPLETOS:', JSON.stringify(error, null, 2));
-        toast.error(
-          `Localização NÃO salvou. Erro: ${error.message || 'desconhecido'} | code=${(error as any).code || 'n/a'}`,
-          { duration: 20000 }
-        );
-        const { latitude_residencia: _a, longitude_residencia: _b, endereco_residencia: _c, ...legacyFields } = motoboyFields;
-        const retry = await tryPersist(legacyFields);
-        savedMotoboy = retry.data;
-        error = retry.error;
-      }
+      // 2. Atualizar Perfil Operacional via RPC (evita bloqueios de RLS em motoboy_profiles)
+      const { data: savedMotoboy, error } = await supabase.rpc(
+        'update_motoboy_operational_profile' as any,
+        { p_fields: motoboyFields },
+      );
       if (error) throw error;
 
       const { data: updatedProfile } = await supabase
@@ -420,12 +406,32 @@ export default function MotoboyProfileContent() {
 
           <div className="space-y-1">
             <Label className="text-xs">Data de Nascimento</Label>
-            <Input
-              type="date"
-              value={motoboyData.data_nascimento}
-              onChange={(e) => setMotoboyData({ ...motoboyData, data_nascimento: e.target.value })}
-              className="mt-1"
-            />
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              <Select value={dobParts.day} onValueChange={(v) => handleDobChange('day', v)}>
+                <SelectTrigger className="text-white"><SelectValue placeholder="Dia" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map((d) => (
+                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={dobParts.month} onValueChange={(v) => handleDobChange('month', v)}>
+                <SelectTrigger className="text-white"><SelectValue placeholder="Mês" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {DOB_MONTHS.map((label, i) => (
+                    <SelectItem key={label} value={String(i + 1).padStart(2, '0')}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={dobParts.year} onValueChange={(v) => handleDobChange('year', v)}>
+                <SelectTrigger className="text-white"><SelectValue placeholder="Ano" /></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {DOB_YEARS.map((y) => (
+                    <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>

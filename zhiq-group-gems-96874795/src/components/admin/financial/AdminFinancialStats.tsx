@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminFinancialStats } from "@/hooks/useAdminFinancials";
-import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2, Car } from "lucide-react";
+import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2, Car, Briefcase } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formatCurrency = (value: number) => {
@@ -85,20 +85,20 @@ export function AdminFinancialStats() {
             color: "#10b981"
         },
         {
-            title: "Entrada Total (Pacotes)",
-            value: data.pacotesLojistas + data.pacotesImoveis + data.pacotesVeiculos,
-            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd + data.pacotesVeiculosQtd} pacote(s) · Marketplace + Imóveis + Veículos`,
-            icon: <Coins className="h-4 w-4 text-emerald-500" />,
-            tooltip: "Entrada total de compras de pacotes somando Marketplace (lojistas/anunciantes) + Imóveis + Veículos.",
+            title: "Pacotes de Serviços",
+            value: data.pacotesServicos,
+            subtitle: `${data.pacotesServicosQtd} pacote(s) comprado(s)`,
+            icon: <Briefcase className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Entrada de compras de pacotes de créditos de serviços (compras confirmadas).",
             color: "#10b981"
         },
         {
-            title: "Total Lojistas",
-            value: data.saldoLojistas,
-            subtitle: `${data.totalLojas} loja(s) cadastrada(s)`,
-            icon: <Store className="h-4 w-4 text-indigo-500" />,
-            tooltip: "Total gasto pelos lojistas/anunciantes em créditos. Subtítulo: nº de lojas cadastradas.",
-            color: "#6366f1"
+            title: "Entrada Total (Pacotes)",
+            value: data.pacotesLojistas + data.pacotesImoveis + data.pacotesVeiculos + data.pacotesServicos,
+            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd + data.pacotesVeiculosQtd + data.pacotesServicosQtd} pacote(s) · Marketplace + Imóveis + Veículos + Serviços`,
+            icon: <Coins className="h-4 w-4 text-emerald-500" />,
+            tooltip: "Entrada total de compras de pacotes somando Marketplace (lojistas/anunciantes) + Imóveis + Veículos + Serviços.",
+            color: "#10b981"
         },
         {
             title: "Total Motoboys",

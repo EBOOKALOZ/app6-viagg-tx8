@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { 
-  Upload, CheckCircle2, Loader2, 
-  RefreshCw, Image as ImageIcon, Trash2, ShieldCheck, 
-  CloudOff, Info
+import {
+  Upload, CheckCircle2, Loader2,
+  RefreshCw, Image as ImageIcon, Trash2, ShieldCheck,
+  CloudOff, Info, Camera
 } from 'lucide-react';
 import { getListingImageUrl, getMediaFallbackUrl } from '@/lib/real-estate/mediaUtils';
 import { cn } from '@/lib/utils';
@@ -177,7 +177,9 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
   const [refreshKey, setRefreshKey] = useState<number>(Date.now());
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
   const [scanStatus, setScanStatus] = useState<string>('');
+  const MAX_PHOTOS = 6;
 
   const addLog = (tag: string, msg: string) => {
     console.log(`[UPLOAD AUDIT][${tag}] ${msg}`);
@@ -185,8 +187,14 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
   };
 
   const handleCardClick = () => {
-    if (uploading) return;
+    if (uploading || uploadedImages.length >= MAX_PHOTOS) return;
     if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleCameraClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (uploading || uploadedImages.length >= MAX_PHOTOS) return;
+    if (cameraInputRef.current) cameraInputRef.current.click();
   };
 
   const fetchExistingImages = async (isManual = false) => {
@@ -210,8 +218,16 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
         const formatted: ScanState[] = (data as any[]).map(item => {
           const isRejected = item.moderation_status?.startsWith('rejected');
           const isApproved = item.moderation_status === 'approved_clean' || item.moderation_status === 'approved_masked' || item.moderation_status === 'approved';
-          const publicUrl  = isApproved && item.public_masked_storage_path
-            ? getListingImageUrl(item.public_masked_storage_path, 'public', timestamp)
+          // A moderação aprova copiando o MESMO path pra public_masked_storage_path
+          // (não gera um arquivo novo no bucket público) — só confia que existe um
+          // arquivo de verdade lá se o caminho for DIFERENTE do original.
+          const reallyHasMaskedFile = !!item.public_masked_storage_path && item.public_masked_storage_path !== item.original_storage_path;
+          const publicUrl = isApproved
+            ? getListingImageUrl(
+                reallyHasMaskedFile ? item.public_masked_storage_path : item.original_storage_path,
+                reallyHasMaskedFile ? 'public' : 'original',
+                timestamp
+              )
             : undefined;
           return {
             id:               item.id,
@@ -236,10 +252,20 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
     const rawFiles = droppedFiles || (event.target as HTMLInputElement).files;
     if (!rawFiles || rawFiles.length === 0) return;
     // Snapshot files before resetting the input so we don't lose them
-    const files = Array.from(rawFiles);
+    let files = Array.from(rawFiles);
     // Reset value so selecting the same file again re-triggers onChange
     if (event?.target && !droppedFiles) {
       try { (event.target as HTMLInputElement).value = ''; } catch {}
+    }
+
+    const remaining = MAX_PHOTOS - uploadedImages.length;
+    if (remaining <= 0) {
+      toast.error(`Limite de ${MAX_PHOTOS} fotos por anúncio atingido.`);
+      return;
+    }
+    if (files.length > remaining) {
+      toast.warning(`Só dá pra adicionar mais ${remaining} foto(s) (limite de ${MAX_PHOTOS}).`);
+      files = files.slice(0, remaining);
     }
 
     if (!listingId) {
@@ -283,7 +309,7 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
         try {
           const processed = await processForUpload(file, {
             maxDimension: 1600,
-            targetSizeBytes: 300 * 1024,
+            targetSizeBytes: 200 * 1024,
           });
           uploadBlob = processed.blob;
           addLog("COMPRESS", `${file.name}: ${formatFileSize(file.size)} → ${formatFileSize(uploadBlob.size)}`);
@@ -402,6 +428,7 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
         onClick={handleCardClick}
       >
         <input type="file" multiple accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.tif,.webp,.jfif,.dib" ref={fileInputRef} onChange={handleFileUpload} disabled={uploading} className="hidden" />
+        <input type="file" multiple accept="image/*,.heic,.heif,.avif,.bmp,.tiff,.tif,.webp,.jfif,.dib" capture="environment" ref={cameraInputRef} onChange={handleFileUpload} disabled={uploading} className="hidden" />
         {uploading ? (
           <div className="flex flex-col items-center gap-4 text-blue-600">
              <Loader2 className="w-16 h-16 animate-spin" />
@@ -411,7 +438,17 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
           <div className="flex flex-col items-center gap-4 text-zinc-400">
              <Upload className="w-12 h-12" />
              <h4 className="text-xl font-black text-zinc-900 uppercase">Selecione ou Arraste Fotos</h4>
-             <p className="text-[10px] font-bold uppercase tracking-widest">PNG, JPG ou HEIC até 10MB</p>
+             <p className="text-[10px] font-bold uppercase tracking-widest">PNG, JPG ou HEIC · até {MAX_PHOTOS} fotos ({uploadedImages.length}/{MAX_PHOTOS})</p>
+             <Button
+               type="button"
+               variant="outline"
+               size="sm"
+               onClick={handleCameraClick}
+               disabled={uploading}
+               className="rounded-2xl border-2 mt-2"
+             >
+               <Camera className="w-4 h-4 mr-2" /> Tirar Foto Agora
+             </Button>
           </div>
         )}
       </div>

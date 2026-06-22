@@ -69,8 +69,9 @@ export const PublicRealEstateHome = () => {
           .maybeSingle();
         
         let thumbnailUrl = null;
+        const hasThumb = !!media?.thumb_masked_storage_path;
         const storagePath = media?.thumb_masked_storage_path || media?.original_storage_path;
-        if (storagePath) thumbnailUrl = getListingImageUrl(storagePath);
+        if (storagePath) thumbnailUrl = getListingImageUrl(storagePath, hasThumb ? 'public' : 'original');
         
         return { ...prop, thumbnail_url: thumbnailUrl };
       }));
@@ -235,9 +236,9 @@ export const PublicRealEstateHome = () => {
                   </Button>
               </div>
             ) : (
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-amber-50/40 rounded-[40px] -z-10" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-6 md:p-10">
+              <div className="relative w-screen left-1/2 -translate-x-1/2">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-amber-50/40 -z-10" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 md:px-8 py-6 md:py-10">
                   {propertyListings.map((prop) => (
                     <MarketPropertyCard key={prop.id} property={prop} />
                   ))}

@@ -4,20 +4,20 @@
  * Modal explicativo para o lojista entender:
  *  - O que são créditos
  *  - Em que ações são consumidos
- *  - Quanto custa cada ação (lendo de merchant_credit_usage_rules na Fase 1-DB)
+ *  - Quanto custa cada ação (CREDIT_COSTS — tabela central oficial)
  *  - O que ele recebe em troca (visualizações, leads, conversões)
- *
- * Fase 1: regras hard-coded. Fase 1-DB: lê de merchant_credit_usage_rules.
  */
 
 import { useEffect, useState } from 'react';
 import {
   Coins,
+  Store,
   Eye,
   ShoppingCart,
+  PackageCheck,
+  Percent,
   MessageCircle,
   Phone,
-  Rocket,
   TrendingUp,
   Info,
 } from 'lucide-react';
@@ -32,6 +32,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { CREDIT_COSTS, CREDIT_EVENT_LABELS, type CreditEvent } from '@/lib/credits/creditPricing';
 
 type ActionRule = {
   code: string;
@@ -42,53 +43,52 @@ type ActionRule = {
   color: string;
 };
 
-/**
- * Regras padrão. Quando merchant_credit_usage_rules existir, este array
- * será substituído por um fetch ao banco.
- */
-const DEFAULT_RULES: ActionRule[] = [
-  {
-    code: 'marketplace_product_click',
-    label: 'Clique em produto',
-    description: 'Cliente clicou em um dos seus produtos no marketplace.',
-    cost: 1,
-    icon: Eye,
+/** Ícone, cor e descrição amigável por evento — texto do label vem de CREDIT_EVENT_LABELS. */
+const EVENT_PRESENTATION: Record<CreditEvent, { description: string; icon: React.ElementType; color: string }> = {
+  visitor_store_entry: {
+    description: 'Cliente clicou num anúncio do marketplace e entrou na sua loja.',
+    icon: Store,
     color: 'text-blue-600 bg-blue-100',
   },
-  {
-    code: 'purchase_intention_received',
-    label: 'Intenção de compra',
-    description: 'Cliente clicou em "Comprar" e abriu intenção de compra.',
-    cost: 5,
+  visitor_product_click: {
+    description: 'Cliente clicou em um dos seus produtos.',
+    icon: Eye,
+    color: 'text-sky-600 bg-sky-100',
+  },
+  visitor_cart_add: {
+    description: 'Cliente adicionou um produto seu à cesta.',
     icon: ShoppingCart,
     color: 'text-emerald-600 bg-emerald-100',
   },
-  {
-    code: 'offer_accept_contact_unlock',
-    label: 'Liberar contato (WhatsApp)',
-    description: 'Você aceitou a intenção e desbloqueou o contato do cliente.',
-    cost: 2,
-    icon: MessageCircle,
+  visitor_checkout: {
+    description: 'Cliente finalizou um pedido na sua loja.',
+    icon: PackageCheck,
+    color: 'text-teal-600 bg-teal-100',
+  },
+  advertiser_accept_offer: {
+    description: 'Você aceitou uma oferta recebida (Minha Oferta é...).',
+    icon: Percent,
+    color: 'text-indigo-600 bg-indigo-100',
+  },
+  advertiser_unlock_order_whatsapp: {
+    description: 'Você desbloqueou o WhatsApp do cliente num pedido.',
+    icon: Phone,
     color: 'text-green-600 bg-green-100',
   },
-  // Próximas regras (Fase 1-DB)
-  {
-    code: 'view_phone_premium',
-    label: 'Ver telefone (premium)',
-    description: 'Cliente solicita ver seu telefone direto — recurso premium.',
-    cost: 3,
-    icon: Phone,
+  advertiser_unlock_lead_whatsapp: {
+    description: 'Você desbloqueou o contato direto de um interessado.',
+    icon: MessageCircle,
     color: 'text-purple-600 bg-purple-100',
   },
-  {
-    code: 'product_boost',
-    label: 'Boost de produto',
-    description: 'Empurra seu produto no topo das listagens por 24h.',
-    cost: 50,
-    icon: Rocket,
-    color: 'text-orange-600 bg-orange-100',
-  },
-];
+};
+
+/** Regras oficiais — derivadas da tabela central CREDIT_COSTS (nunca hardcodar valores aqui). */
+const DEFAULT_RULES: ActionRule[] = (Object.keys(CREDIT_COSTS) as CreditEvent[]).map((code) => ({
+  code,
+  label: CREDIT_EVENT_LABELS[code],
+  cost: CREDIT_COSTS[code],
+  ...EVENT_PRESENTATION[code],
+}));
 
 interface Props {
   open: boolean;

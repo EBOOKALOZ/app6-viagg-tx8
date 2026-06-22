@@ -1,11 +1,11 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2, CarFront } from "lucide-react";
+import { LogOut, Loader2, CarFront, Briefcase } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { requestAudioAndNotificationPermissions } from "@/lib/audioUnlock";
 import LoadingButton from "@/components/LoadingButton";
 import vendaAnuncioHero from "@/assets/venda-anuncio-hero.png";
+import { useSoundtrackMusic } from "@/hooks/useSoundtrackMusic";
+import appTheme from "@/assets/viagg_search_loop.mp3";
 
 /** Onboarding routes per profile */
 const ONBOARDING_ROUTES: Record<string, string> = {
@@ -37,6 +39,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   merchant: "Aqui você gerencia sua loja, vende seus produtos e solicita aqui sua entrega",
   imoveis: "Anuncie imóveis e fale direto com os interessados",
   veiculos: "Anuncie veículos e fale direto com os interessados",
+  servicos: "Divulgue sua empresa e receba contatos de clientes interessados",
 };
 
 // Mosaico de 6 imagens (misturadas) usado como fundo do card de Imóveis.
@@ -65,8 +68,24 @@ const VEICULOS_MOSAIC = [
   "https://images.unsplash.com/photo-1606577924006-27d39b132ae2?w=500&q=70&auto=format&fit=crop",
 ];
 
-// Cards de oportunidades: Motoboy (entregas), Lojista (mercado) e Imóveis.
-const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos"];
+// Mosaico de 6 imagens (negócios/serviços) usado como fundo do card de Serviços.
+const SERVICOS_MOSAIC = [
+  // academia
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=70&auto=format&fit=crop",
+  // dentista
+  "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=400&q=70&auto=format&fit=crop",
+  // farmácia
+  "https://images.unsplash.com/photo-1576602976047-174e57a47881?w=400&q=70&auto=format&fit=crop",
+  // mecânico (oficina escura, motor à noite)
+  "https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&q=70&auto=format&fit=crop",
+  // pedreiro / construção (obra ao entardecer, tons escuros)
+  "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&q=70&auto=format&fit=crop",
+  // jardineiro (mãos na terra escura)
+  "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=70&auto=format&fit=crop",
+];
+
+// Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos e Serviços.
+const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================
@@ -75,10 +94,27 @@ const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 export default function SelectProfile() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { initialized, isLoading, user, setAvailableProfiles, setActiveProfile, signOut, refreshProfiles } = useAuth();
   const { toast } = useToast();
 
-  const [selected, setSelected] = useState<string | null>(null);
+  // Som do app ao abrir a tela de seleção de perfil
+  useSoundtrackMusic({
+    src: appTheme,
+    startTime: 21,
+    endTime: 47,
+    volume: 0.2,
+    isPlaying: true,
+    fadeInDuration: 1000,
+    fadeOutDuration: 500,
+  });
+
+  // Permite chegar com ?profile=motoboy (ex: botão Motoboy do topo) já com aquele
+  // card pré-selecionado, sem travar a escolha — o usuário pode trocar livremente.
+  const [selected, setSelected] = useState<string | null>(() => {
+    const preselect = searchParams.get("profile");
+    return preselect && CARD_ORDER.includes(preselect) ? preselect : null;
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [progressActive, setProgressActive] = useState(false);
   /** Backend confirmed success — controls LoadingButton readiness */
@@ -190,6 +226,13 @@ export default function SelectProfile() {
       return;
     }
 
+    // Serviços: vai pro painel resumido de anunciantes de serviços.
+    if (selected === "servicos") {
+      navigationTarget.current = "/anunciante/servicos";
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
+    }
+
     try {
       await requestAudioAndNotificationPermissions();
 
@@ -273,7 +316,8 @@ export default function SelectProfile() {
               const isMerchant = profile.id === "merchant";
               const isImoveis = profile.id === "imoveis";
               const isVeiculos = profile.id === "veiculos";
-              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos;
+              const isServicos = profile.id === "servicos";
+              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos || isServicos;
 
               return (
                 <div
@@ -299,7 +343,9 @@ export default function SelectProfile() {
                               ? "ring-emerald-400 shadow-[0_0_24px_rgba(16,185,129,0.5)]"
                               : isVeiculos
                                 ? "ring-blue-400 shadow-[0_0_24px_rgba(59,130,246,0.5)]"
-                                : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
+                                : isServicos
+                                  ? "ring-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.5)]"
+                                  : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                       )
                       : cn(
                         "ring-1 ring-white/15",
@@ -307,6 +353,7 @@ export default function SelectProfile() {
                         isMerchant && "hover:ring-yellow-300/50 hover:shadow-[0_0_12px_rgba(234,179,8,0.2)]",
                         isImoveis && "hover:ring-emerald-400/50 hover:shadow-[0_0_12px_rgba(16,185,129,0.2)]",
                         isVeiculos && "hover:ring-blue-400/50 hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]",
+                        isServicos && "hover:ring-violet-400/50 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]",
                       )),
                   )}
                 >
@@ -317,6 +364,8 @@ export default function SelectProfile() {
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600" />
                   ) : isImoveis && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700" />
+                  ) : isServicos ? (
+                    <div className="absolute inset-0 bg-black" />
                   ) : isVeiculos ? (
                     /* Veículos: card SEM imagem — fundo gradiente azul sólido */
                     <div className={cn(
@@ -327,7 +376,7 @@ export default function SelectProfile() {
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-black/60" />
                   )}
 
-                  {/* Imagem de fundo: mosaico de 6 imagens (imóveis) ou hero único */}
+                  {/* Imagem de fundo: mosaico de 6 imagens (imóveis/serviços) ou hero único */}
                   {isImoveis ? (
                     <div
                       className={cn(
@@ -344,6 +393,25 @@ export default function SelectProfile() {
                           decoding="async"
                           onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
                           className="h-full w-full object-cover"
+                        />
+                      ))}
+                    </div>
+                  ) : isServicos ? (
+                    <div
+                      className={cn(
+                        "absolute inset-0 grid grid-cols-3 grid-rows-2 gap-0.5 transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-100",
+                      )}
+                    >
+                      {SERVICOS_MOSAIC.map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                          className="h-full w-full object-cover brightness-[0.55]"
                         />
                       ))}
                     </div>
@@ -396,7 +464,11 @@ export default function SelectProfile() {
                         ? "bg-gradient-to-t from-yellow-900/70 via-transparent to-transparent"
                         : isImoveis && isSel
                           ? "bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent"
-                          : "bg-gradient-to-t from-black/80 to-transparent",
+                          : isServicos && isSel
+                            ? "bg-gradient-to-t from-violet-900/70 via-transparent to-transparent"
+                            : isServicos
+                              ? "bg-gradient-to-t from-black/90 via-black/20 to-transparent"
+                              : "bg-gradient-to-t from-black/80 to-transparent",
                   )} />
 
                   {/* Coming soon overlay */}
@@ -408,13 +480,13 @@ export default function SelectProfile() {
 
                   {/* Text content */}
                   <div className={cn(
-                    "absolute inset-x-0 bottom-0 p-5 text-white text-center transition-opacity duration-300",
+                    "absolute inset-x-0 bottom-0 p-5 text-[#FDF6E3] text-center transition-opacity duration-300",
                     isSel ? "opacity-0 pointer-events-none" : "opacity-100"
                   )}>
                     <h3 className="font-extrabold text-xl tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">{profile.label}</h3>
                     <p className={cn(
                       "text-sm leading-snug mt-1 min-h-[2.5rem] drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]",
-                      isHighlighted && isSel ? "text-white/90" : "text-white/80",
+                      isHighlighted && isSel ? "text-[#FDF6E3]/90" : "text-[#FDF6E3]/80",
                     )}>{PROFILE_DESCRIPTIONS[profile.id]}</p>
                   </div>
 

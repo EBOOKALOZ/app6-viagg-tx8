@@ -136,17 +136,17 @@ export function ContactIntentionModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-md rounded-[32px] border-0 shadow-2xl p-0 overflow-hidden">
+      <DialogContent className="max-w-md max-h-[90vh] rounded-[32px] border-0 shadow-2xl p-0 overflow-hidden flex flex-col">
 
         {/* ── Header Gradiente ── */}
-        <div className="bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 px-8 pt-8 pb-6 space-y-2">
+        <div className="shrink-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 px-8 pt-8 pb-6 space-y-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
               <MessageSquare className="w-5 h-5 text-orange-400" />
             </div>
             <div>
               <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">
-                {listingModule === "real_estate" ? "Imóvel" : "Veículo"}
+                {listingModule === "real_estate" ? "Imóvel" : listingModule === "vehicles" ? "Veículo" : listingModule === "services" ? "Serviço" : "Anúncio"}
               </p>
               <DialogTitle className="text-white font-black text-lg leading-tight">
                 Demonstrar Interesse
@@ -160,8 +160,8 @@ export function ContactIntentionModal({
           )}
         </div>
 
-        {/* ── Body ── */}
-        <div className="p-8 space-y-6 bg-white">
+        {/* ── Body (rola internamente se não couber na tela) ── */}
+        <div className="flex-1 min-h-0 p-8 space-y-6 bg-white overflow-y-auto">
 
           {/* ── Estado de Sucesso ── */}
           {submitted ? (
@@ -265,33 +265,34 @@ export function ContactIntentionModal({
                 </div>
               )}
 
-              {/* Aviso de privacidade */}
-              <div className="flex items-start gap-2 bg-zinc-50 rounded-2xl p-4">
-                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
-                  Seus dados são protegidos. Você não será adicionado a listas de email ou grupos sem sua autorização.
+              {/* Aviso de privacidade + Botão (mais próximos entre si) */}
+              <div className="space-y-2.5">
+                <div className="flex items-start gap-2 bg-zinc-50 rounded-2xl p-4">
+                  <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                    Seus dados são protegidos. Você não será adicionado a listas de email ou grupos sem sua autorização.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!isValid || isLoading}
+                  className="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black uppercase text-xs tracking-widest shadow-lg shadow-orange-600/20 transition-all disabled:bg-zinc-300 disabled:text-zinc-500 disabled:shadow-none disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Enviar Interesse
+                    </>
+                  )}
+                </Button>
+
+                <p className="text-center text-[10px] text-zinc-400 font-medium">
+                  O anunciante verá sua mensagem somente após verificação da plataforma.
                 </p>
               </div>
-
-              {/* Botão */}
-              <Button
-                onClick={handleSubmit}
-                disabled={!isValid || isLoading}
-                className="w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black uppercase text-xs tracking-widest shadow-lg shadow-orange-600/20 transition-all disabled:opacity-40"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Enviar Interesse
-                  </>
-                )}
-              </Button>
-
-              <p className="text-center text-[10px] text-zinc-400 font-medium">
-                O anunciante verá sua mensagem somente após verificação da plataforma.
-              </p>
             </div>
           )}
         </div>

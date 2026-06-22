@@ -115,8 +115,14 @@ export const useSoundtrackMusic = ({
 
     audio.currentTime = startTime;
     audio.volume = 0;
-    
+
+    // Navegadores bloqueiam autoplay com som sem gesto prévio do usuário,
+    // mas autoplay mudo é sempre permitido. Toca mudo e desmuta em seguida
+    // para contornar o bloqueio sem depender de um clique antes de soar.
+    audio.muted = true;
+
     audio.play().then(() => {
+      audio.muted = false;
       const targetVolume = Math.min(Math.max(volume, 0), 1);
       const steps = 20;
       const stepDuration = fadeInDuration / steps;

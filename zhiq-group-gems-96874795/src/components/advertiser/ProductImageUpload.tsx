@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Upload, CheckCircle2, AlertCircle, Loader2, X, Image as ImageIcon, Trash2, RefreshCw, Store as StoreIcon, Package } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, Loader2, X, Image as ImageIcon, Trash2, RefreshCw, Store as StoreIcon, Package, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useQuery } from '@tanstack/react-query';
@@ -18,6 +18,17 @@ interface ProductImageUploadProps {
 }
 
 import heic2any from 'heic2any';
+
+/** Garante que uma Promise sempre resolve dentro do prazo, mesmo se a etapa interna travar (ex: decode de imagem que nunca dispara onload/onerror). */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      () => { clearTimeout(timer); resolve(fallback); }
+    );
+  });
+}
 
 /**
  * Gera preview seguro para qualquer imagem.
@@ -432,7 +443,7 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
       try {
         const newFiles: {file: File, preview: string}[] = [];
         for (const file of fileArray) {
-          const preview = await generatePreview(file);
+          const preview = await withTimeout(generatePreview(file), 12000, '');
           newFiles.push({ file, preview: preview || URL.createObjectURL(file) });
         }
         setSelectedFiles(prev => {
@@ -686,8 +697,8 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
         className="hidden"
       />
 
-      {/* Galeria + Câmera buttons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Galeria + Câmera + Minha Loja buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -711,6 +722,25 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
               </p>
               <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest mt-1">
                 Selecionar fotos do aparelho
+              </p>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={uploading || generatingPreviews}
+          className="flex flex-col items-center justify-center border-2 border-dashed rounded-[30px] p-8 hover:border-orange-500/50 transition-all cursor-pointer group border-zinc-200 bg-zinc-50/50"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-xl flex items-center justify-center text-zinc-400 group-hover:text-orange-500 transition-colors">
+              <Camera className="w-7 h-7" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-black text-white uppercase tracking-tight">Câmera</p>
+              <p className="text-[10px] text-white/70 font-bold uppercase tracking-widest mt-1">
+                Tirar foto agora
               </p>
             </div>
           </div>

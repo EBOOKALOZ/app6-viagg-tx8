@@ -46,46 +46,28 @@ export default function MotoboyOnboarding() {
     setSaving(true);
 
     try {
-      // Update motoboy_profiles
-      const { error: profileError } = await supabase
-        .from("motoboy_profiles")
-        .update({
-          whatsapp: form.whatsapp.trim(),
-          cidade: form.cidade.trim(),
-          estado: form.estado,
-          veiculo_modelo: form.veiculo_modelo.trim(),
-          veiculo_placa: form.veiculo_placa.trim().toUpperCase(),
-          veiculo_cor: form.veiculo_cor,
-        })
-        .eq("user_id", user.id);
-
-      if (profileError) throw profileError;
-
-      // Also update main profiles table
-      const { error: mainProfileError } = await supabase
-        .from("profiles")
-        .update({
-          cidade: form.cidade.trim(),
-          estado: form.estado,
-          whatsapp: form.whatsapp.trim(),
-        })
-        .eq("id", user.id);
-
-      if (mainProfileError) throw mainProfileError;
-
-      // Mark onboarding as complete
-      const { error: onboardingError } = await supabase.rpc(
-        "complete_profile_onboarding" as any,
-        { p_profile_type: "motoboy" }
+      // Tudo em uma RPC SECURITY DEFINER (evita depender de RLS no write do cliente)
+      const { data, error } = await supabase.rpc(
+        "complete_motoboy_onboarding" as any,
+        {
+          p_whatsapp: form.whatsapp.trim(),
+          p_cidade: form.cidade.trim(),
+          p_estado: form.estado,
+          p_veiculo_modelo: form.veiculo_modelo.trim(),
+          p_veiculo_placa: form.veiculo_placa.trim().toUpperCase(),
+          p_veiculo_cor: form.veiculo_cor,
+        }
       );
 
-      if (onboardingError) throw onboardingError;
+      if (error) throw error;
+      const result = data as any;
+      if (!result?.success) throw new Error(result?.error || "Falha ao salvar perfil.");
 
       // Re-sync profile data in context
       await refreshProfiles();
 
       toast({ title: "Perfil completo!", description: "Bem-vindo ao painel Motoboy." });
-      navigate("/motoboy", { replace: true });
+      navigate("/motoboy/profile", { replace: true });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err?.message || "Tente novamente.", variant: "destructive" });
     } finally {

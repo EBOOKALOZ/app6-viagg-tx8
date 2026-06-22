@@ -52,15 +52,14 @@ AS $$
     GROUP BY le.account_id
   ),
   payouts AS (
-    SELECT pr.owner_id,
-           COALESCE(SUM(CASE WHEN pr.status IN ('paid','completed','approved','succeeded')
-                             THEN pr.amount_cents ELSE 0 END), 0)::numeric / 100 AS total_paid,
-           COALESCE(SUM(CASE WHEN pr.status IN ('pending','requested','processing','queued')
-                             THEN pr.amount_cents ELSE 0 END), 0)::numeric / 100 AS total_pending,
+    SELECT pr.requester_owner_id AS owner_id,
+           COALESCE(SUM(CASE WHEN pr.status IN ('paid', 'approved')
+                             THEN pr.requested_amount ELSE 0 END), 0)::numeric AS total_paid,
+           COALESCE(SUM(CASE WHEN pr.status IN ('pending', 'processing')
+                             THEN pr.requested_amount ELSE 0 END), 0)::numeric AS total_pending,
            COUNT(*)::int AS qtd
     FROM public.pay_payout_requests pr
-    WHERE pr.owner_type = 'motoboy'
-    GROUP BY pr.owner_id
+    GROUP BY pr.requester_owner_id
   )
   SELECT
     ma.user_id,

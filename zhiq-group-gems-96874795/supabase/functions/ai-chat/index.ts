@@ -17,8 +17,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-
-const DEFAULT_MODEL = "glm-5.2";
+const DEFAULT_MODEL = "gpt-4o-mini";
 const MAX_TOKENS_LIMIT = 2000;
 const MAX_MESSAGES = 30;
 

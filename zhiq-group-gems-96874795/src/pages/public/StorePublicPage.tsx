@@ -18,6 +18,7 @@ import { useStorePaymentSettings } from "@/hooks/useStorePaymentSettings";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
 import { cn } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
+import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 
 import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StorePremiumCard, StoreProduct } from "@/components/public/store/StorePremiumCard";
@@ -228,8 +229,11 @@ export default function StorePublicPage() {
                     results.push(...rRes.data.map((r: any) => {
                         let img = null;
                         if (r.real_estate_media?.length > 0) {
-                            const path = r.real_estate_media[0].public_masked_storage_path || r.real_estate_media[0].original_storage_path;
-                            if (path) img = supabase.storage.from("real-estate-public").getPublicUrl(path).data.publicUrl;
+                            const m0 = r.real_estate_media[0];
+                            const hasMasked = !!m0.public_masked_storage_path && m0.public_masked_storage_path !== m0.original_storage_path;
+                            const path = hasMasked ? m0.public_masked_storage_path : m0.original_storage_path;
+                            // Fallback pro original tem que buscar no bucket "-original", não "-public".
+                            if (path) img = getListingImageUrl(path, hasMasked ? 'public' : 'original');
                         }
                         return {
                             id: r.id,
@@ -255,8 +259,12 @@ export default function StorePublicPage() {
                     results.push(...vRes.data.map((v: any) => {
                         let img = null;
                         if (v.vehicle_media?.length > 0) {
-                            const path = v.vehicle_media[0].public_masked_storage_path || v.vehicle_media[0].original_storage_path;
-                            if (path) img = supabase.storage.from("vehicles").getPublicUrl(path).data.publicUrl;
+                            const m0 = v.vehicle_media[0];
+                            const hasMasked = !!m0.public_masked_storage_path && m0.public_masked_storage_path !== m0.original_storage_path;
+                            const path = hasMasked ? m0.public_masked_storage_path : m0.original_storage_path;
+                            // Veículos reaproveitam o bucket "real-estate-public"/"real-estate-original"
+                            // (não existe bucket "vehicles") — tipo precisa bater com qual path veio.
+                            if (path) img = getListingImageUrl(path, hasMasked ? 'public' : 'original');
                         }
                         return {
                             id: v.id,
@@ -282,8 +290,144 @@ export default function StorePublicPage() {
             return results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         },
         enabled: !!storeId,
-        refetchInterval: 10000,
-        refetchOnWindowFocus: true,
+    });
+
+    // "Recém-Chegados" é vitrine de TODA a plataforma (todos os vendedores),
+    // diferente das outras abas da loja (que mostram só os itens deste vendedor).
+    const { data: platformLatest = [] } = useQuery<StoreProduct[]>({
+        queryKey: ["public-platform-recent-items"],
+        queryFn: async () => {
+            const results: StoreProduct[] = [];
+
+            const { data: vitrineProducts } = await (supabase.from("merchant_marketing_products") as any)
+                .select("*")
+                .eq("is_active", true)
+                .order("created_at", { ascending: false })
+                .limit(12);
+            (vitrineProducts || []).forEach((p: any) => {
+                results.push({
+                    id: p.id,
+                    title: p.title || "Sem título",
+                    short_description: p.short_description || null,
+                    image_url: p.image_url || null,
+                    price: parseFloat(String(p.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                    original_price: null,
+                    price_label: p.price_label || null,
+                    cta_label: "Comprar",
+                    tracking_slug: p.id,
+                    category: p.category || "Produto",
+                    condition: p.condition || "new",
+                    is_active: p.is_active ?? true,
+                    is_digital: false,
+                    is_featured: p.is_featured || false,
+                    created_at: p.created_at,
+                    _kind: "product",
+                    _ownerStoreId: p.merchant_store_id || null,
+                } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
+            });
+
+            const { data: advListings } = await (supabase.from("advertiser_listings") as any)
+                .select("*, advertiser_listing_media(media_url)")
+                .in("listing_status", ["active", "published"])
+                .order("created_at", { ascending: false })
+                .limit(12);
+            (advListings || []).forEach((p: any) => {
+                const mediaFallback = p.advertiser_listing_media?.[0]?.media_url ?? null;
+                results.push({
+                    id: p.id,
+                    title: p.title || "Sem título",
+                    short_description: p.description || null,
+                    image_url: p.cover_image_url || mediaFallback,
+                    price: p.price || 0,
+                    original_price: null,
+                    price_label: null,
+                    cta_label: "Comprar",
+                    tracking_slug: p.id,
+                    category: p.category || "Produto",
+                    condition: p.condition || "new",
+                    is_active: true,
+                    is_digital: p.is_digital ?? false,
+                    is_featured: false,
+                    created_at: p.created_at,
+                    _kind: "product",
+                    _ownerStoreId: null,
+                } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
+            });
+
+            const { data: vehicles } = await (supabase.from("vehicle_listings") as any)
+                .select("id, title, price_brl, description, created_at, vehicle_media(original_storage_path, public_masked_storage_path)")
+                .eq("visibility_status", "published")
+                .order("created_at", { ascending: false })
+                .limit(12);
+            (vehicles || []).forEach((v: any) => {
+                let img: string | null = null;
+                if (v.vehicle_media?.length > 0) {
+                    const m0 = v.vehicle_media[0];
+                    const hasMasked = !!m0.public_masked_storage_path && m0.public_masked_storage_path !== m0.original_storage_path;
+                    const path = hasMasked ? m0.public_masked_storage_path : m0.original_storage_path;
+                    if (path) img = getListingImageUrl(path, hasMasked ? 'public' : 'original');
+                }
+                results.push({
+                    id: v.id,
+                    title: v.title || "Veículo",
+                    short_description: v.description || null,
+                    image_url: img,
+                    price: v.price_brl || 0,
+                    original_price: null,
+                    price_label: null,
+                    cta_label: "Ver Veículo",
+                    tracking_slug: v.id,
+                    category: "Veículos",
+                    condition: "used",
+                    is_active: true,
+                    is_digital: false,
+                    is_featured: false,
+                    created_at: v.created_at,
+                    _kind: "vehicle",
+                    _ownerStoreId: null,
+                } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
+            });
+
+            const { data: properties } = await (supabase.from("real_estate_listings") as any)
+                .select("id, title, price_brl, description, created_at, real_estate_media(original_storage_path, public_masked_storage_path)")
+                .eq("visibility_status", "published")
+                .order("created_at", { ascending: false })
+                .limit(12);
+            (properties || []).forEach((r: any) => {
+                let img: string | null = null;
+                if (r.real_estate_media?.length > 0) {
+                    const m0 = r.real_estate_media[0];
+                    const hasMasked = !!m0.public_masked_storage_path && m0.public_masked_storage_path !== m0.original_storage_path;
+                    const path = hasMasked ? m0.public_masked_storage_path : m0.original_storage_path;
+                    if (path) img = getListingImageUrl(path, hasMasked ? 'public' : 'original');
+                }
+                results.push({
+                    id: r.id,
+                    title: r.title || "Imóvel",
+                    short_description: r.description || null,
+                    image_url: img,
+                    price: r.price_brl || 0,
+                    original_price: null,
+                    price_label: null,
+                    cta_label: "Conhecer",
+                    tracking_slug: r.id,
+                    category: "Imóveis",
+                    condition: "used",
+                    is_active: true,
+                    is_digital: false,
+                    is_featured: false,
+                    created_at: r.created_at,
+                    _kind: "imovel",
+                    _ownerStoreId: null,
+                } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
+            });
+
+            return results
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .slice(0, 12);
+        },
+        staleTime: 60_000,
+        refetchInterval: 60_000,
     });
 
     const { data: stats } = useQuery({
@@ -357,7 +501,7 @@ export default function StorePublicPage() {
     }, [products, search, activeCategory, activeTab]);
 
     const homeFeatured = useMemo(() => products.filter(p => p.is_featured).slice(0, 6), [products]);
-    const homeLatest = useMemo(() => [...products].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 12), [products]);
+    const homeLatest = platformLatest;
 
     const handleAddToCart = (product: StoreProduct) => {
         cart.addItem(product.id, 1);
@@ -594,7 +738,7 @@ export default function StorePublicPage() {
                                     </div>
                                     <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6">
                                         {homeLatest.map(product => (
-                                            <StorePremiumCard 
+                                            <StorePremiumCard
                                                 key={product.id}
                                                 product={product}
                                                 isRecentlyAdded={recentlyAdded[product.id]}
@@ -602,15 +746,24 @@ export default function StorePublicPage() {
                                                 onAskQuestion={handleAskQuestion}
                                                 onMakeOffer={handleMakeOffer}
                                                 onClick={() => {
-                                                    if (storeId) {
+                                                    const kind = (product as any)._kind;
+                                                    if (kind === "vehicle") {
+                                                        navigate(`/veiculos/${product.tracking_slug || product.id}`);
+                                                        return;
+                                                    }
+                                                    if (kind === "imovel") {
+                                                        navigate(`/imoveis/${product.tracking_slug || product.id}`);
+                                                        return;
+                                                    }
+                                                    const ownerStoreId = (product as any)._ownerStoreId;
+                                                    if (ownerStoreId) {
                                                         consumeMarketplaceProductClick({
                                                             productId: product.id,
-                                                            storeId,
-                                                            source: "store_page",
+                                                            storeId: ownerStoreId,
+                                                            source: "store_page_recem_chegados",
                                                         });
                                                     }
-                                                    const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
-                                                    navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
+                                                    navigate(`/produto/${product.id}`);
                                                 }}
                                             />
                                         ))}

@@ -243,18 +243,20 @@ export const ProductForm = () => {
 
       if (productImages.length > 0 && listingIdResult) {
         toast.success('Anúncio salvo. Enviando imagens...');
+        let failures = 0;
         for (const [index, file] of productImages.entries()) {
           // Converte qualquer formato (inclusive HEIC de iPhone) para JPEG real antes de subir.
           // Sem isso, fotos HEIC eram salvas com extensão .jpg mas bytes HEIC, que o navegador não exibe.
           let uploadBlob: Blob = file;
           let fileExt = 'jpg';
           try {
-            const processed = await processForUpload(file, { outputFormat: 'image/jpeg' });
+            const processed = await processForUpload(file, { outputFormat: 'image/jpeg', targetSizeBytes: 200 * 1024 });
             uploadBlob = processed.blob;
             fileExt = processed.extension;
           } catch (convErr: any) {
             console.error('[ProductForm] Falha ao converter imagem:', convErr);
             toast.error(`Não foi possível processar a imagem "${file.name}". Tente um JPEG ou PNG.`);
+            failures++;
             continue;
           }
           // Path com prefixo user.id para casar com RLS do bucket marketing-materials
@@ -262,21 +264,34 @@ export const ProductForm = () => {
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('marketing-materials')
             .upload(fileName, uploadBlob, { contentType: 'image/jpeg' });
-          if (!uploadError && uploadData) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('marketing-materials')
-              .getPublicUrl(uploadData.path);
-            await supabase.from('advertiser_listing_media' as any).insert({
-              listing_id: listingIdResult,
-              media_url: publicUrl,
-              storage_path: uploadData.path,
-            });
-            if (index === 0) {
-              await supabase.from('advertiser_listings' as any).update({
-                cover_image_url: publicUrl,
-              }).eq('id', listingIdResult);
-            }
+          if (uploadError || !uploadData) {
+            console.error('[ProductForm] Falha no upload da foto:', uploadError);
+            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError?.message || 'erro desconhecido'}`);
+            failures++;
+            continue;
           }
+          const { data: { publicUrl } } = supabase.storage
+            .from('marketing-materials')
+            .getPublicUrl(uploadData.path);
+          const { error: mediaErr } = await supabase.from('advertiser_listing_media' as any).insert({
+            listing_id: listingIdResult,
+            media_url: publicUrl,
+            storage_path: uploadData.path,
+          });
+          if (mediaErr) {
+            console.error('[ProductForm] Falha ao registrar mídia:', mediaErr);
+            toast.error(`Falha ao registrar a foto "${file.name}".`);
+            failures++;
+            continue;
+          }
+          if (index === 0) {
+            await supabase.from('advertiser_listings' as any).update({
+              cover_image_url: publicUrl,
+            }).eq('id', listingIdResult);
+          }
+        }
+        if (failures > 0) {
+          toast.error(`${failures} foto(s) não foram enviadas. Tente adicioná-las novamente editando o anúncio.`);
         }
       }
 

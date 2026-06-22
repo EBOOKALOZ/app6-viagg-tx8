@@ -22,10 +22,12 @@ import {
   Sparkles,
   Star,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { cn, parseBRLCurrency, toE164, formatBrazilianPhone } from '@/lib/utils';
 import { VehicleImageUpload } from '@/components/advertiser/VehicleImageUpload';
 import { VEHICLE_BRANDS, MOTO_BRANDS, BOAT_BRANDS } from '@/lib/vehicles/vehicleBrands';
+import { generateListingDescription } from '@/lib/ai/generateDescription';
 
 // Grupo de marcas por tipo (listas diferentes p/ moto, barco e demais).
 const brandGroupOf = (type: string) => (type === 'moto' ? 'moto' : type === 'barco' ? 'barco' : 'veh');
@@ -104,6 +106,35 @@ export const VehicleForm = () => {
     transmission: 'manual',
     color: '',
   });
+
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const handleGenerateDescription = async () => {
+    if (!vehicleData.title.trim() || !vehicleData.brand || !vehicleData.model.trim()) {
+      toast.error('Preencha título, montadora e modelo antes de gerar a descrição com IA.');
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const desc = await generateListingDescription('veiculo', {
+        'Título': vehicleData.title,
+        'Tipo': VEHICLE_TYPES.find(t => t.value === vehicleData.vehicle_type)?.label || vehicleData.vehicle_type,
+        'Condição': vehicleData.condition === 'novo' ? 'Novo' : vehicleData.condition === 'seminovo' ? 'Seminovo' : 'Usado',
+        'Marca': vehicleData.brand,
+        'Modelo': vehicleData.model,
+        'Ano': vehicleData.year,
+        'Cor': vehicleData.color,
+        'Quilometragem': vehicleData.kilometers ? `${vehicleData.kilometers} km` : undefined,
+        'Combustível': vehicleData.fuel_type,
+        'Câmbio': vehicleData.transmission,
+      });
+      setVehicleData(prev => ({ ...prev, description: desc }));
+      toast.success('Descrição gerada com IA!');
+    } catch (err: any) {
+      toast.error(err.message || 'Falha ao gerar descrição com IA.');
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
 
   const [locationData, setLocationData] = useState({
     city: 'Blumenau',
@@ -285,30 +316,60 @@ export const VehicleForm = () => {
       // Upload de fotos pendentes (modo novo)
       if (pendingFiles.length > 0 && currentListingId) {
         toast.info(`Enviando ${pendingFiles.length} foto(s)...`);
+        const { processForUpload } = await import('@/lib/imageCompressor');
+        let failures = 0;
         for (const file of pendingFiles) {
           const timestamp = new Date().getTime();
-          const fileName = `${timestamp}-${file.name.normalize('NFD').replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const sanitizedName = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9.]/g, '_');
+          const fileName = `${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
           const filePath = `${user.id}/${currentListingId}/${fileName}`;
+
+          let uploadBlob: Blob;
+          try {
+            const processed = await processForUpload(file, { maxDimension: 1600, targetSizeBytes: 200 * 1024 });
+            uploadBlob = processed.blob;
+          } catch (convErr: any) {
+            console.error('[VehicleForm] Falha ao comprimir imagem:', convErr);
+            toast.error(`Não foi possível processar a foto "${file.name}".`);
+            failures++;
+            continue;
+          }
 
           const { error: uploadError } = await supabase.storage
             .from('real-estate-original')
-            .upload(filePath, file);
+            .upload(filePath, uploadBlob, { contentType: 'image/jpeg' });
 
-          if (!uploadError) {
-            const { data: mediaData } = await supabase.from('vehicle_media' as any).insert({
-              listing_id: currentListingId,
-              owner_user_id: user.id,
-              original_storage_path: filePath,
-            } as any).select().single();
-
-            if (mediaData) {
-              await supabase.storage.from('real-estate-public').upload(filePath, file, { upsert: true });
-              await supabase.from('vehicle_media' as any).update({
-                moderation_status: 'approved',
-                public_masked_storage_path: filePath,
-              } as any).eq('id', (mediaData as any).id);
-            }
+          if (uploadError) {
+            console.error('[VehicleForm] Falha no upload da foto:', uploadError);
+            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError.message}`);
+            failures++;
+            continue;
           }
+
+          const { data: mediaData, error: dbErr } = await supabase.from('vehicle_media' as any).insert({
+            listing_id: currentListingId,
+            owner_user_id: user.id,
+            original_storage_path: filePath,
+          } as any).select().single();
+
+          if (dbErr) {
+            console.error('[VehicleForm] Falha ao registrar mídia:', dbErr);
+            toast.error(`Falha ao registrar a foto "${file.name}".`);
+            failures++;
+            continue;
+          }
+
+          if (mediaData) {
+            const { error: copyErr } = await supabase.storage.from('real-estate-public').upload(filePath, uploadBlob, { upsert: true, contentType: 'image/jpeg' });
+            if (copyErr) console.warn('[VehicleForm] Falha ao copiar para public:', copyErr.message);
+            await supabase.from('vehicle_media' as any).update({
+              moderation_status: 'approved',
+              public_masked_storage_path: filePath,
+            } as any).eq('id', (mediaData as any).id);
+          }
+        }
+        if (failures > 0) {
+          toast.error(`${failures} foto(s) não foram enviadas. Tente adicioná-las novamente em "Editar anúncio".`);
         }
         setPendingFiles([]);
       }
@@ -501,7 +562,20 @@ export const VehicleForm = () => {
             {/* 3 — Descrição */}
             <Section step={3} title="Descrição" description="Detalhes como estado dos pneus, revisões, opcionais." icon={MessageCircle} done={completion.descricao}>
               <div className="space-y-2">
-                <InputLabel>Observações do vendedor</InputLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <InputLabel>Observações do vendedor</InputLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDesc}
+                    className="rounded-xl gap-1.5 text-xs h-8 shrink-0"
+                  >
+                    {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {generatingDesc ? 'Gerando...' : 'Gerar com IA'}
+                  </Button>
+                </div>
                 <Textarea
                   placeholder="Descreva detalhes do veículo, histórico de revisões, opcionais exclusivos..."
                   className="min-h-[150px] resize-y bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40 text-sm"

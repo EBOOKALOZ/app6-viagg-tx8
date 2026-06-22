@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
     Package, 
@@ -65,6 +65,20 @@ export default function ProductPublicPage() {
         },
         enabled: !!productId,
     });
+
+    // Cobrança ao lojista por visualização do produto (1cr) — trava evita
+    // cobrança em dobro com React.StrictMode (igual veículos/imóveis).
+    const viewChargedRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!product?.id || !product?.owner_user_id) return;
+        if (viewChargedRef.current === product.id) return;
+        viewChargedRef.current = product.id;
+        supabase.rpc("consume_product_view_credit" as any, {
+            p_product_id: product.id,
+            p_owner_user_id: product.owner_user_id,
+        }).then(({ data }: any) => console.log("[ProductView] credit:", data))
+          .catch(() => { /* noop */ });
+    }, [product?.id, product?.owner_user_id]);
 
     // To show store info if available
     const { data: store } = useQuery({

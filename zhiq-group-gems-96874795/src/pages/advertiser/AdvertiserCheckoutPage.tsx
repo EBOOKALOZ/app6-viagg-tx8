@@ -18,14 +18,16 @@ export default function AdvertiserCheckoutPage() {
     const creditsRoute =
         seg === 'imoveis' ? '/anunciante/imoveis/creditos'
         : seg === 'veiculos' ? '/anunciante/veiculos/creditos'
+        : seg === 'servicos' ? '/anunciante/servicos/creditos'
         : '/anunciante/creditos';
 
     // Carteira de destino do crédito: imóveis credita a carteira imobiliária
     // (real_estate_credit_balances), veículos credita a carteira própria de
-    // veículos (vehicle_credit_balances). Demais segmentos vão para a carteira
-    // do anunciante (marketplace).
-    const walletCtx: 'advertiser' | 'real_estate' | 'vehicle' =
-        seg === 'imoveis' ? 'real_estate' : seg === 'veiculos' ? 'vehicle' : 'advertiser';
+    // veículos (vehicle_credit_balances), serviços credita a carteira própria
+    // de serviços (service_credit_balances). Demais segmentos vão para a
+    // carteira do anunciante (marketplace).
+    const walletCtx: 'advertiser' | 'real_estate' | 'vehicle' | 'service' =
+        seg === 'imoveis' ? 'real_estate' : seg === 'veiculos' ? 'vehicle' : seg === 'servicos' ? 'service' : 'advertiser';
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">

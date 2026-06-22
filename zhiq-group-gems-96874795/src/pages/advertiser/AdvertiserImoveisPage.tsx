@@ -36,7 +36,7 @@ export default function AdvertiserImoveisPage() {
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data } = await (supabase.from("real_estate_listings") as any)
-        .select("id, title, property_type, visibility_status, price_brl, city, state, view_count, created_at")
+        .select("id, title, property_type, visibility_status, price_brl, city, state, created_at")
         .eq("owner_user_id", user!.id)
         .order("created_at", { ascending: false });
       const list = data || [];
@@ -47,8 +47,9 @@ export default function AdvertiserImoveisPage() {
           .order("sort_order", { ascending: true })
           .limit(1)
           .maybeSingle();
+        const hasThumb = !!media?.thumb_masked_storage_path;
         const path = media?.thumb_masked_storage_path || media?.original_storage_path;
-        return { ...im, thumb: path ? getListingImageUrl(path) : null };
+        return { ...im, thumb: path ? getListingImageUrl(path, hasThumb ? 'public' : 'original') : null };
       }));
     },
   });

@@ -41,6 +41,9 @@ const getEmailTemplate = (type: string, data: EmailData): { subject: string; htm
         </head>
         <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <img src="https://www.viagg-tx8.com.br/images/viagg-tx8-logo.png" alt="Viagg-TX8" style="width: 72px; height: 72px; border-radius: 12px;">
+            </div>
             <h1 style="color: #18181b; font-size: 24px; margin-bottom: 16px;">Bem-vindo ao Viagg-TX8! 🎉</h1>
             <p style="color: #52525b; font-size: 16px; line-height: 1.6;">
               Obrigado por se cadastrar! Para ativar sua conta, clique no botão abaixo:

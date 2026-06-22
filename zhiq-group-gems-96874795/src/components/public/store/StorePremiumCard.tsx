@@ -1,7 +1,7 @@
 import { formatCurrencyBRL } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Truck, Percent } from "lucide-react";
+import { ShoppingBag, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface StoreProduct {
@@ -179,13 +179,12 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     {onMakeOffer && (
                         <Button
                             variant="default"
-                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all bg-[#2563EB] text-white hover:bg-[#1D4ED8] border-none shadow-sm flex items-center justify-center gap-1.5"
+                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-[#2563EB] text-white hover:bg-[#1D4ED8] border-none shadow-sm flex items-center justify-center text-center px-1"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onMakeOffer(product);
                             }}
                         >
-                            <Percent className="w-3.5 h-3.5" />
                             Minha Oferta é...
                         </Button>
                     )}
@@ -193,7 +192,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     {onAskQuestion && (
                         <Button
                             variant="default"
-                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all bg-green-500 text-white hover:bg-green-600 border-none shadow-sm flex items-center justify-center gap-1.5"
+                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-green-500 text-white hover:bg-green-600 border-none shadow-sm flex items-center justify-center text-center px-1"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onAskQuestion(product);

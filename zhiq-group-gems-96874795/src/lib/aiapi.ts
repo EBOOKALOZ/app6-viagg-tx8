@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export async function chatCompletion(
   message: string,
-  model: string = 'glm-5.2',
+  model: string = 'glm-4-plus',
   systemPrompt?: string
 ): Promise<string> {
   const messages: Array<{ role: 'system' | 'user'; content: string }> = [];

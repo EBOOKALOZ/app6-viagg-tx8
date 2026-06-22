@@ -46,8 +46,9 @@ export default function AdvertiserImoveisListingsPage() {
           .order("sort_order", { ascending: true })
           .limit(1)
           .maybeSingle();
+        const hasThumb = !!media?.thumb_masked_storage_path;
         const path = media?.thumb_masked_storage_path || media?.original_storage_path;
-        return { ...im, thumb: path ? getListingImageUrl(path) : null };
+        return { ...im, thumb: path ? getListingImageUrl(path, hasThumb ? 'public' : 'original') : null };
       }));
     },
   });

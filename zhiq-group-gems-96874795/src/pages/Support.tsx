@@ -60,7 +60,12 @@ export default function Support() {
   const { activeProfile, availableProfiles, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const isMotoboy = activeProfile === 'motoboy';
+  // Se a pessoa veio de um painel de anunciante (imóveis/veículos/serviços),
+  // mostra o visual do Motoboy mesmo que ela TAMBÉM tenha esse perfil ativo —
+  // o contexto de onde ela clicou em "Suporte" deve prevalecer.
+  const panelContextForChrome = sessionStorage.getItem('viagg_panel_context');
+  const cameFromAdvertiserPanel = ['imoveis', 'veiculos', 'servicos'].includes(panelContextForChrome || '');
+  const isMotoboy = activeProfile === 'motoboy' && !cameFromAdvertiserPanel;
 
   const [formData, setFormData] = useState<TicketFormData>({
     assunto: '',
@@ -78,6 +83,7 @@ export default function Support() {
   const advertiserContaOption =
     panelContext === 'veiculos' ? { value: 'anunciante_veiculos', label: 'Vendedor de Veículos' }
     : panelContext === 'imoveis' ? { value: 'anunciante_imoveis', label: 'Anunciante de Imóveis' }
+    : panelContext === 'servicos' ? { value: 'anunciante_servicos', label: 'Anunciante de Serviços' }
     : panelContext && !PROFILE_TYPES[panelContext] ? { value: 'anunciante', label: 'Lojista / Anunciante' }
     : null;
 
@@ -218,12 +224,20 @@ export default function Support() {
     // Se o usuário veio do painel de Imóveis (detectado por rota, não por perfil),
     // volta para o painel de Imóveis — mesmo que ele também tenha conta lojista.
     const panelContext = sessionStorage.getItem('viagg_panel_context');
+    // Usa navegação "dura" (recarrega a página) ao voltar pro painel de
+    // anunciante: a troca de /suporte/novo (AppLayout) pra /anunciante/* fica
+    // travada numa transição pendente do React Router (v7_startTransition) —
+    // a URL muda mas a tela não, só um reload completo renderiza a página nova.
     if (panelContext === 'imoveis') {
-      navigate('/anunciante/imoveis');
+      window.location.href = '/anunciante/imoveis';
       return;
     }
     if (panelContext === 'veiculos') {
-      navigate('/anunciante/veiculos');
+      window.location.href = '/anunciante/veiculos';
+      return;
+    }
+    if (panelContext === 'servicos') {
+      window.location.href = '/anunciante/servicos';
       return;
     }
     if (activeProfile) {

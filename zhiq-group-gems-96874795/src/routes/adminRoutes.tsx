@@ -60,11 +60,13 @@ import {
   AdminMarketingRadar,
   AdminCreditGrants,
   AdminVehicleOverview,
+  AdminServiceOverview,
   AdminMarketplaceCommerce,
   AdminPaymentGateways,
   AdminPaymentDemo,
   AdminFase1Sim,
   AdminMercadoPagoSecrets,
+  AdminAutoPoster,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -80,6 +82,7 @@ export const adminRoutes = (
       <Route path="/admin/marketplace" element={<AdminMarketplaceOverview />} />
       <Route path="/admin/marketplace/products" element={<AdminMarketplaceProducts />} />
       <Route path="/admin/vehicles" element={<AdminVehicleOverview />} />
+      <Route path="/admin/servicos" element={<AdminServiceOverview />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
@@ -99,6 +102,7 @@ export const adminRoutes = (
       <Route path="/admin/supervisor" element={<AdminAISupervisorPage />} />
       <Route path="/admin/posting" element={<AdminPosting />} />
       <Route path="/admin/postador-central" element={<AdminPostadorCentral />} />
+      <Route path="/admin/auto-poster" element={<AdminAutoPoster />} />
       <Route path="/admin/campaign-queue" element={<AdminCampaignQueue />} />
       <Route path="/admin/campaign-dispatch" element={<AdminCampaignDispatchPanel />} />
       <Route path="/admin/nacional" element={<AdminDashboardNacional />} />

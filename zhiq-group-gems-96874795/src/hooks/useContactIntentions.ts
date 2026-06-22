@@ -31,7 +31,7 @@ import { playLeadNotificationSound } from "@/lib/notificationSound";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-export type ListingModule = "real_estate" | "vehicles" | "product";
+export type ListingModule = "real_estate" | "vehicles" | "product" | "services";
 
 export type InterestType =
   | "whatsapp_click"
@@ -115,6 +115,7 @@ export function useContactIntentions() {
       const realEstateIds = Array.from(new Set(rows.filter(r => r.listing_module === "real_estate").map(r => r.listing_id)));
       const vehicleIds = Array.from(new Set(rows.filter(r => r.listing_module === "vehicles").map(r => r.listing_id)));
       const productIds = Array.from(new Set(rows.filter(r => r.listing_module === "product").map(r => r.listing_id)));
+      const serviceIds = Array.from(new Set(rows.filter(r => r.listing_module === "services").map(r => r.listing_id)));
 
       const titleMap = new Map<string, string>();
       const imageMap = new Map<string, string>();
@@ -133,8 +134,11 @@ export function useContactIntentions() {
           .order("sort_order", { ascending: true });
         (mediaRows || []).forEach((m: any) => {
           if (imageMap.has(m.listing_id)) return;
-          const path = m.public_masked_storage_path || m.original_storage_path;
-          const url = getListingImageUrl(path);
+          // A moderação às vezes só copia o path original pra public_masked_storage_path
+          // sem gerar arquivo novo no bucket público — só confia se for path DIFERENTE.
+          const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+          const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
+          const url = getListingImageUrl(path, hasMasked ? 'public' : 'original');
           if (url) imageMap.set(m.listing_id, url);
         });
       }
@@ -155,12 +159,35 @@ export function useContactIntentions() {
             .in("listing_id", missingVehicleIds);
           (vMedia || []).forEach((m: any) => {
             if (imageMap.has(m.listing_id)) return;
-            const path = m.public_masked_storage_path || m.original_storage_path;
+            const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+            const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
             if (!path) return;
-            const url = path.startsWith("http") ? path : getListingImageUrl(path);
+            const url = path.startsWith("http") ? path : getListingImageUrl(path, hasMasked ? 'public' : 'original');
             if (url) imageMap.set(m.listing_id, url);
           });
         }
+      }
+
+      if (serviceIds.length > 0) {
+        const { data: servs } = await (supabase.from("service_listings") as any)
+          .select("id, title")
+          .in("id", serviceIds);
+        (servs || []).forEach((s: any) => {
+          if (s.title) titleMap.set(s.id, s.title);
+        });
+
+        const { data: sMedia } = await (supabase.from("service_media") as any)
+          .select("listing_id, public_masked_storage_path, original_storage_path, sort_order")
+          .in("listing_id", serviceIds)
+          .order("sort_order", { ascending: true });
+        (sMedia || []).forEach((m: any) => {
+          if (imageMap.has(m.listing_id)) return;
+          const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+          const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
+          if (!path) return;
+          const url = path.startsWith("http") ? path : getListingImageUrl(path, hasMasked ? 'public' : 'original');
+          if (url) imageMap.set(m.listing_id, url);
+        });
       }
 
       // ── Produtos do /mercado (merchant_marketing_products + advertiser_listings) ──
@@ -239,11 +266,11 @@ export function useContactIntentions() {
           table: "advertiser_contact_intentions",
           filter: `advertiser_user_id=eq.${user.id}`,
         },
-        () => {
+        (payload: any) => {
           queryClient.invalidateQueries({ queryKey: ["contact-intentions", user.id] });
           // Bip de notificação ao receber lead em tempo real
           void playLeadNotificationSound();
-          
+
           toast.success("Nova mensagem recebida! Vá para as mensagens.", {
             duration: 10000,
           });
@@ -256,8 +283,28 @@ export function useContactIntentions() {
             Notification.requestPermission();
           }
 
-          if (typeof window !== "undefined" && !window.location.pathname.includes("/anunciante/mensagens")) {
-            window.location.assign("/anunciante/mensagens");
+          // Não força o redirect se o dono estiver numa página PÚBLICA de anúncio
+          // (ex.: testando/visitando o próprio veículo/imóvel) — só faz sentido
+          // puxar pro painel quando ele já está em outra área do próprio painel.
+          const isPublicListingPage =
+            window.location.pathname.startsWith("/veiculos/") ||
+            window.location.pathname.startsWith("/imoveis/");
+
+          // Caixa certa conforme o segmento do lead — sem isso, lead de veículo/
+          // imóvel mandava o dono pra caixa genérica do lojista, onde esse lead
+          // nem aparece.
+          const leadModule = payload?.new?.listing_module;
+          const targetPath =
+            leadModule === "vehicles" ? "/anunciante/veiculos/mensagens"
+            : leadModule === "real_estate" ? "/anunciante/imoveis/mensagens"
+            : "/anunciante/mensagens";
+
+          if (
+            typeof window !== "undefined" &&
+            !window.location.pathname.includes(targetPath) &&
+            !isPublicListingPage
+          ) {
+            window.location.assign(targetPath);
           }
         }
       )

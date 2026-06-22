@@ -25,8 +25,36 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  /**
+   * Depois de um deploy novo, abas já abertas referenciam chunks (.js) que não
+   * existem mais no servidor — dá esse erro em vez de quebrar de verdade.
+   * Recarrega a página automaticamente (1x só, guardado em sessionStorage p/
+   * não entrar em loop se o erro for outra coisa).
+   */
+  private isChunkLoadError(error: Error): boolean {
+    const msg = error?.message || '';
+    return (
+      /Failed to fetch dynamically imported module/i.test(msg) ||
+      /Loading chunk .* failed/i.test(msg) ||
+      /Importing a module script failed/i.test(msg) ||
+      /dynamically imported module/i.test(msg)
+    );
+  }
+
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+
+    if (this.isChunkLoadError(error)) {
+      const RELOAD_KEY = 'viagg_chunk_reload_at';
+      const lastReload = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+      const now = Date.now();
+      // Só recarrega de novo se a última tentativa foi há mais de 10s
+      // (evita loop infinito se o erro persistir por outro motivo).
+      if (now - lastReload > 10_000) {
+        sessionStorage.setItem(RELOAD_KEY, String(now));
+        window.location.reload();
+      }
+    }
   }
 
   private handleReload = () => {

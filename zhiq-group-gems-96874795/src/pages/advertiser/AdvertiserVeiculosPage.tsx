@@ -48,8 +48,9 @@ export default function AdvertiserVeiculosPage() {
           .order("sort_order", { ascending: true })
           .limit(1)
           .maybeSingle();
-        const path = media?.public_masked_storage_path || media?.original_storage_path;
-        return { ...v, thumb: path ? getListingImageUrl(path) : null };
+        const hasThumb = !!media?.public_masked_storage_path && media.public_masked_storage_path !== media.original_storage_path;
+        const path = hasThumb ? media.public_masked_storage_path : media?.original_storage_path;
+        return { ...v, thumb: path ? getListingImageUrl(path, hasThumb ? 'public' : 'original') : null };
       }));
     },
   });

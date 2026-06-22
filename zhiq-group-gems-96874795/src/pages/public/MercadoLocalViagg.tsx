@@ -21,7 +21,6 @@ import {
     CheckCircle,
     ChevronDown,
     Building2,
-    Bike,
     TrendingUp,
     Sparkles,
     Megaphone,
@@ -34,8 +33,9 @@ import {
     Menu,
     SlidersHorizontal,
     MessageCircle,
-    Info,
-    Percent,
+    Volume2,
+    VolumeX,
+    Briefcase,
 } from "lucide-react";
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import { Input } from "@/components/ui/input";
@@ -52,11 +52,16 @@ import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
 import { MarketPropertyCard } from "@/components/real-estate/MarketPropertyCard";
 import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
+import { MarketServiceCard } from "@/components/services/MarketServiceCard";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
+import { useSoundtrackMusic } from "@/hooks/useSoundtrackMusic";
+import appTheme from "@/assets/viagg_search_loop.mp3";
+
+const MERCADO_MUTE_KEY = "viagg_mercado_sound_muted";
 
 // ─── Helpers ────────────────────────────
 const STORAGE_BUCKET_CANDIDATES = ['marketing-materials', 'merchant-products', 'product-images', 'merchant-marketing'];
@@ -264,16 +269,29 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
     const { trackSearch, trackCategoryView } = useMarketplaceTracking();
-    const { user, availableProfiles } = useAuth();
+    const { user } = useAuth();
 
-    // Mesmo destino do botão Motoboy do topo (agora exibido na linha amarela).
+    // Som ambiente da página — suave, em loop, com opção de mudo persistida
+    const [soundMuted, setSoundMuted] = useState<boolean>(
+        () => localStorage.getItem(MERCADO_MUTE_KEY) === "true"
+    );
+    useEffect(() => {
+        localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));
+    }, [soundMuted]);
+    useSoundtrackMusic({
+        src: appTheme,
+        startTime: 21,
+        endTime: 47,
+        volume: 0.12,
+        isPlaying: !soundMuted,
+        fadeInDuration: 1500,
+        fadeOutDuration: 800,
+    });
+
+    // Botão Motoboy do topo: sempre manda pra tela de cadastro/login do motoboy.
     const handleMotoboyClick = () => {
-        if (!user) {
-            localStorage.setItem("viagg_auth_entry", "motoboy");
-            navigate("/auth?entry=motoboy&signup=1");
-            return;
-        }
-        navigate(availableProfiles?.includes("motoboy") ? "/motoboy/dashboard" : "/motoboy/completar");
+        localStorage.setItem("viagg_auth_entry", "motoboy");
+        navigate("/auth?entry=motoboy&signup=1");
     };
 
     // ── Fetch active auction listings ──
@@ -504,10 +522,12 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                     .maybeSingle();
                 
                 let thumbnailUrl = null;
-                // Se tiver thumb processada, usa ela. Senão, usa o path original (getListingImageUrl cuida do fallback)
+                // Se tiver thumb processada (bucket real-estate-public), usa ela. Senão, cai pro
+                // path original — que fica no bucket real-estate-original, não no -public!
+                const hasThumb = !!media?.thumb_masked_storage_path;
                 const storagePath = media?.thumb_masked_storage_path || media?.original_storage_path;
                 if (storagePath) {
-                    thumbnailUrl = getListingImageUrl(storagePath);
+                    thumbnailUrl = getListingImageUrl(storagePath, hasThumb ? 'public' : 'original');
                 }
                 
                 return { ...prop, thumbnail_url: thumbnailUrl };
@@ -538,6 +558,64 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             return true;
         });
     }, [rawPropertyListings, search, cityFilter, neighborhoodFilter]);
+
+    // ── Fetch service listings ──
+    const { data: rawServiceListings = [] } = useQuery<any[]>({
+        queryKey: ['public-services'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('public_service_listings' as any)
+                .select('*')
+                .order('published_at', { ascending: false });
+
+            if (error) throw error;
+
+            const rows = (data as any[]) || [];
+            if (rows.length === 0) return [];
+
+            const ids = rows.map((s: any) => s.id);
+            const { data: mediaRows } = await supabase
+                .from('service_media' as any)
+                .select('listing_id, original_storage_path, public_masked_storage_path, sort_order')
+                .in('listing_id', ids)
+                .order('sort_order', { ascending: true });
+
+            const mediaMap = new Map<string, string>();
+            for (const row of (mediaRows as any[]) || []) {
+                if (!mediaMap.has(row.listing_id)) {
+                    const p = row.public_masked_storage_path || row.original_storage_path;
+                    if (p) {
+                        mediaMap.set(
+                            row.listing_id,
+                            p.startsWith('http') ? p : supabase.storage.from('real-estate-original').getPublicUrl(p).data.publicUrl
+                        );
+                    }
+                }
+            }
+            return rows.map((s: any) => ({ ...s, thumbnail_url: mediaMap.get(s.id) || null }));
+        },
+        refetchInterval: 10000,
+        refetchOnWindowFocus: true,
+    });
+
+    const serviceListings = useMemo(() => {
+        return rawServiceListings.filter((s) => {
+            if (cityFilter !== "all" && s.city?.trim().toLowerCase() !== cityFilter) return false;
+            if (neighborhoodFilter !== "all") {
+                const nb = String(s.neighborhood || "").trim().toLowerCase();
+                if (nb !== neighborhoodFilter.toLowerCase()) return false;
+            }
+            if (search.trim()) {
+                const q = search.toLowerCase();
+                if (
+                    !s.title?.toLowerCase().includes(q) &&
+                    !s.city?.toLowerCase().includes(q) &&
+                    !s.neighborhood?.toLowerCase().includes(q)
+                ) return false;
+            }
+            return true;
+        });
+    }, [rawServiceListings, search, cityFilter, neighborhoodFilter]);
 
     // ── Fetch vehicle listings ──
     // Query direto em vehicle_listings (anon tem policy vehicle_listings_public_read).
@@ -724,7 +802,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         }
 
         return [...matched, ...extras].sort((a, b) => b.count - a.count);
-    }, [categories, products, rawPropertyListings, rawVehicleListings]);
+    }, [categories, products, rawPropertyListings, rawVehicleListings, rawServiceListings]);
 
     const filtered = useMemo(() => {
         return products.filter(p => {
@@ -905,32 +983,47 @@ const scrollToProducts = () => {
             search={search}
             setSearch={setSearch}
             showSearch={!isAdvertiser}
-            headerRight={null}
+            headerRight={
+                <button
+                    type="button"
+                    onClick={() => setSoundMuted((m) => !m)}
+                    className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+                    title={soundMuted ? "Ativar som" : "Desativar som"}
+                >
+                    {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                </button>
+            }
             headerChildren={!isAdvertiser ? (
-                <div className="pb-3 flex gap-2 justify-center">
+                <div className="pb-3 flex gap-1.5 sm:gap-2 justify-center px-2">
                     <button
                         onClick={handleMotoboyClick}
-                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
                     >
-                        <Bike className="h-3.5 w-3.5 shrink-0" /> Motoboy
+                        Motoboy
                     </button>
                     <button
                         onClick={() => navigate("/mercado")}
-                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md ring-2 ring-white/40 hover:scale-105 active:scale-95 transition-all"
+                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md ring-2 ring-white/40 hover:scale-105 active:scale-95 transition-all"
                     >
-                        <ShoppingBag className="h-3.5 w-3.5 shrink-0" /> Mercado
+                        Mercado
                     </button>
                     <button
                         onClick={() => navigate("/imoveis")}
-                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
                     >
-                        <Building2 className="h-3.5 w-3.5 shrink-0" /> Imóveis
+                        Imóveis
                     </button>
                     <button
                         onClick={() => navigate("/automoveis")}
-                        className="flex-1 sm:flex-none sm:px-6 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[11px] sm:text-xs uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
                     >
-                        <Car className="h-3.5 w-3.5 shrink-0" /> Veículos
+                        Veículos
+                    </button>
+                    <button
+                        onClick={() => { setCategoryFilter("Serviços"); scrollToProducts(); }}
+                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                        Serviços
                     </button>
                 </div>
             ) : null}
@@ -958,9 +1051,9 @@ const scrollToProducts = () => {
 
                 <InstitutionalSafetyBanner />
 
-            {/* ═══ REAL ESTATE SECTION (ocultada) ═══ */}
-            {false && !productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-white">
+            {/* ═══ REAL ESTATE SECTION ═══ */}
+            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
+                <div className="w-full px-4 lg:px-6 py-12 bg-[#FFE600]">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1005,6 +1098,61 @@ const scrollToProducts = () => {
                                     <div className="space-y-1">
                                         <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
                                         <p className="text-zinc-400 text-xs font-medium">Anuncie seu imóvel aqui e alcance milhares de compradores.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ SERVICES SECTION ═══ */}
+            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Serviços") && (
+                <div className="w-full px-4 lg:px-6 py-12 bg-violet-50">
+                    <div className="max-w-[1920px] mx-auto space-y-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-violet-600/10 rounded-lg">
+                                        <Briefcase className="w-5 h-5 text-violet-600" />
+                                    </div>
+                                    <span className="text-xs font-black text-violet-600 uppercase tracking-widest">Oportunidades Locais</span>
+                                </div>
+                                <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">SERVIÇOS EM DESTAQUE</h2>
+                                <p className="text-zinc-500 font-medium max-w-xl">
+                                    Divulgue sua empresa e receba contatos de clientes interessados.
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="rounded-2xl font-bold border-zinc-200 hover:bg-zinc-50 gap-2 h-12"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('viagg-close-cart'));
+                                    if (serviceListings.length > 0) window.open('/servicos', '_blank');
+                                    else window.open('/auth?entry=advertiser', '_blank');
+                                }}
+                            >
+                                {serviceListings.length > 0 ? 'Ver todos os serviços' : 'Anuncie agora'}
+                                <ArrowRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                            {serviceListings.length > 0 ? (
+                                serviceListings.slice(0, 8).map((serv) => (
+                                    <MarketServiceCard key={serv.id} service={serv} />
+                                ))
+                            ) : (
+                                <div
+                                    onClick={() => navigate('/auth?entry=advertiser')}
+                                    className="col-span-1 border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-violet-200 hover:bg-violet-50/40 transition-all cursor-pointer group"
+                                >
+                                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-violet-600 transition-all">
+                                        <Plus className="w-8 h-8" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu serviço aqui e alcance milhares de clientes.</p>
                                     </div>
                                 </div>
                             )}
@@ -1112,7 +1260,7 @@ const scrollToProducts = () => {
             </div>
 
             {/* ═══ CATEGORY BAR ═══ */}
-            {activeCategories.length > 0 && (
+            {false && activeCategories.length > 0 && (
                 <div className="bg-white border-b border-gray-100 shadow-sm">
                     <div className="w-full px-4 lg:px-6 relative">
                         <button
@@ -1463,6 +1611,9 @@ const scrollToProducts = () => {
                         </div>
                     </div>
                 ) : filtered.length === 0 ? (
+                    // Sem produtos de loja: se já tem imóveis/veículos/serviços em
+                    // destaque na página, não mostra esse aviso vazio (fica redundante).
+                    (!search && (rawPropertyListings.length > 0 || rawVehicleListings.length > 0 || rawServiceListings.length > 0)) ? null : (
                     <div className="text-center py-20 bg-white rounded-xl shadow-sm">
                         <ShoppingBag className="h-16 w-16 text-gray-200 mx-auto mb-4" />
                         <h2 className="text-xl font-bold text-gray-600">Nenhum produto encontrado</h2>
@@ -1470,6 +1621,7 @@ const scrollToProducts = () => {
                             {search ? `Nenhum resultado para "${search}"` : "Os comerciantes ainda não publicaram produtos."}
                         </p>
                     </div>
+                    )
                 ) : (
                   <div>
                     <h2 className="text-xl font-bold text-gray-800 mb-4">
@@ -1702,10 +1854,8 @@ const scrollToProducts = () => {
                                                     disabled={globalCart.addingProductId === product.id}
                                                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-[#FF6A00] hover:bg-[#e65c00] transition-all duration-200"
                                                 >
-                                                    {globalCart.addingProductId === product.id ? (
+                                                    {globalCart.addingProductId === product.id && (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <ShoppingBag className="h-3.5 w-3.5" />
                                                     )}
                                                     Adicionar Cesta
                                                 </button>
@@ -1726,7 +1876,6 @@ const scrollToProducts = () => {
                                                 }}
                                                 className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] transition-all duration-200 shadow-sm"
                                             >
-                                                <Percent className="h-3.5 w-3.5" />
                                                 Minha Oferta é...
                                             </button>
 
@@ -1746,7 +1895,6 @@ const scrollToProducts = () => {
                                                 }}
                                                 className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all duration-200 shadow-sm"
                                             >
-                                                <Info className="h-3.5 w-3.5" />
                                                 Saber mais
                                             </button>
 

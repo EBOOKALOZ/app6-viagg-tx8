@@ -246,6 +246,13 @@ export function useGlobalCart() {
         entries[existingIdx].item_id = itemId;
         entries[existingIdx].cart_id = cartId;
       } else {
+        // Cobra o lojista só na PRIMEIRA vez que o produto entra na cesta (não
+        // a cada incremento de quantidade) — fire-and-forget, nunca bloqueia o carrinho.
+        supabase.rpc("consume_cart_add_credit" as any, {
+          p_store_id: storeId,
+          p_product_id: productId,
+        }).then(({ data }: any) => console.log("[GlobalCart] cart_add credit:", data))
+          .catch(() => { /* noop */ });
         entries.push({
           item_id: itemId,
           cart_id: cartId,
@@ -435,33 +442,13 @@ export function useGlobalCart() {
               }
             }
 
-            // CESTA1 credit debit: try to deduct 1 credit per purchase intention
-            const { data: balRow } = await (supabase.from("merchant_credit_balances") as any)
-              .select("available_credits, consumed_credits")
-              .eq("store_id", pi.store_id)
-              .single();
-            if (balRow && balRow.available_credits > 0) {
-              const before = balRow.available_credits;
-              const after = Math.max(0, before - 1);
-              await (supabase.from("merchant_credit_balances") as any)
-                .update({
-                  available_credits: after,
-                  consumed_credits: (balRow.consumed_credits || 0) + 1,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("store_id", pi.store_id);
-              await (supabase.from("merchant_credit_ledger") as any).insert({
-                store_id: pi.store_id,
-                purchase_intention_id: pi.intention_id,
-                entry_type: "debit",
-                amount: 1,
-                balance_before: before,
-                balance_after: after,
-                reason_code: "purchase_intention_received",
-                description: `CESTA1: Intenção de ${params.name} — ${pi.total_items} item(s)`,
-                metadata: { intention_id: pi.intention_id, customer_name: params.name, total_items: pi.total_items },
-              });
-            }
+            // Cobrança ao lojista por receber a intenção de compra (5cr,
+            // CREDIT_COSTS.visitor_checkout) — feita via RPC segura no banco,
+            // que lê o valor real da regra e debita com trava (sem race condition).
+            await (supabase.rpc as any)("consume_purchase_intention_credit", {
+              p_store_id: pi.store_id,
+              p_intention_id: pi.intention_id,
+            });
           } catch (e) {
             console.warn(`[GlobalCart] Post-submit fixes failed for intention ${pi.intention_id}:`, e);
           }

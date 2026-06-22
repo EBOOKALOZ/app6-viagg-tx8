@@ -49,6 +49,8 @@ import {
   AllVehiclesPage,
   AllAuctionsPage,
   AuctionMarketDetailPage,
+  PublicServicesHome,
+  ServiceDetailPage,
 } from "./lazyPages";
 
 export const publicRoutes = (
@@ -92,6 +94,8 @@ export const publicRoutes = (
     <Route path="/imoveis/editar/:listingId" element={<ProtectedRoute><LazyPropertyForm /></ProtectedRoute>} />
     <Route path="/veiculos/:id" element={<VehicleDetailPage />} />
     <Route path="/automoveis" element={<AllVehiclesPage />} />
+    <Route path="/servicos" element={<PublicServicesHome />} />
+    <Route path="/servicos/:id" element={<ServiceDetailPage />} />
     <Route path="/mercado/leiloes" element={<AllAuctionsPage />} />
     <Route path="/mercado/leiloes/:id" element={<AuctionMarketDetailPage />} />
     <Route path="/divulgar/:campaignId" element={<CampaignSharePage />} />

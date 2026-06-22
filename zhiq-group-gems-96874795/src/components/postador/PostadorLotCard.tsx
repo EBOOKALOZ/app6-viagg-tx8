@@ -9,6 +9,8 @@ import {
     AlertTriangle, Sparkles,
 } from "lucide-react";
 import type { PostingLot, PostingLotItem } from "@/types/postador";
+import { chatCompletion } from "@/lib/aiapi";
+import WhatsAppPreviewModal from "@/components/postador/WhatsAppPreviewModal";
 
 function buildLotMessage(lot: PostingLot): string {
     const lines: string[] = [];
@@ -25,6 +27,19 @@ function buildLotMessage(lot: PostingLot): string {
     lines.push("─────────────────────");
     lines.push("📢 Quer anunciar seu produto aqui?");
     lines.push("👉 https://zhiq-group-gems-96874795.lovable.app/anunciante/meus-anuncios");
+    return lines.join("\n");
+}
+
+function buildPromptForLot(lot: PostingLot): string {
+    const lines: string[] = [];
+    if (lot.store_name) lines.push(`Loja: ${lot.store_name}`);
+    const location = [lot.target_bairro || lot.target_region, lot.target_city].filter(Boolean).join(", ");
+    if (location) lines.push(`Localização: ${location}`);
+    lines.push("Produtos:");
+    (lot.items || []).forEach((item) => {
+        const price = item.product_price ? ` — R$ ${Number(item.product_price).toFixed(2).replace(".", ",")}` : "";
+        lines.push(`• ${item.product_name}${price}`);
+    });
     return lines.join("\n");
 }
 
@@ -160,6 +175,36 @@ export default function PostadorLotCard({
     const isActing = actionState[key] === "loading";
     const isSuccess = actionState[key] === "success";
     const isError = actionState[key] === "error";
+
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [previewText, setPreviewText] = useState("");
+    const [showPreview, setShowPreview] = useState(false);
+
+    const handleGenerateAiText = async () => {
+        setIsGenerating(true);
+        try {
+            const context = buildPromptForLot(lot);
+            const systemPrompt = `Você é um copywriter especialista em marketing digital e vendas para WhatsApp e Instagram. 
+Crie um texto de venda persuasivo (copy) que divulgue os itens fornecidos, usando gatilhos mentais (urgência, escassez, prova social).
+O texto deve ser animado, usar emojis adequados e ter um call to action (CTA) claro no final, convidando a pessoa para clicar no link da loja ou entrar em contato.
+Mantenha o texto bem formatado e fácil de ler.`;
+            const userPrompt = `Por favor, crie um texto de divulgação para os seguintes itens:\n${context}\n\nLembre-se de adicionar placeholders para o link da loja, ex: [LINK DA LOJA].`;
+
+            const aiText = await chatCompletion(userPrompt, 'glm-4-plus', systemPrompt);
+            
+            const finalMsg = `${aiText}\n\n─────────────────────\n📢 Quer anunciar seu produto aqui?\n👉 https://zhiq-group-gems-96874795.lovable.app/anunciante/meus-anuncios`;
+            
+            setPreviewText(finalMsg);
+            setShowPreview(true);
+        } catch (error) {
+            console.error("Erro ao gerar texto:", error);
+            toast.error("Erro ao gerar texto com IA. Tente novamente.");
+            setPreviewText(buildLotMessage(lot));
+            setShowPreview(true);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     const statusCfg = LOT_STATUS_CONFIG[lot.lot_status] || LOT_STATUS_CONFIG.available;
     const isMine = lot.operator_user_id === userId;
@@ -321,24 +366,23 @@ export default function PostadorLotCard({
                 {isClaimed && isMine && !isActing && !isSuccess ? (
                     /* Lote reservado pelo motoboy — dois botões */
                     <div className="flex gap-2">
-                        {/* Postar no WhatsApp */}
+                        {/* Postar no WhatsApp com IA */}
                         <Button
                             size="sm"
                             className="flex-[2] text-[11px] font-black h-11 gap-1.5 rounded-xl text-white transition-all duration-200"
-                            style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
-                            onClick={() => {
-                                const msg = buildLotMessage(lot);
-                                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
-                                toast.success("WhatsApp aberto! Selecione o grupo e envie.", { duration: 4000 });
-                            }}
+                            style={{ background: "linear-gradient(135deg, #FF6A00, #FF8C33)" }}
+                            onClick={handleGenerateAiText}
+                            disabled={isGenerating || isActing}
                         >
-                            <Send className="h-4 w-4" /> Postar no WhatsApp
+                            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            {isGenerating ? "Gerando IA..." : "Gerar com IA"}
                         </Button>
                         {/* Confirmar no sistema */}
                         <Button
                             size="sm"
                             className="flex-1 text-[11px] font-bold h-11 gap-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white transition-all duration-200"
                             onClick={() => onOpenProof(lot)}
+                            disabled={isActing}
                         >
                             <CheckCircle className="h-4 w-4" /> Confirmar
                         </Button>
@@ -408,6 +452,20 @@ export default function PostadorLotCard({
                     </div>
                 )}
             </div>
+
+            {/* Modal de pré-visualização WhatsApp */}
+            <WhatsAppPreviewModal
+                open={showPreview}
+                onClose={() => setShowPreview(false)}
+                onConfirm={() => {
+                    window.open(`https://wa.me/?text=${encodeURIComponent(previewText)}`, "_blank", "noopener,noreferrer");
+                    toast.success("WhatsApp aberto! Selecione o grupo e envie.", { duration: 4000 });
+                }}
+                messageText={previewText}
+                imageUrl={lot.store_logo_url}
+                ogTitle={lot.store_name ?? undefined}
+                ogDesc={previewText.slice(0, 120) ?? undefined}
+            />
         </div>
     );
 }

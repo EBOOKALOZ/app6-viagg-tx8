@@ -31,7 +31,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { FloatingMessageButton } from "./FloatingMessageButton";
-import { StoreBottomNav } from "@/components/store/StoreBottomNav";
 import { FooterProfile } from "@/components/FooterProfile";
 import { FooterNeutral } from "@/components/FooterNeutral";
 import { useQuery } from "@tanstack/react-query";
@@ -63,11 +62,13 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   // imóveis→real_estate, veículos→vehicles, loja→demais (produtos/mercado).
   const isImoveisCtx = location.pathname.startsWith("/anunciante/imoveis") || checkoutRet === "imoveis";
   const isVeiculosCtx = location.pathname.startsWith("/anunciante/veiculos") || checkoutRet === "veiculos";
+  const isServicosCtx = location.pathname.startsWith("/anunciante/servicos") || checkoutRet === "servicos";
   const pendingLeadCount = intentions.filter((i) => {
     if (i.status === "unlocked") return false;
     if (isImoveisCtx) return i.listing_module === "real_estate";
     if (isVeiculosCtx) return i.listing_module === "vehicles";
-    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles";
+    if (isServicosCtx) return i.listing_module === "services";
+    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services";
   }).length;
 
   const { data: marketplaceCount = 0 } = useQuery({
@@ -148,13 +149,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   // URL está em /anunciante/imoveis/... o menu fica enxuto (sem itens de loja).
   const imoveisMode = isImoveisCtx;
   const veiculosMode = isVeiculosCtx;
+  const servicosMode = isServicosCtx;
 
   // Persiste o contexto do painel para que páginas compartilhadas (ex.: Suporte,
-  // que fica fora dos prefixos /anunciante/imoveis|veiculos) saibam para onde voltar.
+  // que fica fora dos prefixos /anunciante/imoveis|veiculos|servicos) saibam para onde voltar.
   useEffect(() => {
-    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : (activeProfile || "");
+    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : servicosMode ? "servicos" : (activeProfile || "");
     sessionStorage.setItem("viagg_panel_context", ctx);
-  }, [imoveisMode, veiculosMode, activeProfile]);
+  }, [imoveisMode, veiculosMode, servicosMode, activeProfile]);
 
   const showMerchantOnlyItems = activeProfile === "merchant";
 
@@ -164,6 +166,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Divulgar Grátis", href: "/anunciante/veiculos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/veiculos/mensagens", icon: MessageSquare },
     { name: "Gestão e Pacotes", href: "/anunciante/veiculos/creditos", icon: Coins },
+    { name: "Suporte", href: "/suporte/novo", icon: Headphones },
+    { name: "Sair", href: "#", icon: LogOut, action: "logout" },
+  ] : servicosMode ? [
+    { name: "Painel Geral", href: "/anunciante/servicos", icon: LayoutDashboard },
+    { name: "Meus Anúncios", href: "/anunciante/servicos/meus-anuncios", icon: Package },
+    { name: "Divulgar Grátis", href: "/anunciante/servicos/divulgar-gratis", icon: Megaphone },
+    { name: "Mensagens", href: "/anunciante/servicos/mensagens", icon: MessageSquare },
+    { name: "Gestão e Pacotes", href: "/anunciante/servicos/creditos", icon: Coins },
     { name: "Suporte", href: "/suporte/novo", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : imoveisMode ? [
@@ -278,6 +288,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              <h2 className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] leading-tight">Painel Vendedor</h2>
              {veiculosMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Veículos</span>}
              {imoveisMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
+             {servicosMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Serviços</span>}
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:bg-white/10">
@@ -305,6 +316,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              <h2 className="text-sm font-black text-[#A7B0BE] uppercase tracking-[0.2em]">Painel Vendedor</h2>
              {veiculosMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Veículos</span>}
              {imoveisMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
+             {servicosMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Serviços</span>}
           </div>
           <div className="flex items-center gap-6">
             <div className="h-8 w-px bg-[#2A3038]" />
@@ -327,14 +339,16 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
           </div>
         </div>
 
-        {veiculosMode ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
+        {(veiculosMode || imoveisMode || servicosMode) ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
       </main>
 
       {/* Botão flutuante para Mensagens */}
       <FloatingMessageButton />
 
-      {/* Bottom nav consistente em todas as telas do lojista */}
-      <StoreBottomNav />
+      {/* Sem bottom nav aqui: o menu hambúrguer do painel já cobre toda a
+          navegação (inclusive "Minha Loja"). A barra inferior só aparece
+          depois que o usuário sai deste painel e entra em /loja/minha-loja
+          (StoreAppLayout tem sua própria <StoreBottomNav /> sempre visível). */}
     </div>
   );
 }

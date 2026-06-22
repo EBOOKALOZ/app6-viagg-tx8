@@ -1,0 +1,84 @@
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Megaphone, Briefcase, ArrowRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SellServiceCTAProps {
+  variant?: 'banner' | 'simple';
+  className?: string;
+}
+
+export const SellServiceCTA: React.FC<SellServiceCTAProps> = ({
+  variant = 'banner',
+  className = ''
+}) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleCtaClick = async () => {
+    try {
+      await supabase.from('analytics_events' as any).insert({
+        event_name: 'service_sell_cta_clicked',
+        user_id: user?.id || null,
+        metadata: { variant, path: window.location.pathname }
+      } as any);
+    } catch (err) {
+      console.warn('Tracking failed:', err);
+    }
+
+    localStorage.setItem("viagg_auth_entry", "advertiser");
+    navigate("/select-profile");
+  };
+
+  if (variant === 'simple') {
+    return (
+      <Button
+        onClick={handleCtaClick}
+        className={`bg-violet-600 hover:bg-violet-700 text-white font-bold py-6 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all group gap-2 ${className}`}
+      >
+        <Megaphone className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+        ANUNCIE AGORA
+        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+      </Button>
+    );
+  }
+
+  return (
+    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 border border-violet-500/20 p-8 md:p-12 shadow-2xl ${className}`}>
+      <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl" />
+
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="flex-1 space-y-4 text-center md:text-left">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 text-violet-600 text-xs font-bold uppercase tracking-wider">
+            <Briefcase className="w-3 h-3" />
+            Oportunidade Local
+          </div>
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+            Divulgue sua empresa e receba <span className="text-violet-600 italic">contatos de clientes interessados</span>.
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-xl">
+            Academia, dentista, farmácia, advogado, mecânico, salão, clínica e muito mais.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center gap-3">
+          <Button
+            onClick={handleCtaClick}
+            size="lg"
+            className="h-16 px-10 text-xl font-black bg-violet-600 hover:bg-violet-700 text-white rounded-2xl shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:scale-105 transition-all group gap-3"
+          >
+            <Megaphone className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+            ANUNCIE AGORA
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Button>
+          <span className="text-xs text-muted-foreground italic font-medium">
+            Grátis para começar • Proteção Anti-SPAM
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};

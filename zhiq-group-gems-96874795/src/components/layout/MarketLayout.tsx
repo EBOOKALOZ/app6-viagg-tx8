@@ -72,7 +72,7 @@ export function MarketLayout({
             return;
         }
         if (availableProfiles?.includes("motoboy")) {
-            navigate("/motoboy/dashboard");
+            navigate("/select-profile?profile=motoboy");
         } else {
             navigate("/motoboy/completar");
         }

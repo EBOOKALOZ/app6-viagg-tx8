@@ -29,8 +29,10 @@ import {
   Zap,
   Sparkles,
   ShieldCheck,
+  Loader2,
 } from 'lucide-react';
 import { cn, parseBRLCurrency, formatBrazilianPhone, toE164 } from '@/lib/utils';
+import { generateListingDescription } from '@/lib/ai/generateDescription';
 
 const UF_LIST = ["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
 
@@ -108,6 +110,33 @@ export const PropertyForm = () => {
     bathrooms: '0',
     lot_quantity: '1',
   });
+
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const handleGenerateDescription = async () => {
+    if (!propertyData.title.trim()) {
+      toast.error('Preencha o título antes de gerar a descrição com IA.');
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const desc = await generateListingDescription('imovel', {
+        'Título': propertyData.title,
+        'Tipo de imóvel': TYPE_LABEL[propertyData.property_type] || propertyData.property_type,
+        'Área': propertyData.total_area_m2 ? `${propertyData.total_area_m2} ${propertyData.property_type === 'lote' ? 'm²' : 'hectares'}` : undefined,
+        'Quartos': propertyData.bedrooms !== '0' ? propertyData.bedrooms : undefined,
+        'Banheiros': propertyData.bathrooms !== '0' ? propertyData.bathrooms : undefined,
+        'Cidade': locationData.city,
+        'Estado': locationData.state,
+        'Bairro': locationData.neighborhood,
+      });
+      setPropertyData(prev => ({ ...prev, description: desc }));
+      toast.success('Descrição gerada com IA!');
+    } catch (err: any) {
+      toast.error(err.message || 'Falha ao gerar descrição com IA.');
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
 
   // Pré-seleciona a categoria vinda do link de cadastro (?tipo=sitio/chacara/lote/fazenda).
   useEffect(() => {
@@ -318,31 +347,61 @@ export const PropertyForm = () => {
       // ── Upload de fotos pendentes ──
       if (pendingFiles.length > 0) {
         toast.info(`Processando ${pendingFiles.length} fotos... Aguarde análise de segurança.`);
+        const { processForUpload } = await import('@/lib/imageCompressor');
+        let failures = 0;
         for (const file of pendingFiles) {
           const timestamp = new Date().getTime();
-          const fileName = `${timestamp}-${file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const sanitizedName = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9.]/g, '_');
+          const fileName = `${timestamp}-${sanitizedName.replace(/\.[^/.]+$/, '')}.jpg`;
           const filePath = `${user.id}/${currentListingId}/${fileName}`;
+
+          let uploadBlob: Blob;
+          try {
+            const processed = await processForUpload(file, { maxDimension: 1600, targetSizeBytes: 200 * 1024 });
+            uploadBlob = processed.blob;
+          } catch (convErr: any) {
+            console.error('[PropertyForm] Falha ao comprimir imagem:', convErr);
+            toast.error(`Não foi possível processar a foto "${file.name}".`);
+            failures++;
+            continue;
+          }
 
           const { error: uploadError } = await supabase.storage
             .from('real-estate-original')
-            .upload(filePath, file);
+            .upload(filePath, uploadBlob, { contentType: 'image/jpeg' });
 
-          if (!uploadError) {
-             const { data: mediaData } = await supabase.from('real_estate_media' as any).insert({
-               listing_id: currentListingId,
-               owner_user_id: user.id,
-               original_storage_path: filePath,
-             } as any).select().single();
-
-             if (mediaData) {
-                // Auto-approve: copia para public e marca como aprovado
-                await supabase.storage.from('real-estate-public').upload(filePath, file, { upsert: true });
-                await supabase.from('real_estate_media' as any).update({
-                  moderation_status: 'approved',
-                  public_masked_storage_path: filePath
-                } as any).eq('id', (mediaData as any).id);
-              }
+          if (uploadError) {
+            console.error('[PropertyForm] Falha no upload da foto:', uploadError);
+            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError.message}`);
+            failures++;
+            continue;
           }
+
+          const { data: mediaData, error: dbErr } = await supabase.from('real_estate_media' as any).insert({
+            listing_id: currentListingId,
+            owner_user_id: user.id,
+            original_storage_path: filePath,
+          } as any).select().single();
+
+          if (dbErr) {
+            console.error('[PropertyForm] Falha ao registrar mídia:', dbErr);
+            toast.error(`Falha ao registrar a foto "${file.name}".`);
+            failures++;
+            continue;
+          }
+
+          if (mediaData) {
+            // Auto-approve: copia para public e marca como aprovado
+            const { error: copyErr } = await supabase.storage.from('real-estate-public').upload(filePath, uploadBlob, { upsert: true, contentType: 'image/jpeg' });
+            if (copyErr) console.warn('[PropertyForm] Falha ao copiar para public:', copyErr.message);
+            await supabase.from('real_estate_media' as any).update({
+              moderation_status: 'approved',
+              public_masked_storage_path: filePath
+            } as any).eq('id', (mediaData as any).id);
+          }
+        }
+        if (failures > 0) {
+          toast.error(`${failures} foto(s) não foram enviadas. Tente adicioná-las novamente em "Editar anúncio".`);
         }
         setPendingFiles([]);
       }
@@ -489,7 +548,20 @@ export const PropertyForm = () => {
             {/* 4 — Descrição */}
             <Section step={4} title="Descrição" description="Explique tudo sobre o imóvel, sem repetir o título." icon={MessageCircle} done={completion.description}>
               <div className="space-y-2">
-                <InputLabel>Descrição completa</InputLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <InputLabel>Descrição completa</InputLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDesc}
+                    className="rounded-xl gap-1.5 text-xs h-8 shrink-0"
+                  >
+                    {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {generatingDesc ? 'Gerando...' : 'Gerar com IA'}
+                  </Button>
+                </div>
                 <Textarea
                   placeholder="Descreva detalhes do solo, água, árvores frutíferas, benfeitorias..."
                   className="min-h-[150px] resize-y bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40 text-sm"

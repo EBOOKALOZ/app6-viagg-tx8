@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyBRL } from "@/lib/utils";
+import { chatCompletion } from "@/lib/aiapi";
 import { toast } from "sonner";
 import {
   Search,
@@ -26,10 +27,14 @@ import {
   Trash2,
   ListOrdered,
   Clock,
+  Bot,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 /* ─────────────────────────────────────────────
    Types
@@ -84,6 +89,11 @@ export default function AdvertiserPromotionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [promoted, setPromoted] = useState<string[]>([]);
   const [savingSlot, setSavingSlot] = useState<string | null>(null); // itemId being saved
+
+  // AI Generation State
+  const [generatingPromoText, setGeneratingPromoText] = useState(false);
+  const [generatedPromoText, setGeneratedPromoText] = useState("");
+  const [copiedText, setCopiedText] = useState(false);
 
   // Picker state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
@@ -451,6 +461,41 @@ export default function AdvertiserPromotionPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /* ── AI Text Generation ── */
+  async function handleGeneratePromoText() {
+    if (selectedItems.length === 0) return;
+    setGeneratingPromoText(true);
+    setGeneratedPromoText("");
+    try {
+      const itemsContext = selectedItems.map((item, idx) => {
+        return `Item ${idx + 1}: ${item.title} - Categoria: ${item.category} - Preço: ${formatCurrencyBRL(item.price)} - Cidade: ${item.city || "Não informada"}`;
+      }).join("\n");
+
+      const systemPrompt = `Você é um copywriter especialista em marketing digital e vendas para WhatsApp e Instagram. 
+Crie um texto de venda persuasivo (copy) que divulgue os itens fornecidos, usando gatilhos mentais (urgência, escassez, prova social).
+O texto deve ser animado, usar emojis adequados e ter um call to action (CTA) claro no final, convidando a pessoa para clicar no link da loja ou entrar em contato.
+Mantenha o texto bem formatado e fácil de ler.`;
+
+      const userPrompt = `Por favor, crie um texto de divulgação para os seguintes itens:\n${itemsContext}\n\nLembre-se de adicionar placeholders para o link da loja, ex: [LINK DA LOJA].`;
+
+      const text = await chatCompletion(userPrompt, 'glm-4-plus', systemPrompt);
+      setGeneratedPromoText(text);
+      toast.success("Texto de divulgação gerado com sucesso!");
+    } catch (err: any) {
+      console.error("Erro ao gerar texto:", err);
+      toast.error("Não foi possível gerar o texto com a IA.");
+    } finally {
+      setGeneratingPromoText(false);
+    }
+  }
+
+  function handleCopyPromoText() {
+    navigator.clipboard.writeText(generatedPromoText);
+    setCopiedText(true);
+    toast.success("Texto copiado para a área de transferência!");
+    setTimeout(() => setCopiedText(false), 2000);
   }
 
   /* ── Build slots array (always 6) ── */
@@ -834,24 +879,73 @@ export default function AdvertiserPromotionPage() {
           )}
         </div>
 
-        {/* Send Button */}
+        {/* Action Buttons */}
         {selectedItems.length > 0 && (
           <div className="px-3 sm:px-6 py-4 bg-[#0D0F12] border-t border-[#2A3038]/40 rounded-b-3xl">
-            <Button
-              onClick={handlePromote}
-              disabled={submitting}
-              className="w-full bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-wider text-xs h-14 rounded-xl shadow-lg shadow-[#FF6A00]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF6A00]/30"
-            >
-              {submitting ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : (
-                <Share2 className="w-5 h-5 mr-2" />
-              )}
-              {submitting
-                ? "Enviando para o Postador..."
-                : `Enviar ${selectedItems.length} Anúncio${selectedItems.length > 1 ? "s" : ""} para Divulgação`}
-              {!submitting && <ArrowRight className="w-5 h-5 ml-2" />}
-            </Button>
+            <div className="flex flex-col md:flex-row gap-3">
+              <Button
+                onClick={handleGeneratePromoText}
+                disabled={generatingPromoText}
+                variant="outline"
+                className="flex-1 bg-transparent border-[#FF6A00]/40 text-[#FF6A00] hover:bg-[#FF6A00]/10 hover:border-[#FF6A00] font-black uppercase tracking-wider text-xs h-14 rounded-xl transition-all duration-300"
+              >
+                {generatingPromoText ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Bot className="w-5 h-5 mr-2" />
+                )}
+                {generatingPromoText ? "Gerando Texto..." : "Gerar Texto para Redes Sociais com IA"}
+              </Button>
+              
+              <Button
+                onClick={handlePromote}
+                disabled={submitting}
+                className="flex-1 bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-wider text-xs h-14 rounded-xl shadow-lg shadow-[#FF6A00]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF6A00]/30"
+              >
+                {submitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Share2 className="w-5 h-5 mr-2" />
+                )}
+                {submitting
+                  ? "Enviando para o Postador..."
+                  : `Enviar ${selectedItems.length} Anúncio${selectedItems.length > 1 ? "s" : ""} para Divulgação`}
+                {!submitting && <ArrowRight className="w-5 h-5 ml-2" />}
+              </Button>
+            </div>
+
+            {/* Generated Text Area */}
+            {generatedPromoText && (
+              <div className="mt-4 bg-[#1B1F24] border border-[#2A3038] rounded-xl p-4 animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-[#FF6A00]/10 flex items-center justify-center border border-[#FF6A00]/20">
+                      <Sparkles className="w-3.5 h-3.5 text-[#FF6A00]" />
+                    </div>
+                    <span className="text-xs font-black text-white uppercase tracking-wider">
+                      Texto Gerado pela IA
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleCopyPromoText}
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-[#A7B0BE] hover:text-white hover:bg-[#2A3038] text-xs font-bold"
+                  >
+                    {copiedText ? (
+                      <><Check className="w-3.5 h-3.5 mr-1 text-green-400" /> Copiado</>
+                    ) : (
+                      <><Copy className="w-3.5 h-3.5 mr-1" /> Copiar Texto</>
+                    )}
+                  </Button>
+                </div>
+                <Textarea 
+                  readOnly 
+                  value={generatedPromoText}
+                  className="min-h-[160px] bg-[#0D0F12] border-[#2A3038] text-[#F5F7FA] text-sm custom-scrollbar focus-visible:ring-[#FF6A00]/30"
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

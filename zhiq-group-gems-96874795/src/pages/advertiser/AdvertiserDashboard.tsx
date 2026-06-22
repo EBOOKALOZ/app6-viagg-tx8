@@ -268,13 +268,16 @@ export default function AdvertiserDashboard() {
         for (const r of results) totalViews += r?.count ?? 0;
       }
 
-      // c) Visualizações de imóveis e veículos (próprios) — somam view_count direto da listing
+      // c) Visualizações de imóveis e veículos (próprios) — real_estate_listings NÃO tem
+      // coluna view_count (causava erro silencioso); a fonte real é o ledger de cliques.
       const [reViewsRes, vViewsRes] = await Promise.all([
-        (supabase.from('real_estate_listings' as any).select('view_count').eq('owner_user_id', user!.id)) as any,
-        (supabase.from('vehicle_listings' as any).select('view_count').eq('owner_user_id', user!.id)) as any,
+        (supabase.from('real_estate_credit_ledger' as any)
+          .select('metadata').eq('owner_user_id', user!.id)) as any,
+        (supabase.from('vehicle_credit_ledger' as any)
+          .select('metadata').eq('owner_user_id', user!.id)) as any,
       ]);
-      for (const r of ((reViewsRes?.data as any[]) || [])) totalViews += Number(r?.view_count ?? 0);
-      for (const v of ((vViewsRes?.data as any[]) || [])) totalViews += Number(v?.view_count ?? 0);
+      for (const r of ((reViewsRes?.data as any[]) || [])) if (r?.metadata?.event === 'listing_click') totalViews += 1;
+      for (const v of ((vViewsRes?.data as any[]) || [])) if (v?.metadata?.event === 'listing_click') totalViews += 1;
 
       console.log('[Dashboard Stats] views/products', { productIds, storeIdsAll, totalViews, totalAds });
 

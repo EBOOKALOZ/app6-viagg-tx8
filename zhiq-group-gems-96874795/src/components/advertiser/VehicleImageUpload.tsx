@@ -29,9 +29,22 @@ export const VehicleImageUpload: React.FC<VehicleImageUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_PHOTOS = 6;
+
   const processFiles = async (files: FileList | File[]) => {
-    const fileArray = Array.from(files);
+    let fileArray = Array.from(files);
     if (fileArray.length === 0) return;
+
+    const currentCount = listingId ? uploadedImages.length : selectedFiles.length;
+    const remaining = MAX_PHOTOS - currentCount;
+    if (remaining <= 0) {
+      toast.error(`Limite de ${MAX_PHOTOS} fotos por anúncio atingido.`);
+      return;
+    }
+    if (fileArray.length > remaining) {
+      toast.warning(`Só dá pra adicionar mais ${remaining} foto(s) (limite de ${MAX_PHOTOS}).`);
+      fileArray = fileArray.slice(0, remaining);
+    }
 
     if (listingId) {
       await uploadFiles(fileArray);
@@ -73,7 +86,7 @@ export const VehicleImageUpload: React.FC<VehicleImageUploadProps> = ({
 
       for (let i = 0; i < fileArray.length; i++) {
         const file = fileArray[i];
-        const processed = await processForUpload(file, { maxDimension: 1600, targetSizeBytes: 300 * 1024 });
+        const processed = await processForUpload(file, { maxDimension: 1600, targetSizeBytes: 200 * 1024 });
         const fileName = `${sanitizeFileName(file.name)}.${processed.extension}`;
         const filePath = `${user.id}/vehicles/${listingId}/original/${fileName}`;
         const blob = processed.blob;
@@ -155,12 +168,16 @@ export const VehicleImageUpload: React.FC<VehicleImageUploadProps> = ({
         className="hidden"
       />
 
+      <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest text-center">
+        Até {MAX_PHOTOS} fotos ({(listingId ? uploadedImages.length : selectedFiles.length)}/{MAX_PHOTOS})
+      </p>
+
       {/* Galeria + Câmera buttons */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={uploading || generatingPreviews}
+          disabled={uploading || generatingPreviews || (listingId ? uploadedImages.length : selectedFiles.length) >= MAX_PHOTOS}
           className={cn(
             "flex flex-col items-center justify-center border-2 border-dashed rounded-[30px] p-8 hover:border-blue-500/50 transition-all cursor-pointer group",
             uploading ? "border-blue-500 bg-blue-50/10" : "border-zinc-200 bg-zinc-50/50"
@@ -188,7 +205,7 @@ export const VehicleImageUpload: React.FC<VehicleImageUploadProps> = ({
         <button
           type="button"
           onClick={() => cameraInputRef.current?.click()}
-          disabled={uploading || generatingPreviews}
+          disabled={uploading || generatingPreviews || (listingId ? uploadedImages.length : selectedFiles.length) >= MAX_PHOTOS}
           className="flex flex-col items-center justify-center border-2 border-dashed rounded-[30px] p-8 hover:border-blue-500/50 transition-all cursor-pointer group border-zinc-200 bg-zinc-50/50"
         >
           <div className="flex flex-col items-center gap-3">

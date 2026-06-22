@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike } from "lucide-react";
+import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 const UNLOCK_COST = 13; // custo fixo do desbloqueio na LOJA (anunciante)
 const RE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (admin → Cobranças)
 const VE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
+const SE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no SERVIÇO (admin → Cobranças)
 
 export default function AdvertiserMessagesPage() {
   const navigate = useNavigate();
@@ -37,11 +38,14 @@ export default function AdvertiserMessagesPage() {
   // No painel de VEÍCULOS o saldo e o débito usam a carteira PRÓPRIA de veículos
   // (vehicle_credit_balances por owner_user_id), não a do lojista/anunciante.
   const veiculosMode = location.pathname.startsWith("/anunciante/veiculos");
+  // No painel de SERVIÇOS o saldo e o débito usam a carteira PRÓPRIA de serviços
+  // (service_credit_balances por owner_user_id), não a do lojista/anunciante.
+  const servicosMode = location.pathname.startsWith("/anunciante/servicos");
 
   // Fallback de saldo do ANUNCIANTE (modo loja)
   const { data: fallbackBalance = 0 } = useQuery({
     queryKey: ["seller-credit-balance-for-msgs", user?.id],
-    enabled: !!user?.id && !imoveisMode && !veiculosMode,
+    enabled: !!user?.id && !imoveisMode && !veiculosMode && !servicosMode,
     refetchInterval: 15_000,
     queryFn: async () => {
       const { data: adv } = await (supabase.from("advertiser_accounts" as any)
@@ -106,10 +110,36 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : (balance?.available_credits ?? fallbackBalance);
+  // Saldo PRÓPRIO de serviços (service_credit_balances)
+  const { data: seBalance = 0 } = useQuery({
+    queryKey: ["service-balance-msgs", user?.id],
+    enabled: !!user?.id && servicosMode,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from("service_credit_balances") as any)
+        .select("available_credits").eq("owner_user_id", user!.id).maybeSingle();
+      return Number((data as any)?.available_credits ?? 0);
+    },
+  });
 
-  // Custo por lead: imóvel/veículo = WhatsApp fixo da carteira própria; loja = custo do anunciante
-  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : UNLOCK_COST);
+  // Custo FIXO p/ desbloquear WhatsApp do interessado de SERVIÇO (admin → Cobranças)
+  const { data: seUnlockCost = SE_UNLOCK_DEFAULT } = useQuery({
+    queryKey: ["service-unlock-whatsapp-cost"],
+    enabled: servicosMode,
+    queryFn: async () => {
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("credits_cost, is_active")
+        .eq("feature_code", "service_unlock_whatsapp")
+        .maybeSingle();
+      if (!data) return SE_UNLOCK_DEFAULT;
+      return (data as any).is_active === false ? 0 : (Number((data as any).credits_cost) || SE_UNLOCK_DEFAULT);
+    },
+  });
+
+  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : (balance?.available_credits ?? fallbackBalance);
+
+  // Custo por lead: imóvel/veículo/serviço = WhatsApp fixo da carteira própria; loja = custo do anunciante
+  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : UNLOCK_COST);
 
   // Máscaras
   const maskName = (n: string | null) => {
@@ -178,6 +208,29 @@ export default function AdvertiserMessagesPage() {
       return;
     }
 
+    // ── SERVIÇOS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
+    if (servicosMode) {
+      if (creditBalance < cost) {
+        toast.error(`Sem saldo de serviços (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+        setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200);
+        return;
+      }
+      const { data, error } = await supabase.rpc("unlock_service_intention" as any, { p_intention_id: id });
+      const r = data as any;
+      if (!error && r?.success) {
+        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
+        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["service-balance-msgs", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["servicos-painel-saldo", user?.id] });
+      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
+        setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200);
+      } else {
+        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
+      }
+      return;
+    }
+
     // ── LOJA (anunciante): fluxo existente ──
     if (creditBalance < UNLOCK_COST) {
       toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${creditBalance}). Redirecionando para compra...`, { duration: 3000 });
@@ -215,12 +268,15 @@ export default function AdvertiserMessagesPage() {
   // Cada painel mostra só os leads do seu segmento:
   //  • imóveis  → listing_module === 'real_estate'
   //  • veículos → listing_module === 'vehicles'
-  //  • loja     → tudo MENOS imóveis e veículos (produtos/mercado)
+  //  • serviços → listing_module === 'services'
+  //  • loja     → tudo MENOS imóveis, veículos e serviços (produtos/mercado)
   const visibleIntentions = imoveisMode
     ? intentions.filter((i) => i.listing_module === "real_estate")
     : veiculosMode
       ? intentions.filter((i) => i.listing_module === "vehicles")
-      : intentions.filter((i) => i.listing_module !== "real_estate" && i.listing_module !== "vehicles");
+      : servicosMode
+        ? intentions.filter((i) => i.listing_module === "services")
+        : intentions.filter((i) => i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services");
 
   const totalCount = visibleIntentions.length;
 
@@ -267,9 +323,11 @@ export default function AdvertiserMessagesPage() {
             const hasEnough = creditBalance >= leadCost;
             const ModuleIcon = lead.listing_module === "real_estate" ? Building2
               : lead.listing_module === "product" ? Package
+              : lead.listing_module === "services" ? Briefcase
               : Car;
             const moduleLabel = lead.listing_module === "real_estate" ? "Imóvel"
               : lead.listing_module === "product" ? "Produto"
+              : lead.listing_module === "services" ? "Serviço"
               : "Veículo";
 
             return (
