@@ -33,8 +33,6 @@ import {
     Menu,
     SlidersHorizontal,
     MessageCircle,
-    Volume2,
-    VolumeX,
     Briefcase,
 } from "lucide-react";
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
@@ -55,14 +53,11 @@ import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { MarketServiceCard } from "@/components/services/MarketServiceCard";
 import { MarketFreightCard } from "@/components/freight/MarketFreightCard";
 import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
-import { useSoundtrackMusic } from "@/hooks/useSoundtrackMusic";
-import appTheme from "@/assets/viagg_search_loop.mp3";
-
-const MERCADO_MUTE_KEY = "viagg_mercado_sound_muted";
 
 // ─── Helpers ────────────────────────────
 const STORAGE_BUCKET_CANDIDATES = ['marketing-materials', 'merchant-products', 'product-images', 'merchant-marketing'];
@@ -272,22 +267,8 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     const { trackSearch, trackCategoryView } = useMarketplaceTracking();
     const { user } = useAuth();
 
-    // Som ambiente da página — suave, em loop, com opção de mudo persistida
-    const [soundMuted, setSoundMuted] = useState<boolean>(
-        () => localStorage.getItem(MERCADO_MUTE_KEY) === "true"
-    );
-    useEffect(() => {
-        localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));
-    }, [soundMuted]);
-    useSoundtrackMusic({
-        src: appTheme,
-        startTime: 21,
-        endTime: 47,
-        volume: 0.12,
-        isPlaying: !soundMuted,
-        fadeInDuration: 1500,
-        fadeOutDuration: 800,
-    });
+    const [carouselMode, setCarouselMode] = useState(false);
+
 
     // Botão Motoboy do topo: sempre manda pra tela de cadastro/login do motoboy.
     const handleMotoboyClick = () => {
@@ -968,6 +949,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     }, [cityFilter, neighborhoodFilter, products, rawPropertyListings, rawVehicleListings]);
 
 const scrollToProducts = () => {
+        setCarouselMode(c => !c);
         setTimeout(() => {
             productSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 100);
@@ -1043,55 +1025,11 @@ const scrollToProducts = () => {
             search={search}
             setSearch={setSearch}
             showSearch={!isAdvertiser}
-            headerRight={
-                <button
-                    type="button"
-                    onClick={() => setSoundMuted((m) => !m)}
-                    className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
-                    title={soundMuted ? "Ativar som" : "Desativar som"}
-                >
-                    {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                </button>
-            }
             headerChildren={!isAdvertiser ? (
-                <div className="pb-3 flex gap-1.5 sm:gap-2 justify-center px-2">
-                    <button
-                        onClick={handleMotoboyClick}
-                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
-                    >
-                        Motoboy
-                    </button>
-                    <button
-                        onClick={() => navigate("/mercado")}
-                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md ring-2 ring-white/40 hover:scale-105 active:scale-95 transition-all"
-                    >
-                        Mercado
-                    </button>
-                    <button
-                        onClick={() => navigate("/imoveis")}
-                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
-                    >
-                        Imóveis
-                    </button>
-                    <button
-                        onClick={() => navigate("/automoveis")}
-                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
-                    >
-                        Veículos
-                    </button>
-                    <button
-                        onClick={() => { setCategoryFilter("Serviços"); scrollToProducts(); }}
-                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
-                    >
-                        Serviços
-                    </button>
-                    <button
-                        onClick={() => navigate("/fretes")}
-                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
-                    >
-                        Fretes & Mudanças
-                    </button>
-                </div>
+                <MarketNavButtons
+                    onMotoboyClick={handleMotoboyClick}
+                    onMercadoClick={scrollToProducts}
+                />
             ) : null}
             hideTopMotoboy={!isAdvertiser}
             mainClassName="flex flex-col bg-[#F5E62B]"
@@ -1103,19 +1041,7 @@ const scrollToProducts = () => {
                 </div>
             ) : (
                 <>
-                <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-6 text-[11px] text-gray-500">
-                    <span className="flex items-center gap-1.5 font-medium">
-                        <Truck className="h-3.5 w-3.5 text-[#FF6A00]" /> Entrega Local
-                    </span>
-                    <span className="flex items-center gap-1.5 font-medium">
-                        <Shield className="h-3.5 w-3.5 text-green-500" /> Comerciantes Verificados
-                    </span>
-                    <span className="flex items-center gap-1.5 font-medium hidden sm:flex">
-                        <Tag className="h-3.5 w-3.5 text-blue-500" /> Melhores Preços
-                    </span>
-                </div>
-
-                <InstitutionalSafetyBanner />
+<InstitutionalSafetyBanner />
 
             {/* ═══ REAL ESTATE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
@@ -1748,7 +1674,10 @@ const scrollToProducts = () => {
                     <h2 className="text-xl font-bold text-gray-800 mb-4">
                       Produtos {conditionFilter === "all" ? "Todos" : conditionFilter === "novo" ? "Novos" : "Usados"}
                     </h2>
-                    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                    <div ref={gridRef} className={carouselMode
+                        ? "flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide"
+                        : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+                    }>
                         {filtered
                             .flatMap(product => {
                                 const matched = auctionListings.filter((a: any) => 
@@ -1770,7 +1699,7 @@ const scrollToProducts = () => {
 
                             return (
                                 <div key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
-                                    className="rounded-lg overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 bg-white border border-gray-100 group/card flex flex-col h-full"
+                                    className={`rounded-lg overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 bg-white border border-gray-100 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
                                     onClick={() => {
                                         trackProductEvent({
                                             product_id: product.id,

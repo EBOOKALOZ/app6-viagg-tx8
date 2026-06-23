@@ -53,42 +53,45 @@ export function PanelHeader({ icon: Icon, label, children, className }: PanelHea
 
   return (
     <header className={cn(headerStyle, className)}>
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-3 py-1">
         <div className="flex items-center">
-          <Logo size="sm" />
+          <Logo size="xs" />
         </div>
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {children}
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
             onClick={handleFinancialClick}
             title={isMerchant ? "Faturas" : "Carteira"}
           >
             {isMerchant ? (
-              <FileText className="h-5 w-5" />
+              <FileText className="h-3 w-3" />
             ) : (
-              <Wallet className="h-5 w-5" />
+              <Wallet className="h-3 w-3" />
             )}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
             onClick={() => navigate('/support')}
             title="Suporte"
           >
-            <HelpCircle className="h-5 w-5" />
+            <HelpCircle className="h-3 w-3" />
           </Button>
           <UserAvatar size="sm" />
           <ProfileSwitcher />
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleExitProfile} 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={handleExitProfile}
             disabled={isExiting}
             title="Sair do perfil"
           >
-            {isExiting ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
+            {isExiting ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
           </Button>
         </div>
       </div>

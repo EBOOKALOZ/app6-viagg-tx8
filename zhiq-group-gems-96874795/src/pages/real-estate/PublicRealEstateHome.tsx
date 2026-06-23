@@ -23,6 +23,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
 import { getListingImageUrl } from '@/lib/real-estate/mediaUtils';
 import { MarketLayout } from '@/components/layout/MarketLayout';
+import { MarketNavButtons } from '@/components/layout/MarketNavButtons';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 export const PublicRealEstateHome = () => {
@@ -144,7 +145,7 @@ export const PublicRealEstateHome = () => {
   }, [rawPropertyListings, search, cityFilter, neighborhoodFilter, propertyTypeFilter]);
 
   return (
-    <MarketLayout search={search} setSearch={setSearch} hideCart={true} headerRight={null}>
+    <MarketLayout search={search} setSearch={setSearch} hideCart={true} headerRight={null} headerChildren={<MarketNavButtons />}>
       <InstitutionalSafetyBanner />
       <div className="min-h-screen">
         {/* Hero / Module Identity */}

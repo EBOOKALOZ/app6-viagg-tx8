@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketServiceCard } from "@/components/services/MarketServiceCard";
 import { SellServiceCTA } from "@/components/services/SellServiceCTA";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
@@ -99,7 +100,7 @@ export default function PublicServicesHome() {
       showSearch={true}
       hideCart={true}
       headerRight={null}
-      headerChildren={null}
+      headerChildren={<MarketNavButtons />}
     >
       <InstitutionalSafetyBanner />
 

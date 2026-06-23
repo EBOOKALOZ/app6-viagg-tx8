@@ -186,7 +186,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl bg-white text-gray-800">
+            <DialogContent className="sm:max-w-md p-0 gap-0 rounded-2xl border-0 shadow-2xl bg-white text-gray-800 flex flex-col max-h-[92vh] overflow-y-auto">
                 {submitted ? (
                     /* ── Success State ── */
                     <div className="p-8 text-center space-y-4">

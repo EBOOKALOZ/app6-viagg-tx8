@@ -17,6 +17,11 @@ import {
     Gavel,
     HardHat,
     Store,
+    Truck,
+    Shield,
+    Tag,
+    Volume2,
+    VolumeX,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,6 +34,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useSoundtrackMusic } from "@/hooks/useSoundtrackMusic";
+import appTheme from "@/assets/viagg_search_loop.mp3";
+
+const MERCADO_MUTE_KEY = "viagg_mercado_sound_muted";
 
 interface MarketLayoutProps {
     children: React.ReactNode;
@@ -58,11 +67,27 @@ export function MarketLayout({
     onSearchSubmit,
     hideCart = false,
     hideFooter = false,
-    hideTopMotoboy = false
+    hideTopMotoboy = true
 }: MarketLayoutProps) {
     const navigate = useNavigate();
     const { user, isLoading, availableProfiles, activeProfile, signOut } = useAuth();
     const isMerchant = activeProfile === 'merchant';
+
+    const [soundMuted, setSoundMuted] = useState<boolean>(
+        () => localStorage.getItem(MERCADO_MUTE_KEY) === "true"
+    );
+    useEffect(() => {
+        localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));
+    }, [soundMuted]);
+    useSoundtrackMusic({
+        src: appTheme,
+        startTime: 21,
+        endTime: 47,
+        volume: 0.12,
+        isPlaying: !soundMuted,
+        fadeInDuration: 1500,
+        fadeOutDuration: 800,
+    });
 
     const handleMotoboyClick = () => {
         if (!user) {
@@ -100,109 +125,125 @@ export function MarketLayout({
             {/* ═══ TOP BAR ═══ */}
             <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
-                    <div className="flex items-center gap-4 h-[72px] relative w-full">
-                        {/* Mobile logo — esquerda */}
-                        <div className="lg:hidden flex items-center cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
+                    {/* ── MOBILE HEADER (< lg) ── */}
+                    <div className="flex items-center h-[72px] w-full lg:hidden px-3 gap-2">
+                        {/* Esquerda: Cesta */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                            className="relative flex h-10 w-14 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 transition-all outline-none shrink-0"
+                            title="Cesta"
+                        >
+                            <ShoppingCart className="h-5 w-5" />
+                            {globalCart.totalItems > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
+                                    {globalCart.totalItems}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Centro: Logo */}
+                        <div className="flex-1 flex items-center justify-center cursor-pointer" onClick={() => navigate("/mercado")}>
                             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-lg object-contain shadow-sm" />
                         </div>
 
-                        <div className="flex-1 flex items-center justify-center gap-2 lg:flex-none lg:justify-start lg:gap-3 px-2 lg:px-0">
-                            {/* MOTOBOY — esquerda (ocultável quando exibido em outra linha) */}
-                            {!hideTopMotoboy && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
-                                className="group flex h-10 w-[92px] lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
-                                title="Motoboy"
-                              >
-                                <span className="text-[11px] lg:text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
-                              </button>
+                        {/* Direita: Som + Área do Anunciante */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setSoundMuted(m => !m)}
+                                className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+                                title={soundMuted ? "Ativar som" : "Desativar som"}
+                            >
+                                {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                            </button>
+                            {headerRight}
+                            {!user && !isLoading && !hideHeaderAuth && (
+                                <button
+                                    onClick={() => navigate('/auth')}
+                                    className="flex items-center gap-1 h-9 px-2.5 bg-white rounded-xl shadow-lg text-[#FF6A00] hover:bg-zinc-100 transition-all"
+                                >
+                                    <Building2 className="w-3.5 h-3.5 shrink-0" />
+                                    <span className="text-[9px] font-black uppercase leading-tight">Área do<br/>Anunciante</span>
+                                </button>
                             )}
+                        </div>
+                    </div>
 
-                            {/* CESTA — centro */}
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                className="relative flex h-10 w-16 lg:h-auto lg:w-auto lg:px-4 lg:py-2.5 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"
-                                title="Cesta"
-                            >
-                                <ShoppingCart className="h-5 w-5" />
-                                <span className="hidden lg:inline text-sm font-black whitespace-nowrap">
-                                    Cesta — {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
-                                </span>
-                                {globalCart.totalItems > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
-                                        {globalCart.totalItems}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* ENTRAR / SAIR — direita */}
-                            <button
-                                onClick={(e) => { e.stopPropagation(); user ? handleSair() : handleVendedorClick(); }}
-                                className="group flex h-10 px-3 lg:h-auto lg:px-4 lg:py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-emerald-200/50"
-                                title={user ? "Sair da conta" : "Entrar na plataforma"}
-                            >
-                                {user ? (
-                                    <span className="flex flex-col items-center gap-0.5 text-red-600">
-                                        <span className="text-[11px] lg:text-xs font-black uppercase tracking-wide leading-[1.1]">Sair</span>
-                                        <LogOut className="w-3.5 h-3.5" />
-                                    </span>
-                                ) : (
-                                    <span className="text-[11px] lg:text-xs font-black uppercase tracking-wide text-emerald-600 leading-[1.1] text-center">Entrar</span>
-                                )}
-                            </button>
-
-                            {/* Desktop Logo (hidden on mobile) */}
-                            <div className="hidden lg:flex items-center gap-2 cursor-pointer" onClick={() => navigate("/mercado")}>
-                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-lg object-contain" />
-                                <span className="text-xl font-black text-white tracking-tight">
-                                    Mercado Local <span className="text-yellow-200">Viagg-TX8</span>
-                                </span>
-                            </div>
+                    {/* ── DESKTOP HEADER (≥ lg) ── */}
+                    <div className="hidden lg:flex items-center h-[72px] w-full gap-4">
+                        {/* Logo + título */}
+                        <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
+                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-lg object-contain" />
+                            <span className="text-xl font-black text-white tracking-tight">
+                                Mercado Local <span className="text-yellow-200">Viagg-TX8</span>
+                            </span>
                         </div>
 
+                        {/* Cesta */}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                            className="relative flex h-auto px-4 py-2.5 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none shrink-0"
+                            title="Cesta"
+                        >
+                            <ShoppingCart className="h-5 w-5" />
+                            <span className="text-sm font-black whitespace-nowrap">
+                                Cesta — {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
+                            </span>
+                            {globalCart.totalItems > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
+                                    {globalCart.totalItems}
+                                </span>
+                            )}
+                        </button>
 
-                        {/* Search (desktop inline) */}
+                        {/* Motoboy desktop */}
+                        {!hideTopMotoboy && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
+                                className="flex px-4 py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50 shrink-0"
+                            >
+                                <span className="text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
+                            </button>
+                        )}
+
+                        {/* Search */}
                         {showSearch && (
-                            <div className="hidden lg:block flex-1 max-w-2xl mx-auto">
+                            <div className="flex-1 max-w-2xl mx-auto">
                                 <div className="relative flex">
                                     <Input
                                         placeholder="Buscar produtos, lojas..."
                                         value={search}
                                         onChange={e => setSearch?.(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === "Enter" && onSearchSubmit) {
-                                                onSearchSubmit(search);
-                                            }
-                                        }}
+                                        onKeyDown={e => { if (e.key === "Enter" && onSearchSubmit) onSearchSubmit(search); }}
                                         className="w-full pl-4 pr-12 py-2 h-[52px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0"
                                     />
-                                    <button
-                                        onClick={() => onSearchSubmit?.(search)}
-                                        className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center"
-                                    >
+                                    <button onClick={() => onSearchSubmit?.(search)} className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center">
                                         <Search className="h-6 w-6 text-white" />
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Spacer (apenas desktop, mobile usa flex-1 no container dos botões) */}
-
+                        {/* Direita desktop */}
                         <div className="flex items-center gap-3 text-white shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setSoundMuted(m => !m)}
+                                className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+                                title={soundMuted ? "Ativar som" : "Desativar som"}
+                            >
+                                {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                            </button>
                             {headerRight}
-
                             {!user && !isLoading && !hideHeaderAuth && (
-                              <div className="flex items-center gap-2">
                                 <Button
                                     onClick={() => navigate('/auth')}
                                     variant="ghost"
-                                    className="text-[#FF6A00] bg-white hover:bg-zinc-100 font-black text-xs h-[44px] px-6 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap hidden md:flex items-center gap-2"
+                                    className="text-[#FF6A00] bg-white hover:bg-zinc-100 font-black text-xs h-[44px] px-6 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
                                 >
                                     <Building2 className="w-4 h-4" />
                                     Área do Anunciante
                                 </Button>
-
-                              </div>
                             )}
                         </div>
                     </div>
@@ -235,6 +276,19 @@ export function MarketLayout({
 
                     {headerChildren}
                 </div>
+            </div>
+
+            {/* ═══ TRUST BAR ═══ */}
+            <div className="bg-[#F5E62B] px-4 py-1.5 flex items-center justify-center gap-6 text-[11px] text-gray-600">
+                <span className="flex items-center gap-1.5 font-medium">
+                    <Truck className="h-3.5 w-3.5 text-[#FF6A00]" /> Entrega Local
+                </span>
+                <span className="flex items-center gap-1.5 font-medium">
+                    <Shield className="h-3.5 w-3.5 text-green-500" /> Comerciantes Verificados
+                </span>
+                <span className="flex items-center gap-1.5 font-medium hidden sm:flex">
+                    <Tag className="h-3.5 w-3.5 text-blue-500" /> Melhores Preços
+                </span>
             </div>
 
             {/* ═══ MAIN CONTENT ═══ */}

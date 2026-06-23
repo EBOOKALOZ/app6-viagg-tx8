@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketFreightCard } from "@/components/freight/MarketFreightCard";
 import { SellFreightCTA } from "@/components/freight/SellFreightCTA";
 import { FreightTriageWidget } from "@/components/freight/FreightTriageWidget";
@@ -78,7 +79,7 @@ export default function PublicFreightHome() {
       showSearch={true}
       hideCart={true}
       headerRight={null}
-      headerChildren={null}
+      headerChildren={<MarketNavButtons />}
     >
       <InstitutionalSafetyBanner />
 

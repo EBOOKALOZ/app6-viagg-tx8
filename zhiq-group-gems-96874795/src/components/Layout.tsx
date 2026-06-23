@@ -103,13 +103,13 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Mobile Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-card px-4 py-3 md:hidden">
-        <Logo size="sm" />
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-border bg-card px-3 py-1 md:hidden">
+        <Logo size="xs" />
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="rounded-lg p-2 hover:bg-secondary"
+          className="rounded-lg p-1 hover:bg-secondary"
         >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileMenuOpen ? <X className="h-3 w-3" /> : <Menu className="h-3 w-3" />}
         </button>
       </header>
 

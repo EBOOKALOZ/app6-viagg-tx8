@@ -1,12 +1,13 @@
 import logoImage from '@/assets/logo.png';
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showText?: boolean;
   rounded?: boolean;
 }
 
 const sizeMap = {
+  xs: 'h-4',
   sm: 'h-10',
   md: 'h-16',
   lg: 'h-20',
