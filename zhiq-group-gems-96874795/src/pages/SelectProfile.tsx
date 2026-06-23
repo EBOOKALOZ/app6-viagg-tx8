@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2, CarFront, Briefcase } from "lucide-react";
+import { LogOut, Loader2, CarFront, Briefcase, Truck } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -40,6 +40,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   imoveis: "Anuncie imóveis e fale direto com os interessados",
   veiculos: "Anuncie veículos e fale direto com os interessados",
   servicos: "Divulgue sua empresa e receba contatos de clientes interessados",
+  freteiro: "Transporte de cargas pesadas, mudanças, móveis e mercadorias",
 };
 
 // Mosaico de 6 imagens (misturadas) usado como fundo do card de Imóveis.
@@ -68,6 +69,16 @@ const VEICULOS_MOSAIC = [
   "https://images.unsplash.com/photo-1606577924006-27d39b132ae2?w=500&q=70&auto=format&fit=crop",
 ];
 
+// Mosaico de 3 imagens usado como fundo do card de Fretes & Transportes.
+const FRETES_MOSAIC = [
+  // caminhão baú
+  "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500&q=70&auto=format&fit=crop",
+  // carregando caixas / mudança
+  "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500&q=70&auto=format&fit=crop",
+  // outro caminhão
+  "https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=500&q=70&auto=format&fit=crop",
+];
+
 // Mosaico de 6 imagens (negócios/serviços) usado como fundo do card de Serviços.
 const SERVICOS_MOSAIC = [
   // academia
@@ -84,8 +95,8 @@ const SERVICOS_MOSAIC = [
   "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=70&auto=format&fit=crop",
 ];
 
-// Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos e Serviços.
-const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos"];
+// Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, e Fretes.
+const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos", "freteiro"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================
@@ -233,6 +244,13 @@ export default function SelectProfile() {
       return;
     }
 
+    // Fretes: vai pro painel resumido de anunciantes de fretes.
+    if (selected === "freteiro") {
+      navigationTarget.current = "/anunciante/fretes";
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
+    }
+
     try {
       await requestAudioAndNotificationPermissions();
 
@@ -317,7 +335,8 @@ export default function SelectProfile() {
               const isImoveis = profile.id === "imoveis";
               const isVeiculos = profile.id === "veiculos";
               const isServicos = profile.id === "servicos";
-              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos || isServicos;
+              const isFretes = profile.id === "freteiro";
+              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos || isServicos || isFretes;
 
               return (
                 <div
@@ -345,7 +364,9 @@ export default function SelectProfile() {
                                 ? "ring-blue-400 shadow-[0_0_24px_rgba(59,130,246,0.5)]"
                                 : isServicos
                                   ? "ring-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.5)]"
-                                  : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
+                                  : isFretes
+                                    ? "ring-indigo-400 shadow-[0_0_24px_rgba(99,102,241,0.5)]"
+                                    : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                       )
                       : cn(
                         "ring-1 ring-white/15",
@@ -354,6 +375,7 @@ export default function SelectProfile() {
                         isImoveis && "hover:ring-emerald-400/50 hover:shadow-[0_0_12px_rgba(16,185,129,0.2)]",
                         isVeiculos && "hover:ring-blue-400/50 hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]",
                         isServicos && "hover:ring-violet-400/50 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]",
+                        isFretes && "hover:ring-indigo-400/50 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]",
                       )),
                   )}
                 >
@@ -366,6 +388,11 @@ export default function SelectProfile() {
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700" />
                   ) : isServicos ? (
                     <div className="absolute inset-0 bg-black" />
+                  ) : isFretes ? (
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-br transition-all duration-300",
+                      isSel ? "from-indigo-600 via-indigo-700 to-indigo-900" : "from-indigo-800 via-indigo-900 to-slate-900"
+                    )} />
                   ) : isVeiculos ? (
                     /* Veículos: card SEM imagem — fundo gradiente azul sólido */
                     <div className={cn(
@@ -442,6 +469,31 @@ export default function SelectProfile() {
                         ))}
                       </div>
                     </>
+                  ) : isFretes ? (
+                    <>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <Truck className={cn(
+                          "transition-all duration-300",
+                          isSel ? "w-28 h-28 text-white/30" : "w-24 h-24 text-white/15"
+                        )} />
+                      </div>
+                      <div className={cn(
+                        "absolute inset-0 grid grid-cols-1 grid-rows-3 gap-0.5 transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-100"
+                      )}>
+                        {FRETES_MOSAIC.map((src, i) => (
+                          <img
+                            key={i}
+                            src={src}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                            className="h-full w-full object-cover"
+                          />
+                        ))}
+                      </div>
+                    </>
                   ) : heroImage ? (
                     <img
                       src={heroImage}
@@ -466,9 +518,11 @@ export default function SelectProfile() {
                           ? "bg-gradient-to-t from-emerald-900/70 via-transparent to-transparent"
                           : isServicos && isSel
                             ? "bg-gradient-to-t from-violet-900/70 via-transparent to-transparent"
-                            : isServicos
-                              ? "bg-gradient-to-t from-black/90 via-black/20 to-transparent"
-                              : "bg-gradient-to-t from-black/80 to-transparent",
+                            : isFretes && isSel
+                              ? "bg-gradient-to-t from-indigo-900/70 via-transparent to-transparent"
+                              : isServicos
+                                ? "bg-gradient-to-t from-black/90 via-black/20 to-transparent"
+                                : "bg-gradient-to-t from-black/80 to-transparent",
                   )} />
 
                   {/* Coming soon overlay */}

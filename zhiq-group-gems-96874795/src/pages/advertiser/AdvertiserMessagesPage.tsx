@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike, Briefcase } from "lucide-react";
+import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike, Briefcase, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ const UNLOCK_COST = 13; // custo fixo do desbloqueio na LOJA (anunciante)
 const RE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (admin → Cobranças)
 const VE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
 const SE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no SERVIÇO (admin → Cobranças)
+const FR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no FRETE (admin → Cobranças)
 
 export default function AdvertiserMessagesPage() {
   const navigate = useNavigate();
@@ -41,11 +42,14 @@ export default function AdvertiserMessagesPage() {
   // No painel de SERVIÇOS o saldo e o débito usam a carteira PRÓPRIA de serviços
   // (service_credit_balances por owner_user_id), não a do lojista/anunciante.
   const servicosMode = location.pathname.startsWith("/anunciante/servicos");
+  // No painel de FRETES o saldo e o débito usam a carteira PRÓPRIA de fretes
+  // (freight_credit_balances por owner_user_id), não a do lojista/anunciante.
+  const fretesMode = location.pathname.startsWith("/anunciante/fretes");
 
   // Fallback de saldo do ANUNCIANTE (modo loja)
   const { data: fallbackBalance = 0 } = useQuery({
     queryKey: ["seller-credit-balance-for-msgs", user?.id],
-    enabled: !!user?.id && !imoveisMode && !veiculosMode && !servicosMode,
+    enabled: !!user?.id && !imoveisMode && !veiculosMode && !servicosMode && !fretesMode,
     refetchInterval: 15_000,
     queryFn: async () => {
       const { data: adv } = await (supabase.from("advertiser_accounts" as any)
@@ -136,10 +140,36 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : (balance?.available_credits ?? fallbackBalance);
+  // Saldo PRÓPRIO de fretes (freight_credit_balances)
+  const { data: frBalance = 0 } = useQuery({
+    queryKey: ["freight-balance-msgs", user?.id],
+    enabled: !!user?.id && fretesMode,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from("freight_credit_balances") as any)
+        .select("available_credits").eq("owner_user_id", user!.id).maybeSingle();
+      return Number((data as any)?.available_credits ?? 0);
+    },
+  });
+
+  // Custo FIXO p/ desbloquear WhatsApp do interessado de FRETE (admin → Cobranças)
+  const { data: frUnlockCost = FR_UNLOCK_DEFAULT } = useQuery({
+    queryKey: ["freight-unlock-whatsapp-cost"],
+    enabled: fretesMode,
+    queryFn: async () => {
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("credits_cost, is_active")
+        .eq("feature_code", "freight_unlock_whatsapp")
+        .maybeSingle();
+      if (!data) return FR_UNLOCK_DEFAULT;
+      return (data as any).is_active === false ? 0 : (Number((data as any).credits_cost) || FR_UNLOCK_DEFAULT);
+    },
+  });
+
+  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : (balance?.available_credits ?? fallbackBalance);
 
   // Custo por lead: imóvel/veículo/serviço = WhatsApp fixo da carteira própria; loja = custo do anunciante
-  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : UNLOCK_COST);
+  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : UNLOCK_COST);
 
   // Máscaras
   const maskName = (n: string | null) => {
@@ -231,6 +261,29 @@ export default function AdvertiserMessagesPage() {
       return;
     }
 
+    // ── FRETES: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
+    if (fretesMode) {
+      if (creditBalance < cost) {
+        toast.error(`Sem saldo de fretes (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+        setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200);
+        return;
+      }
+      const { data, error } = await supabase.rpc("unlock_freight_intention" as any, { p_intention_id: id });
+      const r = data as any;
+      if (!error && r?.success) {
+        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
+        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["freight-balance-msgs", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["fretes-painel-saldo", user?.id] });
+      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
+        setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200);
+      } else {
+        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
+      }
+      return;
+    }
+
     // ── LOJA (anunciante): fluxo existente ──
     if (creditBalance < UNLOCK_COST) {
       toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${creditBalance}). Redirecionando para compra...`, { duration: 3000 });
@@ -269,14 +322,17 @@ export default function AdvertiserMessagesPage() {
   //  • imóveis  → listing_module === 'real_estate'
   //  • veículos → listing_module === 'vehicles'
   //  • serviços → listing_module === 'services'
-  //  • loja     → tudo MENOS imóveis, veículos e serviços (produtos/mercado)
+  //  • fretes   → listing_module === 'freight'
+  //  • loja     → tudo MENOS imóveis, veículos, serviços e fretes (produtos/mercado)
   const visibleIntentions = imoveisMode
     ? intentions.filter((i) => i.listing_module === "real_estate")
     : veiculosMode
       ? intentions.filter((i) => i.listing_module === "vehicles")
       : servicosMode
         ? intentions.filter((i) => i.listing_module === "services")
-        : intentions.filter((i) => i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services");
+        : fretesMode
+          ? intentions.filter((i) => i.listing_module === "freight")
+          : intentions.filter((i) => i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services" && i.listing_module !== "freight");
 
   const totalCount = visibleIntentions.length;
 
@@ -324,10 +380,12 @@ export default function AdvertiserMessagesPage() {
             const ModuleIcon = lead.listing_module === "real_estate" ? Building2
               : lead.listing_module === "product" ? Package
               : lead.listing_module === "services" ? Briefcase
+              : lead.listing_module === "freight" ? Truck
               : Car;
             const moduleLabel = lead.listing_module === "real_estate" ? "Imóvel"
               : lead.listing_module === "product" ? "Produto"
               : lead.listing_module === "services" ? "Serviço"
+              : lead.listing_module === "freight" ? "Frete"
               : "Veículo";
 
             return (

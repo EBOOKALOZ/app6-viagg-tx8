@@ -414,6 +414,31 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
     }
     return;
   }
+
+  if (mod === "freight") {
+    const { data: fr } = await supabase
+      .from("freight_listings")
+      .select("title")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (fr) {
+      ev.listing_title = fr.title || null;
+    }
+    // 1ª mídia do frete (bucket real-estate-original, mesmo padrão de serviços).
+    const { data: fmedia } = await supabase
+      .from("freight_media")
+      .select("public_masked_storage_path, original_storage_path, sort_order")
+      .eq("listing_id", ev.listing_id)
+      .order("sort_order", { ascending: true });
+    const ffirst = (fmedia || [])[0];
+    const fp = ffirst?.public_masked_storage_path || ffirst?.original_storage_path;
+    if (fp) {
+      ev.listing_image_url = String(fp).startsWith("http")
+        ? fp
+        : `${storageBase}/storage/v1/object/public/real-estate-original/${fp}`;
+    }
+    return;
+  }
 }
 
 // Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
@@ -444,10 +469,12 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
   const isRealEstate = ev.listing_module === "real_estate";
   const isVehicle = ev.listing_module === "vehicles";
   const isService = ev.listing_module === "services";
-  const itemWord = ev.listing_module === "product" ? "produtos" : isService ? "serviços" : "anúncios";
+  const isFreight = ev.listing_module === "freight";
+  const itemWord = ev.listing_module === "product" ? "produtos" : isService ? "serviços" : isFreight ? "fretes" : "anúncios";
   const painelLink = isRealEstate ? "/anunciante/imoveis/mensagens"
     : isVehicle ? "/anunciante/veiculos/mensagens"
     : isService ? "/anunciante/servicos/mensagens"
+    : isFreight ? "/anunciante/fretes/mensagens"
     : "/anunciante/mensagens";
   const subject = "Viagg-TX8 • Você tem um novo interessado! 🎯";
   const html = `
@@ -514,10 +541,12 @@ function listingPublishedTemplate(ev: EventPayload, ownerName: string) {
   const isRealEstate = ev.listing_module === "real_estate";
   const isVehicle = ev.listing_module === "vehicles";
   const isService = ev.listing_module === "services";
-  const itemWord = isService ? "serviço" : isRealEstate ? "imóvel" : isVehicle ? "veículo" : "anúncio";
+  const isFreight = ev.listing_module === "freight";
+  const itemWord = isService ? "serviço" : isFreight ? "frete" : isRealEstate ? "imóvel" : isVehicle ? "veículo" : "anúncio";
   const painelLink = isRealEstate ? "/anunciante/imoveis/meus-anuncios"
     : isVehicle ? "/anunciante/veiculos/meus-anuncios"
     : isService ? "/anunciante/servicos/meus-anuncios"
+    : isFreight ? "/anunciante/fretes/meus-anuncios"
     : "/anunciante/meus-anuncios";
   const subject = "Viagg-TX8 • Seu anúncio foi publicado! ✅";
   const html = `

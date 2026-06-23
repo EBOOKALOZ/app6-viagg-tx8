@@ -146,7 +146,7 @@ export function ContactIntentionModal({
             </div>
             <div>
               <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">
-                {listingModule === "real_estate" ? "Imóvel" : listingModule === "vehicles" ? "Veículo" : listingModule === "services" ? "Serviço" : "Anúncio"}
+                {listingModule === "real_estate" ? "Imóvel" : listingModule === "vehicles" ? "Veículo" : listingModule === "services" ? "Serviço" : listingModule === "freight" ? "Frete" : "Anúncio"}
               </p>
               <DialogTitle className="text-white font-black text-lg leading-tight">
                 Demonstrar Interesse

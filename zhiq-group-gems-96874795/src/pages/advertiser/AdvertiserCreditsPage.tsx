@@ -13,6 +13,7 @@ import {
   Building2,
   CarFront,
   Briefcase,
+  Truck,
   ShoppingBag,
   Sparkles,
   Coins,
@@ -36,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { RealEstateCreditReportCard } from "@/components/real-estate/RealEstateCreditReportCard";
 import { VehicleCreditReportCard } from "@/components/vehicle/VehicleCreditReportCard";
 import { ServiceCreditReportCard } from "@/components/services/ServiceCreditReportCard";
+import { FreightCreditReportCard } from "@/components/freight/FreightCreditReportCard";
 
 export default function AdvertiserCreditsPage() {
   const { user } = useAuth();
@@ -45,15 +47,16 @@ export default function AdvertiserCreditsPage() {
   const isImoveis = location.pathname.startsWith("/anunciante/imoveis");
   const isVeiculos = location.pathname.startsWith("/anunciante/veiculos");
   const isServicos = location.pathname.startsWith("/anunciante/servicos");
-  const isSpecialModule = isImoveis || isVeiculos || isServicos;
+  const isFretes = location.pathname.startsWith("/anunciante/fretes");
+  const isSpecialModule = isImoveis || isVeiculos || isServicos || isFretes;
 
   // Custos por evento — RESPEITA os valores configurados no painel admin
   // (merchant_credit_usage_rules). Fallback só se a regra não existir.
   const { data: ruleCosts = { click: 6, interest: 9, whatsapp: 12 } } = useQuery({
-    queryKey: ["credit-rule-costs", isVeiculos ? "vehicle" : isServicos ? "service" : "real_estate"],
+    queryKey: ["credit-rule-costs", isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : "real_estate"],
     enabled: isSpecialModule,
     queryFn: async () => {
-      const seg = isVeiculos ? "vehicle" : isServicos ? "service" : "real_estate";
+      const seg = isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : "real_estate";
       const codes = [`${seg}_listing_click`, `${seg}_interest_click`, `${seg}_unlock_whatsapp`];
       const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
         .select("feature_code, credits_cost")
@@ -134,6 +137,7 @@ export default function AdvertiserCreditsPage() {
   const realEstatePkgs = packages?.filter(p => p.category === 'real_estate') || [];
   const vehiclePkgs = packages?.filter(p => p.category === 'vehicles' && !HIDDEN_VEHICLE_PACKAGE_SLUGS.includes(p.slug)) || [];
   const servicePkgs = packages?.filter(p => p.category === 'services') || [];
+  const freightPkgs = packages?.filter(p => p.category === 'freight') || [];
 
   // Real merchant products (Configured by Admin)
   const productPkgs = merchantCredits.products.filter(p => p.is_active).map(p => ({
@@ -214,6 +218,7 @@ export default function AdvertiserCreditsPage() {
                        : p.package_type === 'real_estate' || p.package_type === 'REAL_ESTATE' ? 'Imóveis'
                        : p.package_type === 'vehicles' || p.package_type === 'VEHICLES' ? 'Veículos'
                        : p.package_type === 'services' || p.package_type === 'SERVICES' ? 'Serviços'
+                       : p.package_type === 'freight' || p.package_type === 'FREIGHT' ? 'Fretes'
                        : p.package_type}
                     </p>
                   </div>
@@ -267,7 +272,7 @@ export default function AdvertiserCreditsPage() {
                         ? "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/30"
                         : "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/20 border border-yellow-500/40"
                     )}
-                    onClick={() => navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : isServicos ? '?ret=servicos' : ''}`)}
+                    onClick={() => navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : isServicos ? '?ret=servicos' : isFretes ? '?ret=fretes' : ''}`)}
                   >
                     {p.button_label || "ADQUIRIR AGORA"} <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-all" />
                   </Button>
@@ -386,7 +391,9 @@ export default function AdvertiserCreditsPage() {
               ? renderSection("Pacotes de Veículos", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", CarFront, vehiclePkgs, false)
               : isServicos
                 ? renderSection("Pacotes de Serviços", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", Briefcase, servicePkgs, false)
-                : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
+                : isFretes
+                  ? renderSection("Mudanças & Fretes", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", Truck, freightPkgs, false)
+                  : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
         </div>
       )}
 
@@ -398,6 +405,9 @@ export default function AdvertiserCreditsPage() {
 
       {/* Relatório de créditos (serviços): débitos de navegação, interesses + compras atuais */}
       {isServicos && <ServiceCreditReportCard />}
+
+      {/* Relatório de créditos (fretes): débitos de navegação, interesses + compras atuais */}
+      {isFretes && <FreightCreditReportCard />}
 
       {/* ═══ HISTÓRICO DE CONSUMO (oculto no modo imóveis e veículos, exibido para mercado) ═══ */}
       {!isSpecialModule && (<section className="space-y-6">

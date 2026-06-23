@@ -53,6 +53,7 @@ import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking
 import { MarketPropertyCard } from "@/components/real-estate/MarketPropertyCard";
 import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { MarketServiceCard } from "@/components/services/MarketServiceCard";
+import { MarketFreightCard } from "@/components/freight/MarketFreightCard";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
@@ -617,6 +618,65 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         });
     }, [rawServiceListings, search, cityFilter, neighborhoodFilter]);
 
+    // ── Fetch freight listings ──
+    const { data: rawFreightListings = [] } = useQuery<any[]>({
+        queryKey: ['public-freight'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('public_freight_listings' as any)
+                .select('*')
+                .order('is_featured', { ascending: false })
+                .order('published_at', { ascending: false });
+
+            if (error) throw error;
+
+            const rows = (data as any[]) || [];
+            if (rows.length === 0) return [];
+
+            const ids = rows.map((s: any) => s.id);
+            const { data: mediaRows } = await supabase
+                .from('freight_media' as any)
+                .select('listing_id, original_storage_path, public_masked_storage_path, sort_order')
+                .in('listing_id', ids)
+                .order('sort_order', { ascending: true });
+
+            const mediaMap = new Map<string, string>();
+            for (const row of (mediaRows as any[]) || []) {
+                if (!mediaMap.has(row.listing_id)) {
+                    const p = row.public_masked_storage_path || row.original_storage_path;
+                    if (p) {
+                        mediaMap.set(
+                            row.listing_id,
+                            p.startsWith('http') ? p : supabase.storage.from('real-estate-original').getPublicUrl(p).data.publicUrl
+                        );
+                    }
+                }
+            }
+            return rows.map((s: any) => ({ ...s, thumbnail_url: mediaMap.get(s.id) || null }));
+        },
+        refetchInterval: 10000,
+        refetchOnWindowFocus: true,
+    });
+
+    const freightListings = useMemo(() => {
+        return rawFreightListings.filter((s) => {
+            if (cityFilter !== "all" && s.city?.trim().toLowerCase() !== cityFilter) return false;
+            if (neighborhoodFilter !== "all") {
+                const nb = String(s.neighborhood || "").trim().toLowerCase();
+                if (nb !== neighborhoodFilter.toLowerCase()) return false;
+            }
+            if (search.trim()) {
+                const q = search.toLowerCase();
+                if (
+                    !s.title?.toLowerCase().includes(q) &&
+                    !s.city?.toLowerCase().includes(q) &&
+                    !s.neighborhood?.toLowerCase().includes(q)
+                ) return false;
+            }
+            return true;
+        });
+    }, [rawFreightListings, search, cityFilter, neighborhoodFilter]);
+
     // ── Fetch vehicle listings ──
     // Query direto em vehicle_listings (anon tem policy vehicle_listings_public_read).
     // A view public_vehicle_listings filtra por visibility_status='published', mas
@@ -1025,6 +1085,12 @@ const scrollToProducts = () => {
                     >
                         Serviços
                     </button>
+                    <button
+                        onClick={() => navigate("/fretes")}
+                        className="flex-1 sm:flex-none sm:px-4 flex items-center justify-center gap-1 h-10 rounded-xl bg-[#F5E62B] text-black font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all"
+                    >
+                        Fretes & Mudanças
+                    </button>
                 </div>
             ) : null}
             hideTopMotoboy={!isAdvertiser}
@@ -1153,6 +1219,61 @@ const scrollToProducts = () => {
                                     <div className="space-y-1">
                                         <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
                                         <p className="text-zinc-400 text-xs font-medium">Anuncie seu serviço aqui e alcance milhares de clientes.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ FREIGHT SECTION ═══ */}
+            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Fretes") && (
+                <div className="w-full px-4 lg:px-6 py-12 bg-blue-50">
+                    <div className="max-w-[1920px] mx-auto space-y-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-blue-600/10 rounded-lg">
+                                        <Truck className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Mudanças e Cargas Grandes</span>
+                                </div>
+                                <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">FRETES & TRANSPORTES</h2>
+                                <p className="text-zinc-500 font-medium max-w-xl">
+                                    Mudanças, móveis, eletrodomésticos e cargas volumosas — peça orçamento direto.
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="rounded-2xl font-bold border-zinc-200 hover:bg-zinc-50 gap-2 h-12"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('viagg-close-cart'));
+                                    if (freightListings.length > 0) window.open('/fretes', '_blank');
+                                    else window.open('/auth?entry=advertiser', '_blank');
+                                }}
+                            >
+                                {freightListings.length > 0 ? 'Ver todos os fretes' : 'Anuncie agora'}
+                                <ArrowRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                            {freightListings.length > 0 ? (
+                                freightListings.slice(0, 8).map((fr) => (
+                                    <MarketFreightCard key={fr.id} freight={fr} />
+                                ))
+                            ) : (
+                                <div
+                                    onClick={() => navigate('/auth?entry=advertiser')}
+                                    className="col-span-1 border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-blue-200 hover:bg-blue-50/40 transition-all cursor-pointer group"
+                                >
+                                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-blue-600 transition-all">
+                                        <Plus className="w-8 h-8" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie sua transportadora aqui e alcance milhares de clientes.</p>
                                     </div>
                                 </div>
                             )}
@@ -1613,7 +1734,7 @@ const scrollToProducts = () => {
                 ) : filtered.length === 0 ? (
                     // Sem produtos de loja: se já tem imóveis/veículos/serviços em
                     // destaque na página, não mostra esse aviso vazio (fica redundante).
-                    (!search && (rawPropertyListings.length > 0 || rawVehicleListings.length > 0 || rawServiceListings.length > 0)) ? null : (
+                    (!search && (rawPropertyListings.length > 0 || rawVehicleListings.length > 0 || rawServiceListings.length > 0 || rawFreightListings.length > 0)) ? null : (
                     <div className="text-center py-20 bg-white rounded-xl shadow-sm">
                         <ShoppingBag className="h-16 w-16 text-gray-200 mx-auto mb-4" />
                         <h2 className="text-xl font-bold text-gray-600">Nenhum produto encontrado</h2>

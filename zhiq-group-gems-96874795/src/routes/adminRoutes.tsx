@@ -61,6 +61,7 @@ import {
   AdminCreditGrants,
   AdminVehicleOverview,
   AdminServiceOverview,
+  AdminFreightOverview,
   AdminMarketplaceCommerce,
   AdminPaymentGateways,
   AdminPaymentDemo,
@@ -83,6 +84,7 @@ export const adminRoutes = (
       <Route path="/admin/marketplace/products" element={<AdminMarketplaceProducts />} />
       <Route path="/admin/vehicles" element={<AdminVehicleOverview />} />
       <Route path="/admin/servicos" element={<AdminServiceOverview />} />
+      <Route path="/admin/fretes" element={<AdminFreightOverview />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />

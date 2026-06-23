@@ -64,7 +64,7 @@ export default function Support() {
   // mostra o visual do Motoboy mesmo que ela TAMBÉM tenha esse perfil ativo —
   // o contexto de onde ela clicou em "Suporte" deve prevalecer.
   const panelContextForChrome = sessionStorage.getItem('viagg_panel_context');
-  const cameFromAdvertiserPanel = ['imoveis', 'veiculos', 'servicos'].includes(panelContextForChrome || '');
+  const cameFromAdvertiserPanel = ['imoveis', 'veiculos', 'servicos', 'fretes'].includes(panelContextForChrome || '');
   const isMotoboy = activeProfile === 'motoboy' && !cameFromAdvertiserPanel;
 
   const [formData, setFormData] = useState<TicketFormData>({
@@ -84,6 +84,7 @@ export default function Support() {
     panelContext === 'veiculos' ? { value: 'anunciante_veiculos', label: 'Vendedor de Veículos' }
     : panelContext === 'imoveis' ? { value: 'anunciante_imoveis', label: 'Anunciante de Imóveis' }
     : panelContext === 'servicos' ? { value: 'anunciante_servicos', label: 'Anunciante de Serviços' }
+    : panelContext === 'fretes' ? { value: 'anunciante_fretes', label: 'Anunciante de Fretes' }
     : panelContext && !PROFILE_TYPES[panelContext] ? { value: 'anunciante', label: 'Lojista / Anunciante' }
     : null;
 
@@ -238,6 +239,10 @@ export default function Support() {
     }
     if (panelContext === 'servicos') {
       window.location.href = '/anunciante/servicos';
+      return;
+    }
+    if (panelContext === 'fretes') {
+      window.location.href = '/anunciante/fretes';
       return;
     }
     if (activeProfile) {

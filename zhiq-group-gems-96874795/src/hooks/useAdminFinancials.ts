@@ -35,6 +35,10 @@ export interface AdminFinancialStats {
     pacotesServicos: number;
     /** Qtd de compras de pacotes de serviços. */
     pacotesServicosQtd: number;
+    /** Entrada de compras de pacotes de FRETES (freight_credits). */
+    pacotesFretes: number;
+    /** Qtd de compras de pacotes de fretes. */
+    pacotesFretesQtd: number;
 }
 
 export function useAdminFinancialStats() {
@@ -86,6 +90,12 @@ export function useAdminFinancialStats() {
             );
             const pacotesServicos = sum(servicoOrders, (o) => o.amount);
             const pacotesServicosQtd = servicoOrders.length;
+            // Fretes = compras de pacotes de fretes (product_type 'freight_credits').
+            const freteOrders = (paidOrders || []).filter(
+                (o: any) => o.product_type === "freight_credits"
+            );
+            const pacotesFretes = sum(freteOrders, (o) => o.amount);
+            const pacotesFretesQtd = freteOrders.length;
 
             // Recargas de saldo: o dinheiro carregado especificamente p/ chamar motoboy.
             const recargasSaldo = sum(
@@ -166,6 +176,8 @@ export function useAdminFinancialStats() {
                             pacotesVeiculosQtd,
                             pacotesServicos,
                             pacotesServicosQtd,
+                            pacotesFretes,
+                            pacotesFretesQtd,
                         };
                     }
                 }
@@ -194,6 +206,8 @@ export function useAdminFinancialStats() {
                 pacotesVeiculosQtd,
                 pacotesServicos,
                 pacotesServicosQtd,
+                pacotesFretes,
+                pacotesFretesQtd,
             };
         },
     });

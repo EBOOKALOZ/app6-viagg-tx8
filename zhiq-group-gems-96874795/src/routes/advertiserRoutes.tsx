@@ -37,6 +37,9 @@ import {
   AdvertiserServicesPage,
   AdvertiserServicesListingsPage,
   ServiceForm,
+  AdvertiserFretesPage,
+  AdvertiserFretesListingsPage,
+  FreightForm,
   AdvertiserSupportPage,
 } from "./lazyPages";
 
@@ -73,6 +76,15 @@ export const advertiserRoutes = (
     <Route path="/anunciante/servicos/suporte"         element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
     <Route path="/anunciante/servicos/anuncios/novo/servico"             element={<Suspense fallback={<PageFallback />}><ServiceForm /></Suspense>} />
     <Route path="/anunciante/servicos/anuncios/editar/servico/:listingId" element={<Suspense fallback={<PageFallback />}><ServiceForm /></Suspense>} />
+    {/* Sub-rotas do painel de FRETES (menu enxuto) — espelham o de serviços */}
+    <Route path="/anunciante/fretes"         element={<Suspense fallback={<PageFallback />}><AdvertiserFretesPage /></Suspense>} />
+    <Route path="/anunciante/fretes/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserFretesListingsPage /></Suspense>} />
+    <Route path="/anunciante/fretes/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
+    <Route path="/anunciante/fretes/mensagens"       element={<Suspense fallback={<PageFallback />}><AdvertiserMessagesPage /></Suspense>} />
+    <Route path="/anunciante/fretes/creditos"        element={<Suspense fallback={<PageFallback />}><AdvertiserCreditsPage /></Suspense>} />
+    <Route path="/anunciante/fretes/suporte"         element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
+    <Route path="/anunciante/fretes/anuncios/novo/frete"             element={<Suspense fallback={<PageFallback />}><FreightForm /></Suspense>} />
+    <Route path="/anunciante/fretes/anuncios/editar/frete/:listingId" element={<Suspense fallback={<PageFallback />}><FreightForm /></Suspense>} />
     <Route path="/anunciante/minha-loja"      element={<Suspense fallback={<PageFallback />}><MerchantMyStorePage /></Suspense>} />
     <Route path="/anunciante/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserListingsPage /></Suspense>} />
     <Route path="/anunciante/leiloes"         element={<MerchantAuctions />} />

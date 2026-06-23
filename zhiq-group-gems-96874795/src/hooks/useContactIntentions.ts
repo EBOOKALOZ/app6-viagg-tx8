@@ -31,7 +31,7 @@ import { playLeadNotificationSound } from "@/lib/notificationSound";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-export type ListingModule = "real_estate" | "vehicles" | "product" | "services";
+export type ListingModule = "real_estate" | "vehicles" | "product" | "services" | "freight";
 
 export type InterestType =
   | "whatsapp_click"
@@ -116,6 +116,7 @@ export function useContactIntentions() {
       const vehicleIds = Array.from(new Set(rows.filter(r => r.listing_module === "vehicles").map(r => r.listing_id)));
       const productIds = Array.from(new Set(rows.filter(r => r.listing_module === "product").map(r => r.listing_id)));
       const serviceIds = Array.from(new Set(rows.filter(r => r.listing_module === "services").map(r => r.listing_id)));
+      const freightIds = Array.from(new Set(rows.filter(r => r.listing_module === "freight").map(r => r.listing_id)));
 
       const titleMap = new Map<string, string>();
       const imageMap = new Map<string, string>();
@@ -181,6 +182,28 @@ export function useContactIntentions() {
           .in("listing_id", serviceIds)
           .order("sort_order", { ascending: true });
         (sMedia || []).forEach((m: any) => {
+          if (imageMap.has(m.listing_id)) return;
+          const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+          const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
+          if (!path) return;
+          const url = path.startsWith("http") ? path : getListingImageUrl(path, hasMasked ? 'public' : 'original');
+          if (url) imageMap.set(m.listing_id, url);
+        });
+      }
+
+      if (freightIds.length > 0) {
+        const { data: frts } = await (supabase.from("freight_listings") as any)
+          .select("id, title")
+          .in("id", freightIds);
+        (frts || []).forEach((f: any) => {
+          if (f.title) titleMap.set(f.id, f.title);
+        });
+
+        const { data: fMedia } = await (supabase.from("freight_media") as any)
+          .select("listing_id, public_masked_storage_path, original_storage_path, sort_order")
+          .in("listing_id", freightIds)
+          .order("sort_order", { ascending: true });
+        (fMedia || []).forEach((m: any) => {
           if (imageMap.has(m.listing_id)) return;
           const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
           const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
@@ -288,7 +311,9 @@ export function useContactIntentions() {
           // puxar pro painel quando ele já está em outra área do próprio painel.
           const isPublicListingPage =
             window.location.pathname.startsWith("/veiculos/") ||
-            window.location.pathname.startsWith("/imoveis/");
+            window.location.pathname.startsWith("/imoveis/") ||
+            window.location.pathname.startsWith("/servicos/") ||
+            window.location.pathname.startsWith("/fretes/");
 
           // Caixa certa conforme o segmento do lead — sem isso, lead de veículo/
           // imóvel mandava o dono pra caixa genérica do lojista, onde esse lead
@@ -297,6 +322,8 @@ export function useContactIntentions() {
           const targetPath =
             leadModule === "vehicles" ? "/anunciante/veiculos/mensagens"
             : leadModule === "real_estate" ? "/anunciante/imoveis/mensagens"
+            : leadModule === "services" ? "/anunciante/servicos/mensagens"
+            : leadModule === "freight" ? "/anunciante/fretes/mensagens"
             : "/anunciante/mensagens";
 
           if (

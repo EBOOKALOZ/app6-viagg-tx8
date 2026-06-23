@@ -63,12 +63,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   const isImoveisCtx = location.pathname.startsWith("/anunciante/imoveis") || checkoutRet === "imoveis";
   const isVeiculosCtx = location.pathname.startsWith("/anunciante/veiculos") || checkoutRet === "veiculos";
   const isServicosCtx = location.pathname.startsWith("/anunciante/servicos") || checkoutRet === "servicos";
+  const isFretesCtx = location.pathname.startsWith("/anunciante/fretes") || checkoutRet === "fretes";
   const pendingLeadCount = intentions.filter((i) => {
     if (i.status === "unlocked") return false;
     if (isImoveisCtx) return i.listing_module === "real_estate";
     if (isVeiculosCtx) return i.listing_module === "vehicles";
     if (isServicosCtx) return i.listing_module === "services";
-    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services";
+    if (isFretesCtx) return i.listing_module === "freight";
+    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services" && i.listing_module !== "freight";
   }).length;
 
   const { data: marketplaceCount = 0 } = useQuery({
@@ -150,13 +152,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   const imoveisMode = isImoveisCtx;
   const veiculosMode = isVeiculosCtx;
   const servicosMode = isServicosCtx;
+  const fretesMode = isFretesCtx;
 
   // Persiste o contexto do painel para que páginas compartilhadas (ex.: Suporte,
-  // que fica fora dos prefixos /anunciante/imoveis|veiculos|servicos) saibam para onde voltar.
+  // que fica fora dos prefixos /anunciante/imoveis|veiculos|servicos|fretes) saibam para onde voltar.
   useEffect(() => {
-    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : servicosMode ? "servicos" : (activeProfile || "");
+    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : servicosMode ? "servicos" : fretesMode ? "fretes" : (activeProfile || "");
     sessionStorage.setItem("viagg_panel_context", ctx);
-  }, [imoveisMode, veiculosMode, servicosMode, activeProfile]);
+  }, [imoveisMode, veiculosMode, servicosMode, fretesMode, activeProfile]);
 
   const showMerchantOnlyItems = activeProfile === "merchant";
 
@@ -174,6 +177,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Divulgar Grátis", href: "/anunciante/servicos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/servicos/mensagens", icon: MessageSquare },
     { name: "Gestão e Pacotes", href: "/anunciante/servicos/creditos", icon: Coins },
+    { name: "Suporte", href: "/suporte/novo", icon: Headphones },
+    { name: "Sair", href: "#", icon: LogOut, action: "logout" },
+  ] : fretesMode ? [
+    { name: "Painel Geral", href: "/anunciante/fretes", icon: LayoutDashboard },
+    { name: "Meus Anúncios", href: "/anunciante/fretes/meus-anuncios", icon: Package },
+    { name: "Divulgar Grátis", href: "/anunciante/fretes/divulgar-gratis", icon: Megaphone },
+    { name: "Mensagens", href: "/anunciante/fretes/mensagens", icon: MessageSquare },
+    { name: "Gestão e Pacotes", href: "/anunciante/fretes/creditos", icon: Coins },
     { name: "Suporte", href: "/suporte/novo", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : imoveisMode ? [
@@ -289,6 +300,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              {veiculosMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Veículos</span>}
              {imoveisMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
              {servicosMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Serviços</span>}
+             {fretesMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Fretes</span>}
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:bg-white/10">
@@ -317,6 +329,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              {veiculosMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Veículos</span>}
              {imoveisMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
              {servicosMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Serviços</span>}
+             {fretesMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Fretes</span>}
           </div>
           <div className="flex items-center gap-6">
             <div className="h-8 w-px bg-[#2A3038]" />
@@ -339,7 +352,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
           </div>
         </div>
 
-        {(veiculosMode || imoveisMode || servicosMode) ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
+        {(veiculosMode || imoveisMode || servicosMode || fretesMode) ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
       </main>
 
       {/* Botão flutuante para Mensagens */}

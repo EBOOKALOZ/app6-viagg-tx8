@@ -77,11 +77,11 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
   },
   freteiro: {
     id: 'freteiro',
-    label: 'Fretes',
-    description: 'Cargas leves, mudanças e caminhões',
+    label: 'Mudanças & Fretes',
+    description: 'Transporte de cargas pesadas, mudanças, móveis e mercadorias',
     icon: Truck,
-    route: '/freteiro',
-    requiresVehicle: true,
+    route: '/anunciante/fretes',
+    requiresVehicle: false,
   },
 } as const;
 

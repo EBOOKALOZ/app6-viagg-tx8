@@ -1,12 +1,6 @@
 /**
- * VehicleCreditReportCard — Relatório de créditos de VEÍCULOS.
- *
- * Mostra, em um único card:
- *  • Débitos de NAVEGAÇÃO (cliques no anúncio cobrados) — vehicle_credit_ledger
- *    com metadata.event = 'listing_click'.
- *  • Compras atuais — vehicle_credit_purchases (pacotes adquiridos).
- *
- * Tema escuro, alinhado ao restante da página de Gestão e Pacotes.
+ * FreightCreditReportCard — Relatório de créditos de FRETES.
+ * Espelha ServiceCreditReportCard.
  */
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -20,16 +14,15 @@ import { cn, formatCurrencyBRL } from "@/lib/utils";
 
 const fmtDate = (d: string) => format(new Date(d), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 
-export function VehicleCreditReportCard() {
+export function FreightCreditReportCard() {
   const { user } = useAuth();
 
-  // Saldo atual (pode ficar negativo = dívida acumulada).
   const { data: balance = 0 } = useQuery({
-    queryKey: ["ve-report-balance", user?.id],
+    queryKey: ["fr-report-balance", user?.id],
     enabled: !!user?.id,
     refetchInterval: 20_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("vehicle_credit_balances") as any)
+      const { data } = await (supabase.from("freight_credit_balances") as any)
         .select("available_credits")
         .eq("owner_user_id", user!.id)
         .maybeSingle();
@@ -37,30 +30,28 @@ export function VehicleCreditReportCard() {
     },
   });
 
-  // Débitos de navegação (cliques cobrados) — ledger.
   const { data: debits = [], isLoading: debitsLoading } = useQuery({
-    queryKey: ["ve-report-debits", user?.id],
+    queryKey: ["fr-report-debits", user?.id],
     enabled: !!user?.id,
     refetchInterval: 20_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("vehicle_credit_ledger") as any)
+      const { data } = await (supabase.from("freight_credit_ledger") as any)
         .select("id, entry_type, amount, balance_after, listing_id, metadata, created_at")
         .eq("owner_user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(100);
       return (data || []).filter(
-        (e: any) => e?.metadata?.event === "listing_click" || e?.metadata?.event === "interest_click" || e?.entry_type === "debit_unlock" || e?.entry_type === "expired"
+        (e: any) => e?.metadata?.event === "listing_click" || e?.metadata?.event === "interest_click" || e?.metadata?.event === "feature_listing" || e?.entry_type === "debit_unlock" || e?.entry_type === "expired"
       );
     },
   });
 
-  // Compras de pacotes de veículos.
   const { data: purchases = [], isLoading: purchasesLoading } = useQuery({
-    queryKey: ["ve-report-purchases", user?.id],
+    queryKey: ["fr-report-purchases", user?.id],
     enabled: !!user?.id,
     refetchInterval: 30_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("vehicle_credit_purchases") as any)
+      const { data } = await (supabase.from("freight_credit_purchases") as any)
         .select("id, credits_total, amount_brl, payment_status, created_at, paid_at")
         .eq("owner_user_id", user!.id)
         .order("created_at", { ascending: false })
@@ -89,6 +80,7 @@ export function VehicleCreditReportCard() {
   const labelForDebit = (e: any) =>
     e?.metadata?.event === "listing_click" ? "Clique no anúncio (visita)"
     : e?.metadata?.event === "interest_click" ? "Clique no anúncio (interesse)"
+    : e?.metadata?.event === "feature_listing" ? "Destacar anúncio"
     : e?.entry_type === "debit_unlock" ? "Desbloqueio de contato"
     : e?.entry_type === "expired" ? "Créditos expirados (30 dias sem compra)"
     : "Consumo";
@@ -98,16 +90,15 @@ export function VehicleCreditReportCard() {
       <div className="space-y-3">
         <h2 className="text-3xl font-black text-[#F5F7FA] tracking-tighter uppercase flex items-center gap-3">
           <div className="p-3 bg-[#0D0F12] rounded-2xl shadow-xl shadow-black/30">
-            <TrendingDown className="w-6 h-6 text-[#FF6A00]" />
+            <TrendingDown className="w-6 h-6 text-blue-500" />
           </div>
           Relatório de Créditos
         </h2>
         <p className="text-[#A7B0BE] font-bold uppercase text-[10px] tracking-[0.2em] ml-16">
-          Débitos de navegação, interesses e compras de pacotes (veículos)
+          Débitos de navegação, interesses e compras de pacotes (fretes)
         </p>
       </div>
 
-      {/* Resumo */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-[#1B1F24] border-[#2A3038]">
           <CardContent className="p-5 space-y-1">
@@ -137,7 +128,7 @@ export function VehicleCreditReportCard() {
         <Card className="bg-[#1B1F24] border-[#2A3038]">
           <CardContent className="p-5 space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-[#A7B0BE] flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-[#FF6A00]" /> Saldo atual
+              <Wallet className="w-3.5 h-3.5 text-blue-500" /> Saldo atual
             </p>
             <p className={cn("text-2xl font-black tabular-nums", balance < 0 ? "text-red-400" : "text-[#F5F7FA]")}>
               {balance} cr
@@ -153,7 +144,6 @@ export function VehicleCreditReportCard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Débitos de navegação / consumo */}
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-widest text-[#A7B0BE] flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-red-400" /> Débitos (navegação e desbloqueios)
@@ -182,7 +172,6 @@ export function VehicleCreditReportCard() {
             )}
           </div>
 
-          {/* Compras */}
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-widest text-[#A7B0BE] flex items-center gap-2">
               <Coins className="w-4 h-4 text-emerald-400" /> Compras de pacotes
@@ -222,4 +211,4 @@ export function VehicleCreditReportCard() {
   );
 }
 
-export default VehicleCreditReportCard;
+export default FreightCreditReportCard;

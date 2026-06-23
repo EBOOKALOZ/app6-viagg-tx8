@@ -134,6 +134,7 @@ const menuSections: MenuSection[] = [
       { title: "Lojas", url: "/admin/lojas", icon: Store },
       { title: "Veículos", url: "/admin/vehicles", icon: Car },
       { title: "Serviços", url: "/admin/servicos", icon: Briefcase },
+      { title: "Fretes & Transportes", url: "/admin/fretes", icon: Truck },
       { title: "Créditos", url: "/admin/creditos", icon: Coins },
       { title: "Pacotes Imóveis", url: "/admin/imoveis/pacotes", icon: Building2 },
       { title: "Moderação de Imóveis", url: "/admin/imoveis/moderacao", icon: Building2 },

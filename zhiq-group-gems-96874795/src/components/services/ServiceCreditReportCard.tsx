@@ -41,7 +41,7 @@ export function ServiceCreditReportCard() {
         .order("created_at", { ascending: false })
         .limit(100);
       return (data || []).filter(
-        (e: any) => e?.metadata?.event === "listing_click" || e?.metadata?.event === "interest_click" || e?.entry_type === "debit_unlock"
+        (e: any) => e?.metadata?.event === "listing_click" || e?.metadata?.event === "interest_click" || e?.entry_type === "debit_unlock" || e?.entry_type === "expired"
       );
     },
   });
@@ -81,6 +81,7 @@ export function ServiceCreditReportCard() {
     e?.metadata?.event === "listing_click" ? "Clique no anúncio (visita)"
     : e?.metadata?.event === "interest_click" ? "Clique no anúncio (interesse)"
     : e?.entry_type === "debit_unlock" ? "Desbloqueio de contato"
+    : e?.entry_type === "expired" ? "Créditos expirados (30 dias sem compra)"
     : "Consumo";
 
   return (

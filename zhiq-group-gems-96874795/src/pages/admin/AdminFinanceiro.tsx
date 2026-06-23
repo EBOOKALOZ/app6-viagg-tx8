@@ -190,7 +190,7 @@ function GlobalLedger() {
           </Select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[420px]">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
