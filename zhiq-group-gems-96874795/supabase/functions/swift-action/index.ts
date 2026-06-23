@@ -200,6 +200,9 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
   }
 
   if (ev.advertiser_user_id) {
+    let displayName = "";
+    let optedOut = false;
+
     const { data } = await supabase
       .from("advertiser_accounts")
       .select("email, full_name, settings_json")
@@ -212,6 +215,8 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
         optedOut: (data.settings_json || {}).receive_email_notifications === false,
       };
     }
+    if (data?.full_name) displayName = data.full_name;
+    if (data?.settings_json?.receive_email_notifications === false) optedOut = true;
 
     const { data: store } = await supabase
       .from("merchant_stores")
@@ -220,8 +225,9 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
       .not("email", "is", null)
       .maybeSingle();
     if (store?.email) {
-      return { email: store.email, name: store.nome_loja || "", optedOut: false };
+      return { email: store.email, name: store.nome_loja || displayName, optedOut };
     }
+    if (store?.nome_loja) displayName = store.nome_loja;
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -229,8 +235,18 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
       .eq("id", ev.advertiser_user_id)
       .maybeSingle();
     if (profile?.email) {
-      return { email: profile.email, name: profile.name || "", optedOut: false };
+      return { email: profile.email, name: profile.name || displayName, optedOut };
     }
+    if (profile?.name) displayName = profile.name;
+
+    // Fallback final: e-mail de LOGIN do usuário no auth (sempre existe).
+    try {
+      const { data: authData } = await supabase.auth.admin.getUserById(ev.advertiser_user_id);
+      const authEmail = authData?.user?.email;
+      if (authEmail) {
+        return { email: authEmail, name: displayName, optedOut };
+      }
+    } catch (_e) { /* best-effort */ }
   }
 
   return { email: null, name: "", optedOut: false };

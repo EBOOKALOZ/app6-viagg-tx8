@@ -30,7 +30,7 @@ type Step = "cart" | "signup" | "success";
 export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
   const { storeGroups, totalItems, totalSubtotal, totalStores } = globalCart;
   const navigate = useNavigate();
-  const { activeProfile } = useAuth();
+  const { user, activeProfile } = useAuth();
   const [step, setStep] = useState<Step>("cart");
   const [submitResult, setSubmitResult] = useState<MultiSubmitResult | null>(null);
   const [savedGroups, setSavedGroups] = useState<StoreGroup[]>([]);
@@ -79,11 +79,11 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
      if (step === "success") {
        const timer = setTimeout(() => {
          handleClose();
-         navigate("/anunciante/mensagens");
+         if (user) navigate("/anunciante/mensagens");
        }, 2500);
        return () => clearTimeout(timer);
      }
-   }, [step, navigate, activeProfile]);
+   }, [step, navigate, activeProfile, user]);
 
   // ═══ EMPTY STATE ═══
   if (totalItems === 0 && step !== "success" && open) {
@@ -338,13 +338,17 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
               </p>
             </div>
 
-            <button onClick={() => {
-                handleClose();
-                navigate("/anunciante/mensagens");
-              }}
-              className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg">
-              Ver Mensagens
-            </button>
+            {user ? (
+              <button onClick={() => { handleClose(); navigate("/anunciante/mensagens"); }}
+                className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg">
+                Ver Mensagens
+              </button>
+            ) : (
+              <button onClick={handleClose}
+                className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg">
+                Continuar Comprando
+              </button>
+            )}
           </div>
         )}
       </SheetContent>
