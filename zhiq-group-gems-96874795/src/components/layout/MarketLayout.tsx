@@ -79,7 +79,7 @@ export function MarketLayout({
     useEffect(() => {
         localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));
     }, [soundMuted]);
-    useSoundtrackMusic({
+    const { play: playSound } = useSoundtrackMusic({
         src: appTheme,
         startTime: 21,
         endTime: 47,
@@ -150,7 +150,14 @@ export function MarketLayout({
                         <div className="flex items-center gap-1 shrink-0">
                             <button
                                 type="button"
-                                onClick={() => setSoundMuted(m => !m)}
+                                onClick={() => {
+                                    if (soundMuted) {
+                                        setSoundMuted(false);
+                                        playSound();
+                                    } else {
+                                        setSoundMuted(true);
+                                    }
+                                }}
                                 className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-white"
                                 title={soundMuted ? "Ativar som" : "Desativar som"}
                             >
@@ -228,7 +235,14 @@ export function MarketLayout({
                         <div className="flex items-center gap-3 text-white shrink-0">
                             <button
                                 type="button"
-                                onClick={() => setSoundMuted(m => !m)}
+                                onClick={() => {
+                                    if (soundMuted) {
+                                        setSoundMuted(false);
+                                        playSound();
+                                    } else {
+                                        setSoundMuted(true);
+                                    }
+                                }}
                                 className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
                                 title={soundMuted ? "Ativar som" : "Desativar som"}
                             >

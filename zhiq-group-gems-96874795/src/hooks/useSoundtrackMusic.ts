@@ -52,9 +52,9 @@ export const useSoundtrackMusic = ({
       }
     };
 
-    document.addEventListener('click', handleInteraction, { once: true });
-    document.addEventListener('touchstart', handleInteraction, { once: true });
-    document.addEventListener('keydown', handleInteraction, { once: true });
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
     
     // Escutar evento de desbloqueio global
     const handleAudioUnlock = () => {
@@ -104,6 +104,9 @@ export const useSoundtrackMusic = ({
   const fadeIn = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Já tocando normalmente — não reinicia
+    if (!audio.paused && !isStoppingRef.current) return;
 
     isStoppingRef.current = false;
     pendingPlayRef.current = false;
