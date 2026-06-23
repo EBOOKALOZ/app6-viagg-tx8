@@ -126,16 +126,16 @@ export function MarketLayout({
             <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
                     {/* ── MOBILE HEADER (< lg) ── */}
-                    <div className="flex items-center h-[72px] w-full lg:hidden px-3 gap-2">
+                    <div className="flex items-center h-[50px] w-full lg:hidden px-2 gap-1.5">
                         {/* Esquerda: Cesta */}
                         <button
                             onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                            className="relative flex h-10 w-14 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 transition-all outline-none shrink-0"
+                            className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none shrink-0"
                             title="Cesta"
                         >
-                            <ShoppingCart className="h-5 w-5" />
+                            <ShoppingCart className="h-4 w-4" />
                             {globalCart.totalItems > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
+                                <span className="absolute -top-1 -right-1 bg-[#FF6A00] text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 shadow-md border border-[#F5E62B] animate-pulse">
                                     {globalCart.totalItems}
                                 </span>
                             )}
@@ -143,27 +143,27 @@ export function MarketLayout({
 
                         {/* Centro: Logo */}
                         <div className="flex-1 flex items-center justify-center cursor-pointer" onClick={() => navigate("/mercado")}>
-                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-lg object-contain shadow-sm" />
+                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
                         </div>
 
                         {/* Direita: Som + Área do Anunciante */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setSoundMuted(m => !m)}
-                                className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+                                className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-white"
                                 title={soundMuted ? "Ativar som" : "Desativar som"}
                             >
-                                {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                                {soundMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
                             </button>
                             {headerRight}
                             {!user && !isLoading && !hideHeaderAuth && (
                                 <button
                                     onClick={() => navigate('/auth')}
-                                    className="flex items-center gap-1 h-9 px-2.5 bg-white rounded-xl shadow-lg text-[#FF6A00] hover:bg-zinc-100 transition-all"
+                                    className="flex items-center gap-0.5 h-7 px-2 bg-white rounded-lg shadow-lg text-[#FF6A00] hover:bg-zinc-100 transition-all"
                                 >
-                                    <Building2 className="w-3.5 h-3.5 shrink-0" />
-                                    <span className="text-[9px] font-black uppercase leading-tight">Área do<br/>Anunciante</span>
+                                    <Building2 className="w-3 h-3 shrink-0" />
+                                    <span className="text-[7px] font-black uppercase leading-tight">Área do<br/>Anunciante</span>
                                 </button>
                             )}
                         </div>
@@ -250,7 +250,7 @@ export function MarketLayout({
 
                     {/* Mobile search row */}
                     {showSearch && (
-                        <div className="lg:hidden pb-3">
+                        <div className="lg:hidden pb-2">
                             <div className="relative flex">
                                 <Input
                                     placeholder="Buscar produtos, lojas..."
@@ -261,14 +261,14 @@ export function MarketLayout({
                                             onSearchSubmit(search);
                                         }
                                     }}
-                                    className="w-full pl-4 pr-12 py-2 h-[46px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[14px] font-medium focus-visible:ring-0"
+                                    className="w-full pl-3 pr-10 py-1.5 h-[32px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[12px] font-medium focus-visible:ring-0"
                                 />
                                 <button
                                     onClick={() => onSearchSubmit?.(search)}
-                                    className="px-4 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center"
+                                    className="px-3 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center"
                                     aria-label="Buscar"
                                 >
-                                    <Search className="h-5 w-5 text-white" />
+                                    <Search className="h-4 w-4 text-white" />
                                 </button>
                             </div>
                         </div>
@@ -279,15 +279,15 @@ export function MarketLayout({
             </div>
 
             {/* ═══ TRUST BAR ═══ */}
-            <div className="bg-[#F5E62B] px-4 py-1.5 flex items-center justify-center gap-6 text-[11px] text-gray-600">
-                <span className="flex items-center gap-1.5 font-medium">
-                    <Truck className="h-3.5 w-3.5 text-[#FF6A00]" /> Entrega Local
+            <div className="bg-[#F5E62B] px-4 lg:py-1.5 py-1 flex items-center justify-center gap-4 lg:gap-6 text-[9px] lg:text-[11px] text-gray-600">
+                <span className="flex items-center gap-1 font-medium">
+                    <Truck className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-[#FF6A00]" /> Entrega Local
                 </span>
-                <span className="flex items-center gap-1.5 font-medium">
-                    <Shield className="h-3.5 w-3.5 text-green-500" /> Comerciantes Verificados
+                <span className="flex items-center gap-1 font-medium">
+                    <Shield className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-green-500" /> Comerciantes Verificados
                 </span>
-                <span className="flex items-center gap-1.5 font-medium hidden sm:flex">
-                    <Tag className="h-3.5 w-3.5 text-blue-500" /> Melhores Preços
+                <span className="flex items-center gap-1 font-medium hidden sm:flex">
+                    <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-blue-500" /> Melhores Preços
                 </span>
             </div>
 

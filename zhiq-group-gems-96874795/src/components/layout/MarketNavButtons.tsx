@@ -39,7 +39,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
   };
 
   return (
-    <div className="pb-3 flex gap-1.5 sm:gap-2 justify-center px-2">
+    <div className="pb-2 flex gap-1 sm:gap-2 justify-center px-1.5">
       {ROUTES.map(({ label, path }) => {
         const active = isActive(path);
         return (
@@ -47,7 +47,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
             key={path}
             onClick={() => handleClick(path)}
             className={cn(
-              "flex-1 sm:flex-none sm:px-4 flex items-center justify-center h-10 rounded-xl font-black text-[9px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all",
+              "flex-1 sm:flex-none sm:px-4 flex items-center justify-center h-7 rounded-lg font-black text-[8px] sm:text-[11px] uppercase tracking-tight shadow-md hover:scale-105 active:scale-95 transition-all",
               active
                 ? "bg-gray-900 text-[#F5E62B] ring-2 ring-black/20"
                 : "bg-[#F5E62B] text-blue-600"
