@@ -112,7 +112,10 @@ interface EventPayload {
   visitor_name?: string | null;
   visitor_phone?: string | null;
   visitor_message?: string | null;
+  visitor_email?: string | null;
   city?: string | null;
+  /** UUID da advertiser_contact_intentions — a função busca advertiser_user_id + dados automaticamente */
+  lead_intention_id?: string | null;
   // Campos de pedido (source = "order")
   intention_id?: string | null;
   customer_name?: string | null;
@@ -923,11 +926,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!EMAIL_FROM) throw new Error("EMAIL_FROM não configurado");
 
     const ev: EventPayload = await req.json();
-    if (!ev?.advertiser_account_id && !ev?.advertiser_user_id && !ev?.store_id) {
-      throw new Error("Payload inválido: informe advertiser_account_id, advertiser_user_id ou store_id");
+    if (!ev?.advertiser_account_id && !ev?.advertiser_user_id && !ev?.store_id && !ev?.lead_intention_id) {
+      throw new Error("Payload inválido: informe advertiser_account_id, advertiser_user_id, store_id ou lead_intention_id");
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // Se veio lead_intention_id sem advertiser_user_id, busca a intenção para preencher os campos
+    if (ev.lead_intention_id && !ev.advertiser_user_id) {
+      const { data: intention } = await supabase
+        .from("advertiser_contact_intentions")
+        .select("advertiser_user_id, listing_module, listing_id, interest_type, visitor_name, visitor_phone, visitor_message, city")
+        .eq("id", ev.lead_intention_id)
+        .maybeSingle();
+      if (intention) {
+        ev.advertiser_user_id   = intention.advertiser_user_id;
+        ev.listing_module       = ev.listing_module   || intention.listing_module;
+        ev.listing_id           = ev.listing_id       || intention.listing_id;
+        ev.interest_type        = ev.interest_type    || intention.interest_type;
+        ev.visitor_name         = ev.visitor_name     || intention.visitor_name;
+        ev.visitor_phone        = ev.visitor_phone    || intention.visitor_phone;
+        ev.visitor_message      = ev.visitor_message  || intention.visitor_message;
+        ev.city                 = ev.city             || intention.city;
+        ev.source               = ev.source           || "lead";
+      }
+    }
 
     // Imagem/título do produto (best-effort) p/ lead, ledger e oferta de desconto
     // (que manda listing_id). Arremate manda os campos do produto direto (sem
@@ -963,7 +986,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     //    quando o visitante informou e-mail. Mesmo visual do e-mail do lojista,
     //    porém sem mascarar (é o dado do próprio comprador).
     if (ev.source === "lead") {
-      const { email: buyerEmail } = extractVisitorEmail(ev.visitor_message);
+      // visitor_email direto no payload tem prioridade; fallback: extrai da mensagem
+      const { email: extractedEmail } = extractVisitorEmail(ev.visitor_message);
+      const buyerEmail = (ev.visitor_email || extractedEmail || "").trim();
       if (buyerEmail) {
         const storeName = await resolveStoreName(supabase, ev);
         const { subject, html } = buyerLeadTemplate(ev, ev.visitor_name, storeName);

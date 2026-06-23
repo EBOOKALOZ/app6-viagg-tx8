@@ -124,6 +124,20 @@ export function ContactIntentionModal({
       return;
     }
 
+    // Dispara e-mail ao anunciante + confirmação ao visitante (sem depender do trigger)
+    supabase.functions.invoke('swift-action', {
+      body: {
+        source: 'lead',
+        lead_intention_id: result.intention_id || null,
+        visitor_email: form.email.trim() || null,
+        visitor_name: form.name.trim(),
+        visitor_phone: form.phone.replace(/\D/g, ''),
+        visitor_message: composedMessage || null,
+        listing_module: listingModule,
+        listing_id: listingId,
+      },
+    }).catch((e) => console.warn('[email lead]', e));
+
     setSubmitted(true);
   };
 

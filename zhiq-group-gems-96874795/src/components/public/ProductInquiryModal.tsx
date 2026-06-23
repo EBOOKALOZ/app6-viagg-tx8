@@ -78,7 +78,7 @@ export function ProductInquiryModal({ open, onClose, product }: ProductInquiryMo
         p_city: product.city || null,
       });
 
-      const result = data as { success?: boolean; error?: string } | null;
+      const result = data as { success?: boolean; error?: string; intention_id?: string } | null;
       if (error || !result?.success) {
         const errMsg = result?.error || error?.message || 'erro desconhecido';
         toast.error(`Não foi possível enviar: ${errMsg}`);
@@ -86,6 +86,19 @@ export function ProductInquiryModal({ open, onClose, product }: ProductInquiryMo
       }
       setSubmitted(true);
       toast.success('Pergunta enviada! O vendedor vai te responder em breve.');
+
+      // Dispara e-mail ao lojista + confirmação ao visitante (sem depender do trigger)
+      supabase.functions.invoke('swift-action', {
+        body: {
+          source: 'lead',
+          lead_intention_id: result.intention_id || null,
+          visitor_email: email.trim() || null,
+          visitor_name: name.trim(),
+          visitor_phone: phone.replace(/\D/g, ''),
+          visitor_message: message.trim(),
+          city: product.city || null,
+        },
+      }).catch((e) => console.warn('[email lead]', e));
     } catch (err: any) {
       toast.error(`Erro inesperado: ${err?.message || 'tente novamente'}`);
     } finally {

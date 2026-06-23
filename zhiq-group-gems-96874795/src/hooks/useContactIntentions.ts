@@ -470,7 +470,7 @@ export function useRegisterContactIntention() {
   const [isLoading, setIsLoading] = useState(false);
 
   const register = useCallback(
-    async (params: RegisterIntentionParams): Promise<{ success: boolean; error?: string }> => {
+    async (params: RegisterIntentionParams): Promise<{ success: boolean; error?: string; intention_id?: string }> => {
       setIsLoading(true);
       try {
         const { data: rpcResult, error } = await supabase.rpc(
@@ -493,7 +493,7 @@ export function useRegisterContactIntention() {
           return { success: false, error: result?.error || error?.message || "unknown" };
         }
 
-        return { success: true };
+        return { success: true, intention_id: result?.intention_id || undefined };
       } catch (err: any) {
         return { success: false, error: err?.message || "unexpected_error" };
       } finally {
