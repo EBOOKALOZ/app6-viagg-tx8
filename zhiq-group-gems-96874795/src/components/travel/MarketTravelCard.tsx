@@ -6,7 +6,7 @@ import { MapPin, ChevronRight, ShieldCheck, Plane, Heart, Star, Calendar } from 
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { resolveTravelCategoryEmoji } from '@/lib/viagem/travelCategories';
-import { useAuth } from '@/contexts/AuthContext';
+import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
 
 interface MarketTravelCardProps {
   travel: {
@@ -28,8 +28,8 @@ interface MarketTravelCardProps {
 
 export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
 
   const emoji = resolveTravelCategoryEmoji(travel.category);
 
@@ -39,13 +39,7 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
 
   const handleInterest = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) {
-      // Não logado: vai direto para login como comprador com o interesse salvo
-      navigate(`/auth?entry=buyer&redirect=${encodeURIComponent(`/viagens/minha-conta?interest=${travel.id}`)}`);
-    } else {
-      // Logado: vai para a página de detalhe para confirmar o interesse
-      navigate(`/viagens/${travel.id}`);
-    }
+    setContactOpen(true);
   };
 
   const priceDisplay = travel.entry_price?.trim()
@@ -152,6 +146,14 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
           </CardFooter>
         </Card>
       </div>
+
+      <ContactIntentionModal
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+        listingId={travel.id}
+        listingModule="travel"
+        listingTitle={travel.title}
+      />
     </div>
   );
 };
