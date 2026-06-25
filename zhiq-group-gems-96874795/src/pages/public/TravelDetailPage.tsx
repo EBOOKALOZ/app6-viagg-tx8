@@ -83,6 +83,8 @@ export default function TravelDetailPage() {
       headerChildren={<MarketNavButtons />}
       mainClassName="flex flex-col"
       hideFooter
+      hideStoreNav
+      myAccountPath="/viagens/minha-conta"
     >
       <div style={{ backgroundColor: "#E0F2FE" }} className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -92,19 +94,19 @@ export default function TravelDetailPage() {
 
           {(media as string[]).length > 0 && (
             <div className="rounded-3xl overflow-hidden aspect-video bg-sky-100">
-              <img src={(media as string[])[0]} alt={listing.title} className="w-full h-full object-cover" />
+              <img src={(media as string[])[0]} alt={listing.title} className="w-full h-full object-contain bg-zinc-900" />
             </div>
           )}
 
           <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1 text-xs font-black text-sky-600 bg-sky-50 px-3 py-1 rounded-full">
                   {emoji} {listing.category}
                 </span>
-                <h1 className="text-2xl font-black text-zinc-900 leading-tight">{listing.title}</h1>
+                <div className="text-xl font-black text-sky-600">{priceDisplay}</div>
               </div>
-              <div className="text-2xl font-black text-sky-600 text-right shrink-0">{priceDisplay}</div>
+              <h1 className="text-2xl font-black text-zinc-900 leading-tight break-words">{listing.title}</h1>
             </div>
 
             <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
@@ -146,8 +148,8 @@ export default function TravelDetailPage() {
               </div>
             )}
 
-            <Button onClick={handleInterest} className="w-full bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black h-14 text-base shadow-lg">
-              <Plane className="w-5 h-5 mr-2" /> TENHO INTERESSE NESTA VIAGEM
+            <Button onClick={handleInterest} className="w-full bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black py-4 h-auto text-sm shadow-lg flex items-center justify-center gap-2 text-center whitespace-normal">
+              <Plane className="w-4 h-4 shrink-0" /> TENHO INTERESSE NESTA VIAGEM
             </Button>
           </div>
         </div>
@@ -162,6 +164,14 @@ export default function TravelDetailPage() {
           listingTitle={listing.title}
         />
       )}
+
+      <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
+        <p>✈️ Viagg-TX8™ · Viagens &amp; Turismo · viagg-tx8.com</p>
+        <div className="flex items-center justify-center gap-4 text-white/70 text-[10px]">
+          <span>© 2026 Desenvolvido por VIAGG-TX8</span>
+          <button onClick={() => navigate("/viagens/minha-conta")} className="underline hover:text-white transition-colors">Minha Conta</button>
+        </div>
+      </footer>
     </MarketLayout>
   );
 }

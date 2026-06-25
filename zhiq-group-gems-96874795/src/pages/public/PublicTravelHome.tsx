@@ -60,8 +60,29 @@ export default function PublicTravelHome() {
       headerChildren={<MarketNavButtons />}
       mainClassName="flex flex-col bg-[#F5E62B]"
       hideFooter
+      hideStoreNav
+      myAccountPath="/viagens/minha-conta"
     >
       <InstitutionalSafetyBanner />
+
+      {/* ── Chamada para agências anunciarem ── */}
+      <div className="w-full px-4 lg:px-6 pb-6">
+        <div className="max-w-[1920px] mx-auto">
+          <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+            <div className="text-white space-y-1">
+              <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para agências e operadoras</p>
+              <h3 className="text-xl font-black leading-tight">✈️ Anuncie seus pacotes de viagem aqui!</h3>
+              <p className="text-sm text-sky-100">Alcance viajantes na sua região. Cadastro rápido e gratuito.</p>
+            </div>
+            <button
+              onClick={() => navigate("/auth")}
+              className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+            >
+              Anunciar minha agência →
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="w-full px-4 lg:px-6 py-12 bg-yellow-400">
         <div className="max-w-[1920px] mx-auto space-y-8">
@@ -116,6 +137,14 @@ export default function PublicTravelHome() {
           )}
         </div>
       </div>
+
+      <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
+        <p>✈️ Viagg-TX8™ · Viagens &amp; Turismo · viagg-tx8.com</p>
+        <div className="flex items-center justify-center gap-4 text-white/70 text-[10px]">
+          <span>© 2026 Desenvolvido por VIAGG-TX8</span>
+          <button onClick={() => navigate("/viagens/minha-conta")} className="underline hover:text-white transition-colors">Minha Conta</button>
+        </div>
+      </footer>
     </MarketLayout>
   );
 }

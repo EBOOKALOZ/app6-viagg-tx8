@@ -55,7 +55,7 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
               <img
                 src={travel.thumbnail_url}
                 alt={travel.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className="w-full h-full object-contain bg-zinc-900 transition-transform duration-700"
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-sky-50 to-sky-100 flex items-center justify-center">
@@ -89,9 +89,9 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
             </div>
           </div>
 
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-end justify-between gap-2">
-              <div className="text-sky-600 font-black text-2xl tracking-tighter">
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sky-600 font-black text-lg tracking-tighter truncate">
                 {priceDisplay}
               </div>
               {!!travel.duration_days && (
@@ -101,15 +101,17 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
               )}
             </div>
             <div className="space-y-1">
-              <h3 className="font-black text-zinc-900 leading-tight line-clamp-2 h-10 group-hover:text-sky-600 transition-colors">
+              <h3 className="font-bold text-zinc-900 leading-snug line-clamp-2 break-words group-hover:text-sky-600 transition-colors">
                 {travel.title}
               </h3>
               {(travel.destination || travel.city) && (
                 <div className="flex items-center gap-1.5 text-zinc-700 font-bold text-[10px] uppercase tracking-wider">
-                  <MapPin className="w-3 h-3 text-sky-600" />
-                  {travel.destination ? `${travel.destination}` : ''}
-                  {travel.city ? ` · ${travel.city}` : ''}
-                  {travel.state ? `, ${travel.state}` : ''}
+                  <MapPin className="w-3 h-3 text-sky-600 shrink-0" />
+                  <span className="truncate">
+                    {travel.destination ? `${travel.destination}` : ''}
+                    {travel.city ? ` · ${travel.city}` : ''}
+                    {travel.state ? `, ${travel.state}` : ''}
+                  </span>
                 </div>
               )}
               {travel.departure_date && (
@@ -119,12 +121,9 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
                 </div>
               )}
             </div>
-
-            <div className="flex items-center gap-2.5 pt-3 border-t border-yellow-300">
-              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-sky-50 to-sky-100 text-sky-700 ring-1 ring-sky-200/60 shrink-0 text-lg">
-                {emoji}
-              </span>
-              <span className="text-xs font-bold text-zinc-900">{travel.category}</span>
+            <div className="flex items-center gap-2 pt-2 border-t border-yellow-300">
+              <span className="text-lg shrink-0">{emoji}</span>
+              <span className="text-xs font-bold text-zinc-700 truncate">{travel.category}</span>
             </div>
           </CardContent>
 

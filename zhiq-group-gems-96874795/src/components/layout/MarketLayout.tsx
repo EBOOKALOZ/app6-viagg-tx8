@@ -22,6 +22,7 @@ import {
     Tag,
     Volume2,
     VolumeX,
+    User,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,12 @@ interface MarketLayoutProps {
     onSearchSubmit?: (val: string) => void;
     hideCart?: boolean;
     hideFooter?: boolean;
+    /** Força FooterNeutral mesmo para merchants (impede StoreBottomNav em páginas públicas de outros módulos). */
+    hideStoreNav?: boolean;
+    /** Exibe rodapé azul Viagg-TX8 e oculta StoreBottomNav. Ideal para páginas públicas de módulos. */
+    blueFooter?: boolean;
+    /** Rota da página "Minha Conta" do módulo. Quando fornecida, exibe botão no header para usuário logado. */
+    myAccountPath?: string;
     /** Esconde o botão Motoboy do topo (usado quando ele é exibido em outra linha). */
     hideTopMotoboy?: boolean;
 }
@@ -67,6 +74,9 @@ export function MarketLayout({
     onSearchSubmit,
     hideCart = false,
     hideFooter = false,
+    hideStoreNav = false,
+    blueFooter = false,
+    myAccountPath,
     hideTopMotoboy = true
 }: MarketLayoutProps) {
     const navigate = useNavigate();
@@ -128,27 +138,48 @@ export function MarketLayout({
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
                     {/* ── MOBILE HEADER (< lg) ── */}
                     <div className="flex items-center h-[50px] w-full lg:hidden px-2 gap-1.5">
-                        {/* Esquerda: Cesta */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                            className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none shrink-0"
-                            title="Cesta"
-                        >
-                            <ShoppingCart className="h-4 w-4" />
-                            {globalCart.totalItems > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-[#FF6A00] text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 shadow-md border border-[#F5E62B] animate-pulse">
-                                    {globalCart.totalItems}
-                                </span>
-                            )}
-                        </button>
-
-                        {/* Centro: Logo */}
-                        <div className="flex-1 flex items-center justify-center cursor-pointer" onClick={() => navigate("/mercado")}>
+                        {/* Esquerda: Logo */}
+                        <div className="cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
                             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
                         </div>
 
-                        {/* Direita: Som + Área do Anunciante */}
+                        {/* Centro: Cesta */}
+                        <div className="flex-1 flex items-center justify-center">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                                className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none"
+                                title="Cesta"
+                            >
+                                <ShoppingCart className="h-4 w-4" />
+                                {globalCart.totalItems > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-[#FF6A00] text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 shadow-md border border-[#F5E62B] animate-pulse">
+                                        {globalCart.totalItems}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Direita: Minha Conta / Sair + Som */}
                         <div className="flex items-center gap-1 shrink-0">
+                            {user ? (
+                                <button
+                                    onClick={handleSair}
+                                    className="flex items-center gap-0.5 h-7 px-2 bg-red-500 hover:bg-red-600 rounded-lg shadow-lg text-white transition-all"
+                                    title="Sair"
+                                >
+                                    <LogOut className="w-3 h-3 shrink-0" />
+                                    <span className="text-[7px] font-black uppercase leading-tight">Sair</span>
+                                </button>
+                            ) : myAccountPath ? (
+                                <button
+                                    onClick={() => navigate('/auth')}
+                                    className="flex items-center gap-0.5 h-7 px-2 bg-sky-600 hover:bg-sky-700 rounded-lg shadow-lg text-white transition-all"
+                                    title="Minha Conta"
+                                >
+                                    <User className="w-3 h-3 shrink-0" />
+                                    <span className="text-[7px] font-black uppercase leading-tight">Minha<br/>Conta</span>
+                                </button>
+                            ) : null}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -166,15 +197,6 @@ export function MarketLayout({
                                 {soundMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
                             </button>
                             {headerRight}
-                            {!user && !isLoading && !hideHeaderAuth && (
-                                <button
-                                    onClick={() => navigate('/auth')}
-                                    className="flex items-center gap-0.5 h-7 px-2 bg-white rounded-lg shadow-lg text-[#FF6A00] hover:bg-zinc-100 transition-all"
-                                >
-                                    <Building2 className="w-3 h-3 shrink-0" />
-                                    <span className="text-[7px] font-black uppercase leading-tight">Área do<br/>Anunciante</span>
-                                </button>
-                            )}
                         </div>
                     </div>
 
@@ -235,6 +257,16 @@ export function MarketLayout({
 
                         {/* Direita desktop */}
                         <div className="flex items-center gap-3 text-white shrink-0">
+                            {user && (
+                                <Button
+                                    onClick={handleSair}
+                                    variant="ghost"
+                                    className="bg-red-500 hover:bg-red-600 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    Sair
+                                </Button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -252,14 +284,14 @@ export function MarketLayout({
                                 {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                             </button>
                             {headerRight}
-                            {!user && !isLoading && !hideHeaderAuth && (
+                            {!user && !isLoading && myAccountPath && (
                                 <Button
                                     onClick={() => navigate('/auth')}
                                     variant="ghost"
-                                    className="text-[#FF6A00] bg-white hover:bg-zinc-100 font-black text-xs h-[44px] px-6 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
+                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
                                 >
-                                    <Building2 className="w-4 h-4" />
-                                    Área do Anunciante
+                                    <User className="w-4 h-4" />
+                                    Minha Conta
                                 </Button>
                             )}
                         </div>
@@ -309,14 +341,29 @@ export function MarketLayout({
             </div>
 
             {/* ═══ MAIN CONTENT ═══ */}
-            <main className={cn("flex-1", isMerchant && "pb-20 md:pb-0", mainClassName)}>
+            <main className={cn("flex-1", isMerchant && !hideStoreNav && !blueFooter && "pb-20 md:pb-0", mainClassName)}>
                 {children}
             </main>
 
-            {/* ═══ FOOTER / BOTTOM NAV ═══
-                Lojista vê o StoreBottomNav fixo (consistente com as demais telas).
-                Demais perfis e visitantes mantêm o FooterNeutral em fluxo. */}
-            {isMerchant ? <StoreBottomNav /> : (!hideFooter && <FooterNeutral />)}
+            {/* ═══ FOOTER / BOTTOM NAV ═══ */}
+            {blueFooter ? (
+                <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
+                    <p>Viagg-TX8™ · Mercado Local · viagg-tx8.com</p>
+                    <div className="flex items-center justify-center gap-4 text-white/70 text-[10px]">
+                        <span>© 2026 Desenvolvido por VIAGG-TX8</span>
+                        {myAccountPath && (
+                            <button
+                                onClick={() => navigate(myAccountPath)}
+                                className="underline hover:text-white transition-colors"
+                            >
+                                Minha Conta
+                            </button>
+                        )}
+                    </div>
+                </footer>
+            ) : (
+                isMerchant && !hideStoreNav ? <StoreBottomNav /> : (!hideFooter && <FooterNeutral />)
+            )}
 
             {/* ── Drawers/Modals ── */}
             {!hideCart && <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />}

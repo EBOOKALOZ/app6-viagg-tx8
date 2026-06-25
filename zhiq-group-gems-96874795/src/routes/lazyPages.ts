@@ -40,6 +40,7 @@ export const NotFound = lazy(() => import("@/pages/NotFound"));
 export const ChooseProfile = lazy(() => import("@/pages/ChooseProfile"));
 export const ManageProfiles = lazy(() => import("@/pages/ManageProfiles"));
 export const Profile = lazy(() => import("@/pages/Profile"));
+export const MinhaConta = lazy(() => import("@/pages/MinhaConta"));
 export const Dashboard = lazy(() => import("@/pages/Dashboard"));
 export const Groups = lazy(() => import("@/pages/Groups"));
 export const GroupsPage = lazy(() => import("@/pages/GroupsPage"));
@@ -96,6 +97,7 @@ export const PublicFreightHome = lazy(() => import("@/pages/public/PublicFreight
 export const FreightDetailPage = lazy(() => import("@/pages/public/FreightDetailPage"));
 export const PublicTravelHome = lazy(() => import("@/pages/public/PublicTravelHome"));
 export const TravelDetailPage = lazy(() => import("@/pages/public/TravelDetailPage"));
+export const TravelAccountPage = lazy(() => import("@/pages/public/TravelAccountPage"));
 export const AllAuctionsPage = lazy(() => import("@/pages/public/AllAuctionsPage"));
 export const AuctionMarketDetailPage = lazy(() => import("@/pages/public/AuctionMarketDetailPage"));
 export const CampaignSharePage = lazy(() => import("@/pages/public/CampaignSharePage"));

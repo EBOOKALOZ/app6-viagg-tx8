@@ -1095,7 +1095,9 @@ const scrollToProducts = () => {
             ) : null}
             hideTopMotoboy={!isAdvertiser}
             mainClassName="flex flex-col bg-[#F5E62B]"
-            hideFooter
+            hideFooter={isAdvertiser}
+            blueFooter={!isAdvertiser}
+            myAccountPath="/minha-conta"
         >
             {isAdvertiser ? (
                 <div className="bg-[#F5E62B] min-h-[70vh]">
@@ -1301,7 +1303,7 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
-                        <HorizontalCarousel>
+                        <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-80">
                             {travelListings.length > 0 ? (
                                 travelListings.map((tr) => (
                                     <MarketTravelCard key={tr.id} travel={tr} />

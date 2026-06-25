@@ -205,6 +205,8 @@ export default function AllVehiclesPage() {
       hideCart={true}
       headerRight={null}
       headerChildren={<MarketNavButtons />}
+      blueFooter
+      myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />
       <section className="p-4">

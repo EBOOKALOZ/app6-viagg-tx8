@@ -55,6 +55,7 @@ import {
   FreightDetailPage,
   PublicTravelHome,
   TravelDetailPage,
+  TravelAccountPage,
 } from "./lazyPages";
 
 export const publicRoutes = (
@@ -104,6 +105,7 @@ export const publicRoutes = (
     <Route path="/fretes/:id" element={<FreightDetailPage />} />
     <Route path="/viagens" element={<PublicTravelHome />} />
     <Route path="/viagens/:id" element={<TravelDetailPage />} />
+    <Route path="/viagens/minha-conta" element={<ProtectedRoute><TravelAccountPage /></ProtectedRoute>} />
     <Route path="/mercado/leiloes" element={<AllAuctionsPage />} />
     <Route path="/mercado/leiloes/:id" element={<AuctionMarketDetailPage />} />
     <Route path="/divulgar/:campaignId" element={<CampaignSharePage />} />

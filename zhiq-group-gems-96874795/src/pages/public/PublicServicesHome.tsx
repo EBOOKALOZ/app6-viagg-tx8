@@ -102,6 +102,8 @@ export default function PublicServicesHome() {
       hideCart={true}
       headerRight={null}
       headerChildren={<MarketNavButtons />}
+      blueFooter
+      myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />
 
