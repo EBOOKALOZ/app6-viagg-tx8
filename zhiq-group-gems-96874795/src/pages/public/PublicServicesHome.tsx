@@ -103,6 +103,7 @@ export default function PublicServicesHome() {
       headerRight={null}
       headerChildren={<MarketNavButtons />}
       blueFooter
+      blueFooterLabel="🔧 Serviços"
       myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />

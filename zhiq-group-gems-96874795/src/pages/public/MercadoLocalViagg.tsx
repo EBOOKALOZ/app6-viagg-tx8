@@ -1097,6 +1097,7 @@ const scrollToProducts = () => {
             mainClassName="flex flex-col bg-[#F5E62B]"
             hideFooter={isAdvertiser}
             blueFooter={!isAdvertiser}
+            blueFooterLabel="🛒 Mercado Local"
             myAccountPath="/minha-conta"
         >
             {isAdvertiser ? (

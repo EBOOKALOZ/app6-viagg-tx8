@@ -145,7 +145,7 @@ export const PublicRealEstateHome = () => {
   }, [rawPropertyListings, search, cityFilter, neighborhoodFilter, propertyTypeFilter]);
 
   return (
-    <MarketLayout search={search} setSearch={setSearch} hideCart={true} headerRight={null} headerChildren={<MarketNavButtons />} blueFooter myAccountPath="/minha-conta">
+    <MarketLayout search={search} setSearch={setSearch} hideCart={true} headerRight={null} headerChildren={<MarketNavButtons />} blueFooter blueFooterLabel="🏠 Imóveis" myAccountPath="/minha-conta">
       <InstitutionalSafetyBanner />
       <div className="min-h-screen">
         {/* Hero / Module Identity */}

@@ -167,10 +167,7 @@ export default function TravelDetailPage() {
 
       <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
         <p>✈️ Viagg-TX8™ · Viagens &amp; Turismo · viagg-tx8.com</p>
-        <div className="flex items-center justify-center gap-4 text-white/70 text-[10px]">
-          <span>© 2026 Desenvolvido por VIAGG-TX8</span>
-          <button onClick={() => navigate("/viagens/minha-conta")} className="underline hover:text-white transition-colors">Minha Conta</button>
-        </div>
+        <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
       </footer>
     </MarketLayout>
   );

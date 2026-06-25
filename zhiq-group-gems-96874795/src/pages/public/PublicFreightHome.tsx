@@ -82,6 +82,7 @@ export default function PublicFreightHome() {
       headerRight={null}
       headerChildren={<MarketNavButtons />}
       blueFooter
+      blueFooterLabel="🚚 Fretes & Mudanças"
       myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />

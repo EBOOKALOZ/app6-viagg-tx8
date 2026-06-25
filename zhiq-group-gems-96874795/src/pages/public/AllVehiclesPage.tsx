@@ -206,6 +206,7 @@ export default function AllVehiclesPage() {
       headerRight={null}
       headerChildren={<MarketNavButtons />}
       blueFooter
+      blueFooterLabel="🚗 Veículos"
       myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />

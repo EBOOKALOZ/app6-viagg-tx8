@@ -154,7 +154,7 @@ export const ServiceDetailPage = () => {
 
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="bg-[#F5E62B] min-h-screen relative" blueFooter myAccountPath="/minha-conta">
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="bg-[#F5E62B] min-h-screen relative" blueFooter blueFooterLabel="🔧 Serviços" myAccountPath="/minha-conta">
         <div className="sticky top-0 z-40 bg-[#F5E62B]/90 backdrop-blur-md border-b border-zinc-900/10">
           <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
             <Button

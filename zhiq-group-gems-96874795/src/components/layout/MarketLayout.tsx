@@ -56,6 +56,8 @@ interface MarketLayoutProps {
     hideStoreNav?: boolean;
     /** Exibe rodapé azul Viagg-TX8 e oculta StoreBottomNav. Ideal para páginas públicas de módulos. */
     blueFooter?: boolean;
+    /** Texto do módulo exibido no rodapé azul (ex: "🏠 Imóveis", "🚗 Veículos"). Padrão: "Mercado Local". */
+    blueFooterLabel?: string;
     /** Rota da página "Minha Conta" do módulo. Quando fornecida, exibe botão no header para usuário logado. */
     myAccountPath?: string;
     /** Esconde o botão Motoboy do topo (usado quando ele é exibido em outra linha). */
@@ -76,6 +78,7 @@ export function MarketLayout({
     hideFooter = false,
     hideStoreNav = false,
     blueFooter = false,
+    blueFooterLabel = "Mercado Local",
     myAccountPath,
     hideTopMotoboy = true
 }: MarketLayoutProps) {
@@ -348,18 +351,8 @@ export function MarketLayout({
             {/* ═══ FOOTER / BOTTOM NAV ═══ */}
             {blueFooter ? (
                 <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
-                    <p>Viagg-TX8™ · Mercado Local · viagg-tx8.com</p>
-                    <div className="flex items-center justify-center gap-4 text-white/70 text-[10px]">
-                        <span>© 2026 Desenvolvido por VIAGG-TX8</span>
-                        {myAccountPath && (
-                            <button
-                                onClick={() => navigate(myAccountPath)}
-                                className="underline hover:text-white transition-colors"
-                            >
-                                Minha Conta
-                            </button>
-                        )}
-                    </div>
+                    <p>Viagg-TX8™ · {blueFooterLabel} · viagg-tx8.com</p>
+                    <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
                 </footer>
             ) : (
                 isMerchant && !hideStoreNav ? <StoreBottomNav /> : (!hideFooter && <FooterNeutral />)
