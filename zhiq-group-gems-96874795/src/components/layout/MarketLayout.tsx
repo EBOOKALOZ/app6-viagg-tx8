@@ -74,7 +74,9 @@ export function MarketLayout({
     const isMerchant = activeProfile === 'merchant';
 
     const [soundMuted, setSoundMuted] = useState<boolean>(
-        () => localStorage.getItem(MERCADO_MUTE_KEY) === "true"
+        // Default muted: only unmuted when user has EXPLICITLY enabled sound before ("false" stored).
+        // This prevents the silent autoplay-fail state where icon shows Volume2 but nothing plays.
+        () => localStorage.getItem(MERCADO_MUTE_KEY) !== "false"
     );
     useEffect(() => {
         localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));

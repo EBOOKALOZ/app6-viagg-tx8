@@ -40,6 +40,7 @@ export const useSoundtrackMusic = ({
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const pendingPlayRef = useRef(false);
   const isStoppingRef = useRef(false);
+  const isStartingRef = useRef(false);
 
   // Detectar interação do usuário para desbloquear áudio
   useEffect(() => {
@@ -105,12 +106,13 @@ export const useSoundtrackMusic = ({
     const audio = audioRef.current;
     if (!audio) return;
 
-    // Já tocando normalmente — não reinicia
-    if (!audio.paused && !isStoppingRef.current) return;
+    // Já tocando ou iniciando — não reinicia
+    if ((!audio.paused || isStartingRef.current) && !isStoppingRef.current) return;
 
     isStoppingRef.current = false;
     pendingPlayRef.current = false;
-    
+    isStartingRef.current = true;
+
     // Limpar fade anterior
     if (fadeIntervalRef.current) {
       clearInterval(fadeIntervalRef.current);
@@ -119,12 +121,11 @@ export const useSoundtrackMusic = ({
     audio.currentTime = startTime;
     audio.volume = 0;
 
-    // Navegadores bloqueiam autoplay com som sem gesto prévio do usuário,
-    // mas autoplay mudo é sempre permitido. Toca mudo e desmuta em seguida
-    // para contornar o bloqueio sem depender de um clique antes de soar.
+    // Toca mudo e desmuta após promise resolver — necessário em alguns navegadores.
     audio.muted = true;
 
     audio.play().then(() => {
+      isStartingRef.current = false;
       audio.muted = false;
       const targetVolume = Math.min(Math.max(volume, 0), 1);
       const steps = 20;
@@ -150,6 +151,7 @@ export const useSoundtrackMusic = ({
       // Iniciar loop do trecho
       startSegmentLoop();
     }).catch((error) => {
+      isStartingRef.current = false;
       console.warn('[useSoundtrackMusic] Autoplay bloqueado:', error);
       pendingPlayRef.current = true;
     });
