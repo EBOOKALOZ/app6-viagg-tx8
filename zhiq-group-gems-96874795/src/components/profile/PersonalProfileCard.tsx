@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { User, MapPin, Pencil, Check, X, Loader2, LogOut, Mail, Camera } from "lucide-react";
+import { User, MapPin, Pencil, Check, X, Loader2, Mail, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,7 +34,7 @@ export function PersonalProfileCard({
   accentClass = "text-sky-600",
   accentBgClass = "bg-sky-600 hover:bg-sky-700",
 }: PersonalProfileCardProps) {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -108,11 +108,6 @@ export function PersonalProfileCard({
     await queryClient.invalidateQueries({ queryKey });
     setSaving(false);
     setEditing(false);
-  };
-
-  const handleLogout = async () => {
-    await signOut();
-    if (onSignOut) onSignOut();
   };
 
   return (
@@ -242,14 +237,6 @@ export function PersonalProfileCard({
             className="rounded-xl text-xs font-bold"
           >
             <Pencil className="w-3.5 h-3.5 mr-1" /> Editar perfil pessoal
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="rounded-xl text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50"
-          >
-            <LogOut className="w-3.5 h-3.5 mr-1" /> Sair
           </Button>
         </div>
       )}
