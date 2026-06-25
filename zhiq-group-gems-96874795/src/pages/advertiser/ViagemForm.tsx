@@ -7,9 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X } from "lucide-react";
+import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X, RefreshCw } from "lucide-react";
 import { TRAVEL_CATEGORIES, TRAVEL_INCLUDES } from "@/lib/viagem/travelCategories";
 import { useToast } from "@/hooks/use-toast";
+
+interface ExistingMedia {
+  id: string;
+  url: string;
+  path: string;
+}
 
 interface FormData {
   title: string;
@@ -58,9 +64,16 @@ export default function ViagemForm() {
   });
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [existingMedia, setExistingMedia] = useState<ExistingMedia[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const replaceIndexRef = useRef<number>(-1); // índice na lista existingMedia a substituir
+
+  const MAX_PHOTOS = 6;
+  const totalPhotos = existingMedia.length + pendingFiles.length;
 
   const { data: existing } = useQuery({
     queryKey: ["viagem-form-edit", listingId],
@@ -71,6 +84,28 @@ export default function ViagemForm() {
       return data;
     },
   });
+
+  const { data: mediaData } = useQuery({
+    queryKey: ["viagem-form-media", listingId],
+    enabled: isEdit && !!listingId,
+    queryFn: async () => {
+      const { data } = await (supabase.from("travel_media") as any)
+        .select("id, original_storage_path, sort_order")
+        .eq("listing_id", listingId)
+        .order("sort_order");
+      return data || [];
+    },
+  });
+
+  useEffect(() => {
+    if (!mediaData?.length) return;
+    const mapped: ExistingMedia[] = mediaData.map((m: any) => ({
+      id: m.id,
+      path: m.original_storage_path,
+      url: supabase.storage.from("real-estate-original").getPublicUrl(m.original_storage_path).data.publicUrl,
+    }));
+    setExistingMedia(mapped);
+  }, [mediaData]);
 
   useEffect(() => {
     if (!existing) return;
@@ -101,6 +136,24 @@ export default function ViagemForm() {
   }, [existing]);
 
   const set = (key: keyof FormData, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const handleDeleteExisting = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await (supabase.from("travel_media") as any).delete().eq("id", id);
+      setExistingMedia(prev => prev.filter(m => m.id !== id));
+      qc.invalidateQueries({ queryKey: ["viagem-form-media", listingId] });
+    } catch {
+      toast({ title: "Erro ao remover foto", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleReplaceExisting = (idx: number) => {
+    replaceIndexRef.current = idx;
+    replaceInputRef.current?.click();
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -283,11 +336,17 @@ export default function ViagemForm() {
       </div>
 
       <div className="space-y-4 bg-white rounded-2xl border border-zinc-200 p-5">
-        <h2 className="font-black text-zinc-900">Fotos</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-zinc-900">Fotos</h2>
+          <span className="text-[10px] font-bold text-zinc-400">{totalPhotos}/{MAX_PHOTOS}</span>
+        </div>
+
+        {/* inputs ocultos */}
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
           const files = Array.from(e.target.files || []);
           if (!files.length) return;
-          const allowed = files.slice(0, Math.max(0, 3 - pendingFiles.length));
+          const slots = MAX_PHOTOS - totalPhotos;
+          const allowed = files.slice(0, Math.max(0, slots));
           if (!allowed.length) return;
           setPendingFiles(prev => [...prev, ...allowed]);
           setPreviews(prev => [...prev, ...allowed.map(f => URL.createObjectURL(f))]);
@@ -296,39 +355,109 @@ export default function ViagemForm() {
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
           const files = Array.from(e.target.files || []);
           if (!files.length) return;
-          const allowed = files.slice(0, Math.max(0, 3 - pendingFiles.length));
+          const slots = MAX_PHOTOS - totalPhotos;
+          const allowed = files.slice(0, Math.max(0, slots));
           if (!allowed.length) return;
           setPendingFiles(prev => [...prev, ...allowed]);
           setPreviews(prev => [...prev, ...allowed.map(f => URL.createObjectURL(f))]);
           e.target.value = "";
         }} />
+        {/* input de substituição de foto existente */}
+        <input ref={replaceInputRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file || replaceIndexRef.current < 0) return;
+          const idx = replaceIndexRef.current;
+          const media = existingMedia[idx];
+          if (!media || !user) return;
+          // faz upload do novo arquivo
+          const ext = file.name.split(".").pop() || "jpg";
+          const filePath = `${user.id}/travel/${listingId}/${Date.now()}_replace.${ext}`;
+          const { error: upErr } = await supabase.storage.from("real-estate-original").upload(filePath, file, { contentType: file.type });
+          if (upErr) { toast({ title: "Erro no upload", description: upErr.message, variant: "destructive" }); return; }
+          // atualiza o registro no banco
+          await (supabase.from("travel_media") as any).update({ original_storage_path: filePath }).eq("id", media.id);
+          // atualiza o preview localmente
+          const newUrl = supabase.storage.from("real-estate-original").getPublicUrl(filePath).data.publicUrl;
+          setExistingMedia(prev => prev.map((m, i) => i === idx ? { ...m, url: newUrl + `?t=${Date.now()}`, path: filePath } : m));
+          toast({ title: "Foto substituída!" });
+          replaceIndexRef.current = -1;
+          e.target.value = "";
+        }} />
 
-        {previews.length > 0 ? (
+        {(existingMedia.length > 0 || previews.length > 0) ? (
           <div className="grid grid-cols-3 gap-2">
-            {previews.map((src, i) => (
-              <div key={i} className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100">
-                <img src={src} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPendingFiles(prev => prev.filter((_, idx) => idx !== i));
-                    setPreviews(prev => prev.filter((_, idx) => idx !== i));
-                  }}
-                  className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <X className="w-3 h-3 text-white" />
-                </button>
+            {/* fotos já salvas no banco */}
+            {existingMedia.map((media, i) => (
+              <div key={media.id} className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 group">
+                <img src={media.url} alt="" className="w-full h-full object-cover" />
+                {deletingId === media.id && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  </div>
+                )}
+                {/* botões de ação — aparecem no hover */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    title="Substituir foto"
+                    onClick={() => handleReplaceExisting(i)}
+                    className="w-8 h-8 bg-sky-500 hover:bg-sky-400 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-white" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Apagar foto"
+                    onClick={() => handleDeleteExisting(media.id)}
+                    className="w-8 h-8 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                  >
+                    <X className="w-3.5 h-3.5 text-white" />
+                  </button>
+                </div>
+                {/* badge "Salvo" */}
+                <span className="absolute bottom-1 left-1 bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none opacity-80">Salvo</span>
               </div>
             ))}
-            {previews.length < 3 && (
-              <button type="button" onClick={() => fileInputRef.current?.click()}
-                className="aspect-square rounded-xl border-2 border-dashed border-sky-200 flex flex-col items-center justify-center gap-1 hover:border-sky-400 hover:bg-sky-50 transition-all">
-                <ImagePlus className="w-5 h-5 text-sky-500" />
-                <span className="text-[10px] font-bold text-sky-500">Mais</span>
-              </button>
+
+            {/* novas fotos ainda não salvas */}
+            {previews.map((src, i) => (
+              <div key={`new-${i}`} className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 group">
+                <img src={src} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button
+                    type="button"
+                    title="Remover"
+                    onClick={() => {
+                      setPendingFiles(prev => prev.filter((_, idx) => idx !== i));
+                      setPreviews(prev => prev.filter((_, idx) => idx !== i));
+                    }}
+                    className="w-8 h-8 bg-red-500 hover:bg-red-400 rounded-full flex items-center justify-center transition-colors shadow-lg"
+                  >
+                    <X className="w-3.5 h-3.5 text-white" />
+                  </button>
+                </div>
+                {/* badge "Novo" */}
+                <span className="absolute bottom-1 left-1 bg-sky-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none opacity-80">Novo</span>
+              </div>
+            ))}
+
+            {/* botão adicionar mais */}
+            {totalPhotos < MAX_PHOTOS && (
+              <div className="aspect-square rounded-xl border-2 border-dashed border-sky-200 flex flex-col items-center justify-center gap-2">
+                <button type="button" onClick={() => fileInputRef.current?.click()}
+                  className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center hover:bg-sky-200 transition-colors">
+                  <ImagePlus className="w-5 h-5 text-sky-600" />
+                </button>
+                <button type="button" onClick={() => cameraInputRef.current?.click()}
+                  className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center hover:bg-sky-200 transition-colors">
+                  <Camera className="w-5 h-5 text-sky-600" />
+                </button>
+                <span className="text-[9px] font-bold text-zinc-400">Galeria / Câm.</span>
+              </div>
             )}
           </div>
         ) : (
+          /* estado inicial: nenhuma foto */
           <div className="flex gap-3">
             <button type="button" onClick={() => fileInputRef.current?.click()}
               className="flex-1 flex flex-col items-center gap-2 border-2 border-dashed border-sky-200 rounded-2xl p-5 hover:border-sky-400 hover:bg-sky-50 transition-all">
