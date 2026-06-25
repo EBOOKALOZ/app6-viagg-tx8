@@ -162,16 +162,25 @@ export function MarketLayout({
                             </button>
                         </div>
 
-                        {/* Direita: Minha Conta / Sair + Som */}
+                        {/* Direita: Minha Conta + Sair + Som */}
                         <div className="flex items-center gap-1 shrink-0">
+                            {user && myAccountPath && (
+                                <button
+                                    onClick={() => navigate(myAccountPath)}
+                                    className="flex items-center gap-0.5 h-7 px-2 bg-sky-600 hover:bg-sky-700 rounded-lg shadow-lg text-white transition-all"
+                                    title="Minha Conta"
+                                >
+                                    <User className="w-3 h-3 shrink-0" />
+                                    <span className="text-[7px] font-black uppercase leading-tight">Minha<br/>Conta</span>
+                                </button>
+                            )}
                             {user ? (
                                 <button
                                     onClick={handleSair}
-                                    className="flex items-center gap-0.5 h-7 px-2 bg-red-500 hover:bg-red-600 rounded-lg shadow-lg text-white transition-all"
+                                    className="flex items-center justify-center h-7 w-7 bg-red-500 hover:bg-red-600 rounded-lg shadow-lg text-white transition-all"
                                     title="Sair"
                                 >
-                                    <LogOut className="w-3 h-3 shrink-0" />
-                                    <span className="text-[7px] font-black uppercase leading-tight">Sair</span>
+                                    <LogOut className="w-3.5 h-3.5" />
                                 </button>
                             ) : myAccountPath ? (
                                 <button
@@ -260,14 +269,34 @@ export function MarketLayout({
 
                         {/* Direita desktop */}
                         <div className="flex items-center gap-3 text-white shrink-0">
+                            {user && myAccountPath && (
+                                <Button
+                                    onClick={() => navigate(myAccountPath)}
+                                    variant="ghost"
+                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
+                                >
+                                    <User className="w-4 h-4" />
+                                    Minha Conta
+                                </Button>
+                            )}
                             {user && (
                                 <Button
                                     onClick={handleSair}
                                     variant="ghost"
-                                    className="bg-red-500 hover:bg-red-600 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
+                                    className="bg-red-500 hover:bg-red-600 text-white font-black text-xs h-[44px] px-4 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     Sair
+                                </Button>
+                            )}
+                            {!user && myAccountPath && (
+                                <Button
+                                    onClick={() => navigate('/auth')}
+                                    variant="ghost"
+                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
+                                >
+                                    <User className="w-4 h-4" />
+                                    Minha Conta
                                 </Button>
                             )}
                             <button
