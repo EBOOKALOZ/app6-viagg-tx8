@@ -12,21 +12,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Environment variables exclusively
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Fail fast se não tiver as envs! Pra evitar shadow-bugs batendo em outros bancos
-if (!SUPABASE_URL) {
-  throw new Error("VITE_SUPABASE_URL está faltando no ambiente. Verifique o .env.");
-}
-
-if (!SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error("VITE_SUPABASE_ANON_KEY está faltando no ambiente. Verifique o .env.");
-}
-
-// Log initialization status
-console.log("SUPABASE URL:", SUPABASE_URL);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://broifhfqmnzqoongtokm.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyb2lmaGZxbW56cW9vbmd0b2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4Mjc2NzAsImV4cCI6MjA4MzQwMzY3MH0.Zk_AsCPkqaRozf0Nbsxd_S8HBef52VBu7rU4fOD0Hv8";
 
 if (import.meta.env.DEV) {
   console.log('[Supabase] Initializing client:', {
