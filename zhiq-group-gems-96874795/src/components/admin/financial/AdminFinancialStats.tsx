@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAdminFinancialStats } from "@/hooks/useAdminFinancials";
-import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2, Car, Briefcase, Truck } from "lucide-react";
+import { Info, Activity, ArrowDownRight, ArrowUpRight, Banknote, HelpCircle, Store, Users, Wallet, Bike, Coins, Building2, Car, Briefcase, Truck, Plane } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formatCurrency = (value: number) => {
@@ -101,11 +101,19 @@ export function AdminFinancialStats() {
             color: "#10b981"
         },
         {
+            title: "Viagens & Turismo",
+            value: data.pacotesViagens,
+            subtitle: `${data.pacotesViagensQtd} pacote(s) comprado(s)`,
+            icon: <Plane className="h-4 w-4 text-sky-500" />,
+            tooltip: "Entrada de compras de pacotes de créditos de viagens e turismo (compras confirmadas).",
+            color: "#0ea5e9"
+        },
+        {
             title: "Entrada Total (Pacotes)",
-            value: data.pacotesLojistas + data.pacotesImoveis + data.pacotesVeiculos + data.pacotesServicos + data.pacotesFretes,
-            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd + data.pacotesVeiculosQtd + data.pacotesServicosQtd + data.pacotesFretesQtd} pacote(s) · Marketplace + Imóveis + Veículos + Serviços + Fretes`,
+            value: data.pacotesLojistas + data.pacotesImoveis + data.pacotesVeiculos + data.pacotesServicos + data.pacotesFretes + data.pacotesViagens,
+            subtitle: `${data.pacotesLojistasQtd + data.pacotesImoveisQtd + data.pacotesVeiculosQtd + data.pacotesServicosQtd + data.pacotesFretesQtd + data.pacotesViagensQtd} pacote(s) · Marketplace + Imóveis + Veículos + Serviços + Fretes + Viagens`,
             icon: <Coins className="h-4 w-4 text-emerald-500" />,
-            tooltip: "Entrada total de compras de pacotes somando Marketplace (lojistas/anunciantes) + Imóveis + Veículos + Serviços + Fretes.",
+            tooltip: "Entrada total de compras de pacotes somando Marketplace + Imóveis + Veículos + Serviços + Fretes + Viagens.",
             color: "#10b981"
         },
         {
