@@ -74,19 +74,18 @@ export function MarketLayout({
     const isMerchant = activeProfile === 'merchant';
 
     const [soundMuted, setSoundMuted] = useState<boolean>(
-        // Default muted: only unmuted when user has EXPLICITLY enabled sound before ("false" stored).
-        // This prevents the silent autoplay-fail state where icon shows Volume2 but nothing plays.
         () => localStorage.getItem(MERCADO_MUTE_KEY) !== "false"
     );
     useEffect(() => {
         localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));
     }, [soundMuted]);
-    const { play: playSound } = useSoundtrackMusic({
+    // isPlaying sempre false — música só inicia via play()/stop() explícitos no clique
+    const { play: playSound, stop: stopSound } = useSoundtrackMusic({
         src: appTheme,
         startTime: 21,
         endTime: 47,
         volume: 0.12,
-        isPlaying: !soundMuted,
+        isPlaying: false,
         fadeInDuration: 1500,
         fadeOutDuration: 800,
     });
@@ -158,6 +157,7 @@ export function MarketLayout({
                                         playSound();
                                     } else {
                                         setSoundMuted(true);
+                                        stopSound();
                                     }
                                 }}
                                 className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-white"
@@ -243,6 +243,7 @@ export function MarketLayout({
                                         playSound();
                                     } else {
                                         setSoundMuted(true);
+                                        stopSound();
                                     }
                                 }}
                                 className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
