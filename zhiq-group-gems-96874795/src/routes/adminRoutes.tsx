@@ -48,6 +48,7 @@ import {
   AdminPayLedger,
   AdminCourierWallets,
   PayAdminPremium,
+  AdminRealEstateOverview,
   AdminRealEstatePackages,
   AdminRealEstateModeration,
   AdminRealEstateImageModeration,
@@ -62,6 +63,7 @@ import {
   AdminVehicleOverview,
   AdminServiceOverview,
   AdminFreightOverview,
+  AdminViagemOverview,
   AdminMarketplaceCommerce,
   AdminPaymentGateways,
   AdminPaymentDemo,
@@ -85,6 +87,7 @@ export const adminRoutes = (
       <Route path="/admin/vehicles" element={<AdminVehicleOverview />} />
       <Route path="/admin/servicos" element={<AdminServiceOverview />} />
       <Route path="/admin/fretes" element={<AdminFreightOverview />} />
+      <Route path="/admin/viagens" element={<AdminViagemOverview />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
@@ -136,6 +139,7 @@ export const adminRoutes = (
       <Route path="/admin/marketing/fila-grupos" element={<AdminMarketingFilaGrupos />} />
       <Route path="/admin/marketing/radar" element={<AdminMarketingRadar />} />
       {/* Imóveis admin */}
+      <Route path="/admin/imoveis" element={<AdminRealEstateOverview />} />
       <Route path="/admin/imoveis/pacotes" element={<AdminRealEstatePackages />} />
       <Route path="/admin/imoveis/moderacao" element={<AdminRealEstateModeration />} />
       <Route path="/admin/imoveis/aprovacao-imagens" element={<AdminRealEstateImageModeration />} />

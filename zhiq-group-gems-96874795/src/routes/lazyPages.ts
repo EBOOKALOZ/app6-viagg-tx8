@@ -94,6 +94,8 @@ export const PublicServicesHome = lazy(() => import("@/pages/public/PublicServic
 export const ServiceDetailPage = lazy(() => import("@/pages/public/ServiceDetailPage"));
 export const PublicFreightHome = lazy(() => import("@/pages/public/PublicFreightHome"));
 export const FreightDetailPage = lazy(() => import("@/pages/public/FreightDetailPage"));
+export const PublicTravelHome = lazy(() => import("@/pages/public/PublicTravelHome"));
+export const TravelDetailPage = lazy(() => import("@/pages/public/TravelDetailPage"));
 export const AllAuctionsPage = lazy(() => import("@/pages/public/AllAuctionsPage"));
 export const AuctionMarketDetailPage = lazy(() => import("@/pages/public/AuctionMarketDetailPage"));
 export const CampaignSharePage = lazy(() => import("@/pages/public/CampaignSharePage"));
@@ -159,6 +161,9 @@ export const ServiceForm = lazy(() => import("@/pages/advertiser/ServiceForm"));
 export const AdvertiserFretesPage = lazy(() => import("@/pages/advertiser/AdvertiserFretesPage"));
 export const AdvertiserFretesListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserFretesListingsPage"));
 export const FreightForm = lazy(() => import("@/pages/advertiser/FreightForm"));
+export const AdvertiserViagemPage = lazy(() => import("@/pages/advertiser/AdvertiserViagemPage"));
+export const AdvertiserViagemListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserViagemListingsPage"));
+export const ViagemForm = lazy(() => import("@/pages/advertiser/ViagemForm"));
 export const AdvertiserSupportPage = lazy(() => import("@/pages/advertiser/AdvertiserSupportPage"));
 
 /* ── Loja Unificada ── */
@@ -216,6 +221,7 @@ export const AdminPayWallets = lazy(() => import("@/pages/admin/AdminPayWallets"
 export const AdminPayLedger = lazy(() => import("@/pages/admin/AdminPayLedger"));
 export const AdminCourierWallets = lazy(() => import("@/pages/admin/AdminCourierWallets"));
 export const PayAdminPremium = lazy(() => import("@/pages/admin/PayAdminPremium"));
+export const AdminRealEstateOverview = lazy(() => import("@/pages/admin/AdminRealEstateOverview"));
 export const AdminRealEstatePackages = lazy(() => import("@/pages/admin/AdminRealEstatePackages"));
 export const AdminRealEstateModeration = lazy(() => import("@/pages/admin/AdminRealEstateModeration"));
 export const AdminRealEstateImageModeration = lazy(() => import("@/pages/admin/AdminRealEstateImageModeration"));
@@ -223,6 +229,7 @@ export const AdminCreditGrants = lazy(() => import("@/pages/admin/AdminCreditGra
 export const AdminVehicleOverview = lazy(() => import("@/pages/admin/AdminVehicleOverview"));
 export const AdminServiceOverview = lazy(() => import("@/pages/admin/AdminServiceOverview"));
 export const AdminFreightOverview = lazy(() => import("@/pages/admin/AdminFreightOverview"));
+export const AdminViagemOverview = lazy(() => import("@/pages/admin/AdminViagemOverview"));
 export const AdminMarketplaceCommerce = lazy(() => import("@/pages/admin/AdminMarketplaceCommerce"));
 
 /* ── Admin Marketing ── */

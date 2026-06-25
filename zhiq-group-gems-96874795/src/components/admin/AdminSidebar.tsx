@@ -36,6 +36,7 @@ import {
   CreditCard,
   Briefcase,
   Bot,
+  Plane,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -132,9 +133,11 @@ const menuSections: MenuSection[] = [
       { title: "Usuários", url: "/admin/users", icon: Users },
       { title: "Motoboys", url: "/admin/perfis/motoboys", icon: Bike },
       { title: "Lojas", url: "/admin/lojas", icon: Store },
+      { title: "Imóveis", url: "/admin/imoveis", icon: Building2 },
       { title: "Veículos", url: "/admin/vehicles", icon: Car },
       { title: "Serviços", url: "/admin/servicos", icon: Briefcase },
       { title: "Fretes & Transportes", url: "/admin/fretes", icon: Truck },
+      { title: "Viagens & Turismo", url: "/admin/viagens", icon: Plane },
       { title: "Créditos", url: "/admin/creditos", icon: Coins },
       { title: "Pacotes Imóveis", url: "/admin/imoveis/pacotes", icon: Building2 },
       { title: "Moderação de Imóveis", url: "/admin/imoveis/moderacao", icon: Building2 },

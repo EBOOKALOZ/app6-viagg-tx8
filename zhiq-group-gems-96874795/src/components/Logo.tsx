@@ -25,7 +25,7 @@ export function Logo({ size = 'md', showText = false, rounded = false }: LogoPro
       />
       {showText && (
         <span className="text-2xl font-bold tracking-tight text-[#C9A443]">
-          Viagg-TX8
+          Viagg-TX8™
         </span>
       )}
     </div>

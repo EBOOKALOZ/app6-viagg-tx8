@@ -53,7 +53,7 @@ export function FooterNeutral({ light = false, compact = false }: FooterNeutralP
               <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className={`rounded-lg object-contain ${compact ? 'h-6 w-6' : 'h-8 w-8'}`} />
               {!compact && (
                 <span className="text-[11px] font-bold bg-gradient-to-r from-teal-400 to-green-500 bg-clip-text text-transparent">
-                  Viagg-TX8
+                  Viagg-TX8™
                 </span>
               )}
             </div>
@@ -100,7 +100,7 @@ export function FooterNeutral({ light = false, compact = false }: FooterNeutralP
 
           <div className="text-center md:text-right">
             <p className={`text-white/40 ${compact ? 'text-[10px]' : 'text-[8px]'}`}>
-              &copy; {currentDate} Viagg-TX8. Todos os direitos reservados.
+              &copy; {currentDate} Viagg-TX8™. Todos os direitos reservados.
             </p>
             {!compact && (
               <p className="text-[7px] text-white/20 tracking-wider uppercase">

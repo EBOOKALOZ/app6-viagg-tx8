@@ -43,10 +43,10 @@ import {
   TIPOS_CARROCERIA, 
   TipoCarroceria,
   sugerirCategoria, 
-  calcularValorFrete, 
   formatarValorFrete,
   FreteCategoria
 } from '@/lib/fretePricing';
+import { parseCoordinates } from '@/lib/coordinateParser';
 import { cn } from '@/lib/utils';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -434,6 +434,21 @@ export function FreteRequestModal({
   // Geocodificar endereço
   const geocodeAddress = useCallback(async (address: string, type: 'origem' | 'destino') => {
     if (address.length < 3) return;
+
+    // Tentar resolver como coordenada primeiro
+    const coordResult = parseCoordinates(address);
+    if (coordResult.success && coordResult.coordinates) {
+      const { latitude: lat, longitude: lng } = coordResult.coordinates;
+      const coords = { lat, lng };
+      
+      if (type === 'origem') {
+        setOrigemCoords(coords);
+        // O marcador fará o reverseGeocode automaticamente no useEffect
+      } else {
+        setDestinoCoords(coords);
+      }
+      return;
+    }
 
     setIsGeocoding(true);
     try {

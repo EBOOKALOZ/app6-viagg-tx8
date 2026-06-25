@@ -202,6 +202,24 @@ export function StoreLocationPicker({
   const handleSearchAddress = async () => {
     if (!searchAddress.trim()) { toast.error('Digite um endereço para buscar'); return; }
     setIsSearching(true);
+
+    // Try parsing as coordinates first (unified search box experience)
+    const coordResult = parseCoordinates(searchAddress);
+    if (coordResult.success && coordResult.coordinates) {
+      const { latitude: lat, longitude: lng } = coordResult.coordinates;
+      setActiveTab('map');
+      setSearchAddress('');
+      const endereco = await reverseGeocode(lat, lng);
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          centerMapOnLocation(lat, lng, endereco);
+          toast.success('Coordenadas detectadas! Localização definida no mapa.');
+        }, 350);
+      });
+      setIsSearching(false);
+      return;
+    }
+
     try {
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchAddress)}.json?access_token=${mapboxToken}&country=br&language=pt&limit=1`

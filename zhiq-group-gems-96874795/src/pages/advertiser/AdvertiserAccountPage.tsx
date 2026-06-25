@@ -49,13 +49,13 @@ export default function AdvertiserAccountPage() {
          <div className="xl:col-span-1">
            <AccountPreferencesSection data={account} />
          </div>
-         <div className="xl:col-span-2">
+         <div id="security-settings-section" className="xl:col-span-2 scroll-mt-6 rounded-[40px] transition-all duration-500">
            <SecuritySettingsSection />
          </div>
       </div>
 
       {/* Row 4: Store Settings */}
-      <div className="pt-2">
+      <div id="store-settings-section" className="pt-2 scroll-mt-6 rounded-[2rem] transition-all duration-500">
          <div className="flex items-center gap-2 text-[#FF6A00] font-black uppercase tracking-widest text-[11px] mb-6 pl-2">
             Configuração da Loja (Localização e Dados Comerciais)
          </div>

@@ -168,11 +168,19 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
     // ou compartilhado entre lojas — usá-lo primeiro fazia o aviso de dinheiro
     // ir para a conta errada. Ordem: login do dono → perfil → e-mail da loja.
     if (store?.user_id) {
-      const { data: authData } = await supabase.auth.admin.getUserById(store.user_id);
-      const ownerEmail = authData?.user?.email;
-      if (ownerEmail) {
-        return { email: ownerEmail, name: store.nome_loja || "", optedOut: false };
-      }
+      try {
+        const authResp = await fetch(
+          `${SUPABASE_URL}/auth/v1/admin/users/${store.user_id}`,
+          { headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY } }
+        );
+        if (authResp.ok) {
+          const authUser = await authResp.json();
+          const ownerEmail: string | undefined = authUser?.email;
+          if (ownerEmail) {
+            return { email: ownerEmail, name: store.nome_loja || "", optedOut: false };
+          }
+        }
+      } catch {}
       const { data: profile } = await supabase
         .from("profiles")
         .select("email, name")
@@ -206,21 +214,51 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
     let displayName = "";
     let optedOut = false;
 
-    const { data } = await supabase
+    // Coleta nome/prefs do advertiser_accounts (melhor fonte p/ nome e opt-out),
+    // mas não depende dela p/ e-mail — auth.admin.getUserById é mais confiável.
+    const { data: acct } = await supabase
       .from("advertiser_accounts")
       .select("email, full_name, settings_json")
       .eq("user_id", ev.advertiser_user_id)
       .maybeSingle();
-    if (data?.email) {
+    if (acct?.full_name) displayName = acct.full_name;
+    if ((acct?.settings_json || {}).receive_email_notifications === false) optedOut = true;
+    if (acct?.email) {
       return {
-        email: data.email,
-        name: data.full_name || "",
-        optedOut: (data.settings_json || {}).receive_email_notifications === false,
+        email: acct.email,
+        name: displayName,
+        optedOut,
       };
     }
-    if (data?.full_name) displayName = data.full_name;
-    if (data?.settings_json?.receive_email_notifications === false) optedOut = true;
 
+    // PRIORIDADE: e-mail de LOGIN via API REST do Supabase Auth (mais confiável que
+    // supabase.auth.admin.getUserById, que depende da inicialização do cliente JS).
+    try {
+      const authResp = await fetch(
+        `${SUPABASE_URL}/auth/v1/admin/users/${ev.advertiser_user_id}`,
+        { headers: { Authorization: `Bearer ${SERVICE_ROLE_KEY}`, apikey: SERVICE_ROLE_KEY } }
+      );
+      if (authResp.ok) {
+        const authUser = await authResp.json();
+        const authEmail: string | undefined = authUser?.email;
+        console.log("[resolveRecipient] auth REST email:", authEmail || "not found");
+        if (authEmail) {
+          if (!displayName) {
+            const { data: storeN } = await supabase
+              .from("merchant_stores").select("nome_loja")
+              .eq("user_id", ev.advertiser_user_id).maybeSingle();
+            if (storeN?.nome_loja) displayName = storeN.nome_loja;
+          }
+          return { email: authEmail, name: displayName, optedOut };
+        }
+      } else {
+        console.warn("[resolveRecipient] auth REST failed:", authResp.status, await authResp.text());
+      }
+    } catch (authErr) {
+      console.warn("[resolveRecipient] auth REST error:", authErr);
+    }
+
+    // Fallbacks restantes se auth.admin não estiver disponível
     const { data: store } = await supabase
       .from("merchant_stores")
       .select("email, nome_loja")
@@ -240,16 +278,6 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
     if (profile?.email) {
       return { email: profile.email, name: profile.name || displayName, optedOut };
     }
-    if (profile?.name) displayName = profile.name;
-
-    // Fallback final: e-mail de LOGIN do usuário no auth (sempre existe).
-    try {
-      const { data: authData } = await supabase.auth.admin.getUserById(ev.advertiser_user_id);
-      const authEmail = authData?.user?.email;
-      if (authEmail) {
-        return { email: authEmail, name: displayName, optedOut };
-      }
-    } catch (_e) { /* best-effort */ }
   }
 
   return { email: null, name: "", optedOut: false };
@@ -930,15 +958,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
       throw new Error("Payload inválido: informe advertiser_account_id, advertiser_user_id, store_id ou lead_intention_id");
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    console.log("[swift-action] svc_key_set:", !!SERVICE_ROLE_KEY, "source:", ev.source, "lead_id:", ev.lead_intention_id || "-", "listing_id:", ev.listing_id || "-");
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     // Se veio lead_intention_id sem advertiser_user_id, busca a intenção para preencher os campos
     if (ev.lead_intention_id && !ev.advertiser_user_id) {
-      const { data: intention } = await supabase
+      const { data: intention, error: intentionErr } = await supabase
         .from("advertiser_contact_intentions")
         .select("advertiser_user_id, listing_module, listing_id, interest_type, visitor_name, visitor_phone, visitor_message, city")
         .eq("id", ev.lead_intention_id)
         .maybeSingle();
+      console.log("[swift-action] intention lookup:", intention?.advertiser_user_id || "null", intentionErr?.message || "ok");
       if (intention) {
         ev.advertiser_user_id   = intention.advertiser_user_id;
         ev.listing_module       = ev.listing_module   || intention.listing_module;
@@ -951,6 +984,40 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ev.source               = ev.source           || "lead";
       }
     }
+
+    // Fallback: se a tabela advertiser_contact_intentions estiver bloqueada por RLS
+    // (anon key), tenta resolver advertiser_user_id direto pela tabela do anúncio
+    // (que é pública). Cobre product, real_estate, vehicles, services, freight.
+    if (!ev.advertiser_user_id && ev.listing_id) {
+      try {
+        const mod = ev.listing_module || "product";
+        if (mod === "product") {
+          const { data } = await supabase.from("merchant_marketing_products")
+            .select("created_by_user_id").eq("id", ev.listing_id).maybeSingle();
+          if (data?.created_by_user_id) ev.advertiser_user_id = data.created_by_user_id;
+        } else if (mod === "real_estate") {
+          const { data } = await supabase.from("real_estate_listings")
+            .select("user_id").eq("id", ev.listing_id).maybeSingle();
+          if (data?.user_id) ev.advertiser_user_id = data.user_id;
+        } else if (mod === "vehicle" || mod === "vehicles") {
+          const { data } = await supabase.from("vehicle_listings")
+            .select("user_id").eq("id", ev.listing_id).maybeSingle();
+          if (data?.user_id) ev.advertiser_user_id = data.user_id;
+        } else if (mod === "services") {
+          const { data } = await supabase.from("service_listings")
+            .select("user_id").eq("id", ev.listing_id).maybeSingle();
+          if (data?.user_id) ev.advertiser_user_id = data.user_id;
+        } else if (mod === "freight") {
+          const { data } = await supabase.from("freight_listings")
+            .select("user_id").eq("id", ev.listing_id).maybeSingle();
+          if (data?.user_id) ev.advertiser_user_id = data.user_id;
+        }
+      } catch (listingErr) {
+        console.warn("[swift-action] listing fallback error:", listingErr);
+      }
+    }
+
+    console.log("[swift-action] advertiser_user_id resolved:", ev.advertiser_user_id || "NONE");
 
     // Imagem/título do produto (best-effort) p/ lead, ledger e oferta de desconto
     // (que manda listing_id). Arremate manda os campos do produto direto (sem

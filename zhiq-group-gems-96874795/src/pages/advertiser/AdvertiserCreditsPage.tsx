@@ -19,7 +19,8 @@ import {
   Coins,
   TrendingDown,
   Eye,
-  EyeOff
+  EyeOff,
+  Plane,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,25 +39,27 @@ import { RealEstateCreditReportCard } from "@/components/real-estate/RealEstateC
 import { VehicleCreditReportCard } from "@/components/vehicle/VehicleCreditReportCard";
 import { ServiceCreditReportCard } from "@/components/services/ServiceCreditReportCard";
 import { FreightCreditReportCard } from "@/components/freight/FreightCreditReportCard";
+import { TravelCreditReportCard } from "@/components/travel/TravelCreditReportCard";
 
 export default function AdvertiserCreditsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  // Modo IMÓVEIS / VEÍCULOS: mostra pacotes do segmento e esconde os históricos do lojista.
+  // Modo IMÓVEIS / VEÍCULOS / VIAGENS: mostra pacotes do segmento e esconde os históricos do lojista.
   const isImoveis = location.pathname.startsWith("/anunciante/imoveis");
   const isVeiculos = location.pathname.startsWith("/anunciante/veiculos");
   const isServicos = location.pathname.startsWith("/anunciante/servicos");
   const isFretes = location.pathname.startsWith("/anunciante/fretes");
-  const isSpecialModule = isImoveis || isVeiculos || isServicos || isFretes;
+  const isViagens = location.pathname.startsWith("/anunciante/viagens");
+  const isSpecialModule = isImoveis || isVeiculos || isServicos || isFretes || isViagens;
 
   // Custos por evento — RESPEITA os valores configurados no painel admin
   // (merchant_credit_usage_rules). Fallback só se a regra não existir.
   const { data: ruleCosts = { click: 6, interest: 9, whatsapp: 12 } } = useQuery({
-    queryKey: ["credit-rule-costs", isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : "real_estate"],
+    queryKey: ["credit-rule-costs", isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : isViagens ? "travel" : "real_estate"],
     enabled: isSpecialModule,
     queryFn: async () => {
-      const seg = isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : "real_estate";
+      const seg = isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : isViagens ? "travel" : "real_estate";
       const codes = [`${seg}_listing_click`, `${seg}_interest_click`, `${seg}_unlock_whatsapp`];
       const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
         .select("feature_code, credits_cost")
@@ -138,6 +141,7 @@ export default function AdvertiserCreditsPage() {
   const vehiclePkgs = packages?.filter(p => p.category === 'vehicles' && !HIDDEN_VEHICLE_PACKAGE_SLUGS.includes(p.slug)) || [];
   const servicePkgs = packages?.filter(p => p.category === 'services') || [];
   const freightPkgs = packages?.filter(p => p.category === 'freight') || [];
+  const travelPkgs = packages?.filter(p => p.category === 'travel') || [];
 
   // Real merchant products (Configured by Admin)
   const productPkgs = merchantCredits.products.filter(p => p.is_active).map(p => ({
@@ -233,11 +237,6 @@ export default function AdvertiserCreditsPage() {
                           <span className="text-xl text-[#A7B0BE] font-bold tracking-normal">/mês</span>
                         )}
                       </p>
-                      {recurring && (
-                        <div className="flex items-center justify-center gap-2 mt-3 text-[11px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-xl py-2 px-3">
-                          <Coins className="w-4 h-4 shrink-0" /> Créditos não expiram — acumulam todo mês
-                        </div>
-                      )}
                       <p className="text-[14px] text-white font-black uppercase tracking-widest bg-gradient-to-br from-[#FF6A00] to-[#E55A00] py-3 px-4 text-center rounded-[20px] border border-orange-700 shadow-lg shadow-orange-900/30 mt-4 flex flex-col items-center gap-1">
                         <span className="flex items-center gap-2">
                           <Zap className="w-5 h-5 fill-current text-yellow-200" />
@@ -272,7 +271,7 @@ export default function AdvertiserCreditsPage() {
                         ? "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/30"
                         : "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/20 border border-yellow-500/40"
                     )}
-                    onClick={() => navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : isServicos ? '?ret=servicos' : isFretes ? '?ret=fretes' : ''}`)}
+                    onClick={() => navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : isServicos ? '?ret=servicos' : isFretes ? '?ret=fretes' : isViagens ? '?ret=viagens' : ''}`)}
                   >
                     {p.button_label || "ADQUIRIR AGORA"} <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-all" />
                   </Button>
@@ -386,14 +385,16 @@ export default function AdvertiserCreditsPage() {
         <div className="space-y-24">
           {/* Modo imóveis/veículos: pacotes do segmento; senão: pacotes do mercado */}
           {isImoveis
-            ? renderSection("Pacotes de Imóveis", "Plano mensal — renove todo mês", "CRÉDITOS NÃO EXPIRAM — ACUMULAM TODO MÊS", Building2, realEstatePkgs, true)
+            ? renderSection("Pacotes de Imóveis", "Plano mensal — renove todo mês", null, Building2, realEstatePkgs, true)
             : isVeiculos
-              ? renderSection("Pacotes de Veículos", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", CarFront, vehiclePkgs, false)
+              ? renderSection("Pacotes de Veículos", "Compre quando precisar", null, CarFront, vehiclePkgs, false)
               : isServicos
-                ? renderSection("Pacotes de Serviços", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", Briefcase, servicePkgs, false)
+                ? renderSection("Pacotes de Serviços", "Compre quando precisar", null, Briefcase, servicePkgs, false)
                 : isFretes
-                  ? renderSection("Mudanças & Fretes", "Compre quando precisar", "CRÉDITOS NÃO EXPIRAM", Truck, freightPkgs, false)
-                  : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
+                  ? renderSection("Mudanças & Fretes", "Compre quando precisar", null, Truck, freightPkgs, false)
+                  : isViagens
+                    ? renderSection("Pacotes de Viagens & Turismo", "Compre quando precisar", null, Plane, travelPkgs, false)
+                    : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
         </div>
       )}
 
@@ -408,6 +409,9 @@ export default function AdvertiserCreditsPage() {
 
       {/* Relatório de créditos (fretes): débitos de navegação, interesses + compras atuais */}
       {isFretes && <FreightCreditReportCard />}
+
+      {/* Relatório de créditos (viagens): débitos de navegação, interesses + compras atuais */}
+      {isViagens && <TravelCreditReportCard />}
 
       {/* ═══ HISTÓRICO DE CONSUMO (oculto no modo imóveis e veículos, exibido para mercado) ═══ */}
       {!isSpecialModule && (<section className="space-y-6">

@@ -92,6 +92,8 @@ export function ProductInquiryModal({ open, onClose, product }: ProductInquiryMo
         body: {
           source: 'lead',
           lead_intention_id: result.intention_id || null,
+          listing_id: product.id,
+          listing_module: 'product',
           visitor_email: email.trim() || null,
           visitor_name: name.trim(),
           visitor_phone: phone.replace(/\D/g, ''),

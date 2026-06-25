@@ -50,6 +50,7 @@ export function formatBrazilianPhone(value: string): string {
   if (clean.startsWith('55') && clean.length > 11) {
     clean = clean.slice(2);
   }
+  clean = clean.slice(0, 11); // limita a 11 dígitos (DDD + 9 dígitos)
   if (clean.length === 0) return '';
   if (clean.length <= 2) return `(${clean}`;
   if (clean.length <= 6) return `(${clean.slice(0, 2)}) ${clean.slice(2)}`;
@@ -66,7 +67,7 @@ export function toE164(formatted: string): string {
 }
 export function sanitizeFileName(name: string): string {
   return name
-    .normalize('NFD') // Decomposes accents (e.g., � -> A + ~)
+    .normalize('NFD') // Decomposes accents (e.g., � -> A + ~)
     .replace(/[\u0300-\u036f]/g, '') // Removes the accent marks
     .replace(/[^a-zA-Z0-9.-]/g, '_') // Replaces non-alphanumeric (except dot and hyphen) with underscore
     .toLowerCase();

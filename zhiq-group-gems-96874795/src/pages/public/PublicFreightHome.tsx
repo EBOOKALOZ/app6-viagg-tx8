@@ -7,6 +7,7 @@ import { MarketFreightCard } from "@/components/freight/MarketFreightCard";
 import { SellFreightCTA } from "@/components/freight/SellFreightCTA";
 import { FreightTriageWidget } from "@/components/freight/FreightTriageWidget";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FREIGHT_VEHICLE_TYPES } from "@/lib/freight/vehicleTypes";
 
@@ -111,11 +112,11 @@ export default function PublicFreightHome() {
         {!isLoading && filteredFreight.length === 0 && (
           <p className="text-center text-white/70">Nenhum frete encontrado.</p>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <HorizontalCarousel gap="gap-4">
           {filteredFreight.map((s) => (
             <MarketFreightCard key={s.id} freight={s} />
           ))}
-        </div>
+        </HorizontalCarousel>
       </section>
 
       <section className="p-4">

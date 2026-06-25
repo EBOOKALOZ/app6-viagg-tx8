@@ -1,17 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
-import { 
-  Package, 
-  Plus, 
+import {
+  Package,
+  Plus,
   Search,
-  Building2, 
-  Car,
   ShoppingBag,
-  Eye, 
-  Edit, 
-  MoreVertical, 
-  CheckCircle2, 
-  Clock, 
+  Eye,
+  Edit,
+  MoreVertical,
+  CheckCircle2,
+  Clock,
   AlertCircle,
   Loader2,
   Trash2,
@@ -143,21 +141,17 @@ export default function AdvertiserListingsPage() {
     enabled: !!user,
     refetchInterval: 10000,
     queryFn: async () => {
-      const { data: advAcc } = await supabase
-        .from('advertiser_accounts' as any)
-        .select('id')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-
       const storeIds: string[] = [];
-      if ((advAcc as any)?.id) storeIds.push((advAcc as any).id);
 
-      const { data: merchantStore } = await supabase
-        .from('merchant_stores' as any)
-        .select('id')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      if ((merchantStore as any)?.id) storeIds.push((merchantStore as any).id);
+      // Coleta TODOS os advertiser_accounts do usuário
+      const { data: advList } = await (supabase.from('advertiser_accounts' as any)
+        .select('id').eq('user_id', user!.id)) as any;
+      ((advList || []) as any[]).forEach((a: any) => { if (a?.id) storeIds.push(a.id); });
+
+      // Coleta TODAS as merchant_stores do usuário
+      const { data: msList } = await (supabase.from('merchant_stores' as any)
+        .select('id').eq('user_id', user!.id)) as any;
+      ((msList || []) as any[]).forEach((s: any) => { if (s?.id && !storeIds.includes(s.id)) storeIds.push(s.id); });
 
       if (storeIds.length === 0) return [] as any[];
 
@@ -312,101 +306,28 @@ export default function AdvertiserListingsPage() {
     refetchOnMount: 'always',
     staleTime: 0,
     queryFn: async () => {
-      // 1. Real Estate
-      const rePromise = supabase
-        .from("real_estate_listings")
-        .select(`*, real_estate_media(public_masked_storage_path, original_storage_path)`)
-        .eq("owner_user_id", user?.id);
+      const { data: advertiserData } = await supabase
+        .from('advertiser_accounts' as any).select('id').eq('user_id', user?.id).maybeSingle();
 
-      // 2. Vehicles
-      const vPromise = supabase
-        .from("vehicle_listings" as any)
-        .select(`*, vehicle_media(original_storage_path, public_masked_storage_path)`)
-        .eq("owner_user_id", user?.id);
-
-      // 3. Advertiser Ads
-      const { data: advertiserData } = await supabase.from('advertiser_accounts' as any).select('id').eq('user_id', user?.id).maybeSingle();
-      
-      const pPromise = supabase
-        .from("advertiser_listings" as any)
-        .select(`*, advertiser_listing_media(media_url)`)
-        .eq("advertiser_account_id", advertiserData?.id);
-
-      const [reRes, vRes, pRes] = await Promise.all([rePromise, vPromise, pPromise]);
+      const [pRes, mRes] = await Promise.all([
+        advertiserData?.id
+          ? supabase.from("advertiser_listings" as any)
+              .select(`*, advertiser_listing_media(media_url)`)
+              .eq("advertiser_account_id", advertiserData.id)
+          : Promise.resolve({ data: [] }),
+        supabase.from("merchant_marketing_products" as any)
+          .select(`id, title, image_url, price_label, category, is_active, created_at, campaign_type`)
+          .eq("created_by_user_id", user?.id),
+      ]);
 
       const normalized: any[] = [];
 
-      (reRes.data || []).forEach(item => normalized.push({
-        id: item.id, title: item.title, category: 'imovel',
-        city: item.city, state: item.state, price: item.price_brl || 0,
-        status: item.visibility_status,
-        image: item.real_estate_media?.[0]?.public_masked_storage_path || item.real_estate_media?.[0]?.original_storage_path,
-        storageBucket: 'real-estate-public', typeLabel: item.property_type,
-        listingMode: 'normal', raw: item,
-      }));
-
-      (vRes.data || []).forEach((item: any) => {
-        // Prioridade 1: cover_image_url (full public URL definida pelo VehicleForm)
-        let imgUrl: string | null = item.cover_image_url || null;
-
-        // Prioridade 2: vehicle_media join (pode falhar se FK não existir no PostgREST)
-        if (!imgUrl && item.vehicle_media?.length > 0) {
-          const media = item.vehicle_media[0];
-          const mediaPath = media?.public_masked_storage_path || media?.original_storage_path;
-          if (mediaPath) {
-            imgUrl = mediaPath.startsWith('http') 
-              ? mediaPath 
-              : supabase.storage.from('real-estate-original').getPublicUrl(mediaPath).data.publicUrl;
-          }
-        }
-
-        normalized.push({
-          id: item.id, title: item.title, category: 'veiculo',
-          city: item.city, state: item.state, price: item.price_brl || 0,
-          status: item.visibility_status, image: imgUrl, storageBucket: null,
-          typeLabel: item.vehicle_type || 'Carro', listingMode: 'normal', raw: item,
-        });
-      });
-
-      // ── Fallback robusto: buscar imagens de veículos sem cover_image_url ──
-      const vehiclesWithoutImage = normalized.filter(n => n.category === 'veiculo' && !n.image);
-      if (vehiclesWithoutImage.length > 0) {
-        const vIds = vehiclesWithoutImage.map(v => v.id);
-        const { data: mediaRows } = await supabase
-          .from('vehicle_media' as any)
-          .select('listing_id, original_storage_path, public_masked_storage_path')
-          .in('listing_id', vIds);
-
-        if (mediaRows && mediaRows.length > 0) {
-          const mediaMap = new Map<string, string>();
-          for (const row of mediaRows as any[]) {
-            if (!mediaMap.has(row.listing_id)) {
-              const p = row.public_masked_storage_path || row.original_storage_path;
-              if (p) {
-                mediaMap.set(
-                  row.listing_id, 
-                  p.startsWith('http') 
-                    ? p 
-                    : supabase.storage.from('real-estate-original').getPublicUrl(p).data.publicUrl
-                );
-              }
-            }
-          }
-          for (const n of normalized) {
-            if (n.category === 'veiculo' && !n.image && mediaMap.has(n.id)) {
-              n.image = mediaMap.get(n.id)!;
-            }
-          }
-        }
-      }
-
-      (pRes.data || []).forEach(item => {
-        const mediaFallback = (item as any).advertiser_listing_media?.[0]?.media_url ?? null;
+      ((pRes as any).data || []).forEach((item: any) => {
+        const mediaFallback = item.advertiser_listing_media?.[0]?.media_url ?? null;
         let pUrl = item.cover_image_url || mediaFallback;
         if (pUrl && !pUrl.startsWith('http')) {
           pUrl = supabase.storage.from('marketing-materials').getPublicUrl(pUrl).data.publicUrl;
         }
-
         normalized.push({
           id: item.id, title: item.title, category: 'produto',
           city: item.city || '', state: '',
@@ -416,6 +337,23 @@ export default function AdvertiserListingsPage() {
           storageBucket: null,
           typeLabel: item.category || 'Produto',
           listingMode: 'normal',
+          source: 'advertiser_listings',
+          raw: item,
+        });
+      });
+
+      ((mRes as any).data || []).forEach((item: any) => {
+        const priceNum = parseFloat(String(item.price_label).replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+        normalized.push({
+          id: item.id, title: item.title, category: 'produto',
+          city: '', state: '',
+          price: priceNum,
+          status: item.is_active ? 'active' : 'paused',
+          image: item.image_url || null,
+          storageBucket: null,
+          typeLabel: item.category || item.campaign_type || 'Produto da Loja',
+          listingMode: 'normal',
+          source: 'merchant_marketing_products',
           raw: item,
         });
       });
@@ -439,15 +377,11 @@ export default function AdvertiserListingsPage() {
     const channel = supabase
       .channel(`advertiser-listings-realtime-${user.id}`)
       .on("postgres_changes", {
-        event: "*", schema: "public", table: "real_estate_listings",
-        filter: `owner_user_id=eq.${user.id}`,
-      }, invalidate)
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "vehicle_listings",
-        filter: `owner_user_id=eq.${user.id}`,
-      }, invalidate)
-      .on("postgres_changes", {
         event: "*", schema: "public", table: "advertiser_listings",
+      }, invalidate)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "merchant_marketing_products",
+        filter: `created_by_user_id=eq.${user.id}`,
       }, invalidate)
       .on("postgres_changes", {
         event: "*", schema: "public", table: "discount_requests",
@@ -493,10 +427,8 @@ export default function AdvertiserListingsPage() {
   };
 
   const deleteListing = useMutation({
-    mutationFn: async ({ id, category }: { id: string, category: string }) => {
-      let table = "real_estate_listings";
-      if (category === 'veiculo') table = "vehicle_listings";
-      if (category === 'produto') table = "advertiser_listings";
+    mutationFn: async ({ id, source }: { id: string, category: string, source?: string }) => {
+      const table = source === 'merchant_marketing_products' ? 'merchant_marketing_products' : 'advertiser_listings';
       const { error } = await supabase.from(table as any).delete().eq("id", id);
       if (error) throw error;
     },
@@ -505,28 +437,20 @@ export default function AdvertiserListingsPage() {
   });
 
   const toggleStatus = useMutation({
-    mutationFn: async ({ id, category, currentStatus }: { id: string, category: string, currentStatus: string }) => {
-      // Normalize current status
+    mutationFn: async ({ id, currentStatus, source }: { id: string, category: string, currentStatus: string, source?: string }) => {
       const s = currentStatus?.toLowerCase();
       const isCurrentlyActive = s === 'active' || s === 'published' || s === 'active_published';
-      let table = "real_estate_listings";
-      let statusColumn = "visibility_status";
-      let activeStatus = "published";
-
-      if (category === 'veiculo') {
-        table = "vehicle_listings";
-        statusColumn = "visibility_status";
-      } else if (category === 'produto') {
-        table = "advertiser_listings";
-        statusColumn = "listing_status";
-        activeStatus = "active";
+      if (source === 'merchant_marketing_products') {
+        const { error } = await supabase.from("merchant_marketing_products" as any)
+          .update({ is_active: !isCurrentlyActive }).eq("id", id);
+        if (error) throw error;
+      } else {
+        const newStatus = isCurrentlyActive ? 'paused' : 'active';
+        const { error } = await supabase.from("advertiser_listings" as any)
+          .update({ listing_status: newStatus }).eq("id", id);
+        if (error) throw error;
       }
-      
-      const newStatus = isCurrentlyActive ? 'paused' : activeStatus;
-      
-      const { error } = await supabase.from(table as any).update({ [statusColumn]: newStatus }).eq("id", id);
-      if (error) throw error;
-      return newStatus;
+      return isCurrentlyActive ? 'paused' : 'active';
     },
     onSuccess: (newStatus) => { 
       listingsQuery.refetch(); 
@@ -654,19 +578,11 @@ export default function AdvertiserListingsPage() {
                             <div className="relative w-12 h-12 rounded-xl bg-[#14171B] overflow-hidden shrink-0 border border-[#2A3038] flex items-center justify-center">
                               {listing.image ? (
                                 <img
-                                  src={
-                                    listing.image.startsWith('http')
-                                      ? listing.image
-                                      : listing.storageBucket
-                                        ? `${supabase.storage.from(listing.storageBucket).getPublicUrl(listing.image).data.publicUrl}`
-                                        : listing.image
-                                  }
+                                  src={listing.image.startsWith('http') ? listing.image : listing.image}
                                   className={`w-full h-full object-cover ${listing.status?.toLowerCase() === 'paused' ? 'opacity-40' : ''}`}
                                   alt=""
                                 />
                               ) : (
-                                listing.category === 'imovel' ? <Building2 className="w-5 h-5 text-[#2A3038]" /> :
-                                listing.category === 'veiculo' ? <Car className="w-5 h-5 text-[#2A3038]" /> :
                                 <ShoppingBag className="w-5 h-5 text-[#2A3038]" />
                               )}
                               {listing.status?.toLowerCase() === 'paused' && (
@@ -688,9 +604,7 @@ export default function AdvertiserListingsPage() {
                         <td className="p-6">
                           <div className="flex flex-col gap-1.5">
                             <div className="flex items-center gap-2">
-                              <span className="text-xl">
-                                {listing.category === 'imovel' ? "🏘️" : listing.category === 'veiculo' ? "🚗" : "🛒"}
-                              </span>
+                              <span className="text-xl">🛒</span>
                               <span className="text-[11px] font-black text-[#F5F7FA] uppercase tracking-tight">{listing.typeLabel}</span>
                             </div>
                             {listing.listingMode && listing.listingMode !== 'normal' && (
@@ -708,22 +622,18 @@ export default function AdvertiserListingsPage() {
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost" size="icon" className="h-10 w-10 hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] rounded-xl text-[#A7B0BE]"
-                              onClick={() => {
-                                const paths: any = { imovel: '/imoveis', veiculo: '/veiculos', produto: '/produto' };
-                                window.open(`${paths[listing.category]}/${listing.id}`, '_blank');
-                              }}
+                              onClick={() => window.open(`/produto/${listing.id}`, '_blank')}
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost" size="icon" className="h-10 w-10 hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] rounded-xl text-[#A7B0BE]"
                               onClick={() => {
-                                const paths: any = {
-                                  imovel: `/anunciante/anuncios/editar/imovel/${listing.id}`,
-                                  veiculo: `/anunciante/anuncios/editar/veiculo/${listing.id}`,
-                                  produto: `/anunciante/anuncios/editar/produto/${listing.id}`,
-                                };
-                                navigate(paths[listing.category]);
+                                if (listing.source === 'merchant_marketing_products') {
+                                  navigate('/anunciante/minha-loja');
+                                } else {
+                                  navigate(`/anunciante/anuncios/editar/produto/${listing.id}`);
+                                }
                               }}
                             >
                               <Edit className="w-4 h-4" />
@@ -746,14 +656,14 @@ export default function AdvertiserListingsPage() {
                                 <DropdownMenuSeparator />
                                 {listing.status?.toLowerCase() === 'active' || listing.status?.toLowerCase() === 'published' ? (
                                   <DropdownMenuItem
-                                    onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status })}
+                                    onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status, source: listing.source })}
                                     className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-amber-600 hover:bg-amber-50 mb-1"
                                   >
                                     <Pause className="w-4 h-4" /> Pausar Anúncio
                                   </DropdownMenuItem>
                                 ) : (
                                   <DropdownMenuItem
-                                    onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status })}
+                                    onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status, source: listing.source })}
                                     className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-emerald-600 hover:bg-emerald-50 mb-1"
                                   >
                                     <Play className="w-4 h-4" /> Ativar Anúncio
@@ -761,7 +671,7 @@ export default function AdvertiserListingsPage() {
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => deleteListing.mutate({ id: listing.id, category: listing.category })}
+                                  onClick={() => deleteListing.mutate({ id: listing.id, category: listing.category, source: listing.source })}
                                   className="text-destructive font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer hover:bg-red-50"
                                 >
                                   <Trash2 className="w-4 h-4" /> Excluir Anúncio

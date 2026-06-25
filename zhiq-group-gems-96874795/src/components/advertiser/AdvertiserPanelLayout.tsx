@@ -64,13 +64,15 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   const isVeiculosCtx = location.pathname.startsWith("/anunciante/veiculos") || checkoutRet === "veiculos";
   const isServicosCtx = location.pathname.startsWith("/anunciante/servicos") || checkoutRet === "servicos";
   const isFretesCtx = location.pathname.startsWith("/anunciante/fretes") || checkoutRet === "fretes";
+  const isViagensCtx = location.pathname.startsWith("/anunciante/viagens") || checkoutRet === "viagens";
   const pendingLeadCount = intentions.filter((i) => {
     if (i.status === "unlocked") return false;
     if (isImoveisCtx) return i.listing_module === "real_estate";
     if (isVeiculosCtx) return i.listing_module === "vehicles";
     if (isServicosCtx) return i.listing_module === "services";
     if (isFretesCtx) return i.listing_module === "freight";
-    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services" && i.listing_module !== "freight";
+    if (isViagensCtx) return i.listing_module === "travel";
+    return i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services" && i.listing_module !== "freight" && i.listing_module !== "travel";
   }).length;
 
   const { data: marketplaceCount = 0 } = useQuery({
@@ -102,30 +104,28 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     refetchInterval: 15_000,
     queryFn: async () => {
       const storeIds: string[] = [];
-      const { data: adv } = await (supabase.from("advertiser_accounts" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if ((adv as any)?.id) storeIds.push((adv as any).id);
-      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if ((ms as any)?.id) storeIds.push((ms as any).id);
+      const { data: advList } = await (supabase.from("advertiser_accounts" as any).select("id").eq("user_id", user!.id)) as any;
+      ((advList || []) as any[]).forEach((a: any) => { if (a?.id) storeIds.push(a.id); });
+      const { data: msList } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id)) as any;
+      ((msList || []) as any[]).forEach((s: any) => { if (s?.id) storeIds.push(s.id); });
       if (storeIds.length === 0) return 0;
       const { count } = await (supabase.from("discount_requests" as any)
         .select("id", { count: "exact", head: true })
         .in("store_id", storeIds)
-        .eq("status", "pending")) as any;
+        .neq("status", "deleted")) as any;
       return count || 0;
     },
   });
 
-  // Contagem de PEDIDOS novos (purchase_intentions)
+  // Contagem de PEDIDOS novos — RLS "pi_select_store_owner" filtra por ownership
+  // automaticamente; não precisa buscar store_id manualmente.
   const { data: pendingOrdersCount = 0 } = useQuery({
     queryKey: ["sidebar-pending-orders", user?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if (!(ms as any)?.id) return 0;
       const { count } = await (supabase.from("purchase_intentions" as any)
         .select("id", { count: "exact", head: true })
-        .eq("store_id", (ms as any).id)
         .eq("status", "new")) as any;
       return count || 0;
     },
@@ -137,11 +137,12 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     enabled: !!user?.id,
     refetchInterval: 20_000,
     queryFn: async () => {
-      const { data: ms } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if (!(ms as any)?.id) return 0;
+      const { data: stores } = await (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id)) as any;
+      const storeIds = ((stores || []) as any[]).map((s: any) => s.id).filter(Boolean);
+      if (storeIds.length === 0) return 0;
       const { count } = await (supabase.from("marketplace_product_click_events" as any)
         .select("id", { count: "exact", head: true })
-        .eq("store_id", (ms as any).id)
+        .in("store_id", storeIds)
         .not("status", "in", "(owner_skip,dry_run)")) as any;
       return count || 0;
     },
@@ -153,13 +154,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   const veiculosMode = isVeiculosCtx;
   const servicosMode = isServicosCtx;
   const fretesMode = isFretesCtx;
+  const viagensMode = isViagensCtx;
 
   // Persiste o contexto do painel para que páginas compartilhadas (ex.: Suporte,
-  // que fica fora dos prefixos /anunciante/imoveis|veiculos|servicos|fretes) saibam para onde voltar.
+  // que fica fora dos prefixos /anunciante/imoveis|veiculos|servicos|fretes|viagens) saibam para onde voltar.
   useEffect(() => {
-    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : servicosMode ? "servicos" : fretesMode ? "fretes" : (activeProfile || "");
+    const ctx = veiculosMode ? "veiculos" : imoveisMode ? "imoveis" : servicosMode ? "servicos" : fretesMode ? "fretes" : viagensMode ? "viagens" : (activeProfile || "");
     sessionStorage.setItem("viagg_panel_context", ctx);
-  }, [imoveisMode, veiculosMode, servicosMode, fretesMode, activeProfile]);
+  }, [imoveisMode, veiculosMode, servicosMode, fretesMode, viagensMode, activeProfile]);
 
   const showMerchantOnlyItems = activeProfile === "merchant";
 
@@ -185,6 +187,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Divulgar Grátis", href: "/anunciante/fretes/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/fretes/mensagens", icon: MessageSquare },
     { name: "Gestão e Pacotes", href: "/anunciante/fretes/creditos", icon: Coins },
+    { name: "Suporte", href: "/suporte/novo", icon: Headphones },
+    { name: "Sair", href: "#", icon: LogOut, action: "logout" },
+  ] : viagensMode ? [
+    { name: "Painel Geral", href: "/anunciante/viagens", icon: LayoutDashboard },
+    { name: "Meus Anúncios", href: "/anunciante/viagens/meus-anuncios", icon: Package },
+    { name: "Divulgar Grátis", href: "/anunciante/viagens/divulgar-gratis", icon: Megaphone },
+    { name: "Mensagens", href: "/anunciante/viagens/mensagens", icon: MessageSquare },
+    { name: "Gestão e Pacotes", href: "/anunciante/viagens/creditos", icon: Coins },
     { name: "Suporte", href: "/suporte/novo", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : imoveisMode ? [
@@ -251,7 +261,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
             0;
           if (!badge || badge <= 0) return null;
           return (
-            <span className="ml-auto bg-[#22C55E] text-white text-[10px] font-black min-w-[20px] h-[20px] flex items-center justify-center rounded-full px-1.5 shadow-lg shadow-emerald-500/30 animate-pulse">
+            <span className="ml-auto text-[21px] font-black tabular-nums leading-none text-[#22C55E] animate-pulse">
               {badge}
             </span>
           );
@@ -301,6 +311,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              {imoveisMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
              {servicosMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Serviços</span>}
              {fretesMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Fretes</span>}
+             {viagensMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Viagens</span>}
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:bg-white/10">
@@ -330,6 +341,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              {imoveisMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Imóveis</span>}
              {servicosMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Serviços</span>}
              {fretesMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Fretes</span>}
+             {viagensMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Viagens</span>}
           </div>
           <div className="flex items-center gap-6">
             <div className="h-8 w-px bg-[#2A3038]" />
@@ -352,7 +364,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
           </div>
         </div>
 
-        {(veiculosMode || imoveisMode || servicosMode || fretesMode) ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
+        {(veiculosMode || imoveisMode || servicosMode || fretesMode || viagensMode) ? <FooterNeutral /> : <FooterProfile profile="advertiser" />}
       </main>
 
       {/* Botão flutuante para Mensagens */}

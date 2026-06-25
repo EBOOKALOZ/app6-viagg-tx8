@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike, Briefcase, Truck } from "lucide-react";
+import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike, Briefcase, Truck, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,7 @@ export default function AdvertiserMessagesPage() {
   // No painel de FRETES o saldo e o débito usam a carteira PRÓPRIA de fretes
   // (freight_credit_balances por owner_user_id), não a do lojista/anunciante.
   const fretesMode = location.pathname.startsWith("/anunciante/fretes");
+  const viagensMode = location.pathname.startsWith("/anunciante/viagens");
 
   // Fallback de saldo do ANUNCIANTE (modo loja)
   const { data: fallbackBalance = 0 } = useQuery({
@@ -166,10 +167,10 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : (balance?.available_credits ?? fallbackBalance);
+  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : viagensMode ? 0 : (balance?.available_credits ?? fallbackBalance);
 
   // Custo por lead: imóvel/veículo/serviço = WhatsApp fixo da carteira própria; loja = custo do anunciante
-  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : UNLOCK_COST);
+  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : viagensMode ? 9 : UNLOCK_COST);
 
   // Máscaras
   const maskName = (n: string | null) => {
@@ -332,7 +333,9 @@ export default function AdvertiserMessagesPage() {
         ? intentions.filter((i) => i.listing_module === "services")
         : fretesMode
           ? intentions.filter((i) => i.listing_module === "freight")
-          : intentions.filter((i) => i.listing_module !== "real_estate" && i.listing_module !== "vehicles" && i.listing_module !== "services" && i.listing_module !== "freight");
+          : viagensMode
+            ? intentions.filter((i) => i.listing_module === "travel")
+            : intentions.filter((i) => !["real_estate", "vehicles", "services", "freight", "travel"].includes(i.listing_module));
 
   const totalCount = visibleIntentions.length;
 
@@ -381,11 +384,13 @@ export default function AdvertiserMessagesPage() {
               : lead.listing_module === "product" ? Package
               : lead.listing_module === "services" ? Briefcase
               : lead.listing_module === "freight" ? Truck
+              : lead.listing_module === "travel" ? Plane
               : Car;
             const moduleLabel = lead.listing_module === "real_estate" ? "Imóvel"
               : lead.listing_module === "product" ? "Produto"
               : lead.listing_module === "services" ? "Serviço"
               : lead.listing_module === "freight" ? "Frete"
+              : lead.listing_module === "travel" ? "Viagem"
               : "Veículo";
 
             return (
@@ -519,17 +524,14 @@ export default function AdvertiserMessagesPage() {
 
 
 
-                {/* Excluir só aparece depois que o lojista desbloqueia a mensagem */}
-                {isUnlocked && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDelete(lead.id)}
-                    className="w-full h-9 rounded-lg border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black text-[10px] uppercase gap-1"
-                  >
-                    <Trash2 className="w-3 h-3" /> Excluir
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleDelete(lead.id)}
+                  className="w-full h-9 rounded-lg border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black text-[10px] uppercase gap-1"
+                >
+                  <Trash2 className="w-3 h-3" /> Excluir
+                </Button>
               </div>
             );
           })}

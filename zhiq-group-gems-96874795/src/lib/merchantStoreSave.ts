@@ -149,6 +149,7 @@ export async function loadMerchantStore(): Promise<{
   const { data, error } = await (supabase.from('merchant_stores') as any)
     .select(`id, endereco_formatado, ${MERCHANT_STORE_SELECT_COLUMNS}`)
     .eq('user_id', authData.user.id)
+    .limit(1)
     .maybeSingle();
 
   if (error) {

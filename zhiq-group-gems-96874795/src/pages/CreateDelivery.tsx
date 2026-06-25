@@ -357,11 +357,12 @@ export default function CreateDelivery() {
       }
 
       // 1) Fetch the correct store ID for the logged in user
-      const { data: storeData, error: storeError } = await supabase
-        .from('merchant_stores')
+      const { data: storeData, error: storeError } = await (supabase
+        .from('merchant_stores') as any)
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (storeError || !storeData) {
         throw new Error("Loja não encontrada para este usuário");

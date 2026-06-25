@@ -182,7 +182,7 @@ export function MarketLayout({
                         <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
                             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-lg object-contain" />
                             <span className="text-xl font-black text-white tracking-tight">
-                                Mercado Local <span className="text-yellow-200">Viagg-TX8</span>
+                                Mercado Local <span className="text-yellow-200">Viagg-TX8™</span>
                             </span>
                         </div>
 

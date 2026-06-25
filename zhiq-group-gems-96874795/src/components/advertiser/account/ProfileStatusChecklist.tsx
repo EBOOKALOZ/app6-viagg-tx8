@@ -1,25 +1,54 @@
 import React from "react";
-import { CheckCircle2, XCircle, ChevronRight, AlertCircle, TrendingUp, ShieldCheck, Zap } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { CheckCircle2, ChevronRight, AlertCircle, TrendingUp, ShieldCheck, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
+
+interface Step {
+  label: string;
+  status: boolean;
+  required: boolean;
+  cta?: string;
+  href?: string;
+  scrollTo?: string;
+}
 
 interface ProfileStatusChecklistProps {
   data: AdvertiserAccountData;
 }
 
 export function ProfileStatusChecklist({ data }: ProfileStatusChecklistProps) {
-  const steps = [
+  const location = useLocation();
+  const isOnAccountPage = location.pathname === "/anunciante/conta";
+
+  const steps: Step[] = [
     { label: "Cadastro Iniciado", status: !!data.id, required: true },
-    { label: "Perfil Completo", status: data.onboarding_completed, required: true, cta: "Completar cadastro", href: "/anunciante/onboarding" },
-    { label: "E-mail Confirmado", status: data.profile.email_confirmed, required: true, cta: "Confirmar e-mail", href: "/auth/verify" },
-    { label: "Telefone Validado", status: !!data.whatsapp, required: true, cta: "Adicionar telefone", href: "/anunciante/conta" },
+    { label: "Perfil Completo", status: data.onboarding_completed, required: true, cta: "Completar cadastro", href: "/anunciante/conta", scrollTo: "store-settings-section" },
+    { label: "E-mail Confirmado", status: data.profile.email_confirmed, required: true, cta: "Confirmar e-mail", href: "/anunciante/conta", scrollTo: "security-settings-section" },
+    { label: "Telefone Validado", status: !!data.whatsapp, required: true, cta: "Adicionar telefone", href: "/anunciante/conta", scrollTo: "store-settings-section" },
     { label: "Plano Ativo", status: !!data.plan, required: false, cta: "Ativar plano", href: "/anunciante/creditos" },
   ];
 
   const completedCount = steps.filter(s => s.status).length;
   const progressPercent = (completedCount / steps.length) * 100;
+
+  const handleStepClick = (step: Step) => {
+    if (step.scrollTo && isOnAccountPage) {
+      const el = document.getElementById(step.scrollTo);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Highlight flash
+        el.classList.add("ring-2", "ring-orange-400", "ring-offset-4");
+        setTimeout(() => el.classList.remove("ring-2", "ring-orange-400", "ring-offset-4"), 2000);
+        return;
+      }
+    }
+    // Fallback: navigate via link
+    if (step.href) {
+      window.location.href = step.href;
+    }
+  };
 
   return (
     <Card className="border-none shadow-xl shadow-zinc-200/50 rounded-[40px] overflow-hidden bg-white h-full flex flex-col">
@@ -60,16 +89,15 @@ export function ProfileStatusChecklist({ data }: ProfileStatusChecklistProps) {
                       </span>
                    </div>
                    
-                   {!step.status && step.cta && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-50 hover:text-orange-700 gap-1"
-                        onClick={() => window.location.href = step.href}
+                   {!step.status && step.cta && step.href && (
+                      <button
+                        type="button"
+                        onClick={() => handleStepClick(step)}
+                        className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest text-orange-600 hover:bg-orange-50 hover:text-orange-700 transition-colors cursor-pointer"
                       >
-                         {step.cta}
-                         <ChevronRight className="w-3 h-3" />
-                      </Button>
+                        {step.cta}
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
                    )}
                 </div>
              ))}
@@ -83,21 +111,20 @@ export function ProfileStatusChecklist({ data }: ProfileStatusChecklistProps) {
                 </span>
              </div>
              {!data.plan?.is_premium && (
-                <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 shadow-sm animate-in zoom-in-95 duration-500">
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 shadow-sm animate-in zoom-in-95 duration-500">
                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-4 h-4 text-orange-600 shrink-0" />
-                      <div className="space-y-1">
-                         <p className="text-[10px] font-black text-orange-950 uppercase tracking-tight">Recurso Bloqueado</p>
-                         <p className="text-[10px] text-orange-800 leading-relaxed font-bold">
-                            Para liberar os botões de contato ("Falar Agora") e aumentar suas chances de venda, ative um plano premium.
+                      <AlertCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <div className="space-y-1.5">
+                         <p className="text-[13px] font-black text-emerald-950 uppercase tracking-tight">Recurso Bloqueado</p>
+                         <p className="text-[13px] text-emerald-800 leading-relaxed font-bold">
+                            Sugerimos adquirir pacotes de créditos para que seu produto possa evoluir para vendas imediatas.
                          </p>
-                         <Button 
-                           variant="link" 
-                           className="p-0 h-auto text-[10px] font-black text-orange-600 group/link"
-                           onClick={() => window.location.href = '/anunciante/creditos'}
+                         <Link
+                           to="/anunciante/creditos"
+                           className="inline-flex items-center gap-1 text-[13px] font-black text-emerald-600 hover:text-emerald-700 transition-colors group/link pt-1"
                          >
-                           Ver benefícios agora <Zap className="w-3 h-3 ml-1 group-hover/link:animate-pulse" />
-                         </Button>
+                           Ver benefícios agora <Zap className="w-4 h-4 ml-1 group-hover/link:animate-pulse" />
+                         </Link>
                       </div>
                    </div>
                 </div>

@@ -6,6 +6,7 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { Button } from "@/components/ui/button";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { SlidersHorizontal } from "lucide-react";
 import {
   Sheet,
@@ -211,14 +212,11 @@ export default function AllVehiclesPage() {
         {!vehiclesLoading && sortedVehicles.length === 0 && (
           <p className="text-center text-white/70">Nenhum veículo encontrado.</p>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <HorizontalCarousel gap="gap-4">
           {sortedVehicles.map(v => (
-            <MarketVehicleCard
-              key={v.id}
-              vehicle={v}
-            />
+            <MarketVehicleCard key={v.id} vehicle={v} />
           ))}
-        </div>
+        </HorizontalCarousel>
       </section>
     </MarketLayout>
   );

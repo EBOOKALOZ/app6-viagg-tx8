@@ -167,6 +167,22 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
 
             setSubmitted(true);
             toast.success("Interesse enviado! O vendedor será notificado.");
+
+            // Dispara e-mail ao lojista + confirmação ao interessado (sem depender do trigger SQL)
+            const resTyped = data as { success?: boolean; error?: string; intention_id?: string } | null;
+            supabase.functions.invoke('swift-action', {
+                body: {
+                    source: 'lead',
+                    lead_intention_id: resTyped?.intention_id || null,
+                    listing_id: product.id,
+                    listing_module: 'product',
+                    visitor_email: customerEmail.trim() || null,
+                    visitor_name: customerName.trim(),
+                    visitor_phone: phoneClean,
+                    visitor_message: customerMessage.trim() || null,
+                    city: store?.city || product.city || null,
+                },
+            }).catch((e: unknown) => console.warn('[email lead]', e));
         } catch (err: any) {
             console.error("[LeadCaptureModal] error:", err);
             toast.error("Erro ao enviar interesse. Tente novamente.");

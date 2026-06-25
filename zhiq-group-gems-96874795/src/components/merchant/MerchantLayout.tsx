@@ -29,6 +29,7 @@ export function MerchantLayout() {
         const { data: storeData } = await (supabase.from("merchant_stores") as any)
           .select("nome_loja, street, number, neighborhood, logo_url, categoria_id")
           .eq("user_id", user.id)
+          .limit(1)
           .maybeSingle();
 
         if (storeData) {

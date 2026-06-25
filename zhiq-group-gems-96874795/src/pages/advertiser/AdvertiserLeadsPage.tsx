@@ -53,12 +53,12 @@ export default function AdvertiserLeadsPage() {
     refetchInterval: 15_000,
     queryFn: async () => {
       const storeIds: string[] = [];
-      const { data: adv } = await (supabase.from("advertiser_accounts") as any)
-        .select("id").eq("user_id", user!.id).maybeSingle();
-      if ((adv as any)?.id) storeIds.push((adv as any).id);
-      const { data: ms } = await (supabase.from("merchant_stores") as any)
-        .select("id").eq("user_id", user!.id).maybeSingle();
-      if ((ms as any)?.id) storeIds.push((ms as any).id);
+      const { data: advList } = await (supabase.from("advertiser_accounts") as any)
+        .select("id").eq("user_id", user!.id);
+      ((advList || []) as any[]).forEach((a: any) => { if (a?.id) storeIds.push(a.id); });
+      const { data: msList } = await (supabase.from("merchant_stores") as any)
+        .select("id").eq("user_id", user!.id);
+      ((msList || []) as any[]).forEach((s: any) => { if (s?.id) storeIds.push(s.id); });
       if (storeIds.length === 0) return [];
 
       const { data } = await (supabase.from("discount_requests") as any)

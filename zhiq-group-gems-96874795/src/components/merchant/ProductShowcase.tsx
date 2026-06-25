@@ -141,31 +141,29 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
         staleTime: 5 * 60 * 1000,
     });
 
-    // ── Query: Vitrine (merchant_marketing_products) + Advertiser Listings ──
+    // Categorias que pertencem a outros perfis (veículos e imóveis)
+    const OTHER_PROFILE_CATEGORIES = new Set([
+        'moto','carro','caminhao','caminhão','onibus','ônibus','van','utilitario','utilitário',
+        'barco','lancha','jet','quadriciclo','trator','maquina','máquina',
+        'sitio','sítio','fazenda','chacara','chácara','lote','terreno','apartamento',
+        'casa','comercial','galpao','galpão','rural','imovel','imóvel','haras',
+    ]);
+
+    // ── Query: merchant_marketing_products + advertiser_listings (excluindo veículos/imóveis) ──
     const { data: products = [], isLoading } = useQuery<ShowcaseProduct[]>({
         queryKey: ["showcase-products", user?.id],
         queryFn: async () => {
-            // 1. Vitrine products (showcase flag)
+            // 1. Produtos da vitrine (merchant_marketing_products)
             const { data: vitrineData } = await (supabase.from("merchant_marketing_products") as any)
                 .select("*")
                 .eq("created_by_user_id", user!.id)
-                .order("created_at", { ascending: false });
+                .order("created_at", { ascending: false })
+                .limit(50);
+            const vitrineProducts = (vitrineData || []) as ShowcaseProduct[];
 
-            const vitrineProducts: ShowcaseProduct[] = (vitrineData || []).filter((p: any) => {
-                try {
-                    if (p.cta_label && p.cta_label.startsWith("{")) {
-                        const parsed = JSON.parse(p.cta_label);
-                        return parsed._showcase === true;
-                    }
-                } catch { /* ignore */ }
-                return false;
-            }).slice(0, 50);
-
-            // 2. Advertiser Listings (anúncios do painel)
+            // 2. Anúncios gerais do painel (advertiser_listings) — exclui categorias de outros perfis
             const { data: accData } = await (supabase.from("advertiser_accounts") as any)
-                .select("id")
-                .eq("user_id", user!.id)
-                .maybeSingle();
+                .select("id").eq("user_id", user!.id).limit(1).maybeSingle();
 
             let advProducts: ShowcaseProduct[] = [];
             if (accData?.id) {
@@ -174,39 +172,43 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
                     .eq("advertiser_account_id", accData.id)
                     .order("created_at", { ascending: false });
 
-                advProducts = (advData || []).map((item: any) => {
-                    const mediaFallback = item.advertiser_listing_media?.[0]?.media_url ?? null;
-                    const style: CardStyle = {
-                        label: "Comprar",
-                        bgColor: "#FF6A00",
-                        textColor: "#FFFFFF",
-                        cardBg: "#FFFFFF",
-                        _showcase: true,
-                    };
-                    return {
-                        id: item.id,
-                        title: item.title || "Sem título",
-                        short_description: item.description || null,
-                        image_url: item.cover_image_url || mediaFallback,
-                        video_url: null,
-                        external_link: null,
-                        price_label: item.price ? String(item.price) : null,
-                        category: item.category || null,
-                        cta_label: serializeCardStyle(style),
-                        campaign_type: "offer",
-                        is_active: item.listing_status === "active" || item.listing_status === "published",
-                        created_at: item.created_at,
-                        merchant_store_id: storeId,
-                        created_by_user_id: user!.id,
-                        tracking_slug: null,
-                    } as ShowcaseProduct;
-                });
+                advProducts = ((advData || []) as any[])
+                    .filter((item: any) => {
+                        const cat = (item.category || "").toLowerCase().trim();
+                        return !OTHER_PROFILE_CATEGORIES.has(cat);
+                    })
+                    .map((item: any) => {
+                        const mediaFallback = item.advertiser_listing_media?.[0]?.media_url ?? null;
+                        const style: CardStyle = {
+                            label: "Ver produto",
+                            bgColor: "#FF6A00",
+                            textColor: "#FFFFFF",
+                            cardBg: "#FFFFFF",
+                            _showcase: true,
+                        };
+                        return {
+                            id: item.id,
+                            title: item.title || "Sem título",
+                            short_description: item.description || null,
+                            image_url: item.cover_image_url || mediaFallback,
+                            video_url: null,
+                            external_link: null,
+                            price_label: item.price ? String(item.price) : null,
+                            category: item.category || null,
+                            cta_label: serializeCardStyle(style),
+                            campaign_type: "offer",
+                            is_active: item.listing_status === "active" || item.listing_status === "published",
+                            created_at: item.created_at,
+                            merchant_store_id: storeId,
+                            created_by_user_id: user!.id,
+                            tracking_slug: null,
+                        } as ShowcaseProduct;
+                    });
             }
 
-            // 3. Merge (evitar duplicatas pelo ID)
+            // Merge sem duplicatas
             const vitrineIds = new Set(vitrineProducts.map(p => p.id));
-            const merged = [...vitrineProducts, ...advProducts.filter(p => !vitrineIds.has(p.id))];
-            return merged;
+            return [...vitrineProducts, ...advProducts.filter(p => !vitrineIds.has(p.id))];
         },
         enabled: !!user,
     });

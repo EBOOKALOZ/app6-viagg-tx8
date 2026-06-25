@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMyStore } from "@/hooks/useMyStore";
 import { PackageSearch, ArrowLeft, Loader2, Package, User, Phone, MapPin, Clock, ShoppingBag, MessageSquare, Coins, X, EyeOff, Bike, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +34,6 @@ const fmtBRL = (v: number | null) =>
   (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function StoreOrdersPage() {
-  const { store, isLoading: storeLoading } = useMyStore();
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -127,7 +125,7 @@ export default function StoreOrdersPage() {
       const { error } = await (supabase.from("purchase_intentions") as any).delete().eq("id", pi.id);
       if (error) throw error;
       toast.success("Pedido excluído.");
-      queryClient.invalidateQueries({ queryKey: ["store-orders", store?.id] });
+      queryClient.invalidateQueries({ queryKey: ["store-orders", user?.id] });
     } catch (err: any) {
       toast.error(`Erro ao excluir: ${err?.message || "tente novamente"}`);
     } finally {
@@ -136,14 +134,16 @@ export default function StoreOrdersPage() {
   };
 
   const { data: orders = [], isLoading } = useQuery<PurchaseIntentionCard[]>({
-    queryKey: ["store-orders", store?.id],
-    enabled: !!store?.id,
+    queryKey: ["store-orders", user?.id],
+    enabled: !!user?.id,
     refetchInterval: 15_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
+      // A política RLS "pi_select_store_owner" filtra automaticamente por ownership
+      // (ms.user_id = auth.uid()), sem precisar passar store_id explicitamente.
+      // Isso garante que o lojista veja pedidos de TODAS as suas lojas.
       const { data: pis } = await (supabase.from("purchase_intentions") as any)
         .select("id, customer_name, customer_whatsapp, customer_bairro, customer_city, subtotal, total_items, status, created_at")
-        .eq("store_id", store!.id)
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -196,7 +196,7 @@ export default function StoreOrdersPage() {
         </div>
       )}
 
-      {(isLoading || storeLoading) ? (
+      {isLoading ? (
         <div className="py-20 flex justify-center">
           <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
         </div>

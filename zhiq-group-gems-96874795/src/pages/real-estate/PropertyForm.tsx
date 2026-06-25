@@ -552,11 +552,10 @@ export const PropertyForm = () => {
                   <InputLabel>Descrição completa</InputLabel>
                   <Button
                     type="button"
-                    variant="outline"
                     size="sm"
                     onClick={handleGenerateDescription}
                     disabled={generatingDesc}
-                    className="rounded-xl gap-1.5 text-xs h-8 shrink-0"
+                    className="rounded-xl gap-1.5 text-xs h-8 shrink-0 bg-orange-500 hover:bg-orange-600 text-white border-0"
                   >
                     {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                     {generatingDesc ? 'Gerando...' : 'Gerar com IA'}

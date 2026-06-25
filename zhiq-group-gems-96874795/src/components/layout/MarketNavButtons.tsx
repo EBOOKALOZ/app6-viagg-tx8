@@ -13,6 +13,7 @@ const ROUTES: { label: string; path: string }[] = [
   { label: "Veículos",          path: "/automoveis" },
   { label: "Serviços",          path: "/servicos" },
   { label: "Fretes & Mudanças", path: "/fretes" },
+  { label: "Viagens & Turismo", path: "/viagens" },
 ];
 
 export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavButtonsProps) {

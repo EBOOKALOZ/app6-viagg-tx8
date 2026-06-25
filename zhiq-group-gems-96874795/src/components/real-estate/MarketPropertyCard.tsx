@@ -70,6 +70,9 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
     }
   };
 
+  const priceStr = formatCurrencyBRL(property.price_brl).replace(/^R\$\s?/, '');
+  const priceFontSize = priceStr.length > 11 ? "text-base" : priceStr.length > 8 ? "text-[20px]" : "text-[26px]";
+
   const isLoteArea = ['lote', 'terreno'].includes(String(property.property_type || '').toLowerCase());
   const areaLabel = property.total_area_m2
     ? (isLoteArea
@@ -170,10 +173,10 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
             <div className="flex items-baseline gap-1">
               <span className={cn("font-bold text-emerald-600/80 pb-1", isFeatured ? "text-sm md:text-base" : "text-[13px]")}>R$</span>
               <span className={cn(
-                "leading-none font-black tracking-tight bg-gradient-to-r from-emerald-600 to-green-500 bg-clip-text text-transparent",
-                isFeatured ? "text-[28px] md:text-[34px]" : "text-[26px]"
+                "leading-tight font-black tracking-tight bg-gradient-to-r from-emerald-600 to-green-500 bg-clip-text text-transparent break-all",
+                isFeatured ? "text-[28px] md:text-[34px]" : priceFontSize
               )}>
-                {formatCurrencyBRL(property.price_brl).replace(/^R\$\s?/, '')}
+                {priceStr}
               </span>
             </div>
           </div>

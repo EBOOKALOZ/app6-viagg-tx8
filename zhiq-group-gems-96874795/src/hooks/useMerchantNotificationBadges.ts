@@ -33,7 +33,7 @@ export function useMerchantNotificationBadges() {
     if (!user?.id) return;
     (async () => {
       const { data } = await (supabase.from("merchant_stores") as any)
-        .select("id").eq("user_id", user.id).single();
+        .select("id").eq("user_id", user.id).limit(1).maybeSingle();
       if (data) setStoreId(data.id);
     })();
   }, [user?.id]);

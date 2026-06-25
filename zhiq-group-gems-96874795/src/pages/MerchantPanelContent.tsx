@@ -210,11 +210,12 @@ export default function MerchantPanelContent() {
         return;
       }
 
-      const { data: store, error: storeError } = await supabase
-        .from('merchant_stores')
+      const { data: store, error: storeError } = await (supabase
+        .from('merchant_stores') as any)
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (storeError || !store) {
         console.error("Erro ao buscar loja:", storeError);

@@ -17,11 +17,15 @@ export function StoreBottomNav() {
         advId: null, storeId: null, storeIds: [],
       };
       const { data: adv } = await (supabase.from("advertiser_accounts") as any)
-        .select("id").eq("user_id", user!.id).maybeSingle();
+        .select("id").eq("user_id", user!.id).limit(1).maybeSingle();
       if ((adv as any)?.id) { out.advId = (adv as any).id; out.storeIds.push(out.advId!); }
-      const { data: ms } = await (supabase.from("merchant_stores") as any)
-        .select("id").eq("user_id", user!.id).maybeSingle();
-      if ((ms as any)?.id) { out.storeId = (ms as any).id; out.storeIds.push(out.storeId!); }
+      // Busca TODAS as lojas do usuário para evitar PGRST116 e cobrir multi-loja
+      const { data: msList } = await (supabase.from("merchant_stores") as any)
+        .select("id").eq("user_id", user!.id);
+      if (Array.isArray(msList) && msList.length > 0) {
+        out.storeId = msList[0].id;
+        msList.forEach((s: any) => { if (s?.id && !out.storeIds.includes(s.id)) out.storeIds.push(s.id); });
+      }
       return out;
     },
   });
@@ -55,15 +59,15 @@ export function StoreBottomNav() {
     },
   });
 
-  // Conta de PEDIDOS novos (purchase_intentions)
+  // Conta de PEDIDOS novos (purchase_intentions) — todas as lojas do usuário
   const { data: pendingOrders = 0 } = useQuery({
-    queryKey: ["bottom-nav-pending-orders", user?.id, ids?.storeId],
-    enabled: !!user?.id && !!ids?.storeId,
+    queryKey: ["bottom-nav-pending-orders", user?.id, ids?.storeIds],
+    enabled: !!user?.id && (ids?.storeIds?.length ?? 0) > 0,
     refetchInterval: 15_000,
     queryFn: async () => {
       const { count } = await (supabase.from("purchase_intentions" as any)
         .select("id", { count: "exact", head: true })
-        .eq("store_id", ids!.storeId)
+        .in("store_id", ids!.storeIds)
         .eq("status", "new")) as any;
       return count ?? 0;
     },

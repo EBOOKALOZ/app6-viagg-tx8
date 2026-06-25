@@ -54,12 +54,13 @@ export default function AdvertiserOffersPage() {
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const storeIds: string[] = [];
-      const { data: adv } = await (supabase.from("advertiser_accounts" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if ((adv as any)?.id) storeIds.push((adv as any).id);
-      const { data: ms } = await (supabase.from("merchant_stores" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if ((ms as any)?.id) storeIds.push((ms as any).id);
+      const { data: advList } = await (supabase.from("advertiser_accounts" as any)
+        .select("id").eq("user_id", user!.id)) as any;
+      ((advList || []) as any[]).forEach((a: any) => { if (a?.id) storeIds.push(a.id); });
+      const { data: msList } = await (supabase.from("merchant_stores" as any)
+        .select("id").eq("user_id", user!.id)) as any;
+      ((msList || []) as any[]).forEach((s: any) => { if (s?.id) storeIds.push(s.id); });
+
       if (storeIds.length === 0) return [];
 
       const { data } = await (supabase.from("discount_requests" as any)
@@ -72,7 +73,7 @@ export default function AdvertiserOffersPage() {
       if (list.length === 0) return [];
 
       // Resolver título + imagem do produto
-      const productIds = [...new Set(list.map(r => r.product_id).filter(Boolean))];
+      const offerProductIds = [...new Set(list.map((r: any) => r.product_id).filter(Boolean))];
       const infoMap: Record<string, { title: string; image: string | null }> = {};
 
       const resolveStorage = async (raw: string | null | undefined): Promise<string | null> => {
@@ -85,10 +86,10 @@ export default function AdvertiserOffersPage() {
         return supabase.storage.from("marketing-materials").getPublicUrl(raw).data.publicUrl;
       };
 
-      if (productIds.length > 0) {
+      if (offerProductIds.length > 0) {
         const [adv2, mkt] = await Promise.all([
-          (supabase.from("advertiser_listings") as any).select("id, title, cover_image_url").in("id", productIds),
-          (supabase.from("merchant_marketing_products") as any).select("id, title, image_url").in("id", productIds),
+          (supabase.from("advertiser_listings") as any).select("id, title, cover_image_url").in("id", offerProductIds),
+          (supabase.from("merchant_marketing_products") as any).select("id, title, image_url").in("id", offerProductIds),
         ]);
         for (const row of (adv2.data ?? []) as any[]) {
           infoMap[row.id] = { title: row.title, image: await resolveStorage(row.cover_image_url) };

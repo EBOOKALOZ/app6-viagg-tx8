@@ -34,6 +34,7 @@ import {
     SlidersHorizontal,
     MessageCircle,
     Briefcase,
+    Plane,
 } from "lucide-react";
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import { Input } from "@/components/ui/input";
@@ -52,8 +53,10 @@ import { MarketPropertyCard } from "@/components/real-estate/MarketPropertyCard"
 import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { MarketServiceCard } from "@/components/services/MarketServiceCard";
 import { MarketFreightCard } from "@/components/freight/MarketFreightCard";
+import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
@@ -658,6 +661,65 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         });
     }, [rawFreightListings, search, cityFilter, neighborhoodFilter]);
 
+    // ── Fetch travel listings ──
+    const { data: rawTravelListings = [] } = useQuery<any[]>({
+        queryKey: ['public-travel'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('travel_listings' as any)
+                .select('id, title, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, visibility_status, published_at, created_at')
+                .eq('visibility_status', 'published')
+                .order('is_featured', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.warn('[travel] erro ao buscar travel_listings:', error.message);
+                return [];
+            }
+
+            const rows = (data as any[]) || [];
+            if (rows.length === 0) return [];
+
+            const ids = rows.map((s: any) => s.id);
+            const { data: mediaRows } = await supabase
+                .from('travel_media' as any)
+                .select('listing_id, original_storage_path, public_masked_storage_path, sort_order')
+                .in('listing_id', ids)
+                .order('sort_order', { ascending: true });
+
+            const mediaMap = new Map<string, string>();
+            for (const row of (mediaRows as any[]) || []) {
+                if (!mediaMap.has(row.listing_id)) {
+                    const p = row.public_masked_storage_path || row.original_storage_path;
+                    if (p) {
+                        mediaMap.set(
+                            row.listing_id,
+                            p.startsWith('http') ? p : supabase.storage.from('real-estate-original').getPublicUrl(p).data.publicUrl
+                        );
+                    }
+                }
+            }
+            return rows.map((s: any) => ({ ...s, thumbnail_url: mediaMap.get(s.id) || null }));
+        },
+        staleTime: 0,
+        refetchInterval: 8000,
+        refetchOnMount: true,
+        refetchOnWindowFocus: true,
+    });
+
+    const travelListings = useMemo(() => {
+        return rawTravelListings.filter((s) => {
+            if (search.trim()) {
+                const q = search.toLowerCase();
+                if (
+                    !s.title?.toLowerCase().includes(q) &&
+                    !s.destination?.toLowerCase().includes(q)
+                ) return false;
+            }
+            return true;
+        });
+    }, [rawTravelListings, search]);
+
     // ── Fetch vehicle listings ──
     // Query direto em vehicle_listings (anon tem policy vehicle_listings_public_read).
     // A view public_vehicle_listings filtra por visibility_status='published', mas
@@ -1074,26 +1136,26 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        <HorizontalCarousel>
                             {propertyListings.length > 0 ? (
-                                propertyListings.slice(0, 8).map((prop) => (
+                                propertyListings.map((prop) => (
                                     <MarketPropertyCard key={prop.id} property={prop} />
                                 ))
                             ) : (
-                                <div 
+                                <div
                                     onClick={() => navigate('/auth?entry=advertiser')}
-                                    className="col-span-1 border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-orange-200 hover:bg-orange-50/20 transition-all cursor-pointer group"
+                                    className="border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-orange-200 hover:bg-orange-50/20 transition-all cursor-pointer group h-64"
                                 >
                                     <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-[#FF6A00] transition-all">
                                         <Plus className="w-8 h-8" />
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
-                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu imóvel aqui e alcance milhares de compradores.</p>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu imóvel aqui.</p>
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </HorizontalCarousel>
                     </div>
                 </div>
             )}
@@ -1129,26 +1191,26 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        <HorizontalCarousel>
                             {serviceListings.length > 0 ? (
-                                serviceListings.slice(0, 8).map((serv) => (
+                                serviceListings.map((serv) => (
                                     <MarketServiceCard key={serv.id} service={serv} />
                                 ))
                             ) : (
                                 <div
                                     onClick={() => navigate('/auth?entry=advertiser')}
-                                    className="col-span-1 border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-violet-200 hover:bg-violet-50/40 transition-all cursor-pointer group"
+                                    className="border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-violet-200 hover:bg-violet-50/40 transition-all cursor-pointer group h-64"
                                 >
                                     <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-violet-600 transition-all">
                                         <Plus className="w-8 h-8" />
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
-                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu serviço aqui e alcance milhares de clientes.</p>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu serviço aqui.</p>
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </HorizontalCarousel>
                     </div>
                 </div>
             )}
@@ -1184,32 +1246,87 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        <HorizontalCarousel>
                             {freightListings.length > 0 ? (
-                                freightListings.slice(0, 8).map((fr) => (
+                                freightListings.map((fr) => (
                                     <MarketFreightCard key={fr.id} freight={fr} />
                                 ))
                             ) : (
                                 <div
                                     onClick={() => navigate('/auth?entry=advertiser')}
-                                    className="col-span-1 border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-blue-200 hover:bg-blue-50/40 transition-all cursor-pointer group"
+                                    className="border-2 border-dashed border-zinc-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-blue-200 hover:bg-blue-50/40 transition-all cursor-pointer group h-64"
                                 >
                                     <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-blue-600 transition-all">
                                         <Plus className="w-8 h-8" />
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
-                                        <p className="text-zinc-400 text-xs font-medium">Anuncie sua transportadora aqui e alcance milhares de clientes.</p>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie sua transportadora aqui.</p>
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </HorizontalCarousel>
                     </div>
                 </div>
             )}
 
-            {/* ═══ AUTOMOTIVE SECTION (ocultada) ═══ */}
-            {false && !productsOnly && (categoryFilter === "all" || categoryFilter === "Automóveis") && (
+            {/* ═══ TRAVEL SECTION ═══ */}
+            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Viagens") && (
+                <div className="w-full px-4 lg:px-6 py-12 bg-yellow-400">
+                    <div className="max-w-[1920px] mx-auto space-y-10">
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-2 bg-sky-600/10 rounded-lg">
+                                        <Plane className="w-5 h-5 text-sky-600" />
+                                    </div>
+                                    <span className="text-xs font-black text-sky-600 uppercase tracking-widest">Pacotes & Destinos</span>
+                                </div>
+                                <h2 className="text-4xl font-black text-zinc-900 tracking-tighter">VIAGENS & TURISMO</h2>
+                                <p className="text-zinc-500 font-medium max-w-xl">
+                                    Pacotes completos, roteiros nacionais e internacionais — peça orçamento direto com a agência.
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="rounded-2xl font-bold border-zinc-200 hover:bg-zinc-50 gap-2 h-12"
+                                onClick={() => {
+                                    window.dispatchEvent(new CustomEvent('viagg-close-cart'));
+                                    if (travelListings.length > 0) window.open('/viagens', '_blank');
+                                    else window.open('/auth?entry=advertiser', '_blank');
+                                }}
+                            >
+                                {travelListings.length > 0 ? 'Ver todas as viagens' : 'Anuncie agora'}
+                                <ArrowRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        <HorizontalCarousel>
+                            {travelListings.length > 0 ? (
+                                travelListings.map((tr) => (
+                                    <MarketTravelCard key={tr.id} travel={tr} />
+                                ))
+                            ) : (
+                                <div
+                                    onClick={() => navigate('/auth?entry=advertiser')}
+                                    className="border-2 border-dashed border-sky-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-sky-200 hover:bg-sky-50/40 transition-all cursor-pointer group h-64"
+                                >
+                                    <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-sky-600 transition-all">
+                                        <Plus className="w-8 h-8" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seus pacotes de viagem aqui.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </HorizontalCarousel>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ AUTOMOTIVE SECTION ═══ */}
+            {!productsOnly && (categoryFilter === "all" || categoryFilter === "Automóveis") && (
                 <div className="w-full px-4 lg:px-6 py-12 bg-blue-50/50">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -1239,26 +1356,26 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        <HorizontalCarousel>
                             {vehicleListings.length > 0 ? (
-                                vehicleListings.slice(0, 8).map((veh) => (
+                                vehicleListings.map((veh) => (
                                     <MarketVehicleCard key={veh.id} vehicle={veh} />
                                 ))
                             ) : (
-                                <div 
+                                <div
                                     onClick={() => navigate('/auth?entry=advertiser')}
-                                    className="col-span-1 border-2 border-dashed border-blue-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-blue-200 hover:bg-blue-50/20 transition-all cursor-pointer group"
+                                    className="border-2 border-dashed border-blue-100 rounded-[32px] p-10 flex flex-col items-center justify-center text-center space-y-4 hover:border-blue-200 hover:bg-blue-50/20 transition-all cursor-pointer group h-64"
                                 >
                                     <div className="w-16 h-16 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:text-blue-500 transition-all">
                                         <Plus className="w-8 h-8" />
                                     </div>
                                     <div className="space-y-1">
                                         <h4 className="font-black text-zinc-900 uppercase text-sm">Seja o primeiro</h4>
-                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu veículo aqui e negocie mais rápido.</p>
+                                        <p className="text-zinc-400 text-xs font-medium">Anuncie seu veículo aqui.</p>
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </HorizontalCarousel>
                     </div>
                 </div>
             )}
@@ -1383,7 +1500,7 @@ const scrollToProducts = () => {
                             <h2 className="text-lg font-black text-gray-800">🔥 Leilões Ativos</h2>
                             <span className="text-[10px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">AO VIVO</span>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <HorizontalCarousel gap="gap-4">
                             {auctionListings.filter((a: any) => {
                                 if (listingTypeFilter === "all") return true;
                                 const lt = String(a.listing_type || "").toLowerCase().trim();
@@ -1505,7 +1622,7 @@ const scrollToProducts = () => {
                                     </div>
                                 );
                             })}
-                        </div>
+                        </HorizontalCarousel>
                     </div>
                 </div>
             )}

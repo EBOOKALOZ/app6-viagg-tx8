@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PRODUCT_CATEGORIES } from '@/lib/productCategories';
 import { processForUpload } from '@/lib/imageCompressor';
+import { generateListingDescription } from '@/lib/ai/generateDescription';
 import {
   Package as PackageIcon,
   ArrowLeft,
@@ -31,6 +32,7 @@ import {
   Sparkles,
   Star,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductImageUpload } from '@/components/advertiser/ProductImageUpload';
@@ -135,6 +137,31 @@ export const ProductForm = () => {
     bairro: '',
     cidade: '',
   });
+
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const handleGenerateDescription = async () => {
+    if (!formData.title.trim() || !formData.category) {
+      toast.error('Preencha título e categoria antes de gerar a descrição com IA.');
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const desc = await generateListingDescription('produto', {
+        'Título': formData.title,
+        'Categoria': formData.category,
+        'Condição': formData.condition === 'novo' ? 'Novo' : formData.condition === 'seminovo' ? 'Seminovo' : formData.condition === 'digital' ? 'Digital' : 'Usado',
+        'Marca': formData.brand || undefined,
+        'Modelo': formData.model || undefined,
+        'Memória/Capacidade': formData.memory || undefined,
+      });
+      setFormData(prev => ({ ...prev, description: desc }));
+      toast.success('Descrição gerada com IA!');
+    } catch (err: any) {
+      toast.error(err.message || 'Falha ao gerar descrição com IA.');
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
 
   const showElectronicsFields = formData.condition !== 'digital' && isElectronicsCategory(formData.category);
   const isDigital = formData.condition === 'digital';
@@ -623,7 +650,19 @@ export const ProductForm = () => {
             {/* 5 — Descrição */}
             <Section step={5} title="Descrição" description="Explique tudo sobre o produto, sem repetir o título." icon={MessageCircle} done={completion.description}>
               <div className="space-y-2">
-                <InputLabel>Detalhes do produto</InputLabel>
+                <div className="flex items-center justify-between gap-2">
+                  <InputLabel>Detalhes do produto</InputLabel>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDesc}
+                    className="rounded-xl gap-1.5 text-xs h-8 shrink-0 bg-orange-500 hover:bg-orange-600 text-white border-0"
+                  >
+                    {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {generatingDesc ? 'Gerando...' : 'Gerar com IA'}
+                  </Button>
+                </div>
                 <Textarea
                   placeholder="Características, estado de conservação, acessórios inclusos, motivo da venda, garantia, etc."
                   className="min-h-[160px] resize-y bg-white border-zinc-300 text-zinc-900 placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-[#3483FA]/40 text-sm"

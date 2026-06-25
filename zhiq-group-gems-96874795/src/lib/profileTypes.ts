@@ -1,4 +1,4 @@
-import { Car, Bike, Store, Truck, Zap, Building2, CarFront, Briefcase } from 'lucide-react';
+import { Car, Bike, Store, Truck, Zap, Building2, CarFront, Briefcase, Plane } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
 export interface ProfileTypeConfig {
@@ -81,6 +81,14 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     description: 'Transporte de cargas pesadas, mudanças, móveis e mercadorias',
     icon: Truck,
     route: '/anunciante/fretes',
+    requiresVehicle: false,
+  },
+  viagem: {
+    id: 'viagem',
+    label: 'Viagens & Turismo',
+    description: 'Anuncie pacotes de viagem e receba contatos de viajantes interessados',
+    icon: Plane,
+    route: '/anunciante/viagens',
     requiresVehicle: false,
   },
 } as const;

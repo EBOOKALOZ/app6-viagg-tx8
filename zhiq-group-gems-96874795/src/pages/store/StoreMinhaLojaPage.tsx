@@ -13,39 +13,17 @@ export default function StoreMinhaLojaPage() {
   const { store } = useOutletContext<{ store: MyStoreData }>();
   const { user } = useAuth();
 
-  // Conta produtos cadastrados do usuário (todas as fontes)
+  // Conta apenas produtos da vitrine da loja (merchant_marketing_products)
   const { data: productsCount = 0 } = useQuery({
     queryKey: ["my-store-products-count", user?.id, store?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      let total = 0;
-      if (store?.id) {
-        const { count: mktCount } = await (supabase.from("merchant_marketing_products" as any)
-          .select("id", { count: "exact", head: true })
-          .eq("merchant_store_id", store.id)) as any;
-        total += mktCount ?? 0;
-      }
-      // advertiser_listings via advertiser_account
-      const { data: advAcc } = await (supabase.from("advertiser_accounts" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      if ((advAcc as any)?.id) {
-        const { count: advCount } = await (supabase.from("advertiser_listings" as any)
-          .select("id", { count: "exact", head: true })
-          .eq("advertiser_account_id", (advAcc as any).id)) as any;
-        total += advCount ?? 0;
-      }
-      // real_estate + vehicle listings (próprios)
-      const [reCount, vCount] = await Promise.all([
-        (supabase.from("real_estate_listings" as any)
-          .select("id", { count: "exact", head: true })
-          .eq("owner_user_id", user!.id)) as any,
-        (supabase.from("vehicle_listings" as any)
-          .select("id", { count: "exact", head: true })
-          .eq("owner_user_id", user!.id)) as any,
-      ]);
-      total += (reCount?.count ?? 0) + (vCount?.count ?? 0);
-      return total;
+      if (!store?.id) return 0;
+      const { count } = await (supabase.from("merchant_marketing_products" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("merchant_store_id", store.id)) as any;
+      return count ?? 0;
     },
   });
 

@@ -31,7 +31,7 @@ import { playLeadNotificationSound } from "@/lib/notificationSound";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-export type ListingModule = "real_estate" | "vehicles" | "product" | "services" | "freight";
+export type ListingModule = "real_estate" | "vehicles" | "product" | "services" | "freight" | "travel";
 
 export type InterestType =
   | "whatsapp_click"
@@ -117,6 +117,7 @@ export function useContactIntentions() {
       const productIds = Array.from(new Set(rows.filter(r => r.listing_module === "product").map(r => r.listing_id)));
       const serviceIds = Array.from(new Set(rows.filter(r => r.listing_module === "services").map(r => r.listing_id)));
       const freightIds = Array.from(new Set(rows.filter(r => r.listing_module === "freight").map(r => r.listing_id)));
+      const travelIds = Array.from(new Set(rows.filter(r => r.listing_module === "travel").map(r => r.listing_id)));
 
       const titleMap = new Map<string, string>();
       const imageMap = new Map<string, string>();
@@ -209,6 +210,27 @@ export function useContactIntentions() {
           const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
           if (!path) return;
           const url = path.startsWith("http") ? path : getListingImageUrl(path, hasMasked ? 'public' : 'original');
+          if (url) imageMap.set(m.listing_id, url);
+        });
+      }
+
+      // ── Viagens & Turismo ──
+      if (travelIds.length > 0) {
+        const { data: travels } = await (supabase.from("travel_listings") as any)
+          .select("id, title")
+          .in("id", travelIds);
+        (travels || []).forEach((t: any) => {
+          if (t.title) titleMap.set(t.id, t.title);
+        });
+        const { data: tMedia } = await (supabase.from("travel_media") as any)
+          .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+          .in("listing_id", travelIds)
+          .order("sort_order", { ascending: true });
+        (tMedia || []).forEach((m: any) => {
+          if (imageMap.has(m.listing_id)) return;
+          const p = m.public_masked_storage_path || m.original_storage_path;
+          if (!p) return;
+          const url = p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl;
           if (url) imageMap.set(m.listing_id, url);
         });
       }
@@ -473,24 +495,44 @@ export function useRegisterContactIntention() {
     async (params: RegisterIntentionParams): Promise<{ success: boolean; error?: string; intention_id?: string }> => {
       setIsLoading(true);
       try {
-        const { data: rpcResult, error } = await supabase.rpc(
-          "register_contact_intention" as any,
-          {
-            p_listing_module:  params.listingModule,
-            p_listing_id:      params.listingId,
-            p_interest_type:   params.interestType ?? "message_request",
-            p_visitor_name:    params.visitorName || null,
-            p_visitor_phone:   params.visitorPhone || null,
-            p_visitor_message: params.visitorMessage || null,
-            p_city:            params.city || null,
-            p_region:          params.region || null,
-          }
-        );
+        let rpcResult: any;
+        let rpcError: any;
+
+        if (params.listingModule === "travel") {
+          const { data, error } = await supabase.rpc(
+            "register_travel_contact_intention" as any,
+            {
+              p_listing_id:      params.listingId,
+              p_interest_type:   params.interestType ?? "message_request",
+              p_visitor_name:    params.visitorName || null,
+              p_visitor_phone:   params.visitorPhone || null,
+              p_visitor_message: params.visitorMessage || null,
+              p_city:            params.city || null,
+              p_region:          params.region || null,
+            }
+          );
+          rpcResult = data; rpcError = error;
+        } else {
+          const { data, error } = await supabase.rpc(
+            "register_contact_intention" as any,
+            {
+              p_listing_module:  params.listingModule,
+              p_listing_id:      params.listingId,
+              p_interest_type:   params.interestType ?? "message_request",
+              p_visitor_name:    params.visitorName || null,
+              p_visitor_phone:   params.visitorPhone || null,
+              p_visitor_message: params.visitorMessage || null,
+              p_city:            params.city || null,
+              p_region:          params.region || null,
+            }
+          );
+          rpcResult = data; rpcError = error;
+        }
 
         const result = rpcResult as any;
 
-        if (error || !result?.success) {
-          return { success: false, error: result?.error || error?.message || "unknown" };
+        if (rpcError || !result?.success) {
+          return { success: false, error: result?.error || rpcError?.message || "unknown" };
         }
 
         return { success: true, intention_id: result?.intention_id || undefined };

@@ -163,6 +163,20 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
 
             if (error) throw error;
 
+            // Dispara e-mail ao lojista + confirmação ao comprador (sem depender do trigger SQL)
+            supabase.functions.invoke('swift-action', {
+                body: {
+                    source: 'offer',
+                    store_id: product.merchant_store_id || null,
+                    listing_id: product.id,
+                    listing_module: 'product',
+                    offer_amount: priceNum,
+                    offer_note: message.trim() || "Tenho interesse neste produto. A loja aceita este valor?",
+                    customer_name: customerName.trim(),
+                    customer_email: customerEmail.trim() || null,
+                },
+            }).catch((e) => console.warn('[email offer]', e));
+
             // Track analytics
             trackProductEvent({
                 product_id: product.id,

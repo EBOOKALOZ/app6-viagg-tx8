@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2, CarFront, Briefcase, Truck } from "lucide-react";
+import { LogOut, Loader2, CarFront, Briefcase, Truck, Plane } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -41,6 +41,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   veiculos: "Anuncie veículos e fale direto com os interessados",
   servicos: "Divulgue sua empresa e receba contatos de clientes interessados",
   freteiro: "Transporte de cargas pesadas, mudanças, móveis e mercadorias",
+  viagem: "Anuncie pacotes de viagem e receba contatos de viajantes interessados",
 };
 
 // Mosaico de 6 imagens (misturadas) usado como fundo do card de Imóveis.
@@ -57,6 +58,16 @@ const IMOVEIS_MOSAIC = [
   "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&q=70&auto=format&fit=crop",
   // sítio / fazenda
   "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&q=70&auto=format&fit=crop",
+];
+
+// Mosaico de 3 imagens usado como fundo do card de Viagens & Turismo.
+const VIAGENS_MOSAIC = [
+  // praia tropical
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&q=70&auto=format&fit=crop",
+  // avião / viagem
+  "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=500&q=70&auto=format&fit=crop",
+  // montanha / natureza
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=500&q=70&auto=format&fit=crop",
 ];
 
 // Mosaico de 3 imagens (carro, moto, utilitário) usado como fundo do card de Veículos.
@@ -96,7 +107,7 @@ const SERVICOS_MOSAIC = [
 ];
 
 // Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, e Fretes.
-const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos", "freteiro"];
+const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================
@@ -251,6 +262,13 @@ export default function SelectProfile() {
       return;
     }
 
+    // Viagens: vai pro painel resumido de agências de viagem.
+    if (selected === "viagem") {
+      navigationTarget.current = "/anunciante/viagens";
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
+    }
+
     try {
       await requestAudioAndNotificationPermissions();
 
@@ -336,7 +354,8 @@ export default function SelectProfile() {
               const isVeiculos = profile.id === "veiculos";
               const isServicos = profile.id === "servicos";
               const isFretes = profile.id === "freteiro";
-              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos || isServicos || isFretes;
+              const isViagem = profile.id === "viagem";
+              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos || isServicos || isFretes || isViagem;
 
               return (
                 <div
@@ -366,7 +385,9 @@ export default function SelectProfile() {
                                   ? "ring-violet-400 shadow-[0_0_24px_rgba(139,92,246,0.5)]"
                                   : isFretes
                                     ? "ring-indigo-400 shadow-[0_0_24px_rgba(99,102,241,0.5)]"
-                                    : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
+                                    : isViagem
+                                      ? "ring-sky-400 shadow-[0_0_24px_rgba(14,165,233,0.5)]"
+                                      : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                       )
                       : cn(
                         "ring-1 ring-white/15",
@@ -376,6 +397,7 @@ export default function SelectProfile() {
                         isVeiculos && "hover:ring-blue-400/50 hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]",
                         isServicos && "hover:ring-violet-400/50 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]",
                         isFretes && "hover:ring-indigo-400/50 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]",
+                        isViagem && "hover:ring-sky-400/50 hover:shadow-[0_0_12px_rgba(14,165,233,0.2)]",
                       )),
                   )}
                 >
@@ -392,6 +414,11 @@ export default function SelectProfile() {
                     <div className={cn(
                       "absolute inset-0 bg-gradient-to-br transition-all duration-300",
                       isSel ? "from-indigo-600 via-indigo-700 to-indigo-900" : "from-indigo-800 via-indigo-900 to-slate-900"
+                    )} />
+                  ) : isViagem ? (
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-br transition-all duration-300",
+                      isSel ? "from-sky-500 via-sky-600 to-sky-800" : "from-sky-700 via-sky-800 to-slate-900"
                     )} />
                   ) : isVeiculos ? (
                     /* Veículos: card SEM imagem — fundo gradiente azul sólido */
@@ -494,6 +521,31 @@ export default function SelectProfile() {
                         ))}
                       </div>
                     </>
+                  ) : isViagem ? (
+                    <>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <Plane className={cn(
+                          "transition-all duration-300",
+                          isSel ? "w-28 h-28 text-white/30" : "w-24 h-24 text-white/15"
+                        )} />
+                      </div>
+                      <div className={cn(
+                        "absolute inset-0 grid grid-cols-1 grid-rows-3 gap-0.5 transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-100"
+                      )}>
+                        {VIAGENS_MOSAIC.map((src, i) => (
+                          <img
+                            key={i}
+                            src={src}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                            className="h-full w-full object-cover"
+                          />
+                        ))}
+                      </div>
+                    </>
                   ) : heroImage ? (
                     <img
                       src={heroImage}
@@ -520,6 +572,8 @@ export default function SelectProfile() {
                             ? "bg-gradient-to-t from-violet-900/70 via-transparent to-transparent"
                             : isFretes && isSel
                               ? "bg-gradient-to-t from-indigo-900/70 via-transparent to-transparent"
+                              : isViagem && isSel
+                              ? "bg-gradient-to-t from-sky-900/70 via-transparent to-transparent"
                               : isServicos
                                 ? "bg-gradient-to-t from-black/90 via-black/20 to-transparent"
                                 : "bg-gradient-to-t from-black/80 to-transparent",

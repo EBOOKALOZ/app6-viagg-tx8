@@ -377,6 +377,22 @@ export function useGlobalCart() {
             throw new Error(piErr?.message || "Erro ao registrar intenção para a loja");
           }
 
+          // Dispara e-mail ao lojista + confirmação ao comprador sem depender do trigger SQL
+          supabase.functions.invoke('swift-action', {
+            body: {
+              source: 'order',
+              store_id: group.store_id,
+              intention_id: intention.id,
+              customer_name: params.name,
+              customer_whatsapp: params.whatsapp,
+              customer_email: params.email ?? null,
+              customer_note: params.note ?? null,
+              subtotal,
+              total_items: totalItems,
+              checkout_mode: params.checkoutMode,
+            },
+          }).catch((e: unknown) => console.warn('[email order]', e));
+
           const itemsPayload = group.items.map((it) => ({
             intention_id: intention.id,
             product_id: it.product_id,

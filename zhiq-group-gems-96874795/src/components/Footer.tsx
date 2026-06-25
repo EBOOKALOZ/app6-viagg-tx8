@@ -27,7 +27,7 @@ export function Footer() {
         </nav>
 
         <p className="text-center text-xs tracking-wide text-white/70">
-          © {new Date().getFullYear()} Viagg-TX8 • Plataforma de Mobilidade
+          © {new Date().getFullYear()} Viagg-TX8™ • Plataforma de Mobilidade
         </p>
 
         <p className="text-center text-[10px] tracking-wider text-white/50">

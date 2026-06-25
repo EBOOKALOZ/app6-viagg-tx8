@@ -37,7 +37,7 @@ interface RealEstateCheckoutContentProps {
      *  'vehicle' = créditos de veículos (vehicle_credit_balances);
      *  'service' = créditos de serviços (service_credit_balances);
      *  'freight' = créditos de fretes (freight_credit_balances). */
-    walletContext?: 'advertiser' | 'real_estate' | 'vehicle' | 'service' | 'freight';
+    walletContext?: 'advertiser' | 'real_estate' | 'vehicle' | 'service' | 'freight' | 'travel';
     /** Para onde voltar após o pagamento aprovado (depende do painel de origem:
      *  lojista, imóveis ou veículos). Default: /anunciante/creditos. */
     returnTo?: string;
@@ -145,6 +145,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                 : walletContext === 'vehicle' ? 'vehicle_credit_purchases'
                 : walletContext === 'service' ? 'service_credit_purchases'
                 : walletContext === 'freight' ? 'freight_credit_purchases'
+                : walletContext === 'travel' ? 'travel_credit_purchases'
                 : 'real_estate_credit_purchases';
             const { data, error } = await supabase
                 .from(table as any)
@@ -286,6 +287,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                 const targetTable = walletContext === 'vehicle' ? 'vehicle_credit_purchases'
                     : walletContext === 'service' ? 'service_credit_purchases'
                     : walletContext === 'freight' ? 'freight_credit_purchases'
+                    : walletContext === 'travel' ? 'travel_credit_purchases'
                     : 'real_estate_credit_purchases';
                 const { data: rePurchase, error: reError } = await (supabase
                     .from(targetTable)
@@ -343,6 +345,11 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     grant_kind: "freight",
                     freight_purchase_id: purchase.id,
                 };
+            } else if (walletContext === "travel") {
+                chargeMeta = {
+                    grant_kind: "travel",
+                    travel_purchase_id: purchase.id,
+                };
             } else {
                 chargeMeta = {
                     grant_kind: "real_estate",
@@ -375,7 +382,9 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                         ? `Créditos de serviços: ${pkg.name}`
                                         : walletContext === "freight"
                                             ? `Créditos de fretes: ${pkg.name}`
-                                            : `Créditos imobiliários: ${pkg.name}`,
+                                            : walletContext === "travel"
+                                                ? `Créditos de viagens: ${pkg.name}`
+                                                : `Créditos imobiliários: ${pkg.name}`,
                         reference_type:
                             walletContext === "advertiser"
                                 ? "advertiser_credit_purchase"
@@ -385,7 +394,9 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                         ? "service_credit_purchase"
                                         : walletContext === "freight"
                                             ? "freight_credit_purchase"
-                                            : "real_estate_credit_purchase",
+                                            : walletContext === "travel"
+                                                ? "travel_credit_purchase"
+                                                : "real_estate_credit_purchase",
                         reference_id: purchase.id,
                         product_type:
                             walletContext === "advertiser"
@@ -396,7 +407,9 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                         ? "service_credits"
                                         : walletContext === "freight"
                                             ? "freight_credits"
-                                            : "real_estate_credits",
+                                            : walletContext === "travel"
+                                                ? "travel_credits"
+                                                : "real_estate_credits",
                         // Guardado na ordem p/ o e-mail de confirmação descriminar
                         // o pacote e a quantidade de créditos.
                         product_snapshot: {
