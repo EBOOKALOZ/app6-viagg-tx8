@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X, RefreshCw } from "lucide-react";
 import { TRAVEL_CATEGORIES, TRAVEL_INCLUDES } from "@/lib/viagem/travelCategories";
 import { useToast } from "@/hooks/use-toast";
+import { formatBrazilianPhone } from "@/lib/utils";
 
 interface ExistingMedia {
   id: string;
@@ -520,7 +521,13 @@ export default function ViagemForm() {
           </div>
           <div>
             <label className="text-xs font-bold text-zinc-600 mb-1 block">WhatsApp</label>
-            <Input value={form.whatsapp} onChange={e => set("whatsapp", e.target.value)} placeholder="(11) 99999-9999" />
+            <Input
+              value={form.whatsapp}
+              onChange={e => set("whatsapp", formatBrazilianPhone(e.target.value))}
+              placeholder="(11) 99999-9999"
+              maxLength={15}
+              inputMode="numeric"
+            />
           </div>
           <div>
             <label className="text-xs font-bold text-zinc-600 mb-1 block">E-mail</label>
