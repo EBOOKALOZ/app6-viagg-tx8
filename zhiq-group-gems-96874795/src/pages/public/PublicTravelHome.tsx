@@ -76,10 +76,10 @@ export default function PublicTravelHome() {
             <p className="text-zinc-500 font-medium max-w-xl">Pacotes completos, roteiros nacionais e internacionais — fale direto com a agencia.</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth -mx-4 px-4">
             <button
               onClick={() => setCategoryFilter("all")}
-              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${categoryFilter === "all" ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
+              className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all ${categoryFilter === "all" ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
             >
               Todas
             </button>
@@ -87,7 +87,7 @@ export default function PublicTravelHome() {
               <button
                 key={c.value}
                 onClick={() => setCategoryFilter(c.value)}
-                className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${categoryFilter === c.value ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
+                className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${categoryFilter === c.value ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
               >
                 {c.emoji} {c.label}
               </button>
@@ -108,7 +108,7 @@ export default function PublicTravelHome() {
               </button>
             </div>
           ) : (
-            <HorizontalCarousel gap="gap-5">
+            <HorizontalCarousel gap="gap-4" snap cardWidth="w-[calc(100vw-2rem)] sm:w-80">
               {filtered.map((tr: any) => (
                 <MarketTravelCard key={tr.id} travel={tr} />
               ))}

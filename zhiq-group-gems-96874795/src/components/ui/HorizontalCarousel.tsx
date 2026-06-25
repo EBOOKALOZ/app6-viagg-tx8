@@ -7,6 +7,7 @@ interface HorizontalCarouselProps {
   cardWidth?: string;
   className?: string;
   gap?: string;
+  snap?: boolean;
 }
 
 export function HorizontalCarousel({
@@ -14,6 +15,7 @@ export function HorizontalCarousel({
   cardWidth = "w-72 sm:w-80",
   className,
   gap = "gap-5",
+  snap = false,
 }: HorizontalCarouselProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -28,16 +30,17 @@ export function HorizontalCarousel({
         ref={ref}
         className={cn(
           "flex overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth",
+          snap && "snap-x snap-mandatory",
           gap
         )}
       >
         {Array.isArray(children)
           ? children.map((child, i) => (
-              <div key={i} className={cn("flex-none", cardWidth)}>
+              <div key={i} className={cn("flex-none", snap && "snap-start", cardWidth)}>
                 {child}
               </div>
             ))
-          : <div className={cn("flex-none", cardWidth)}>{children}</div>}
+          : <div className={cn("flex-none", snap && "snap-start", cardWidth)}>{children}</div>}
       </div>
 
       <button
