@@ -77,6 +77,8 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
   // Suporte é compartilhado entre todos os contextos (inclusive anunciante sem
   // activeProfile "tradicional") — não pode cair no redirect de /select-profile.
   const isSupportRoute = pathname.startsWith("/suporte") || pathname.startsWith("/support");
+  // Páginas de conta do comprador — não exigem perfil ativo
+  const isBuyerAccountRoute = pathname === "/minha-conta" || pathname === "/viagens/minha-conta";
 
   const selfManagedProfiles = ["motoboy", "mototaxi", "merchant"];
   const isSelfManaged = !!activeProfile && selfManagedProfiles.includes(activeProfile);
@@ -243,7 +245,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
      → NUNCA voltar ao /auth, ir para seleção
      → EXCEÇÃO: rotas admin (já tratadas acima, mas safety-net)
   ============================= */
-  if ((!activeProfile || availableProfiles.length === 0) && !isAdminRoute && !requireAdmin && !isAdvertiserRoute && !isSupportRoute) {
+  if ((!activeProfile || availableProfiles.length === 0) && !isAdminRoute && !requireAdmin && !isAdvertiserRoute && !isSupportRoute && !isBuyerAccountRoute) {
     return <Navigate to="/select-profile" replace />;
   }
 
@@ -264,7 +266,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
   /* =============================
      PERFIL BÁSICO INCOMPLETO
   ============================= */
-  if (!isProfileComplete && !isSelfManaged && !isSupportRoute) {
+  if (!isProfileComplete && !isSelfManaged && !isSupportRoute && !isBuyerAccountRoute) {
     return <Navigate to="/complete-profile" replace />;
   }
 

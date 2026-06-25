@@ -141,7 +141,7 @@ export default function AdvertiserViagemPage() {
                   <p className="text-xs text-zinc-500 truncate">{s.category}{s.destination && ` - ${s.destination}`} - {[s.city, s.state].filter(Boolean).join("/")} - {s.visibility_status}{s.is_featured && " - destaque"}</p>
                 </div>
                 <span className="text-sm font-black text-sky-600 shrink-0">
-                  {s.entry_price?.trim() || (s.price_per_person ? `R$ ${Number(s.price_per_person).toLocaleString("pt-BR")}/p.` : "Consulte")}
+                  {s.entry_price?.trim() || (s.price_per_person ? `R$ ${Number(s.price_per_person).toLocaleString("pt-BR")}/ pessoa` : "Consulte")}
                 </span>
                 <button onClick={() => navigate(`/anunciante/viagens/anuncios/editar/viagem/${s.id}`)} className="p-2 rounded-lg text-zinc-400 hover:text-sky-600 hover:bg-sky-50 shrink-0">
                   <Pencil className="w-4 h-4" />

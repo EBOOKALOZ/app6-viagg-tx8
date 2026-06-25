@@ -46,11 +46,21 @@ export default function TravelDetailPage() {
   useEffect(() => {
     if (!id || chargedClick.current) return;
     chargedClick.current = true;
-    supabase.rpc("charge_travel_listing_click" as any, { p_listing_id: id, p_viewer_user_id: user?.id || null }).then(() => {}, () => {});
-  }, [id, user?.id]);
+    const fpKey = `travel_click_${id}`;
+    const fp = sessionStorage.getItem(fpKey) ?? (() => {
+      const v = Math.random().toString(36).slice(2);
+      sessionStorage.setItem(fpKey, v);
+      return v;
+    })();
+    supabase.rpc("charge_travel_listing_click" as any, { p_listing_id: id, p_fingerprint: fp }).then(() => {}, () => {});
+  }, [id]);
 
   const handleInterest = () => {
-    supabase.rpc("charge_travel_interest_click" as any, { p_listing_id: id, p_viewer_user_id: user?.id || null }).then(() => {}, () => {});
+    if (!user) {
+      navigate(`/auth?entry=buyer&redirect=${encodeURIComponent(`/viagens/minha-conta?interest=${id}`)}`);
+      return;
+    }
+    supabase.rpc("charge_travel_interest_click" as any, { p_listing_id: id, p_fingerprint: null }).then(() => {}, () => {});
     setContactOpen(true);
   };
 

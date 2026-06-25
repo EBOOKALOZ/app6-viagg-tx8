@@ -6,6 +6,7 @@ import { MapPin, ChevronRight, ShieldCheck, Plane, Heart, Star, Calendar } from 
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { resolveTravelCategoryEmoji } from '@/lib/viagem/travelCategories';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MarketTravelCardProps {
   travel: {
@@ -27,6 +28,7 @@ interface MarketTravelCardProps {
 
 export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
 
   const emoji = resolveTravelCategoryEmoji(travel.category);
@@ -35,8 +37,19 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
     navigate(`/viagens/${travel.id}`);
   };
 
+  const handleInterest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      // Não logado: vai direto para login como comprador com o interesse salvo
+      navigate(`/auth?entry=buyer&redirect=${encodeURIComponent(`/viagens/minha-conta?interest=${travel.id}`)}`);
+    } else {
+      // Logado: vai para a página de detalhe para confirmar o interesse
+      navigate(`/viagens/${travel.id}`);
+    }
+  };
+
   const priceDisplay = travel.entry_price?.trim()
-    || (travel.price_per_person ? `R$ ${Number(travel.price_per_person).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}/p.` : null)
+    || (travel.price_per_person ? `R$ ${Number(travel.price_per_person).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}/ pessoa` : null)
     || (travel.total_price ? `R$ ${Number(travel.total_price).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}` : null)
     || 'Consulte';
 
@@ -129,7 +142,7 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
 
           <CardFooter className="px-5 pb-6 pt-0">
             <Button
-              onClick={(e) => { e.stopPropagation(); handleNavigate(); }}
+              onClick={handleInterest}
               className="w-full bg-sky-400 hover:bg-sky-500 text-white rounded-2xl font-black text-sm h-12 group/btn shadow-lg"
             >
               <Plane className="w-4 h-4 mr-2" />

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/select";
 
 export default function AllVehiclesPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("all");
   const [neighborhoodFilter, setNeighborhoodFilter] = useState("all");
@@ -210,6 +212,24 @@ export default function AllVehiclesPage() {
       myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />
+
+      {/* ── CTA para anunciantes ── */}
+      <div className="w-full px-4 lg:px-6 pb-4 pt-2">
+        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="text-white space-y-1">
+            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para revendas e proprietários</p>
+            <h3 className="text-xl font-black leading-tight">🚗 Anuncie seu veículo aqui!</h3>
+            <p className="text-sm text-sky-100">Alcance compradores na sua região. Cadastro rápido e gratuito.</p>
+          </div>
+          <button
+            onClick={() => navigate("/auth")}
+            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+          >
+            Anunciar meu veículo →
+          </button>
+        </div>
+      </div>
+
       <section className="p-4">
         {vehiclesLoading && <p className="text-center text-white/70">Carregando veículos...</p>}
         {!vehiclesLoading && sortedVehicles.length === 0 && (

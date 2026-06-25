@@ -68,6 +68,7 @@ export default function Auth() {
   const wantsSignup = searchParams.get("signup") === "1" || searchParams.get("mode") === "signup";
   const isAdvertiserMode = entry === "advertiser";
   const isMotoboyMode = entry === "motoboy";
+  const isBuyerMode = entry === "buyer";
 
   useEffect(() => {
     if (isAdvertiserMode) {
@@ -77,6 +78,11 @@ export default function Auth() {
     if (isMotoboyMode) {
       console.log("[Auth] Setting viagg_auth_entry to motoboy");
       localStorage.setItem("viagg_auth_entry", "motoboy");
+    }
+    // Salva o redirect pendente no sessionStorage para sobreviver a OAuth/magic link
+    const redirect = searchParams.get("redirect");
+    if (redirect) {
+      sessionStorage.setItem("viagg_pending_redirect", redirect);
     }
   }, [isAdvertiserMode, isMotoboyMode]);
 
@@ -248,7 +254,25 @@ export default function Auth() {
     try {
       const { error } = isSignUp ? await signUp(email, password) : await signInWithPassword(email, password);
       if (error) {
-        setErrorMessage(translateError(error.message));
+        const lMsg = error.message.toLowerCase();
+        // E-mail já cadastrado → troca automaticamente para modo login
+        if (isSignUp && lMsg.includes("user already registered")) {
+          setIsSignUp(false);
+          setErrorMessage(
+            isBuyerMode
+              ? "Você já tem uma conta! Entre com sua senha para continuar como comprador."
+              : "Você já tem uma conta! Entre com sua senha para acessar seu painel."
+          );
+        } else if (!isSignUp && lMsg.includes("invalid login credentials")) {
+          // Senha incorreta ou conta criada via Google/OAuth (sem senha)
+          // → troca para magic link automaticamente
+          setAuthMethod("magic");
+          setErrorMessage(
+            "Não foi possível entrar com senha. Se você entrou com Google antes, use o botão Google acima — ou clique em \"Enviar Link de Acesso\" abaixo."
+          );
+        } else {
+          setErrorMessage(translateError(error.message));
+        }
         setAuthState("error");
       } else {
         if (isSignUp) {
@@ -343,7 +367,9 @@ export default function Auth() {
                 <h1 className={cn("text-[22px] sm:text-[28px] md:text-[34px] font-black uppercase tracking-tighter leading-[0.95]", isAdvertiserMode ? "text-[#3B1F14]" : "text-white")}>
                    {isAdvertiserMode
                      ? (isSignUp ? "Cadastro de Parceiro" : "Portal do Anunciante")
-                     : (isSignUp ? "Crie Sua Conta" : "Acesse Seu Painel")}
+                     : isBuyerMode
+                       ? (isSignUp ? "Crie Sua Conta" : "Minha Conta")
+                       : (isSignUp ? "Crie Sua Conta" : "Acesse Seu Painel")}
                 </h1>
              </div>
           </div>
@@ -367,10 +393,10 @@ export default function Auth() {
 
               <div className="space-y-4 relative z-10">
                 <div className="space-y-2">
-                  <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-2", isAdvertiserMode ? "text-[#FFF4E6]/90" : "text-white/80")}>Identificação Comercial</label>
+                  <label className={cn("text-[10px] font-black uppercase tracking-[0.3em] ml-2", isAdvertiserMode ? "text-[#FFF4E6]/90" : "text-white/80")}>{isBuyerMode ? "Seu e-mail" : "Identificação Comercial"}</label>
                   <div className="relative group">
                       <Mail className={cn("absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 transition-colors", isAdvertiserMode ? "group-focus-within:text-[#EA580C]" : "group-focus-within:text-[#FF6A00]")} />
-                      <Input type="email" placeholder="comercial@suaempresa.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={authState === "sending"} required className={cn("h-10 pl-10 text-white placeholder:text-white/20 focus:ring-[#EA580C]/40 focus:border-[#EA580C]/70 rounded-xl font-black transition-all", isAdvertiserMode ? "bg-[#422618] border-[#D6A75C]/30" : "bg-black/30 border-white/10")} />
+                      <Input type="email" placeholder={isBuyerMode ? "seu@email.com" : "comercial@suaempresa.com"} value={email} onChange={(e) => setEmail(e.target.value)} disabled={authState === "sending"} required className={cn("h-10 pl-10 text-white placeholder:text-white/20 focus:ring-[#EA580C]/40 focus:border-[#EA580C]/70 rounded-xl font-black transition-all", isAdvertiserMode ? "bg-[#422618] border-[#D6A75C]/30" : "bg-black/30 border-white/10")} />
                   </div>
                 </div>
 
@@ -408,7 +434,7 @@ export default function Auth() {
                     isAdvertiserMode ? "bg-[#EA580C] hover:bg-orange-600 shadow-orange-950/40" : "bg-[#FF6A00] hover:bg-orange-600 shadow-[0_12px_32px_rgba(255,106,0,0.3)]"
                   )}
                 >
-                  {authState === "sending" ? <Loader2 className="h-5 w-5 animate-spin" /> : authMethod === "magic" && cooldown > 0 ? `Reenviar em ${cooldown}s` : <div className="flex items-center gap-2">{authMethod === "magic" ? "Enviar Link de Acesso" : (isSignUp ? "Criar Painel" : "Acessar Painel")} <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" /></div>}
+                  {authState === "sending" ? <Loader2 className="h-5 w-5 animate-spin" /> : authMethod === "magic" && cooldown > 0 ? `Reenviar em ${cooldown}s` : <div className="flex items-center gap-2">{authMethod === "magic" ? "Enviar Link de Acesso" : (isSignUp ? (isBuyerMode ? "Criar Conta" : "Criar Painel") : (isBuyerMode ? "Entrar" : "Acessar Painel"))} <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" /></div>}
                 </Button>
 
                 {errorMessage && (
@@ -472,7 +498,7 @@ export default function Auth() {
                 </div>
 
                 <p className="relative z-10 flex items-center justify-center flex-wrap gap-2 text-center text-[11px] font-black uppercase tracking-[0.15em] text-white">
-                  <span>{isSignUp ? "Já possui acesso?" : "Ainda não tem acesso comercial?"}</span>
+                  <span>{isSignUp ? "Já possui acesso?" : (isBuyerMode ? "Ainda não tem conta?" : "Ainda não tem acesso comercial?")}</span>
                   <button
                     onClick={() => setIsSignUp(!isSignUp)}
                     className="inline-flex items-center px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black uppercase tracking-[0.15em] shadow-md transition-colors"

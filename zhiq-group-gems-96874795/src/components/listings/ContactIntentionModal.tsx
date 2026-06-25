@@ -13,7 +13,7 @@
  *   listingTitle   → título para exibição no modal
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,7 @@ import {
 } from "@/hooks/useContactIntentions";
 import { supabase } from "@/integrations/supabase/client";
 import { getVisitorFingerprint } from "@/lib/cpcTracker";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ export function ContactIntentionModal({
   listingTitle,
 }: ContactIntentionModalProps) {
   const { register, isLoading } = useRegisterContactIntention();
+  const { user } = useAuth();
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
@@ -83,6 +85,29 @@ export function ContactIntentionModal({
 
   const update = (field: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Pré-preenche com os dados do usuário logado
+  useEffect(() => {
+    if (!open || !user) return;
+    setForm(prev => ({
+      ...prev,
+      email: prev.email || user.email || "",
+    }));
+    (supabase.from("profiles") as any)
+      .select("name, full_name, telefone, whatsapp")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (!data) return;
+        const name = data.name || data.full_name || "";
+        const phone = data.whatsapp || data.telefone || "";
+        setForm(prev => ({
+          ...prev,
+          name: prev.name || name,
+          phone: prev.phone || (phone ? maskPhone(phone) : ""),
+        }));
+      });
+  }, [open, user?.id]);
 
   const emailOk = /\S+@\S+\.\S+/.test(form.email.trim());
   const isValid =
@@ -202,6 +227,14 @@ export function ContactIntentionModal({
               >
                 Fechar
               </Button>
+              {listingModule === "travel" && user && (
+                <button
+                  onClick={() => { handleClose(); window.location.href = "/viagens/minha-conta"; }}
+                  className="text-xs text-sky-600 font-bold underline underline-offset-2 mt-1"
+                >
+                  Ver meus interesses →
+                </button>
+              )}
             </div>
 
           ) : (

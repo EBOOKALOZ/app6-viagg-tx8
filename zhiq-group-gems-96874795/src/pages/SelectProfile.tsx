@@ -106,7 +106,7 @@ const SERVICOS_MOSAIC = [
   "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=70&auto=format&fit=crop",
 ];
 
-// Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, e Fretes.
+// Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, Fretes, Viagens e Comprador.
 const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
@@ -117,7 +117,7 @@ const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 export default function SelectProfile() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { initialized, isLoading, user, setAvailableProfiles, setActiveProfile, signOut, refreshProfiles } = useAuth();
+  const { initialized, isLoading, user, availableProfiles, setAvailableProfiles, setActiveProfile, signOut, refreshProfiles } = useAuth();
   const { toast } = useToast();
 
   // Som do app ao abrir a tela de seleção de perfil
@@ -285,8 +285,12 @@ export default function SelectProfile() {
         if (error) console.warn("[SelectProfile] ensure_merchant_profile function is not ready in backend, continuing anyway:", error.message);
       }
 
-      await setAvailableProfiles([selected]);
-      await setActiveProfile(selected, [selected]);
+      // Adiciona o novo perfil ao array existente (não substitui)
+      const updatedProfiles = availableProfiles.includes(selected)
+        ? availableProfiles
+        : [...availableProfiles, selected];
+      await setAvailableProfiles(updatedProfiles);
+      await setActiveProfile(selected, updatedProfiles);
 
       // Re-sync all profile data from backend after creation
       await refreshProfiles();

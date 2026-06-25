@@ -263,8 +263,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (newSession?.user) {
         await hydrateForUser(newSession.user);
 
-        if (!isBootstrapExemptRoute() && window.location.pathname === "/auth") {
-          navigate("/select-profile", { replace: true });
+        // Verifica redirect pendente (funciona com senha, Google, magic link, Facebook, Twitter)
+        const pendingRedirect = sessionStorage.getItem("viagg_pending_redirect");
+        if (pendingRedirect) {
+          sessionStorage.removeItem("viagg_pending_redirect");
+          navigate(pendingRedirect, { replace: true });
+        } else if (!isBootstrapExemptRoute() && (window.location.pathname === "/auth" || window.location.pathname === "/auth/callback")) {
+          const params = new URLSearchParams(window.location.search);
+          const redirect = params.get("redirect");
+          navigate(redirect || "/select-profile", { replace: true });
         }
         _redirectedAfterLogin = true;
       } else if (event === "SIGNED_OUT") {
@@ -289,8 +296,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.session?.user) {
           await hydrateForUser(data.session.user);
 
-          if (!isBootstrapExemptRoute() && window.location.pathname === "/auth") {
-            navigate("/select-profile", { replace: true });
+          const pendingRedirect = sessionStorage.getItem("viagg_pending_redirect");
+          if (pendingRedirect) {
+            sessionStorage.removeItem("viagg_pending_redirect");
+            navigate(pendingRedirect, { replace: true });
+          } else if (!isBootstrapExemptRoute() && (window.location.pathname === "/auth" || window.location.pathname === "/auth/callback")) {
+            const params = new URLSearchParams(window.location.search);
+            const redirect = params.get("redirect");
+            navigate(redirect || "/select-profile", { replace: true });
           }
           _redirectedAfterLogin = true;
         }

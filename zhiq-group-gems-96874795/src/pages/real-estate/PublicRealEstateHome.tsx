@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SellRealEstateCTA } from '@/components/real-estate/SellRealEstateCTA';
 import { ShieldCheck, Zap, Users, SlidersHorizontal, Trees, Tractor, MapPin, Wheat, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { MarketNavButtons } from '@/components/layout/MarketNavButtons';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 export const PublicRealEstateHome = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [neighborhoodFilter, setNeighborhoodFilter] = useState<string>("all");
@@ -147,6 +149,24 @@ export const PublicRealEstateHome = () => {
   return (
     <MarketLayout search={search} setSearch={setSearch} hideCart={true} headerRight={null} headerChildren={<MarketNavButtons />} blueFooter blueFooterLabel="🏠 Imóveis" myAccountPath="/minha-conta">
       <InstitutionalSafetyBanner />
+
+      {/* ── CTA para anunciantes ── */}
+      <div className="w-full px-4 lg:px-6 pb-4 pt-2">
+        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="text-white space-y-1">
+            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para proprietários e corretores</p>
+            <h3 className="text-xl font-black leading-tight">🏠 Anuncie seu imóvel aqui!</h3>
+            <p className="text-sm text-sky-100">Alcance compradores e inquilinos na sua região. Cadastro rápido e gratuito.</p>
+          </div>
+          <button
+            onClick={() => navigate("/auth")}
+            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+          >
+            Anunciar meu imóvel →
+          </button>
+        </div>
+      </div>
+
       <div className="min-h-screen">
         {/* Hero / Module Identity */}
         <section className="relative h-[480px] flex items-center justify-center overflow-hidden bg-zinc-950">

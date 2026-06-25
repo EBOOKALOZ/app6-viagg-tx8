@@ -22,7 +22,6 @@ import {
     Tag,
     Volume2,
     VolumeX,
-    User,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -162,18 +161,8 @@ export function MarketLayout({
                             </button>
                         </div>
 
-                        {/* Direita: Minha Conta + Sair + Som */}
+                        {/* Direita: Sair + Som */}
                         <div className="flex items-center gap-1 shrink-0">
-                            {user && myAccountPath && (
-                                <button
-                                    onClick={() => navigate(myAccountPath)}
-                                    className="flex items-center gap-0.5 h-7 px-2 bg-sky-600 hover:bg-sky-700 rounded-lg shadow-lg text-white transition-all"
-                                    title="Minha Conta"
-                                >
-                                    <User className="w-3 h-3 shrink-0" />
-                                    <span className="text-[7px] font-black uppercase leading-tight">Minha<br/>Conta</span>
-                                </button>
-                            )}
                             {user ? (
                                 <button
                                     onClick={handleSair}
@@ -181,15 +170,6 @@ export function MarketLayout({
                                     title="Sair"
                                 >
                                     <LogOut className="w-3.5 h-3.5" />
-                                </button>
-                            ) : myAccountPath ? (
-                                <button
-                                    onClick={() => navigate('/auth')}
-                                    className="flex items-center gap-0.5 h-7 px-2 bg-sky-600 hover:bg-sky-700 rounded-lg shadow-lg text-white transition-all"
-                                    title="Minha Conta"
-                                >
-                                    <User className="w-3 h-3 shrink-0" />
-                                    <span className="text-[7px] font-black uppercase leading-tight">Minha<br/>Conta</span>
                                 </button>
                             ) : null}
                             <button
@@ -269,16 +249,6 @@ export function MarketLayout({
 
                         {/* Direita desktop */}
                         <div className="flex items-center gap-3 text-white shrink-0">
-                            {user && myAccountPath && (
-                                <Button
-                                    onClick={() => navigate(myAccountPath)}
-                                    variant="ghost"
-                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
-                                >
-                                    <User className="w-4 h-4" />
-                                    Minha Conta
-                                </Button>
-                            )}
                             {user && (
                                 <Button
                                     onClick={handleSair}
@@ -287,16 +257,6 @@ export function MarketLayout({
                                 >
                                     <LogOut className="w-4 h-4" />
                                     Sair
-                                </Button>
-                            )}
-                            {!user && myAccountPath && (
-                                <Button
-                                    onClick={() => navigate('/auth')}
-                                    variant="ghost"
-                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
-                                >
-                                    <User className="w-4 h-4" />
-                                    Minha Conta
                                 </Button>
                             )}
                             <button
@@ -316,16 +276,6 @@ export function MarketLayout({
                                 {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                             </button>
                             {headerRight}
-                            {!user && !isLoading && myAccountPath && (
-                                <Button
-                                    onClick={() => navigate('/auth')}
-                                    variant="ghost"
-                                    className="bg-sky-600 hover:bg-sky-700 text-white font-black text-xs h-[44px] px-5 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
-                                >
-                                    <User className="w-4 h-4" />
-                                    Minha Conta
-                                </Button>
-                            )}
                         </div>
                     </div>
 

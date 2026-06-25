@@ -89,7 +89,7 @@ export default function AdvertiserViagemListingsPage() {
                   </p>
                 </div>
                 <span className="text-sm font-black text-sky-600 shrink-0">
-                  {s.entry_price?.trim() || (s.price_per_person ? `R$ ${Number(s.price_per_person).toLocaleString("pt-BR")}/p.` : "Consulte")}
+                  {s.entry_price?.trim() || (s.price_per_person ? `R$ ${Number(s.price_per_person).toLocaleString("pt-BR")}/ pessoa` : "Consulte")}
                 </span>
                 <button
                   onClick={() => navigate(`/anunciante/viagens/anuncios/editar/viagem/${s.id}`)}

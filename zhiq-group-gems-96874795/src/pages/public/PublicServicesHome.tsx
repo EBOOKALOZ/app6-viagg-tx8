@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -15,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 export default function PublicServicesHome() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
@@ -107,6 +109,23 @@ export default function PublicServicesHome() {
       myAccountPath="/minha-conta"
     >
       <InstitutionalSafetyBanner />
+
+      {/* ── CTA para anunciantes ── */}
+      <div className="w-full px-4 lg:px-6 pb-4 pt-2">
+        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="text-white space-y-1">
+            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para prestadores de serviço</p>
+            <h3 className="text-xl font-black leading-tight">🔧 Ofereça seus serviços aqui!</h3>
+            <p className="text-sm text-sky-100">Alcance clientes na sua região. Cadastro rápido e gratuito.</p>
+          </div>
+          <button
+            onClick={() => navigate("/auth")}
+            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+          >
+            Anunciar meu serviço →
+          </button>
+        </div>
+      </div>
 
       <section className="px-4 pt-6 space-y-3">
         <h1 className="text-2xl font-black text-white tracking-tight">Serviços</h1>

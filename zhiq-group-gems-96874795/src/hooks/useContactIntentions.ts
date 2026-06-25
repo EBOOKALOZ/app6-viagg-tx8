@@ -335,7 +335,8 @@ export function useContactIntentions() {
             window.location.pathname.startsWith("/veiculos/") ||
             window.location.pathname.startsWith("/imoveis/") ||
             window.location.pathname.startsWith("/servicos/") ||
-            window.location.pathname.startsWith("/fretes/");
+            window.location.pathname.startsWith("/fretes/") ||
+            window.location.pathname.startsWith("/viagens/");
 
           // Caixa certa conforme o segmento do lead — sem isso, lead de veículo/
           // imóvel mandava o dono pra caixa genérica do lojista, onde esse lead
@@ -346,6 +347,7 @@ export function useContactIntentions() {
             : leadModule === "real_estate" ? "/anunciante/imoveis/mensagens"
             : leadModule === "services" ? "/anunciante/servicos/mensagens"
             : leadModule === "freight" ? "/anunciante/fretes/mensagens"
+            : leadModule === "travel" ? "/anunciante/viagens/mensagens"
             : "/anunciante/mensagens";
 
           if (
