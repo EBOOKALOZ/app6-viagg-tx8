@@ -276,9 +276,14 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
         to={item.href}
         className="block w-full"
         onClick={(e) => {
-          e.preventDefault();
           if (isMobile) setMobileMenuOpen(false);
-          window.location.href = item.href;
+          // Força reload apenas dentro do painel /anunciante/ para evitar
+          // stale location do React Router v7 startTransition.
+          // Links externos (ex: /loja/...) usam navegação normal do React Router.
+          if (item.href.startsWith("/anunciante/")) {
+            e.preventDefault();
+            window.location.href = item.href;
+          }
         }}
       >
         {content}
