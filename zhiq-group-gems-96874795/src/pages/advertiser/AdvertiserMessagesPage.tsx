@@ -9,10 +9,10 @@ import { toast } from "sonner";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 
-const UNLOCK_COST = 13; // custo fixo do desbloqueio na LOJA (anunciante)
-const RE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (admin → Cobranças)
-const VE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
-const SE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no SERVIÇO (admin → Cobranças)
+const UNLOCK_COST = 12; // custo fixo do desbloqueio na LOJA (anunciante)
+const RE_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (admin → Cobranças)
+const VE_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
+const SE_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no SERVIÇO (admin → Cobranças)
 const FR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no FRETE (admin → Cobranças)
 const TR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp na VIAGEM (admin → Cobranças)
 
@@ -46,7 +46,7 @@ export default function AdvertiserMessagesPage() {
   // No painel de FRETES o saldo e o débito usam a carteira PRÓPRIA de fretes
   // (freight_credit_balances por owner_user_id), não a do lojista/anunciante.
   const fretesMode = location.pathname.startsWith("/anunciante/fretes");
-  const viagensMode = location.pathname.startsWith("/anunciante/viagens");
+  const viagensMode = window.location.pathname.startsWith("/anunciante/viagens");
 
   // Fallback de saldo do ANUNCIANTE (modo loja)
   const { data: fallbackBalance = 0 } = useQuery({
