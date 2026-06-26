@@ -46,11 +46,11 @@ export default function AdvertiserCreditsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   // Modo IMÓVEIS / VEÍCULOS / VIAGENS: mostra pacotes do segmento e esconde os históricos do lojista.
-  const isImoveis = location.pathname.startsWith("/anunciante/imoveis");
-  const isVeiculos = location.pathname.startsWith("/anunciante/veiculos");
-  const isServicos = location.pathname.startsWith("/anunciante/servicos");
-  const isFretes = location.pathname.startsWith("/anunciante/fretes");
-  const isViagens = location.pathname.startsWith("/anunciante/viagens");
+  const isImoveis = window.location.pathname.startsWith("/anunciante/imoveis");
+  const isVeiculos = window.location.pathname.startsWith("/anunciante/veiculos");
+  const isServicos = window.location.pathname.startsWith("/anunciante/servicos");
+  const isFretes = window.location.pathname.startsWith("/anunciante/fretes");
+  const isViagens = window.location.pathname.startsWith("/anunciante/viagens");
   const isSpecialModule = isImoveis || isVeiculos || isServicos || isFretes || isViagens;
 
   // Custos por evento — RESPEITA os valores configurados no painel admin
