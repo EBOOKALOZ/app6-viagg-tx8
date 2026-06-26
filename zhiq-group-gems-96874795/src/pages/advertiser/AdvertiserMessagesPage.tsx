@@ -218,13 +218,22 @@ export default function AdvertiserMessagesPage() {
     (msg || "").replace(/\n*\s*e-?mail:\s*[^\s]+@[^\s]+/i, "").trim();
 
   const handleUnlock = async (id: string) => {
+    // Read from window.location.pathname to avoid React Router v7 startTransition stale closure bug
+    const p = window.location.pathname;
+    const isImoveisMode = p.startsWith("/anunciante/imoveis");
+    const isVeiculosMode = p.startsWith("/anunciante/veiculos");
+    const isServicosMode = p.startsWith("/anunciante/servicos");
+    const isFretesMode = p.startsWith("/anunciante/fretes");
+    const isViagensMode = p.startsWith("/anunciante/viagens");
+
     const lead = intentions.find((i) => i.id === id);
-    const cost = lead ? costForLead(lead) : (imoveisMode ? 50 : UNLOCK_COST);
+    const cost = isImoveisMode ? reUnlockCost : isVeiculosMode ? veUnlockCost : isServicosMode ? seUnlockCost : isFretesMode ? frUnlockCost : isViagensMode ? trUnlockCost : UNLOCK_COST;
+    const curBal = isImoveisMode ? reBalance : isVeiculosMode ? veBalance : isServicosMode ? seBalance : isFretesMode ? frBalance : isViagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
 
     // ── IMÓVEIS: debita a carteira PRÓPRIA via RPC (custo por categoria) ──
-    if (imoveisMode) {
-      if (creditBalance < cost) {
-        toast.error(`Sem saldo de imóveis (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+    if (isImoveisMode) {
+      if (curBal < cost) {
+        toast.error(`Sem saldo de imóveis (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
         setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200);
         return;
       }
@@ -244,9 +253,9 @@ export default function AdvertiserMessagesPage() {
     }
 
     // ── VEÍCULOS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
-    if (veiculosMode) {
-      if (creditBalance < cost) {
-        toast.error(`Sem saldo de veículos (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+    if (isVeiculosMode) {
+      if (curBal < cost) {
+        toast.error(`Sem saldo de veículos (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
         setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200);
         return;
       }
@@ -267,9 +276,9 @@ export default function AdvertiserMessagesPage() {
     }
 
     // ── SERVIÇOS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
-    if (servicosMode) {
-      if (creditBalance < cost) {
-        toast.error(`Sem saldo de serviços (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+    if (isServicosMode) {
+      if (curBal < cost) {
+        toast.error(`Sem saldo de serviços (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
         setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200);
         return;
       }
@@ -290,9 +299,9 @@ export default function AdvertiserMessagesPage() {
     }
 
     // ── FRETES: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
-    if (fretesMode) {
-      if (creditBalance < cost) {
-        toast.error(`Sem saldo de fretes (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+    if (isFretesMode) {
+      if (curBal < cost) {
+        toast.error(`Sem saldo de fretes (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
         setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200);
         return;
       }
@@ -313,9 +322,9 @@ export default function AdvertiserMessagesPage() {
     }
 
     // ── VIAGENS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
-    if (viagensMode) {
-      if (creditBalance < cost) {
-        toast.error(`Sem saldo de viagens (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+    if (isViagensMode) {
+      if (curBal < cost) {
+        toast.error(`Sem saldo de viagens (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
         setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200);
         return;
       }
@@ -336,8 +345,9 @@ export default function AdvertiserMessagesPage() {
     }
 
     // ── LOJA (anunciante): fluxo existente ──
-    if (creditBalance < UNLOCK_COST) {
-      toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${creditBalance}). Redirecionando para compra...`, { duration: 3000 });
+    const lojaBal = balance?.available_credits ?? fallbackBalance;
+    if (lojaBal < UNLOCK_COST) {
+      toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${lojaBal}). Redirecionando para compra...`, { duration: 3000 });
       setTimeout(() => navigate(creditosRouteFor(id)), 1200);
       return;
     }

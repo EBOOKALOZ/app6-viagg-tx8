@@ -272,7 +272,15 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     if (item.action === "logout") return content;
     
     return (
-      <Link to={item.href} className="block w-full" onClick={isMobile ? () => setMobileMenuOpen(false) : undefined}>
+      <Link
+        to={item.href}
+        className="block w-full"
+        onClick={(e) => {
+          e.preventDefault();
+          if (isMobile) setMobileMenuOpen(false);
+          window.location.href = item.href;
+        }}
+      >
         {content}
       </Link>
     );
