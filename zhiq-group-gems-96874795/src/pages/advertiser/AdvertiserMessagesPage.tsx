@@ -14,6 +14,7 @@ const RE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (a
 const VE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
 const SE_UNLOCK_DEFAULT = 9; // custo fixo p/ desbloquear WhatsApp no SERVIÇO (admin → Cobranças)
 const FR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no FRETE (admin → Cobranças)
+const TR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp na VIAGEM (admin → Cobranças)
 
 export default function AdvertiserMessagesPage() {
   const navigate = useNavigate();
@@ -167,10 +168,36 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : viagensMode ? 0 : (balance?.available_credits ?? fallbackBalance);
+  // Saldo PRÓPRIO de viagens (travel_credit_balances)
+  const { data: trBalance = 0 } = useQuery({
+    queryKey: ["travel-balance-msgs", user?.id],
+    enabled: !!user?.id && viagensMode,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from("travel_credit_balances") as any)
+        .select("available_credits").eq("owner_user_id", user!.id).maybeSingle();
+      return Number((data as any)?.available_credits ?? 0);
+    },
+  });
 
-  // Custo por lead: imóvel/veículo/serviço = WhatsApp fixo da carteira própria; loja = custo do anunciante
-  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : viagensMode ? 9 : UNLOCK_COST);
+  // Custo FIXO p/ desbloquear WhatsApp do interessado de VIAGEM (admin → Cobranças)
+  const { data: trUnlockCost = TR_UNLOCK_DEFAULT } = useQuery({
+    queryKey: ["travel-unlock-whatsapp-cost"],
+    enabled: viagensMode,
+    queryFn: async () => {
+      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
+        .select("credits_cost, is_active")
+        .eq("feature_code", "travel_unlock_whatsapp")
+        .maybeSingle();
+      if (!data) return TR_UNLOCK_DEFAULT;
+      return (data as any).is_active === false ? 0 : (Number((data as any).credits_cost) || TR_UNLOCK_DEFAULT);
+    },
+  });
+
+  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : viagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
+
+  // Custo por lead: imóvel/veículo/serviço/frete/viagem = WhatsApp fixo da carteira própria; loja = custo do anunciante
+  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : viagensMode ? trUnlockCost : UNLOCK_COST);
 
   // Máscaras
   const maskName = (n: string | null) => {
@@ -279,6 +306,29 @@ export default function AdvertiserMessagesPage() {
       } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
         toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
         setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200);
+      } else {
+        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
+      }
+      return;
+    }
+
+    // ── VIAGENS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
+    if (viagensMode) {
+      if (creditBalance < cost) {
+        toast.error(`Sem saldo de viagens (precisa ${cost}, tem ${creditBalance}). Redirecionando...`, { duration: 3000 });
+        setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200);
+        return;
+      }
+      const { data, error } = await supabase.rpc("unlock_travel_intention" as any, { p_intention_id: id });
+      const r = data as any;
+      if (!error && r?.success) {
+        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
+        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["travel-balance-msgs", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["viagens-painel-saldo", user?.id] });
+      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
+        setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200);
       } else {
         toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
       }
