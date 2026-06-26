@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,7 +6,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
-import { Plane, Loader2 } from "lucide-react";
+import { Plane, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 
@@ -14,6 +14,10 @@ export default function PublicTravelHome() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+  const scrollFilters = (dir: "left" | "right") => {
+    filterScrollRef.current?.scrollBy({ left: dir === "right" ? 160 : -160, behavior: "smooth" });
+  };
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["public-travel-home"],
@@ -42,6 +46,10 @@ export default function PublicTravelHome() {
     },
     refetchOnWindowFocus: true,
   });
+
+  const usedCategories = TRAVEL_CATEGORIES.filter(c =>
+    listings.some((l: any) => l.category === c.value)
+  );
 
   const filtered = listings.filter((l: any) => {
     if (categoryFilter !== "all" && l.category !== categoryFilter) return false;
@@ -87,33 +95,52 @@ export default function PublicTravelHome() {
       <div className="w-full px-4 lg:px-6 py-12 bg-yellow-400">
         <div className="max-w-[1920px] mx-auto space-y-8">
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+          <div className="w-full flex flex-col items-center text-center gap-2">
+            <div className="flex items-center gap-2 justify-center">
               <div className="p-2 bg-sky-600/10 rounded-lg">
                 <Plane className="w-5 h-5 text-sky-600" />
               </div>
               <span className="text-xs font-black text-sky-600 uppercase tracking-widest">Pacotes & Destinos</span>
             </div>
-            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter">VIAGENS & TURISMO</h1>
-            <p className="text-zinc-500 font-medium max-w-xl">Pacotes completos, roteiros nacionais e internacionais — fale direto com a agencia.</p>
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">VIAGENS <span className="text-orange-500">&</span> TURISMO</h1>
+            <p className="text-zinc-500 font-medium max-w-xl text-center">Pacotes completos, roteiros nacionais e internacionais — fale direto com a agencia.</p>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth -mx-4 px-4">
+          <div className="relative flex items-center gap-1">
+            {/* Seta esquerda */}
             <button
-              onClick={() => setCategoryFilter("all")}
-              className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all ${categoryFilter === "all" ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
+              onClick={() => scrollFilters("left")}
+              className="shrink-0 bg-white/90 backdrop-blur shadow-sm rounded-full p-1 border border-zinc-200/70 transition-all hover:scale-110 z-10"
             >
-              Todas
+              <ChevronLeft className="w-3.5 h-3.5 text-zinc-500" />
             </button>
-            {TRAVEL_CATEGORIES.map(c => (
+
+            {/* Lista de filtros */}
+            <div ref={filterScrollRef} className="flex gap-2 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth flex-1">
               <button
-                key={c.value}
-                onClick={() => setCategoryFilter(c.value)}
-                className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${categoryFilter === c.value ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
+                onClick={() => setCategoryFilter("all")}
+                className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all ${categoryFilter === "all" ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
               >
-                {c.emoji} {c.label}
+                Todas
               </button>
-            ))}
+              {usedCategories.map(c => (
+                <button
+                  key={c.value}
+                  onClick={() => setCategoryFilter(c.value)}
+                  className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${categoryFilter === c.value ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
+                >
+                  {c.emoji} {c.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Seta direita */}
+            <button
+              onClick={() => scrollFilters("right")}
+              className="shrink-0 bg-white/90 backdrop-blur shadow-sm rounded-full p-1 border border-zinc-200/70 transition-all hover:scale-110 z-10"
+            >
+              <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
+            </button>
           </div>
 
           {isLoading ? (
@@ -130,7 +157,7 @@ export default function PublicTravelHome() {
               </button>
             </div>
           ) : (
-            <HorizontalCarousel gap="gap-4" snap cardWidth="w-[calc(100vw-2rem)] sm:w-80">
+            <HorizontalCarousel gap="gap-4" snap cardWidth="w-[calc(100vw-2rem)] sm:w-80" alwaysShowArrows>
               {filtered.map((tr: any) => (
                 <MarketTravelCard key={tr.id} travel={tr} />
               ))}

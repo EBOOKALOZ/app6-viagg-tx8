@@ -117,14 +117,12 @@ export function MarketLayout({
             <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
                     {/* ── MOBILE HEADER (< lg) ── */}
-                    <div className="flex items-center h-[50px] w-full lg:hidden px-2 gap-1.5">
-                        {/* Esquerda: Logo */}
-                        <div className="cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
-                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
-                        </div>
-
-                        {/* Centro: Cesta */}
-                        <div className="flex-1 flex items-center justify-center">
+                    <div className="relative flex items-center h-[50px] w-full lg:hidden px-2">
+                        {/* Centro absoluto: Logo + Cesta */}
+                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+                            <div className="cursor-pointer" onClick={() => navigate("/mercado")}>
+                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
+                            </div>
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
                                 className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none"
@@ -140,7 +138,7 @@ export function MarketLayout({
                         </div>
 
                         {/* Direita */}
-                        <div className="flex items-center gap-1 shrink-0">
+                        <div className="ml-auto flex items-center gap-1">
                             {headerRight}
                         </div>
                     </div>
@@ -184,7 +182,7 @@ export function MarketLayout({
 
                         {/* Search */}
                         {showSearch && (
-                            <div className="flex-1 max-w-2xl mx-auto">
+                            <div className="max-w-[400px] w-full mx-auto">
                                 <div className="relative flex">
                                     <Input
                                         placeholder="Buscar produtos, lojas..."

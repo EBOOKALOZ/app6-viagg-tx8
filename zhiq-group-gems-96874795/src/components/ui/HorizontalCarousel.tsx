@@ -8,6 +8,7 @@ interface HorizontalCarouselProps {
   className?: string;
   gap?: string;
   snap?: boolean;
+  alwaysShowArrows?: boolean;
 }
 
 export function HorizontalCarousel({
@@ -16,6 +17,7 @@ export function HorizontalCarousel({
   className,
   gap = "gap-5",
   snap = false,
+  alwaysShowArrows = false,
 }: HorizontalCarouselProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -24,12 +26,54 @@ export function HorizontalCarousel({
     ref.current?.scrollBy({ left: dir === "left" ? -(w * 0.75) : w * 0.75, behavior: "smooth" });
   };
 
+  if (alwaysShowArrows) {
+    return (
+      <div className={cn("flex flex-col gap-2", className)}>
+        {/* Flechas acima dos cards */}
+        <div className="flex justify-end gap-2 pr-1">
+          <button
+            onClick={() => scroll("left")}
+            className="bg-white/90 backdrop-blur shadow-sm rounded-full p-1 border border-zinc-200/70 transition-all hover:scale-110"
+            aria-label="Anterior"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 text-zinc-500" />
+          </button>
+          <button
+            onClick={() => scroll("right")}
+            className="bg-white/90 backdrop-blur shadow-sm rounded-full p-1 border border-zinc-200/70 transition-all hover:scale-110"
+            aria-label="Próximo"
+          >
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
+          </button>
+        </div>
+
+        {/* Cards — tamanho original sem alteração */}
+        <div
+          ref={ref}
+          className={cn(
+            "flex overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth touch-pan-x select-none",
+            snap && "snap-x snap-mandatory",
+            gap
+          )}
+        >
+          {Array.isArray(children)
+            ? children.map((child, i) => (
+                <div key={i} className={cn("flex-none", snap && "snap-start", cardWidth)}>
+                  {child}
+                </div>
+              ))
+            : <div className={cn("flex-none", snap && "snap-start", cardWidth)}>{children}</div>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative group/carousel", className)}>
       <div
         ref={ref}
         className={cn(
-          "flex overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth",
+          "flex overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth touch-pan-x select-none",
           snap && "snap-x snap-mandatory",
           gap
         )}
@@ -45,14 +89,14 @@ export function HorizontalCarousel({
 
       <button
         onClick={() => scroll("left")}
-        className="absolute -left-4 top-1/2 -translate-y-8 z-10 bg-white/95 backdrop-blur shadow-xl rounded-full p-2.5 opacity-0 group-hover/carousel:opacity-100 transition-all hover:scale-110 border border-zinc-100"
+        className="absolute z-10 top-1/2 -translate-y-8 -left-4 bg-white/95 backdrop-blur shadow-xl rounded-full p-2.5 border border-zinc-100 opacity-0 group-hover/carousel:opacity-100 transition-all hover:scale-110"
         aria-label="Anterior"
       >
         <ChevronLeft className="w-5 h-5 text-zinc-700" />
       </button>
       <button
         onClick={() => scroll("right")}
-        className="absolute -right-4 top-1/2 -translate-y-8 z-10 bg-white/95 backdrop-blur shadow-xl rounded-full p-2.5 opacity-0 group-hover/carousel:opacity-100 transition-all hover:scale-110 border border-zinc-100"
+        className="absolute z-10 top-1/2 -translate-y-8 -right-4 bg-white/95 backdrop-blur shadow-xl rounded-full p-2.5 border border-zinc-100 opacity-0 group-hover/carousel:opacity-100 transition-all hover:scale-110"
         aria-label="Próximo"
       >
         <ChevronRight className="w-5 h-5 text-zinc-700" />
