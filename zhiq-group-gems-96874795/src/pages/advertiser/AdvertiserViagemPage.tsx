@@ -193,7 +193,7 @@ export default function AdvertiserViagemPage() {
           const isCreditsCard = a.title === "Creditos";
           return (
             <div key={a.to}>
-              <Link to={a.to} className="relative flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-4 rounded-2xl border border-zinc-200 bg-white hover:border-sky-300 hover:shadow-sm transition-all h-full">
+              <Link to={a.to} onClick={(e) => { e.preventDefault(); window.location.href = a.to; }} className="relative flex flex-col items-center text-center gap-2 sm:flex-row sm:items-start sm:text-left sm:gap-3 p-4 rounded-2xl border border-zinc-200 bg-white hover:border-sky-300 hover:shadow-sm transition-all h-full">
                 {isCreditsCard && saldo > 0 && <span className="absolute top-2 right-2 text-[19px] font-black tracking-tight text-emerald-600">{saldo} cr</span>}
                 <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0"><Icon className="w-5 h-5" /></div>
                 <div className="min-w-0 flex flex-col items-center sm:items-start flex-1">
