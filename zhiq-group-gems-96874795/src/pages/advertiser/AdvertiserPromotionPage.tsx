@@ -30,6 +30,9 @@ import {
   Bot,
   Copy,
   Check,
+  Briefcase,
+  Truck,
+  Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +43,7 @@ import { Textarea } from "@/components/ui/textarea";
    Types
 ───────────────────────────────────────────── */
 
-type CategoryTab = "produtos" | "imoveis" | "veiculos";
+type CategoryTab = "produtos" | "imoveis" | "veiculos" | "servicos" | "fretes" | "viagens";
 
 interface CatalogItem {
   id: string;
@@ -58,6 +61,15 @@ interface CatalogItem {
 }
 
 const MAX_PROMO_SLOTS = 5; // 1 slot fixo de marca + 5 slots do usuário
+
+const SOCIAL_NETWORKS = [
+  { id: "whatsapp",  label: "WhatsApp",  emoji: "💬", color: "#25D366" },
+  { id: "instagram", label: "Instagram", emoji: "📸", color: "#E1306C" },
+  { id: "facebook",  label: "Facebook",  emoji: "👥", color: "#1877F2" },
+  { id: "linkedin",  label: "LinkedIn",  emoji: "💼", color: "#0A66C2" },
+  { id: "telegram",  label: "Telegram",  emoji: "📲", color: "#0088CC" },
+  { id: "twitter",   label: "X / Twitter", emoji: "🐦", color: "#1DA1F2" },
+];
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -94,6 +106,11 @@ export default function AdvertiserPromotionPage() {
   const [generatingPromoText, setGeneratingPromoText] = useState(false);
   const [generatedPromoText, setGeneratedPromoText] = useState("");
   const [copiedText, setCopiedText] = useState(false);
+  const [selectedNetworks, setSelectedNetworks] = useState<string[]>(["whatsapp", "instagram"]);
+  const [networkTexts, setNetworkTexts] = useState<Record<string, string>>({});
+  const [activeNetworkTab, setActiveNetworkTab] = useState<string>("whatsapp");
+  const [copiedNetwork, setCopiedNetwork] = useState<string | null>(null);
+  const [generatingNetworkId, setGeneratingNetworkId] = useState<string | null>(null);
 
   // Picker state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
@@ -300,6 +317,85 @@ export default function AdvertiserPromotionPage() {
         results.push(...vehicleRows);
       }
 
+      // Serviços
+      {
+        const { data } = await supabase
+          .from("service_listings" as any)
+          .select("id, title, service_type, price_label, city, state, visibility_status")
+          .eq("owner_user_id", user!.id)
+          .order("created_at", { ascending: false });
+
+        (data ?? []).forEach((r: any) => {
+          results.push({
+            id: r.id,
+            title: r.title ?? "Sem título",
+            price: null,
+            image: null,
+            bucket: undefined,
+            status: r.visibility_status ?? "draft",
+            category: "servicos",
+            extra: r.service_type ?? r.price_label,
+            city: r.city,
+            state: r.state,
+            storeId: store?.id,
+            storeName: store?.name,
+          });
+        });
+      }
+
+      // Fretes
+      {
+        const { data } = await supabase
+          .from("freight_listings" as any)
+          .select("id, title, vehicle_type, price_label, price_per_km, city, state, visibility_status")
+          .eq("owner_user_id", user!.id)
+          .order("created_at", { ascending: false });
+
+        (data ?? []).forEach((r: any) => {
+          results.push({
+            id: r.id,
+            title: r.title ?? "Frete",
+            price: r.price_per_km ?? null,
+            image: null,
+            bucket: undefined,
+            status: r.visibility_status ?? "draft",
+            category: "fretes",
+            extra: r.vehicle_type ?? r.price_label,
+            city: r.city,
+            state: r.state,
+            storeId: store?.id,
+            storeName: store?.name,
+          });
+        });
+      }
+
+      // Viagens
+      {
+        const { data } = await supabase
+          .from("travel_listings" as any)
+          .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, visibility_status")
+          .eq("owner_user_id", user!.id)
+          .order("created_at", { ascending: false });
+
+        (data ?? []).forEach((r: any) => {
+          const price = r.entry_price ?? r.price_per_person ?? r.total_price ?? null;
+          results.push({
+            id: r.id,
+            title: r.title ?? "Viagem",
+            price,
+            image: null,
+            bucket: undefined,
+            status: r.visibility_status ?? "draft",
+            category: "viagens",
+            extra: r.category ?? r.destination,
+            city: r.city ?? r.destination,
+            state: r.state,
+            storeId: store?.id,
+            storeName: store?.name,
+          });
+        });
+      }
+
       setAllItems(results);
 
       // Restore saved slots from DB — populates both visual slots and "Ativo" badges
@@ -463,29 +559,54 @@ export default function AdvertiserPromotionPage() {
     }
   }
 
-  /* ── AI Text Generation ── */
+  /* ── AI Text Generation — per network ── */
   async function handleGeneratePromoText() {
-    if (selectedItems.length === 0) return;
+    if (selectedItems.length === 0 || selectedNetworks.length === 0) return;
     setGeneratingPromoText(true);
+    setNetworkTexts({});
     setGeneratedPromoText("");
+
+    const itemsContext = selectedItems.map((item, idx) => {
+      const catLabel: Record<CategoryTab, string> = {
+        produtos: "Produto", imoveis: "Imóvel", veiculos: "Veículo",
+        servicos: "Serviço", fretes: "Frete", viagens: "Viagem",
+      };
+      return `Item ${idx + 1}: ${item.title} — Tipo: ${catLabel[item.category]} — Preço: ${item.price ? formatCurrencyBRL(item.price) : "Consulte"} — Local: ${[item.city, item.state].filter(Boolean).join(", ") || "Não informado"}`;
+    }).join("\n");
+
+    const networkInstructions: Record<string, string> = {
+      whatsapp:  "WhatsApp: escrita informal e calorosa, emojis moderados, máximo 300 palavras, CTA para chamar no WhatsApp ou acessar o link",
+      instagram: "Instagram: linguagem jovem e visual, muitos emojis, hashtags relevantes ao final (#), máximo 2200 caracteres",
+      facebook:  "Facebook: texto mais longo e conversacional, engaje com perguntas ao leitor, CTA claro para comentar ou compartilhar",
+      linkedin:  "LinkedIn: linguagem profissional e formal, foco em valor e credibilidade, sem emojis excessivos, até 700 palavras",
+      telegram:  "Telegram: direto e objetivo, formatação em negrito **assim** para destaques, emojis moderados, inclua link de contato",
+      twitter:   "X / Twitter: texto extremamente curto (máximo 280 caracteres), impactante, uma hashtag principal",
+    };
+
+    const systemPrompt = `Você é um especialista em marketing digital e copywriting para redes sociais brasileiras.
+Crie textos de divulgação altamente persuasivos usando gatilhos mentais (urgência, escassez, prova social, autoridade).
+Escreva em português brasileiro coloquial e envolvente. Adapte exatamente ao tom e formato de cada rede social.
+Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
+
     try {
-      const itemsContext = selectedItems.map((item, idx) => {
-        return `Item ${idx + 1}: ${item.title} - Categoria: ${item.category} - Preço: ${formatCurrencyBRL(item.price)} - Cidade: ${item.city || "Não informada"}`;
-      }).join("\n");
-
-      const systemPrompt = `Você é um copywriter especialista em marketing digital e vendas para WhatsApp e Instagram. 
-Crie um texto de venda persuasivo (copy) que divulgue os itens fornecidos, usando gatilhos mentais (urgência, escassez, prova social).
-O texto deve ser animado, usar emojis adequados e ter um call to action (CTA) claro no final, convidando a pessoa para clicar no link da loja ou entrar em contato.
-Mantenha o texto bem formatado e fácil de ler.`;
-
-      const userPrompt = `Por favor, crie um texto de divulgação para os seguintes itens:\n${itemsContext}\n\nLembre-se de adicionar placeholders para o link da loja, ex: [LINK DA LOJA].`;
-
-      const text = await chatCompletion(userPrompt, 'glm-4-plus', systemPrompt);
-      setGeneratedPromoText(text);
-      toast.success("Texto de divulgação gerado com sucesso!");
+      const results: Record<string, string> = {};
+      await Promise.all(
+        selectedNetworks.map(async (networkId) => {
+          const instruction = networkInstructions[networkId] || networkId;
+          const userPrompt = `Rede social: ${instruction}\n\nItens para divulgar:\n${itemsContext}\n\nGere o texto de divulgação para esta rede:`;
+          try {
+            results[networkId] = await chatCompletion(userPrompt, "glm-4-plus", systemPrompt);
+          } catch {
+            results[networkId] = "Erro ao gerar. Tente novamente.";
+          }
+        })
+      );
+      setNetworkTexts(results);
+      setActiveNetworkTab(selectedNetworks[0]);
+      toast.success(`Textos gerados para ${selectedNetworks.length} rede(s)!`);
     } catch (err: any) {
-      console.error("Erro ao gerar texto:", err);
-      toast.error("Não foi possível gerar o texto com a IA.");
+      console.error("Erro ao gerar textos:", err);
+      toast.error("Não foi possível gerar os textos com a IA.");
     } finally {
       setGeneratingPromoText(false);
     }
@@ -494,16 +615,30 @@ Mantenha o texto bem formatado e fácil de ler.`;
   function handleCopyPromoText() {
     navigator.clipboard.writeText(generatedPromoText);
     setCopiedText(true);
-    toast.success("Texto copiado para a área de transferência!");
+    toast.success("Texto copiado!");
     setTimeout(() => setCopiedText(false), 2000);
+  }
+
+  function handleCopyNetworkText(networkId: string) {
+    const text = networkTexts[networkId];
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedNetwork(networkId);
+    toast.success("Texto copiado!");
+    setTimeout(() => setCopiedNetwork(null), 2000);
   }
 
   /* ── Build slots array (always 6) ── */
   const slots: (CatalogItem | null)[] = Array.from({ length: MAX_PROMO_SLOTS }, (_, i) => selectedItems[i] ?? null);
 
-  /* ── Picker tabs (Imóveis/Veículos ocultos) ── */
+  /* ── Picker tabs ── */
   const pickerTabs: { key: CategoryTab; label: string; icon: React.ElementType }[] = [
-    { key: "produtos", label: "Produtos", icon: Package },
+    { key: "produtos",  label: "Produtos",  icon: Package },
+    { key: "imoveis",   label: "Imóveis",   icon: Building2 },
+    { key: "veiculos",  label: "Veículos",  icon: Car },
+    { key: "servicos",  label: "Serviços",  icon: Briefcase },
+    { key: "fretes",    label: "Fretes",    icon: Truck },
+    { key: "viagens",   label: "Viagens",   icon: Plane },
   ];
 
   /* ─────────────────────────────────────────────
@@ -881,11 +1016,46 @@ Mantenha o texto bem formatado e fácil de ler.`;
 
         {/* Action Buttons */}
         {selectedItems.length > 0 && (
-          <div className="px-3 sm:px-6 py-4 bg-[#0D0F12] border-t border-[#2A3038]/40 rounded-b-3xl">
+          <div className="px-3 sm:px-6 py-4 bg-[#0D0F12] border-t border-[#2A3038]/40 rounded-b-3xl space-y-4">
+
+            {/* Network selector */}
+            <div className="bg-[#1B1F24] border border-[#2A3038]/60 rounded-xl p-3">
+              <p className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                <Bot className="w-3.5 h-3.5 text-[#FF6A00]" />
+                Gerar texto para estas redes:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SOCIAL_NETWORKS.map((net) => {
+                  const active = selectedNetworks.includes(net.id);
+                  return (
+                    <button
+                      key={net.id}
+                      onClick={() =>
+                        setSelectedNetworks((prev) =>
+                          prev.includes(net.id)
+                            ? prev.filter((n) => n !== net.id)
+                            : [...prev, net.id]
+                        )
+                      }
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-all border ${
+                        active
+                          ? "text-white border-transparent"
+                          : "bg-transparent text-[#A7B0BE] border-[#2A3038] hover:border-[#A7B0BE]/40"
+                      }`}
+                      style={active ? { backgroundColor: net.color + "33", borderColor: net.color + "66", color: net.color } : {}}
+                    >
+                      <span>{net.emoji}</span>
+                      {net.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="flex flex-col md:flex-row gap-3">
               <Button
                 onClick={handleGeneratePromoText}
-                disabled={generatingPromoText}
+                disabled={generatingPromoText || selectedNetworks.length === 0}
                 variant="outline"
                 className="flex-1 bg-transparent border-[#FF6A00]/40 text-[#FF6A00] hover:bg-[#FF6A00]/10 hover:border-[#FF6A00] font-black uppercase tracking-wider text-xs h-14 rounded-xl transition-all duration-300"
               >
@@ -894,9 +1064,11 @@ Mantenha o texto bem formatado e fácil de ler.`;
                 ) : (
                   <Bot className="w-5 h-5 mr-2" />
                 )}
-                {generatingPromoText ? "Gerando Texto..." : "Gerar Texto para Redes Sociais com IA"}
+                {generatingPromoText
+                  ? `Gerando para ${selectedNetworks.length} rede(s)...`
+                  : `Postador IA — Gerar para ${selectedNetworks.length} Rede(s)`}
               </Button>
-              
+
               <Button
                 onClick={handlePromote}
                 disabled={submitting}
@@ -914,36 +1086,65 @@ Mantenha o texto bem formatado e fácil de ler.`;
               </Button>
             </div>
 
-            {/* Generated Text Area */}
-            {generatedPromoText && (
-              <div className="mt-4 bg-[#1B1F24] border border-[#2A3038] rounded-xl p-4 animate-in fade-in slide-in-from-top-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-[#FF6A00]/10 flex items-center justify-center border border-[#FF6A00]/20">
-                      <Sparkles className="w-3.5 h-3.5 text-[#FF6A00]" />
-                    </div>
-                    <span className="text-xs font-black text-white uppercase tracking-wider">
-                      Texto Gerado pela IA
-                    </span>
+            {/* Per-network generated texts */}
+            {Object.keys(networkTexts).length > 0 && (
+              <div className="bg-[#1B1F24] border border-[#2A3038] rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-4">
+                {/* Header */}
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-[#2A3038]/60">
+                  <div className="w-6 h-6 rounded-md bg-[#FF6A00]/10 flex items-center justify-center border border-[#FF6A00]/20">
+                    <Sparkles className="w-3.5 h-3.5 text-[#FF6A00]" />
                   </div>
-                  <Button
-                    onClick={handleCopyPromoText}
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-[#A7B0BE] hover:text-white hover:bg-[#2A3038] text-xs font-bold"
-                  >
-                    {copiedText ? (
-                      <><Check className="w-3.5 h-3.5 mr-1 text-green-400" /> Copiado</>
-                    ) : (
-                      <><Copy className="w-3.5 h-3.5 mr-1" /> Copiar Texto</>
-                    )}
-                  </Button>
+                  <span className="text-xs font-black text-white uppercase tracking-wider flex-1">
+                    Textos gerados pelo Postador IA
+                  </span>
+                  <span className="text-[10px] text-[#A7B0BE]/60">{Object.keys(networkTexts).length} rede(s)</span>
                 </div>
-                <Textarea 
-                  readOnly 
-                  value={generatedPromoText}
-                  className="min-h-[160px] bg-[#0D0F12] border-[#2A3038] text-[#F5F7FA] text-sm custom-scrollbar focus-visible:ring-[#FF6A00]/30"
-                />
+
+                {/* Network tabs */}
+                <div className="flex overflow-x-auto border-b border-[#2A3038]/40 bg-[#0D0F12]">
+                  {SOCIAL_NETWORKS.filter((n) => networkTexts[n.id]).map((net) => (
+                    <button
+                      key={net.id}
+                      onClick={() => setActiveNetworkTab(net.id)}
+                      className={`shrink-0 flex items-center gap-1.5 px-3 py-2 text-[11px] font-black transition-all border-b-2 ${
+                        activeNetworkTab === net.id
+                          ? "border-[#FF6A00] text-white"
+                          : "border-transparent text-[#A7B0BE] hover:text-white"
+                      }`}
+                    >
+                      <span>{net.emoji}</span>
+                      {net.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Active network text */}
+                {SOCIAL_NETWORKS.filter((n) => n.id === activeNetworkTab && networkTexts[n.id]).map((net) => (
+                  <div key={net.id} className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-[#A7B0BE]">
+                        {net.emoji} Texto para {net.label}
+                      </span>
+                      <Button
+                        onClick={() => handleCopyNetworkText(net.id)}
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-[#A7B0BE] hover:text-white hover:bg-[#2A3038] text-xs font-bold"
+                      >
+                        {copiedNetwork === net.id ? (
+                          <><Check className="w-3.5 h-3.5 mr-1 text-green-400" /> Copiado</>
+                        ) : (
+                          <><Copy className="w-3.5 h-3.5 mr-1" /> Copiar</>
+                        )}
+                      </Button>
+                    </div>
+                    <Textarea
+                      readOnly
+                      value={networkTexts[net.id]}
+                      className="min-h-[160px] bg-[#0D0F12] border-[#2A3038] text-[#F5F7FA] text-sm custom-scrollbar focus-visible:ring-[#FF6A00]/30"
+                    />
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -986,8 +1187,13 @@ Mantenha o texto bem formatado e fácil de ler.`;
             {selectedItems.map((item, idx) => {
               const imgUrl = resolveImage(item.image, item.bucket);
               const isActive = promoted.includes(item.id);
-              const categoryIcon = item.category === "imoveis" ? Building2
-                : item.category === "veiculos" ? Car : Package;
+              const categoryIcon =
+                item.category === "imoveis"  ? Building2
+                : item.category === "veiculos" ? Car
+                : item.category === "servicos" ? Briefcase
+                : item.category === "fretes"   ? Truck
+                : item.category === "viagens"  ? Plane
+                : Package;
               const CategoryIcon = categoryIcon;
 
               return (
