@@ -33,7 +33,7 @@ const SITUATIONS = [
     desc: "Cobrado quando o anunciante desbloqueia o contato (WhatsApp + e-mail) do interessado.",
     icon: KeyRound,
     color: "text-emerald-600",
-    def: 9,
+    def: 12,
   },
 ];
 

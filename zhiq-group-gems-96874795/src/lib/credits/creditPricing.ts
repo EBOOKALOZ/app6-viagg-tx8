@@ -18,9 +18,9 @@ export const CREDIT_COSTS = {
   /** Lojista aceita uma oferta recebida (Minha Oferta é...) */
   advertiser_accept_offer: 9,
   /** Lojista desbloqueia WhatsApp do cliente no pedido (PEDIDO VINDO DE MARKETPLACE) */
-  advertiser_unlock_order_whatsapp: 13,
+  advertiser_unlock_order_whatsapp: 12,
   /** Lojista desbloqueia contato direto do visitante (lead de imóvel/veículo/produto) */
-  advertiser_unlock_lead_whatsapp: 13,
+  advertiser_unlock_lead_whatsapp: 12,
 } as const;
 
 export type CreditEvent = keyof typeof CREDIT_COSTS;
