@@ -1,15 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
-const MODEL = "gpt-4o-mini";
-const KIND_LABEL: Record<"imovel" | "veiculo" | "servico", string> = {
+const MODEL = "glm-4-plus";
+const KIND_LABEL: Record<"imovel" | "veiculo" | "servico" | "produto", string> = {
   imovel: "imóvel",
   veiculo: "veículo",
   servico: "serviço",
+  produto: "produto",
 };
 
-const KIND_VERB: Record<"imovel" | "veiculo" | "servico", string> = {
+const KIND_VERB: Record<"imovel" | "veiculo" | "servico" | "produto", string> = {
   imovel: "venda",
   veiculo: "venda",
   servico: "divulgação",
+  produto: "venda",
 };
 
 /**
@@ -17,7 +19,7 @@ const KIND_VERB: Record<"imovel" | "veiculo" | "servico", string> = {
  * a partir dos campos já preenchidos pelo anunciante no formulário.
  */
 export async function generateListingDescription(
-  kind: "imovel" | "veiculo" | "servico",
+  kind: "imovel" | "veiculo" | "servico" | "produto",
   fields: Record<string, string | number | null | undefined>
 ): Promise<string> {
   const fieldLines = Object.entries(fields)
@@ -43,6 +45,7 @@ export async function generateListingDescription(
   });
 
   if (error) throw new Error(error.message || "Falha ao gerar descrição com IA.");
+  if ((data as any)?.ok === false) throw new Error((data as any)?.error || "Erro da API de IA.");
 
   const content = (data as any)?.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string" || !content.trim()) {

@@ -10,10 +10,12 @@ interface CommissionTiersCardProps {
 }
 
 const TIERS = [
-  { rate: 25, label: '25%' },
-  { rate: 18, label: '18%' },
-  { rate: 11, label: '11%' },
-  { rate: 6, label: '6%', isMeta: true },
+  { rate: 25, label: '25%', nivel: 'Inicial',  grupos: '0 grupos'  },
+  { rate: 20, label: '20%', nivel: 'Bronze',   grupos: '1 grupo'   },
+  { rate: 16, label: '16%', nivel: 'Prata',    grupos: '2 grupos'  },
+  { rate: 12, label: '12%', nivel: 'Ouro',     grupos: '3 grupos'  },
+  { rate: 9,  label: '9%',  nivel: 'Elite',    grupos: '4 grupos'  },
+  { rate: 6,  label: '6%',  nivel: 'VIP',      grupos: '5+ grupos', isMeta: true },
 ];
 
 export function CommissionTiersCard({
@@ -44,7 +46,7 @@ export function CommissionTiersCard({
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-2">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="h-10 w-full bg-muted rounded" />
             ))}
           </div>
@@ -87,7 +89,7 @@ export function CommissionTiersCard({
               {/* Left side */}
               <div className="flex items-center gap-3">
                 <div className={cn(
-                  'flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-colors',
+                  'flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold transition-colors shrink-0',
                   isCurrent && 'bg-emerald-500 text-white',
                   !isCurrent && !tier.isMeta && 'bg-muted text-muted-foreground',
                   tier.isMeta && !isCurrent && 'bg-amber-400 text-amber-950'
@@ -99,13 +101,16 @@ export function CommissionTiersCard({
                   )}
                 </div>
 
-                <span className={cn(
-                  'text-sm font-medium',
-                  isCurrent && 'text-emerald-800 dark:text-emerald-200 font-semibold',
-                  !isCurrent && 'text-muted-foreground'
-                )}>
-                  {tier.label}
-                </span>
+                <div>
+                  <div className={cn(
+                    'text-sm font-semibold leading-tight',
+                    isCurrent && 'text-emerald-800 dark:text-emerald-200',
+                    !isCurrent && 'text-muted-foreground'
+                  )}>
+                    {tier.label} <span className="font-normal opacity-70">— {tier.nivel}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground/60 mt-0.5">{tier.grupos}</div>
+                </div>
               </div>
 
               {/* Right side - badges */}

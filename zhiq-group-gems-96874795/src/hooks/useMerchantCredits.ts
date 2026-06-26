@@ -131,7 +131,8 @@ export function useMerchantCredits() {
         const { data } = await (supabase.from("merchant_stores") as any)
           .select("id")
           .eq("user_id", user.id)
-          .single();
+          .limit(1)
+          .maybeSingle();
         if (data) setStoreId(data.id);
       } catch { /* no store */ }
       finally {

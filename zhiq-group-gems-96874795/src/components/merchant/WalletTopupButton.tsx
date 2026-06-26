@@ -1,5 +1,5 @@
 /**
- * WalletTopupButton — "Comprar + Saldo" (recarga em R$ via Mercado Pago)
+ * WalletTopupButton — "Saldo para Motoboy" (recarga em R$ via Mercado Pago)
  *
  * Recarga avulsa em R$ que credita DIRETO no merchant_wallet pay_* — a mesma
  * conta debitada ao pagar o motoboy pela entrega (requestDelivery). NÃO concede
@@ -35,6 +35,9 @@ import {
   ExternalLink,
   AlertCircle,
   Clock,
+  QrCode,
+  CreditCard,
+  ArrowLeft,
 } from "lucide-react";
 
 type Step = "input" | "card" | "awaiting" | "confirmed" | "failed";
@@ -87,8 +90,6 @@ export function WalletTopupButton({
       toast.error("Loja não encontrada");
       return;
     }
-    // Modo embutido (flag VITE_MP_EMBEDDED_CHECKOUT): coleta o cartão na própria
-    // tela via Payment Brick, em vez de redirecionar para a página hospedada.
     if (isEmbeddedCardCheckout() && mercadoPagoPublicKey()) {
       setStep("card");
       return;
@@ -96,15 +97,6 @@ export function WalletTopupButton({
     const priceCents = Math.round(val * 100);
     setProcessing(true);
     try {
-      // wallet-topup: SEM grant_kind → pay_grant_legacy faz skip; o webhook
-      // credita o valor em R$ no merchant_wallet pay_* (target_account_id),
-      // exatamente a conta debitada ao pagar o motoboy.
-      //
-      // method "credit_card" → Edge Function gera uma PREFERENCE (Checkout
-      // Pro hospedado do MP), NÃO um PIX direto. O Checkout Pro já oferece
-      // PIX/cartão/boleto dentro da página do MP e funciona no sandbox —
-      // PIX direto (/v1/payments) falha no sandbox porque a conta de teste
-      // não tem chave PIX habilitada p/ render do QR.
       const res = await purchaseCredits({
         merchant_owner_id: storeId,
         package_price_cents: priceCents,
@@ -166,7 +158,7 @@ export function WalletTopupButton({
       const isMpInstavel =
         /non-2xx|internal_error|MP 5\d\d|comunica|timeout|failed to fetch/i.test(raw);
       const description = isMpInstavel
-        ? "O Mercado Pago está com instabilidade momentânea e não confirmou o cartão. Isso costuma ser temporário — aguarde alguns segundos e tente novamente. Se continuar, use o PIX ou tente mais tarde."
+        ? "O Mercado Pago está com instabilidade momentânea. Isso costuma ser temporário — aguarde alguns segundos e tente novamente, ou tente mais tarde."
         : raw || "Falha no pagamento";
       toast.error("Não foi possível concluir o pagamento", { description });
       throw err; // deixa o Brick exibir o erro também
@@ -237,7 +229,7 @@ export function WalletTopupButton({
     <>
       <Button onClick={() => setOpen(true)} className={className}>
         <Banknote className="h-4 w-4 mr-1.5" />
-        Comprar + Saldo
+        Saldo para Motoboy
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -245,7 +237,7 @@ export function WalletTopupButton({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#F5F7FA]">
               <Banknote className="h-5 w-5 text-emerald-400" />
-              Comprar + Saldo
+              Saldo para Motoboy
             </DialogTitle>
             <DialogDescription className="text-[#A7B0BE]">
               Recarga em R$ via Mercado Pago. O valor entra na sua carteira e é

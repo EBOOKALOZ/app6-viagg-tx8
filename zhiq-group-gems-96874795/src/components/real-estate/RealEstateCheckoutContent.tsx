@@ -16,7 +16,7 @@ import {
     Clock,
     XCircle,
     CheckCircle,
-    Shield
+    Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
@@ -219,6 +219,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
 
     const handleConfirmPurchase = async () => {
         if (!pkg || isProcessing) return;
+        const method = 'credit_card';
         setIsProcessing(true);
 
         try {
@@ -306,10 +307,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             let realPix = pixCode;
             let realQr: string | null = null;
             let realCheckout: string | null = null;
-            // "credit_card" (qualquer valor != "pix") faz a edge function
-            // gerar a preference do Checkout Pro (checkout_url), onde o
-            // usuário escolhe como pagar (PIX, cartão, boleto...).
-            const mpMethod = "credit_card";
+            const mpMethod = method;
 
             // Destino do crédito conforme o contexto da tela.
             let chargeMeta: Record<string, unknown>;
@@ -564,13 +562,13 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                 </div>
 
                                 <Button
-                                    onClick={handleConfirmPurchase}
+                                    onClick={() => handleConfirmPurchase()}
                                     disabled={isProcessing}
-                                    className="w-full h-16 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm sm:text-base px-3 shadow-xl shadow-orange-500/20 active:scale-[0.98] transition-all whitespace-normal text-center leading-tight"
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm shadow-xl active:scale-[0.98] transition-all"
                                 >
-                                    {isProcessing ? (
-                                        <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Gerando...</>
-                                    ) : "Recarga via Mercado Pago"}
+                                    {isProcessing
+                                        ? <Loader2 className="w-5 h-5 animate-spin" />
+                                        : "Pagar com Mercado Pago"}
                                 </Button>
 
                                 <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-loose">
@@ -611,10 +609,11 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                                 {isExpired ? (
                                     <div className="space-y-4">
                                         <Button
-                                            onClick={handleConfirmPurchase}
-                                            className="w-full h-14 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black text-sm uppercase shadow-xl"
+                                            onClick={() => handleConfirmPurchase()}
+                                            disabled={isProcessing}
+                                            className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm shadow-xl"
                                         >
-                                            Gerar Novo Link
+                                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Tentar novamente"}
                                         </Button>
                                         <Button
                                             variant="ghost"

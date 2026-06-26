@@ -269,15 +269,105 @@ export default function AdvertiserWalletPage() {
               onSuccess={loadWallet}
               className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider"
             />
-            <Button
-              variant="outline"
-              onClick={() => navigate("/anunciante/creditos")}
-              className="border-amber-500/30 text-amber-200 hover:bg-amber-500/10 hover:text-amber-100 font-bold text-xs uppercase tracking-wider"
-            >
-              <Banknote className="h-4 w-4 mr-1.5" />
-              Comprar Créditos
-            </Button>
           </div>
+        </div>
+      </div>
+
+      {/* ========== CREDITS PANEL ========== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Créditos da plataforma */}
+        <div className={`relative overflow-hidden rounded-2xl border p-5 ${
+          !isLoadingAdvertiserCredits && (advCredits?.available_credits ?? 0) <= 0
+            ? "bg-red-950/40 border-red-500/30"
+            : "bg-amber-950/30 border-amber-500/20"
+        }`}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              !isLoadingAdvertiserCredits && (advCredits?.available_credits ?? 0) <= 0
+                ? "bg-red-500/20"
+                : "bg-amber-500/20"
+            }`}>
+              <Banknote className={`h-4 w-4 ${
+                !isLoadingAdvertiserCredits && (advCredits?.available_credits ?? 0) <= 0
+                  ? "text-red-400"
+                  : "text-amber-400"
+              }`} />
+            </div>
+            <p className={`text-[10px] font-black uppercase tracking-widest ${
+              !isLoadingAdvertiserCredits && (advCredits?.available_credits ?? 0) <= 0
+                ? "text-red-400"
+                : "text-amber-400"
+            }`}>
+              {!isLoadingAdvertiserCredits && (advCredits?.available_credits ?? 0) < 0
+                ? "Créditos Devedores"
+                : "Créditos Disponíveis"}
+            </p>
+          </div>
+          {isLoadingAdvertiserCredits ? (
+            <Skeleton className="h-10 w-32 bg-white/10" />
+          ) : (
+            <p className={`text-4xl font-black tabular-nums tracking-tight ${
+              (advCredits?.available_credits ?? 0) < 0
+                ? "text-red-400"
+                : (advCredits?.available_credits ?? 0) === 0
+                  ? "text-red-300"
+                  : "text-amber-300"
+            }`}>
+              {(advCredits?.available_credits ?? 0).toLocaleString("pt-BR")}
+              <span className="text-base font-bold ml-1 opacity-60">cr</span>
+            </p>
+          )}
+          <p className="text-[11px] text-white/40 mt-2 font-medium">
+            {!isLoadingAdvertiserCredits && (advCredits?.available_credits ?? 0) <= 0
+              ? "Recarregue créditos para continuar usando a plataforma"
+              : "Saldo de créditos para usar nos serviços da plataforma"}
+          </p>
+          <Button
+            onClick={() => navigate("/anunciante/creditos")}
+            size="sm"
+            className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-black font-black text-xs uppercase tracking-wider rounded-xl"
+          >
+            <Banknote className="h-3.5 w-3.5 mr-1.5" />
+            Comprar Pacote de Créditos
+          </Button>
+        </div>
+
+        {/* Saldo financeiro (R$) — devedor ou positivo */}
+        <div className={`relative overflow-hidden rounded-2xl border p-5 ${
+          !isLoading && balanceCents < 0
+            ? "bg-red-950/40 border-red-500/30"
+            : "bg-[#1B1F24] border-[#2A3038]/60"
+        }`}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              !isLoading && balanceCents < 0 ? "bg-red-500/20" : "bg-emerald-500/10"
+            }`}>
+              <Wallet className={`h-4 w-4 ${
+                !isLoading && balanceCents < 0 ? "text-red-400" : "text-emerald-400"
+              }`} />
+            </div>
+            <p className={`text-[10px] font-black uppercase tracking-widest ${
+              !isLoading && balanceCents < 0 ? "text-red-400" : "text-emerald-400"
+            }`}>
+              {!isLoading && balanceCents < 0 ? "Saldo Devedor (R$)" : "Saldo em Reais"}
+            </p>
+          </div>
+          {isLoading ? (
+            <Skeleton className="h-10 w-32 bg-white/10" />
+          ) : (
+            <p className={`text-4xl font-black tabular-nums tracking-tight ${
+              balanceCents < 0 ? "text-red-400" : "text-[#F5F7FA]"
+            }`}>
+              {balanceVisible
+                ? `R$ ${formatCurrency(Math.abs(balanceCents))}`
+                : "R$ ••••••"}
+            </p>
+          )}
+          <p className="text-[11px] text-white/40 mt-2 font-medium">
+            {!isLoading && balanceCents < 0
+              ? "Recarregue para cobrir o débito pendente"
+              : "Disponível para pagamentos de entrega"}
+          </p>
         </div>
       </div>
 

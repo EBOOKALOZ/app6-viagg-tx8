@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Loader2, Plus, Package, Navigation, Clock,
   ChevronRight, Bike, CheckCircle2, X, RefreshCw,
-  ArrowLeft, Truck, AlertCircle, Search, EyeOff, Eye,
+  ArrowLeft, Truck, AlertCircle, Search, EyeOff, Eye, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +100,7 @@ export default function AdvertiserDeliveriesPage() {
   const navigate = useNavigate();
 
   const [view, setView] = useState<"list" | "create">("list");
+  const [pendingDraft, setPendingDraft] = useState<Record<string, any> | null>(null);
 
   /* ── List state ── */
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
@@ -205,18 +206,21 @@ export default function AdvertiserDeliveriesPage() {
      CREATE FORM LOGIC
   ══════════════════════════════════════ */
 
-  const openCreate = async () => {
+  const openCreate = async (opts?: { keepForm?: boolean }) => {
     setView("create");
     setIsLoadingStore(true);
 
-    // Reset form
-    setDestinationAddress("");
-    setCustomerName("");
-    setCustomerPhone("");
-    setDeliveryNotes("");
-    setManualDestCoords(null);
-    setReverseGeocodedAddress(null);
-    setRouteInfo(null);
+    if (!opts?.keepForm) {
+      setDestinationAddress("");
+      setCustomerName("");
+      setCustomerPhone("");
+      setDeliveryNotes("");
+      setProductImage(null);
+      setProductName(null);
+      setManualDestCoords(null);
+      setReverseGeocodedAddress(null);
+      setRouteInfo(null);
+    }
 
     try {
       const { exists, data: storeData } = await loadMerchantStore();
@@ -254,6 +258,57 @@ export default function AdvertiserDeliveriesPage() {
       setIsLoadingBalance(false);
     }
   };
+
+  /* ── Draft persistence ── */
+  const DRAFT_KEY = "delivery_new_call_draft";
+
+  const clearDraft = useCallback(() => sessionStorage.removeItem(DRAFT_KEY), []);
+
+  // Detecta draft salvo e apresenta opção ao lojista (sem abrir o form automaticamente)
+  useEffect(() => {
+    const saved = sessionStorage.getItem(DRAFT_KEY);
+    if (!saved) return;
+    try { setPendingDraft(JSON.parse(saved)); } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const resumeDraft = useCallback(() => {
+    if (!pendingDraft) return;
+    if (pendingDraft.destinationAddress) setDestinationAddress(pendingDraft.destinationAddress);
+    if (pendingDraft.customerName) setCustomerName(pendingDraft.customerName);
+    if (pendingDraft.customerPhone) setCustomerPhone(pendingDraft.customerPhone);
+    if (pendingDraft.deliveryNotes) setDeliveryNotes(pendingDraft.deliveryNotes);
+    if (pendingDraft.productImage) setProductImage(pendingDraft.productImage);
+    if (pendingDraft.productName) setProductName(pendingDraft.productName);
+    if (pendingDraft.manualDestCoords) setManualDestCoords(pendingDraft.manualDestCoords);
+    if (pendingDraft.serviceLevel) setServiceLevel(pendingDraft.serviceLevel);
+    if (pendingDraft.reverseGeocodedAddress) setReverseGeocodedAddress(pendingDraft.reverseGeocodedAddress);
+    if (pendingDraft.destDetails) setDestDetails(pendingDraft.destDetails);
+    setPendingDraft(null);
+    openCreate({ keepForm: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDraft]);
+
+  const discardDraft = useCallback(() => {
+    clearDraft();
+    setPendingDraft(null);
+  }, [clearDraft]);
+
+  /* Auto-save: salva sempre que um campo muda enquanto o form está aberto */
+  useEffect(() => {
+    if (view !== "create") return;
+    const hasData = !!(destinationAddress || customerName || customerPhone || deliveryNotes || productImage || productName || manualDestCoords);
+    if (!hasData) return;
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+      destinationAddress, customerName, customerPhone, deliveryNotes,
+      productImage, productName, manualDestCoords, serviceLevel, reverseGeocodedAddress, destDetails,
+    }));
+  }, [view, destinationAddress, customerName, customerPhone, deliveryNotes,
+      productImage, productName, manualDestCoords, serviceLevel, reverseGeocodedAddress, destDetails]);
+
+  const goToWallet = useCallback(() => {
+    navigate("/anunciante/carteira");
+  }, [navigate]);
 
   /* ── Derived coords ── */
   const parsedCoordinates = useMemo(() => {
@@ -421,6 +476,7 @@ export default function AdvertiserDeliveriesPage() {
         body: { delivery_id: orderId, pickup_address: store.endereco_formatado, destination_address: destinationAddress },
       }).catch(console.error);
 
+      clearDraft();
       toast.success("Entrega criada!", { description: "Buscando motoboy para sua entrega." });
       navigate(`/anunciante/entregas/${orderId}`);
     } catch (e: any) {
@@ -494,7 +550,7 @@ export default function AdvertiserDeliveriesPage() {
         <div className="xl:hidden w-full">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-background sticky top-0 z-20">
-            <Button variant="ghost" size="icon" onClick={() => setView("list")}>
+            <Button variant="ghost" size="icon" onClick={() => { clearDraft(); setView("list"); }}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -510,6 +566,8 @@ export default function AdvertiserDeliveriesPage() {
               <ProductImageUpload
                 onImageSelect={setProductImage}
                 onProductPick={(p) => { setProductImage(p.image); setProductName(p.title); }}
+                initialStoreLogo={store?.logo_url}
+                initialStoreName={store?.nome_loja}
               />
 
               <DestinationSection
@@ -540,10 +598,19 @@ export default function AdvertiserDeliveriesPage() {
                 />
               )}
 
-              {saldoApos !== null && saldoApos < 0 && (
-                <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>Saldo insuficiente para realizar a entrega.</span>
+              {saldoApos !== null && saldoApos < 0 && !!routeInfo && !!destinationAddress.trim() && !!customerName.trim() && (
+                <div className="flex flex-col gap-3 bg-destructive/10 border border-destructive/30 text-white rounded-xl p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-6 w-6 shrink-0 text-red-400" />
+                    <span className="text-[22px] font-bold leading-tight">Saldo insuficiente para realizar a entrega.</span>
+                  </div>
+                  <button
+                    onClick={goToWallet}
+                    className="w-full bg-white text-red-600 font-black text-sm uppercase tracking-wider rounded-xl py-3 px-4 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Adicione saldo e chame um motoboy
+                  </button>
                 </div>
               )}
 
@@ -587,7 +654,7 @@ export default function AdvertiserDeliveriesPage() {
           {/* Right — Sidebar */}
           <div className="w-[380px] 2xl:w-[420px] border-l border-border bg-muted/30 flex flex-col overflow-y-auto">
             <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-              <Button variant="ghost" size="icon" onClick={() => setView("list")}>
+              <Button variant="ghost" size="icon" onClick={() => { clearDraft(); setView("list"); }}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
@@ -601,6 +668,8 @@ export default function AdvertiserDeliveriesPage() {
               <ProductImageUpload
                 onImageSelect={setProductImage}
                 onProductPick={(p) => { setProductImage(p.image); setProductName(p.title); }}
+                initialStoreLogo={store?.logo_url}
+                initialStoreName={store?.nome_loja}
               />
 
               <DestinationSection
@@ -620,10 +689,19 @@ export default function AdvertiserDeliveriesPage() {
 
               {/* ServiceSelectionCard ocultado a pedido do usuário */}
 
-              {saldoApos !== null && saldoApos < 0 && (
-                <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  <span>Saldo insuficiente para realizar a entrega.</span>
+              {saldoApos !== null && saldoApos < 0 && !!routeInfo && !!destinationAddress.trim() && !!customerName.trim() && (
+                <div className="flex flex-col gap-3 bg-destructive/10 border border-destructive/30 text-white rounded-xl p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-6 w-6 shrink-0 text-red-400" />
+                    <span className="text-[22px] font-bold leading-tight">Saldo insuficiente para realizar a entrega.</span>
+                  </div>
+                  <button
+                    onClick={goToWallet}
+                    className="w-full bg-white text-red-600 font-black text-sm uppercase tracking-wider rounded-xl py-3 px-4 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Wallet className="h-4 w-4" />
+                    Adicione saldo e chame um motoboy
+                  </button>
                 </div>
               )}
 
@@ -751,6 +829,33 @@ export default function AdvertiserDeliveriesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Banner: chamada de motoboy pausada */}
+      {pendingDraft && (
+        <div className="max-w-2xl mx-auto px-4 pt-4">
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5 text-orange-500" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-800">Chamada de motoboy pausada</p>
+                <p className="text-xs text-slate-500 truncate">
+                  {pendingDraft.customerName || pendingDraft.destinationAddress || "Retomar onde parou?"}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="ghost" className="text-slate-400 h-8 px-3 text-xs" onClick={discardDraft}>
+                Descartar
+              </Button>
+              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white h-8 px-3 text-xs font-bold" onClick={resumeDraft}>
+                Retomar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto px-4 pt-5 space-y-6">
         {/* Search */}

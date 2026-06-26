@@ -56,8 +56,17 @@ serve(async (req) => {
 
     const data = await upstream.json();
 
+    if (!upstream.ok) {
+      const errMsg = data?.error?.message || data?.error || `Erro ${upstream.status} da API de IA`;
+      console.error("[ai-chat] upstream error:", upstream.status, errMsg);
+      return new Response(
+        JSON.stringify({ ok: false, error: errMsg }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(JSON.stringify(data), {
-      status: upstream.status,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {

@@ -15,6 +15,9 @@ interface ProductImageUploadProps {
   onImageSelect?: (dataUri: string | null) => void;
   onProductPick?: (product: { id: string; title: string; image: string | null; price?: number | null }) => void;
   maxImages?: number;
+  /** Logo e nome da loja passados pelo pai — evitam query interna e garantem exibição imediata */
+  initialStoreLogo?: string | null;
+  initialStoreName?: string | null;
 }
 
 import heic2any from 'heic2any';
@@ -178,7 +181,9 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   onFilesSelected,
   onImageSelect,
   onProductPick,
-  maxImages = 6
+  maxImages = 6,
+  initialStoreLogo,
+  initialStoreName,
 }) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
@@ -324,8 +329,8 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
       };
     },
   });
-  const storeName = storeInfo?.name || 'Minha Loja';
-  const storeLogo = storeInfo?.logo || null;
+  const storeName = initialStoreName || storeInfo?.name || 'Minha Loja';
+  const storeLogo = initialStoreLogo || storeInfo?.logo || null;
 
   const handlePickProduct = (product: { id: string; title: string; image: string | null; price?: number | null }) => {
     if (!product.image) {

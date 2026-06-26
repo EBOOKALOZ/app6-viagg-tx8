@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Loader2, Truck, AlertCircle } from "lucide-react";
+import { Loader2, Truck, AlertCircle, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { parseCoordinates } from "@/lib/coordinateParser";
 import { calculateDeliveryValue } from "@/lib/deliveryPricing";
@@ -74,6 +74,43 @@ export default function CreateDelivery() {
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [serviceLevel, setServiceLevel] = useState<'standard' | 'express'>('standard');
 
+
+  /* ── Draft persistence: restaura rascunho ao montar ── */
+  const DRAFT_KEY = "delivery_new_call_draft";
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem(DRAFT_KEY);
+    if (!saved) return;
+    try {
+      const d = JSON.parse(saved);
+      if (d.destinationAddress) setDestinationAddress(d.destinationAddress);
+      if (d.customerName) setCustomerName(d.customerName);
+      if (d.customerPhone) setCustomerPhone(d.customerPhone);
+      if (d.deliveryNotes) setDeliveryNotes(d.deliveryNotes);
+      if (d.manualDestCoords) setManualDestCoords(d.manualDestCoords);
+      if (d.serviceLevel) setServiceLevel(d.serviceLevel);
+      if (d.reverseGeocodedAddress) setReverseGeocodedAddress(d.reverseGeocodedAddress);
+      if (d.destDetails) setDestDetails(d.destDetails);
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* Auto-save: salva sempre que um campo muda */
+  useEffect(() => {
+    const hasData = !!(destinationAddress || customerName || customerPhone || deliveryNotes || manualDestCoords);
+    if (!hasData) return;
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+      destinationAddress, customerName, customerPhone, deliveryNotes,
+      manualDestCoords, serviceLevel, reverseGeocodedAddress, destDetails,
+    }));
+  }, [destinationAddress, customerName, customerPhone, deliveryNotes,
+      manualDestCoords, serviceLevel, reverseGeocodedAddress, destDetails]);
+
+  const clearDraft = useCallback(() => sessionStorage.removeItem(DRAFT_KEY), []);
+
+  const goToWallet = useCallback(() => {
+    navigate("/anunciante/carteira");
+  }, [navigate]);
 
   /* ── Derived ── */
 
@@ -426,7 +463,7 @@ export default function CreateDelivery() {
         else console.log("[CreateDelivery] Geocoding function success:", funcData);
       });
 
-      // Redirect to delivery view page for real-time tracking
+      clearDraft();
       navigate(`/merchant/entrega/${orderId}`);
     } catch (e: any) {
       console.error("[CreateDelivery] insert catch:", e);
@@ -551,10 +588,19 @@ export default function CreateDelivery() {
           />
         ) : null}
 
-        {saldoApos !== null && saldoApos < 0 && (
-          <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-lg p-3 text-sm mt-3">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>Saldo insuficiente para realizar a entrega.</span>
+        {saldoApos !== null && saldoApos < 0 && !!routeInfo && !!destinationAddress.trim() && !!customerName.trim() && (
+          <div className="flex flex-col gap-3 bg-destructive/10 border border-destructive/30 text-white rounded-xl p-4 mt-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-6 w-6 shrink-0 text-red-400" />
+              <span className="text-[22px] font-bold leading-tight">Saldo insuficiente para realizar a entrega.</span>
+            </div>
+            <button
+              onClick={goToWallet}
+              className="w-full bg-white text-red-600 font-black text-sm uppercase tracking-wider rounded-xl py-3 px-4 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Wallet className="h-4 w-4" />
+              Adicione saldo e chame um motoboy
+            </button>
           </div>
         )}
 
@@ -631,10 +677,19 @@ export default function CreateDelivery() {
 
             <ServiceSelectionCard serviceLevel={serviceLevel} onSelectService={setServiceLevel} />
 
-            {saldoApos !== null && saldoApos < 0 && (
-              <div className="flex items-center gap-2 bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>Saldo insuficiente para realizar a entrega.</span>
+            {saldoApos !== null && saldoApos < 0 && !!routeInfo && !!destinationAddress.trim() && !!customerName.trim() && (
+              <div className="flex flex-col gap-3 bg-destructive/10 border border-destructive/30 text-white rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-6 w-6 shrink-0 text-red-400" />
+                  <span className="text-[22px] font-bold leading-tight">Saldo insuficiente para realizar a entrega.</span>
+                </div>
+                <button
+                  onClick={goToWallet}
+                  className="w-full bg-white text-red-600 font-black text-sm uppercase tracking-wider rounded-xl py-3 px-4 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <Wallet className="h-4 w-4" />
+                  Adicione saldo e chame um motoboy
+                </button>
               </div>
             )}
 

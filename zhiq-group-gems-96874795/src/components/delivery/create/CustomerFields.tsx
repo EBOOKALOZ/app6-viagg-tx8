@@ -80,7 +80,7 @@ export function CustomerFields({
             placeholder="Ponto de referência, instruções..."
             value={deliveryNotes}
             onChange={(e) => onNotesChange(e.target.value)}
-            className="resize-none"
+            className="resize-none text-white"
             rows={2}
           />
         </div>
