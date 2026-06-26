@@ -6,8 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { ContactIntentionModal } from "@/components/listings/ContactIntentionModal";
+import { StoreLocationMap } from "@/components/StoreLocationMap";
+import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { Button } from "@/components/ui/button";
-import { Plane, MapPin, Calendar, Users, Check, ArrowLeft, Loader2 } from "lucide-react";
+import { Plane, MapPin, Calendar, Users, Check, ArrowLeft, Loader2, DollarSign, Clock } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
 
 export default function TravelDetailPage() {
@@ -56,10 +58,6 @@ export default function TravelDetailPage() {
   }, [id]);
 
   const handleInterest = () => {
-    if (!user) {
-      navigate(`/auth?entry=buyer&redirect=${encodeURIComponent(`/viagens/minha-conta?interest=${id}`)}`);
-      return;
-    }
     supabase.rpc("charge_travel_interest_click" as any, { p_listing_id: id, p_fingerprint: null }).then(() => {}, () => {});
     setContactOpen(true);
   };
@@ -96,17 +94,23 @@ export default function TravelDetailPage() {
       hideStoreNav
       myAccountPath="/viagens/minha-conta"
     >
-      <div style={{ backgroundColor: "#E0F2FE" }} className="min-h-screen">
+      <div style={{ backgroundColor: "#F5E62B" }} className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
           <button onClick={() => navigate("/viagens")} className="flex items-center gap-2 text-sm font-bold text-zinc-600 hover:text-sky-600">
             <ArrowLeft className="w-4 h-4" /> Voltar para Viagens
           </button>
 
-          {(media as string[]).length > 0 && (
-            <div className="rounded-3xl overflow-hidden aspect-video bg-sky-100">
+          <div className="rounded-3xl overflow-hidden aspect-video">
+            {(media as string[]).length > 0 ? (
               <img src={(media as string[])[0]} alt={listing.title} className="w-full h-full object-contain bg-zinc-900" />
-            </div>
-          )}
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ backgroundColor: "#F5E62B" }}>
+                <span className="text-5xl">✈️</span>
+                <p className="text-zinc-800 font-black text-lg tracking-tight">Viagens &amp; Turismo</p>
+                <p className="text-zinc-600 text-sm font-medium">Sem foto cadastrada</p>
+              </div>
+            )}
+          </div>
 
           <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200">
             <div className="space-y-2">
@@ -158,6 +162,36 @@ export default function TravelDetailPage() {
               </div>
             )}
 
+            {/* ── Mapa de localização da agência ── */}
+            {listing.latitude && listing.longitude && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-sky-500" />
+                  <h3 className="font-black text-zinc-900 text-sm">Localização da agência</h3>
+                </div>
+                {listing.endereco_formatado && (
+                  <p className="text-xs text-zinc-500 font-medium">{listing.endereco_formatado}</p>
+                )}
+                <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
+                  <StoreLocationMap
+                    initialLat={listing.latitude}
+                    initialLng={listing.longitude}
+                    addressLabel={listing.endereco_formatado ?? listing.city}
+                    markerLabel={listing.title}
+                    readOnly
+                    hasConfirmedLocation
+                    onLocationSelect={() => {}}
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Banner de aviso antes do botão de interesse */}
+            <div className="-mx-6 px-0">
+              <InstitutionalSafetyBanner />
+            </div>
+
             <Button onClick={handleInterest} className="w-full bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black py-4 h-auto text-sm shadow-lg flex items-center justify-center gap-2 text-center whitespace-normal">
               <Plane className="w-4 h-4 shrink-0" /> TENHO INTERESSE NESTA VIAGEM
             </Button>
@@ -172,6 +206,16 @@ export default function TravelDetailPage() {
           listingId={id!}
           listingModule={"travel" as any}
           listingTitle={listing.title}
+          listingMeta={{
+            image: (media as string[])[0] ?? null,
+            chips: [
+              ...(priceDisplay ? [{ icon: <DollarSign className="w-3 h-3" />, label: priceDisplay, color: "#22c55e" }] : []),
+              ...(listing.destination ? [{ icon: <MapPin className="w-3 h-3" />, label: listing.destination, color: "#0ea5e9" }] : []),
+              ...(listing.departure_date ? [{ icon: <Calendar className="w-3 h-3" />, label: new Date(listing.departure_date + "T12:00:00").toLocaleDateString("pt-BR") }] : []),
+              ...(listing.duration_days ? [{ icon: <Clock className="w-3 h-3" />, label: `${listing.duration_days} dias`, color: "#f59e0b" }] : []),
+              ...(listing.available_spots ? [{ icon: <Users className="w-3 h-3" />, label: `${listing.available_spots} vagas`, color: "#8b5cf6" }] : []),
+            ],
+          }}
         />
       )}
 

@@ -33,6 +33,7 @@ export const useSoundtrackMusic = ({
     const audio = new Audio(src);
     audio.volume = 0;
     audio.preload = "auto";
+    audio.loop = true;
     audio.load();
     audioRef.current = audio;
     return () => {

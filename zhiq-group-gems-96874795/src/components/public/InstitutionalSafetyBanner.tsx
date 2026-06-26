@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export const InstitutionalSafetyBanner: React.FC = () => {
     return (
-        <div className="w-full px-4 lg:px-6 mb-8 mt-2">
+        <div className="w-full px-4 lg:px-6 mb-8 mt-0">
             <div className="max-w-[1920px] mx-auto relative overflow-hidden bg-[#D90000] rounded-[32px] border border-white/20 shadow-2xl">
                 {/* Visual Elements - Glow Effect */}
                 <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-white/10 rounded-full blur-[100px]" />

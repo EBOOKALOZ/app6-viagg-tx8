@@ -20,8 +20,6 @@ import {
     Truck,
     Shield,
     Tag,
-    Volume2,
-    VolumeX,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,10 +32,6 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useSoundtrackMusic } from "@/hooks/useSoundtrackMusic";
-import appTheme from "@/assets/viagg_search_loop.mp3";
-
-const MERCADO_MUTE_KEY = "viagg_mercado_sound_muted";
 
 interface MarketLayoutProps {
     children: React.ReactNode;
@@ -85,22 +79,6 @@ export function MarketLayout({
     const { user, isLoading, availableProfiles, activeProfile, signOut } = useAuth();
     const isMerchant = activeProfile === 'merchant';
 
-    const [soundMuted, setSoundMuted] = useState<boolean>(
-        () => localStorage.getItem(MERCADO_MUTE_KEY) !== "false"
-    );
-    useEffect(() => {
-        localStorage.setItem(MERCADO_MUTE_KEY, String(soundMuted));
-    }, [soundMuted]);
-    // isPlaying sempre false — música só inicia via play()/stop() explícitos no clique
-    const { play: playSound, stop: stopSound } = useSoundtrackMusic({
-        src: appTheme,
-        startTime: 21,
-        endTime: 47,
-        volume: 0.12,
-        isPlaying: false,
-        fadeInDuration: 1500,
-        fadeOutDuration: 800,
-    });
 
     const handleMotoboyClick = () => {
         if (!user) {
@@ -161,33 +139,8 @@ export function MarketLayout({
                             </button>
                         </div>
 
-                        {/* Direita: Sair + Som */}
+                        {/* Direita */}
                         <div className="flex items-center gap-1 shrink-0">
-                            {user ? (
-                                <button
-                                    onClick={handleSair}
-                                    className="flex items-center justify-center h-7 w-7 bg-red-500 hover:bg-red-600 rounded-lg shadow-lg text-white transition-all"
-                                    title="Sair"
-                                >
-                                    <LogOut className="w-3.5 h-3.5" />
-                                </button>
-                            ) : null}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (soundMuted) {
-                                        setSoundMuted(false);
-                                        playSound();
-                                    } else {
-                                        setSoundMuted(true);
-                                        stopSound();
-                                    }
-                                }}
-                                className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-white"
-                                title={soundMuted ? "Ativar som" : "Desativar som"}
-                            >
-                                {soundMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-                            </button>
                             {headerRight}
                         </div>
                     </div>
@@ -249,32 +202,6 @@ export function MarketLayout({
 
                         {/* Direita desktop */}
                         <div className="flex items-center gap-3 text-white shrink-0">
-                            {user && (
-                                <Button
-                                    onClick={handleSair}
-                                    variant="ghost"
-                                    className="bg-red-500 hover:bg-red-600 text-white font-black text-xs h-[44px] px-4 rounded-xl shadow-lg border-0 uppercase tracking-widest whitespace-nowrap flex items-center gap-2"
-                                >
-                                    <LogOut className="w-4 h-4" />
-                                    Sair
-                                </Button>
-                            )}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    if (soundMuted) {
-                                        setSoundMuted(false);
-                                        playSound();
-                                    } else {
-                                        setSoundMuted(true);
-                                        stopSound();
-                                    }
-                                }}
-                                className="p-2 rounded-full hover:bg-white/10 transition-colors text-white"
-                                title={soundMuted ? "Ativar som" : "Desativar som"}
-                            >
-                                {soundMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                            </button>
                             {headerRight}
                         </div>
                     </div>

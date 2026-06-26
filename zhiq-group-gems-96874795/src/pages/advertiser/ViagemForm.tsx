@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X, RefreshCw } from "lucide-react";
+import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X, RefreshCw, Phone, Mail } from "lucide-react";
+import { StoreLocationPicker, type ValidAddressDetails } from "@/components/merchant/StoreLocationPicker";
 import { TRAVEL_CATEGORIES, TRAVEL_INCLUDES } from "@/lib/viagem/travelCategories";
 import { useToast } from "@/hooks/use-toast";
 import { formatBrazilianPhone } from "@/lib/utils";
@@ -38,6 +39,9 @@ interface FormData {
   state: string;
   whatsapp: string;
   email: string;
+  latitude: number | null;
+  longitude: number | null;
+  endereco_formatado: string | null;
   includes: Record<string, boolean>;
 }
 
@@ -47,6 +51,7 @@ const EMPTY: FormData = {
   entry_price: "", price_per_person: "", total_price: "",
   not_included: "", installments_available: false,
   description: "", city: "", state: "", whatsapp: "", email: "",
+  latitude: null, longitude: null, endereco_formatado: null,
   includes: Object.fromEntries(TRAVEL_INCLUDES.map(i => [i.key, false])),
 };
 
@@ -130,6 +135,9 @@ export default function ViagemForm() {
       state: existing.state || "",
       whatsapp: existing.whatsapp || "",
       email: existing.email || "",
+      latitude: existing.latitude ?? null,
+      longitude: existing.longitude ?? null,
+      endereco_formatado: existing.endereco_formatado ?? null,
       includes: Object.fromEntries(
         TRAVEL_INCLUDES.map(i => [i.key, existing[`includes_${i.key}`] ?? false])
       ),
@@ -185,6 +193,9 @@ export default function ViagemForm() {
         description: form.description.trim() || null,
         city: form.city.trim() || form.destination.trim() || '',
         state: form.state.trim() || '',
+        latitude: form.latitude ?? null,
+        longitude: form.longitude ?? null,
+        endereco_formatado: form.endereco_formatado ?? null,
         visibility_status: "published",
         published_at: new Date().toISOString(),
       };
@@ -508,19 +519,33 @@ export default function ViagemForm() {
         </label>
       </div>
 
+      {/* ── Localização e Contato ── */}
       <div className="space-y-4 bg-white rounded-2xl border border-zinc-200 p-5">
-        <h2 className="font-black text-zinc-900">Localizacao e contato</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <h2 className="font-black text-zinc-900">Localização e contato</h2>
+
+        {/* Mapa — mesmo componente do cadastro de lojista */}
+        <StoreLocationPicker
+          latitude={form.latitude}
+          longitude={form.longitude}
+          endereco_formatado={form.endereco_formatado}
+          onLocationChange={(lat, lng, endereco, details?: ValidAddressDetails) => {
+            setForm(prev => ({
+              ...prev,
+              latitude: lat,
+              longitude: lng,
+              endereco_formatado: endereco,
+              city: details?.cidade || prev.city,
+              state: details?.estado || prev.state,
+            }));
+          }}
+        />
+
+        {/* Campos de contato da agência */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
           <div>
-            <label className="text-xs font-bold text-zinc-600 mb-1 block">Cidade</label>
-            <Input value={form.city} onChange={e => set("city", e.target.value)} placeholder="Sao Paulo" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-zinc-600 mb-1 block">Estado (sigla)</label>
-            <Input value={form.state} onChange={e => set("state", e.target.value)} maxLength={2} placeholder="SP" />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-zinc-600 mb-1 block">WhatsApp</label>
+            <label className="text-xs font-bold text-zinc-600 mb-1 block flex items-center gap-1">
+              <Phone className="w-3 h-3" /> WhatsApp
+            </label>
             <Input
               value={form.whatsapp}
               onChange={e => set("whatsapp", formatBrazilianPhone(e.target.value))}
@@ -530,8 +555,15 @@ export default function ViagemForm() {
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-zinc-600 mb-1 block">E-mail</label>
-            <Input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="agencia@email.com" />
+            <label className="text-xs font-bold text-zinc-600 mb-1 block flex items-center gap-1">
+              <Mail className="w-3 h-3" /> E-mail
+            </label>
+            <Input
+              type="email"
+              value={form.email}
+              onChange={e => set("email", e.target.value)}
+              placeholder="agencia@email.com"
+            />
           </div>
         </div>
       </div>

@@ -1108,6 +1108,25 @@ const scrollToProducts = () => {
                 <>
 <InstitutionalSafetyBanner />
 
+            {/* CTA para anunciantes */}
+            <div className="w-full px-4 lg:px-6 pb-4 pt-0">
+                <div className="max-w-[1920px] mx-auto">
+                    <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                        <div className="text-white space-y-1">
+                            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para lojistas e comerciantes</p>
+                            <h3 className="text-xl font-black leading-tight">🛍️ Anuncie seu produto aqui!</h3>
+                            <p className="text-sm text-sky-100">Alcance compradores na sua região. Cadastro rápido e gratuito.</p>
+                        </div>
+                        <button
+                            onClick={() => navigate("/auth?entry=advertiser")}
+                            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+                        >
+                            Anunciar meu produto →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {/* ═══ REAL ESTATE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
                 <div className="w-full px-4 lg:px-6 py-12 bg-[#FFE600]">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyBRL } from "@/lib/utils";
@@ -60,7 +60,7 @@ interface CatalogItem {
   storeName?: string;
 }
 
-const MAX_PROMO_SLOTS = 5; // 1 slot fixo de marca + 5 slots do usuário
+const MAX_PROMO_SLOTS = 5; // máximo de slots do usuário
 
 const SOCIAL_NETWORKS = [
   { id: "whatsapp",  label: "WhatsApp",  emoji: "💬", color: "#25D366" },
@@ -94,6 +94,16 @@ function buildStoreUrl(storeId?: string): string {
 export default function AdvertiserPromotionPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const routeCategory = useMemo((): CategoryTab | null => {
+    if (pathname.includes("/imoveis/")) return "imoveis";
+    if (pathname.includes("/veiculos/")) return "veiculos";
+    if (pathname.includes("/servicos/")) return "servicos";
+    if (pathname.includes("/fretes/")) return "fretes";
+    if (pathname.includes("/viagens/")) return "viagens";
+    return null; // rota genérica → mostra todas
+  }, [pathname]);
 
   const [allItems, setAllItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -155,9 +165,10 @@ export default function AdvertiserPromotionPage() {
     setLoading(true);
     try {
       const results: CatalogItem[] = [];
+      const onlyCategory = routeCategory; // null = busca tudo
 
       // Produtos (Advertiser Listings + Merchant Products)
-      {
+      if (!onlyCategory || onlyCategory === "produtos") {
         // 1. Fetch Advertiser Listings — by account ID if available, fallback to owner_user_id
         {
           const advQuery = supabase
@@ -216,7 +227,7 @@ export default function AdvertiserPromotionPage() {
       }
 
       // Imóveis
-      {
+      if (!onlyCategory || onlyCategory === "imoveis") {
         const { data } = await supabase
           .from("real_estate_listings")
           .select("id, title, price_brl, visibility_status, property_type, city, state, real_estate_media(original_storage_path, public_masked_storage_path)")
@@ -244,7 +255,7 @@ export default function AdvertiserPromotionPage() {
       }
 
       // Veículos — vehicle_listings não tem cover_image_url; usar vehicle_media join
-      {
+      if (!onlyCategory || onlyCategory === "veiculos") {
         const { data } = await supabase
           .from("vehicle_listings" as any)
           .select("id, title, price_brl, visibility_status, vehicle_type, city, state, vehicle_media(original_storage_path, public_masked_storage_path)")
@@ -318,7 +329,7 @@ export default function AdvertiserPromotionPage() {
       }
 
       // Serviços
-      {
+      if (!onlyCategory || onlyCategory === "servicos") {
         const { data } = await supabase
           .from("service_listings" as any)
           .select("id, title, service_type, price_label, city, state, visibility_status")
@@ -344,7 +355,7 @@ export default function AdvertiserPromotionPage() {
       }
 
       // Fretes
-      {
+      if (!onlyCategory || onlyCategory === "fretes") {
         const { data } = await supabase
           .from("freight_listings" as any)
           .select("id, title, vehicle_type, price_label, price_per_km, city, state, visibility_status")
@@ -370,20 +381,45 @@ export default function AdvertiserPromotionPage() {
       }
 
       // Viagens
-      {
+      if (!onlyCategory || onlyCategory === "viagens") {
         const { data } = await supabase
           .from("travel_listings" as any)
           .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, visibility_status")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
-        (data ?? []).forEach((r: any) => {
+        const travelRows = (data ?? []) as any[];
+
+        // Buscar imagens em travel_media
+        const travelIds = travelRows.map((r: any) => r.id);
+        const travelMediaMap = new Map<string, string>();
+        if (travelIds.length > 0) {
+          const { data: mediaRows } = await supabase
+            .from("travel_media" as any)
+            .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+            .in("listing_id", travelIds)
+            .order("sort_order", { ascending: true });
+
+          for (const m of (mediaRows ?? []) as any[]) {
+            if (!travelMediaMap.has(m.listing_id)) {
+              const p = m.public_masked_storage_path || m.original_storage_path;
+              if (p) {
+                travelMediaMap.set(
+                  m.listing_id,
+                  p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl,
+                );
+              }
+            }
+          }
+        }
+
+        travelRows.forEach((r: any) => {
           const price = r.entry_price ?? r.price_per_person ?? r.total_price ?? null;
           results.push({
             id: r.id,
             title: r.title ?? "Viagem",
             price,
-            image: null,
+            image: travelMediaMap.get(r.id) ?? null,
             bucket: undefined,
             status: r.visibility_status ?? "draft",
             category: "viagens",
@@ -628,11 +664,12 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
     setTimeout(() => setCopiedNetwork(null), 2000);
   }
 
-  /* ── Build slots array (always 6) ── */
-  const slots: (CatalogItem | null)[] = Array.from({ length: MAX_PROMO_SLOTS }, (_, i) => selectedItems[i] ?? null);
+  /* ── Build slots array — itens preenchidos + 1 slot vazio extra (até MAX_PROMO_SLOTS) ── */
+  const visibleSlotCount = Math.min(selectedItems.length + 1, MAX_PROMO_SLOTS);
+  const slots: (CatalogItem | null)[] = Array.from({ length: visibleSlotCount }, (_, i) => selectedItems[i] ?? null);
 
-  /* ── Picker tabs ── */
-  const pickerTabs: { key: CategoryTab; label: string; icon: React.ElementType }[] = [
+  /* ── Picker tabs — filtrado pela rota atual ── */
+  const allPickerTabs: { key: CategoryTab; label: string; icon: React.ElementType }[] = [
     { key: "produtos",  label: "Produtos",  icon: Package },
     { key: "imoveis",   label: "Imóveis",   icon: Building2 },
     { key: "veiculos",  label: "Veículos",  icon: Car },
@@ -640,6 +677,9 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
     { key: "fretes",    label: "Fretes",    icon: Truck },
     { key: "viagens",   label: "Viagens",   icon: Plane },
   ];
+  const pickerTabs = routeCategory
+    ? allPickerTabs.filter((t) => t.key === routeCategory)
+    : allPickerTabs;
 
   /* ─────────────────────────────────────────────
      RENDER
@@ -693,7 +733,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                 if (nextSlot < MAX_PROMO_SLOTS) {
                   setPickerSlot(nextSlot);
                   setPickerSearch("");
-                  setPickerTab("produtos");
+                  setPickerTab(routeCategory ?? "produtos");
                 } else {
                   toast.error("Todos os slots já estão preenchidos!");
                 }
@@ -714,13 +754,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
 
           {/* ── Slot 0: MARCA — clica e vai criar anúncio ── */}
           <button
-            onClick={() => {
-              if (user) {
-                navigate("/anunciante/anuncios/novo");
-              } else {
-                navigate("/auth");
-              }
-            }}
+            onClick={() => navigate("/mercado")}
             className="relative bg-[#0D0F12] aspect-square flex flex-col items-center justify-center overflow-hidden cursor-pointer group/brand w-full transition-all duration-300 hover:bg-[#FF6A00]/10"
           >
             {/* fundo decorativo */}
@@ -789,7 +823,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                           setTimeout(() => {
                             setPickerSlot(slotIdx >= 0 ? slotIdx : selectedItems.length);
                             setPickerSearch("");
-                            setPickerTab("produtos");
+                            setPickerTab(routeCategory ?? "produtos");
                           }, 50);
                         }}
                         className="w-7 h-7 rounded-full bg-blue-500/90 text-white flex items-center justify-center hover:bg-blue-600 shadow-lg transition-all"
@@ -856,7 +890,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                   onClick={() => {
                     setPickerSlot(idx);
                     setPickerSearch("");
-                    setPickerTab("produtos");
+                    setPickerTab(routeCategory ?? "produtos");
                   }}
                   className="w-full bg-[#1B1F24] flex flex-col items-center justify-center aspect-square border-2 border-dashed border-[#2A3038]/60 hover:border-[#FF6A00]/50 hover:bg-[#FF6A00]/5 transition-all duration-300 cursor-pointer group/empty"
                 >

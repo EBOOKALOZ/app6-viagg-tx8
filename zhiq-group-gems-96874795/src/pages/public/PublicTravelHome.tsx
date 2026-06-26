@@ -8,6 +8,7 @@ import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
 import { Plane, Loader2 } from "lucide-react";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
+import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 
 export default function PublicTravelHome() {
   const navigate = useNavigate();
@@ -62,8 +63,30 @@ export default function PublicTravelHome() {
       hideStoreNav
       myAccountPath="/viagens/minha-conta"
     >
+      <div className="w-full px-4 lg:px-6 pt-0 bg-yellow-400">
+        <InstitutionalSafetyBanner />
+
+        {/* CTA para agências */}
+        <div className="pb-4 pt-2">
+          <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+            <div className="text-white space-y-1">
+              <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para agências e operadoras</p>
+              <h3 className="text-xl font-black leading-tight">✈️ Anuncie sua viagem aqui!</h3>
+              <p className="text-sm text-sky-100">Alcance viajantes na sua região. Cadastro rápido e gratuito.</p>
+            </div>
+            <button
+              onClick={() => navigate("/auth?entry=advertiser")}
+              className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+            >
+              Anunciar minha viagem →
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="w-full px-4 lg:px-6 py-12 bg-yellow-400">
         <div className="max-w-[1920px] mx-auto space-y-8">
+
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-sky-600/10 rounded-lg">

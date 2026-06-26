@@ -34,10 +34,19 @@ function productBlock(ev: EventPayload) {
   const priceLine = (ev.listing_price_brl !== null && ev.listing_price_brl !== undefined)
     ? `<p style="color:#16a34a; font-size:16px; font-weight:700; margin:4px 0 0;">${formatBRL(ev.listing_price_brl)}</p>`
     : "";
-  return `<div style="margin:0 0 20px; text-align:center;">
-    ${ev.listing_image_url ? `<img src="${ev.listing_image_url}" alt="${ev.listing_title || "Produto"}" width="220" style="max-width:220px; width:100%; height:auto; border-radius:12px; border:1px solid #e4e4e7;" />` : ""}
-    ${ev.listing_title ? `<p style="color:#18181b; font-size:15px; font-weight:600; margin:10px 0 0;">${ev.listing_title}</p>` : ""}
-    ${priceLine}
+  const descLine = ev.listing_description
+    ? `<p style="color:#52525b; font-size:13px; margin:6px 0 0; line-height:1.5;">${ev.listing_description}</p>`
+    : "";
+  return `
+  <div style="margin:20px 0; border:1px solid #e4e4e7; border-radius:14px; overflow:hidden; background:#fafafa;">
+    ${ev.listing_image_url
+      ? `<img src="${ev.listing_image_url}" alt="${ev.listing_title || "Produto"}" width="600" style="width:100%; max-height:240px; object-fit:cover; display:block; border-bottom:1px solid #e4e4e7;" />`
+      : ""}
+    <div style="padding:16px 20px;">
+      ${ev.listing_title ? `<p style="color:#18181b; font-size:16px; font-weight:700; margin:0;">${ev.listing_title}</p>` : ""}
+      ${priceLine}
+      ${descLine}
+    </div>
   </div>`;
 }
 
@@ -129,6 +138,7 @@ interface EventPayload {
   listing_image_url?: string | null;
   listing_title?: string | null;
   listing_price_brl?: number | null;
+  listing_description?: string | null;
   // Oferta (source = "offer")
   offer_amount?: number | null;
   offer_note?: string | null;
@@ -486,6 +496,50 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
     }
     return;
   }
+
+  if (mod === "travel") {
+    const { data: tr } = await supabase
+      .from("travel_listings")
+      .select("title, description, price_per_person, total_price, entry_price, destination, departure_date, duration_days, category, owner_user_id")
+      .eq("id", ev.listing_id)
+      .maybeSingle();
+    if (tr) {
+      ev.listing_title = tr.title || null;
+      // Preço: entry_price texto > price_per_person > total_price
+      if (tr.entry_price) {
+        const raw = Number(tr.entry_price);
+        ev.listing_price_brl = !Number.isNaN(raw) && raw > 0 ? raw : null;
+      } else {
+        ev.listing_price_brl = tr.price_per_person ?? tr.total_price ?? null;
+      }
+      // Mini-descrição: destino + data de saída + duração
+      const parts: string[] = [];
+      if (tr.destination) parts.push(`✈️ Destino: ${tr.destination}`);
+      if (tr.departure_date) {
+        const d = new Date(tr.departure_date + "T12:00:00");
+        parts.push(`📅 Saída: ${d.toLocaleDateString("pt-BR")}`);
+      }
+      if (tr.duration_days) parts.push(`⏱️ ${tr.duration_days} dias`);
+      if (tr.category) parts.push(`🏷️ ${tr.category}`);
+      if (parts.length) ev.listing_description = parts.join(" &nbsp;|&nbsp; ");
+      // Injeta advertiser_user_id se ainda não resolvido
+      if (!ev.advertiser_user_id && tr.owner_user_id) ev.advertiser_user_id = tr.owner_user_id;
+    }
+    // 1ª foto (bucket real-estate-original, mesmo padrão de veículos/serviços)
+    const { data: tmedia } = await supabase
+      .from("travel_media")
+      .select("public_masked_storage_path, original_storage_path, sort_order")
+      .eq("listing_id", ev.listing_id)
+      .order("sort_order", { ascending: true });
+    const tfirst = (tmedia || [])[0];
+    const tp = tfirst?.public_masked_storage_path || tfirst?.original_storage_path;
+    if (tp) {
+      ev.listing_image_url = String(tp).startsWith("http")
+        ? tp
+        : `${storageBase}/storage/v1/object/public/real-estate-original/${tp}`;
+    }
+    return;
+  }
 }
 
 // Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
@@ -517,11 +571,13 @@ function leadTemplate(ev: EventPayload, ownerName: string) {
   const isVehicle = ev.listing_module === "vehicles";
   const isService = ev.listing_module === "services";
   const isFreight = ev.listing_module === "freight";
-  const itemWord = ev.listing_module === "product" ? "produtos" : isService ? "serviços" : isFreight ? "fretes" : "anúncios";
+  const isTravel = ev.listing_module === "travel";
+  const itemWord = ev.listing_module === "product" ? "produtos" : isService ? "serviços" : isFreight ? "fretes" : isTravel ? "viagens" : "anúncios";
   const painelLink = isRealEstate ? "/anunciante/imoveis/mensagens"
     : isVehicle ? "/anunciante/veiculos/mensagens"
     : isService ? "/anunciante/servicos/mensagens"
     : isFreight ? "/anunciante/fretes/mensagens"
+    : isTravel ? "/anunciante/viagens/mensagens"
     : "/anunciante/mensagens";
   const subject = "Viagg-TX8 • Você tem um novo interessado! 🎯";
   const html = `
@@ -589,11 +645,13 @@ function listingPublishedTemplate(ev: EventPayload, ownerName: string) {
   const isVehicle = ev.listing_module === "vehicles";
   const isService = ev.listing_module === "services";
   const isFreight = ev.listing_module === "freight";
-  const itemWord = isService ? "serviço" : isFreight ? "frete" : isRealEstate ? "imóvel" : isVehicle ? "veículo" : "anúncio";
+  const isTravelPub = ev.listing_module === "travel";
+  const itemWord = isService ? "serviço" : isFreight ? "frete" : isRealEstate ? "imóvel" : isVehicle ? "veículo" : isTravelPub ? "viagem" : "anúncio";
   const painelLink = isRealEstate ? "/anunciante/imoveis/meus-anuncios"
     : isVehicle ? "/anunciante/veiculos/meus-anuncios"
     : isService ? "/anunciante/servicos/meus-anuncios"
     : isFreight ? "/anunciante/fretes/meus-anuncios"
+    : isTravelPub ? "/anunciante/viagens/meus-anuncios"
     : "/anunciante/meus-anuncios";
   const subject = "Viagg-TX8 • Seu anúncio foi publicado! ✅";
   const html = `
@@ -1011,6 +1069,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           const { data } = await supabase.from("freight_listings")
             .select("user_id").eq("id", ev.listing_id).maybeSingle();
           if (data?.user_id) ev.advertiser_user_id = data.user_id;
+        } else if (mod === "travel") {
+          const { data } = await supabase.from("travel_listings")
+            .select("owner_user_id").eq("id", ev.listing_id).maybeSingle();
+          if (data?.owner_user_id) ev.advertiser_user_id = data.owner_user_id;
         }
       } catch (listingErr) {
         console.warn("[swift-action] listing fallback error:", listingErr);
