@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
-import { CreditCard, Calendar, User as UserIcon, Check, Phone, Bike, MapPin, Lock, Home } from 'lucide-react';
+import { CreditCard, Calendar, User as UserIcon, Check, Phone, Bike, MapPin, Lock, Home, Mail } from 'lucide-react';
 import { brazilianStates } from '@/lib/brazilianStates';
 import { isProfileRegistrationComplete } from '@/lib/profileValidation';
 import { MathCaptchaDialog } from '@/components/ui/math-captcha-dialog';
@@ -68,6 +68,7 @@ interface MotoboyProfileData {
   capacidade_garupa: CanonicalCapacity;
   // Dados Pessoais (de profiles)
   name: string;
+  email: string;
   cpf: string;
   data_nascimento: string;
   avatar_url: string;
@@ -102,6 +103,7 @@ export default function MotoboyProfileContent() {
     capacidade_bag: '',
     capacidade_garupa: '',
     name: '',
+    email: '',
     cpf: '',
     data_nascimento: '',
     avatar_url: '',
@@ -233,6 +235,7 @@ export default function MotoboyProfileContent() {
       capacidade_garupa: normalizeCapacity(motoboy.capacidade_garupa),
       // Perfil (se disponível)
       name: profile?.name || '',
+      email: profile?.email || '',
       cpf: profile?.cpf || '',
       data_nascimento: profile?.data_nascimento || '',
       avatar_url: profile?.avatar_url || '',
@@ -387,21 +390,36 @@ export default function MotoboyProfileContent() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">CPF</Label>
-              <Input
-                value={motoboyData.cpf}
-                onChange={(e) => {
-                  const cleaned = e.target.value.replace(/\D/g, '').slice(0, 11);
-                  let formatted = cleaned;
-                  if (cleaned.length > 3) formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`;
-                  if (cleaned.length > 6) formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6)}`;
-                  if (cleaned.length > 9) formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
-                  setMotoboyData({ ...motoboyData, cpf: formatted });
-                }}
-                placeholder="000.000.000-00"
-                className="mt-1"
-              />
+              <Label className="text-xs flex items-center gap-1">
+                <Mail className="h-3 w-3" /> E-mail
+                <span className="ml-1 text-muted-foreground font-normal">(somente leitura)</span>
+              </Label>
+              <div className="relative mt-1">
+                <Input
+                  value={motoboyData.email}
+                  readOnly
+                  className="pr-8 bg-muted text-muted-foreground cursor-default"
+                />
+                <Lock className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              </div>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-xs">CPF</Label>
+            <Input
+              value={motoboyData.cpf}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '').slice(0, 11);
+                let formatted = cleaned;
+                if (cleaned.length > 3) formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`;
+                if (cleaned.length > 6) formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6)}`;
+                if (cleaned.length > 9) formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9)}`;
+                setMotoboyData({ ...motoboyData, cpf: formatted });
+              }}
+              placeholder="000.000.000-00"
+              className="mt-1"
+            />
           </div>
 
           <div className="space-y-1">
