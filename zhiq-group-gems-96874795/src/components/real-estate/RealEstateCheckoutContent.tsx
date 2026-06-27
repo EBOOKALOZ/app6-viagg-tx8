@@ -311,7 +311,14 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
 
             // Destino do crédito conforme o contexto da tela.
             let chargeMeta: Record<string, unknown>;
-            if (walletContext === "advertiser") {
+            if (purchaseType === 'merchant_product') {
+                // Produto de mercado (merchant_credit_products): credita via
+                // confirm_credit_purchase → merchant_credit_balances do lojista.
+                chargeMeta = {
+                    grant_kind: "merchant",
+                    credit_purchase_id: purchase.id,
+                };
+            } else if (walletContext === "advertiser") {
                 const { data: advAcct } = await (supabase
                     .from("advertiser_accounts") as any)
                     .select("id")
@@ -372,42 +379,48 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                         // tela "congrats" do checkout.
                         back_url: getCheckoutBackUrl(),
                         description:
-                            walletContext === "advertiser"
-                                ? `Créditos anunciante: ${pkg.name}`
-                                : walletContext === "vehicle"
-                                    ? `Créditos de veículos: ${pkg.name}`
-                                    : walletContext === "service"
-                                        ? `Créditos de serviços: ${pkg.name}`
-                                        : walletContext === "freight"
-                                            ? `Créditos de fretes: ${pkg.name}`
-                                            : walletContext === "travel"
-                                                ? `Créditos de viagens: ${pkg.name}`
-                                                : `Créditos imobiliários: ${pkg.name}`,
+                            purchaseType === 'merchant_product'
+                                ? `Créditos de mercado: ${pkg.name}`
+                                : walletContext === "advertiser"
+                                    ? `Créditos anunciante: ${pkg.name}`
+                                    : walletContext === "vehicle"
+                                        ? `Créditos de veículos: ${pkg.name}`
+                                        : walletContext === "service"
+                                            ? `Créditos de serviços: ${pkg.name}`
+                                            : walletContext === "freight"
+                                                ? `Créditos de fretes: ${pkg.name}`
+                                                : walletContext === "travel"
+                                                    ? `Créditos de viagens: ${pkg.name}`
+                                                    : `Créditos imobiliários: ${pkg.name}`,
                         reference_type:
-                            walletContext === "advertiser"
-                                ? "advertiser_credit_purchase"
-                                : walletContext === "vehicle"
-                                    ? "vehicle_credit_purchase"
-                                    : walletContext === "service"
-                                        ? "service_credit_purchase"
-                                        : walletContext === "freight"
-                                            ? "freight_credit_purchase"
-                                            : walletContext === "travel"
-                                                ? "travel_credit_purchase"
-                                                : "real_estate_credit_purchase",
+                            purchaseType === 'merchant_product'
+                                ? "merchant_credit_purchase"
+                                : walletContext === "advertiser"
+                                    ? "advertiser_credit_purchase"
+                                    : walletContext === "vehicle"
+                                        ? "vehicle_credit_purchase"
+                                        : walletContext === "service"
+                                            ? "service_credit_purchase"
+                                            : walletContext === "freight"
+                                                ? "freight_credit_purchase"
+                                                : walletContext === "travel"
+                                                    ? "travel_credit_purchase"
+                                                    : "real_estate_credit_purchase",
                         reference_id: purchase.id,
                         product_type:
-                            walletContext === "advertiser"
-                                ? "advertiser_credits"
-                                : walletContext === "vehicle"
-                                    ? "vehicle_credits"
-                                    : walletContext === "service"
-                                        ? "service_credits"
-                                        : walletContext === "freight"
-                                            ? "freight_credits"
-                                            : walletContext === "travel"
-                                                ? "travel_credits"
-                                                : "real_estate_credits",
+                            purchaseType === 'merchant_product'
+                                ? "credit_package"
+                                : walletContext === "advertiser"
+                                    ? "advertiser_credits"
+                                    : walletContext === "vehicle"
+                                        ? "vehicle_credits"
+                                        : walletContext === "service"
+                                            ? "service_credits"
+                                            : walletContext === "freight"
+                                                ? "freight_credits"
+                                                : walletContext === "travel"
+                                                    ? "travel_credits"
+                                                    : "real_estate_credits",
                         // Guardado na ordem p/ o e-mail de confirmação descriminar
                         // o pacote e a quantidade de créditos.
                         product_snapshot: {
