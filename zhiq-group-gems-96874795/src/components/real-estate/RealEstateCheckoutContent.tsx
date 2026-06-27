@@ -41,9 +41,11 @@ interface RealEstateCheckoutContentProps {
     /** Para onde voltar após o pagamento aprovado (depende do painel de origem:
      *  lojista, imóveis ou veículos). Default: /anunciante/creditos. */
     returnTo?: string;
+    /** store_id já resolvido pelo pai (evita re-query que falha por contexto de rota) */
+    merchantStoreId?: string;
 }
 
-export function RealEstateCheckoutContent({ listingId: propListingId, onBack, onSuccess, layout = 'public', walletContext = 'real_estate', returnTo = '/anunciante/creditos' }: RealEstateCheckoutContentProps) {
+export function RealEstateCheckoutContent({ listingId: propListingId, onBack, onSuccess, layout = 'public', walletContext = 'real_estate', returnTo = '/anunciante/creditos', merchantStoreId }: RealEstateCheckoutContentProps) {
     const { listingId: paramListingId } = useParams();
     const listingId = propListingId || paramListingId;
     const navigate = useNavigate();
@@ -272,10 +274,16 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     }
                 };
 
-                // store_id é NOT NULL em credit_purchases — lança erro claro se não achar
-                const { data: storeInfo } = await supabase.from('merchant_stores').select('id').eq('user_id', userData.user.id).maybeSingle();
-                if (!storeInfo?.id) throw new Error("Loja não encontrada. Acesse o painel do lojista para garantir que sua loja está ativa antes de comprar créditos de mercado.");
-                merchantPayload.store_id = storeInfo.id;
+                // store_id é NOT NULL em credit_purchases.
+                // Prioriza o storeId já resolvido pelo pai (via URL ?storeId=); caso
+                // contrário tenta resolver direto (funciona quando o hook carregou antes).
+                let resolvedStoreId = merchantStoreId ?? null;
+                if (!resolvedStoreId) {
+                    const { data: storeInfo } = await (supabase.from('merchant_stores') as any).select('id').eq('user_id', userData.user.id).maybeSingle();
+                    resolvedStoreId = storeInfo?.id ?? null;
+                }
+                if (!resolvedStoreId) throw new Error("Loja não encontrada. Complete o cadastro da sua loja antes de comprar créditos de mercado.");
+                merchantPayload.store_id = resolvedStoreId;
 
                 const { data: merchantOrder, error: merchantErr } = await (supabase
                     .from('credit_purchases')

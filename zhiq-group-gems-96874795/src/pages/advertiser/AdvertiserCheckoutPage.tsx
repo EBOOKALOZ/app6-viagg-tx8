@@ -15,6 +15,7 @@ export default function AdvertiserCheckoutPage() {
     // Segmento de origem (imoveis/veiculos/lojista) → define para onde voltar
     // após o pagamento aprovado, mantendo o usuário no painel certo.
     const seg = searchParams.get('ret');
+    const merchantStoreId = searchParams.get('storeId') || undefined;
     const creditsRoute =
         seg === 'imoveis' ? '/anunciante/imoveis/creditos'
         : seg === 'veiculos' ? '/anunciante/veiculos/creditos'
@@ -56,6 +57,7 @@ export default function AdvertiserCheckoutPage() {
                     layout="dashboard"
                     walletContext={walletCtx}
                     returnTo={creditsRoute}
+                    merchantStoreId={merchantStoreId}
                     onBack={() => navigate(creditsRoute)}
                     onSuccess={() => {
                         // Optional: additional logic on success inside dashboard
