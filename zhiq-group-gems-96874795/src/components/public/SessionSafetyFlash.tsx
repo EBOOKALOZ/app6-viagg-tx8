@@ -1,28 +1,13 @@
 import { useState, useEffect } from "react";
 
-const SESSION_START_KEY = "vx8_session_start";
-const SUPPRESS_AFTER_MS = 15 * 60 * 1000; // 15 minutos
-const SHOW_DURATION_MS = 3000;             // 3 segundos
+const SHOW_DURATION_MS = 3000; // 3 segundos
 
 export function SessionSafetyFlash() {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
   const [redPhase, setRedPhase] = useState(true);
 
   useEffect(() => {
-    const now = Date.now();
-    const stored = sessionStorage.getItem(SESSION_START_KEY);
-    const sessionStart = stored ? parseInt(stored, 10) : now;
-    if (!stored) sessionStorage.setItem(SESSION_START_KEY, String(now));
-
-    // Depois de 15 minutos, não mostrar mais
-    if (now - sessionStart >= SUPPRESS_AFTER_MS) return;
-
-    setVisible(true);
-
-    // Pisca a cada 350ms alternando vermelho ↔ amarelo
     const blink = setInterval(() => setRedPhase((p) => !p), 350);
-
-    // Some após 3 segundos
     const hide = setTimeout(() => {
       setVisible(false);
       clearInterval(blink);

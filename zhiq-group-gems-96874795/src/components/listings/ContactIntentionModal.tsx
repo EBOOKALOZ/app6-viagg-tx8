@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
+import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
 import { Textarea } from "@/components/ui/textarea";
 import {
   MessageSquare,
@@ -194,6 +195,7 @@ export function ContactIntentionModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      {open && <SessionSafetyFlash />}
       <DialogContent className="max-w-md max-h-[90vh] rounded-[32px] border-0 shadow-2xl p-0 overflow-hidden flex flex-col">
 
         {/* ── Header Amarelo ── */}
