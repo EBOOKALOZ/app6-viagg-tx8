@@ -9,10 +9,9 @@ import { MapPin } from 'lucide-react';
 
 // Premium components
 import { 
-  HeroCommissionCard, 
-  QuickMetricsRow, 
+  HeroCommissionCard,
+  QuickMetricsRow,
   EconomicRadarCard,
-  CommissionTiersCard 
 } from '@/components/motoboy/premium';
 import { MotoboyCallsButton } from '@/components/motoboy/MotoboyCallsButton';
 
@@ -197,16 +196,10 @@ export default function MotoboyPanelContent() {
       </div>
 
       {/* Radar e Tiers em grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <EconomicRadarCard
-          commissionRate={commissionRate}
-          isLoading={isLoading}
-        />
-        <CommissionTiersCard
-          commissionRate={commissionRate}
-          isLoading={isLoading}
-        />
-      </div>
+      <EconomicRadarCard
+        commissionRate={commissionRate}
+        isLoading={isLoading}
+      />
 
       {/* Localização do Motoboy (baseada no cadastro) */}
       {motoboyLocation && (

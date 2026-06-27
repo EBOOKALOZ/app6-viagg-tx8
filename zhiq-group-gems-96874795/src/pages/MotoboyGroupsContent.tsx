@@ -34,7 +34,6 @@ import { Badge } from '@/components/ui/badge';
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { SafeErrorBoundary } from '@/components/SafeErrorBoundary';
 import { TierLadderCard } from '@/components/motoboy/TierLadderCard';
-import { CommissionTiersCard } from '@/components/motoboy/premium';
 import { useTierPromotionToast } from '@/hooks/useTierPromotionToast';
 import { cn } from '@/lib/utils';
 
@@ -458,12 +457,6 @@ export default function MotoboyGroupsContent() {
 
           {/* 1.5 ESCADA DE TIERS */}
           <TierLadderCard validGroups={validGroupsCount} />
-
-          {/* 1.6 FAIXAS DE COMISSÃO */}
-          <CommissionTiersCard
-            commissionRate={rate}
-            isLoading={isCommissionLoading}
-          />
 
           {/* 2. DASHBOARD DE STATUS */}
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
