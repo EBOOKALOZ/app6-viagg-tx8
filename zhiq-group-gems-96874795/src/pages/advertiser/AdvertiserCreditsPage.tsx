@@ -271,7 +271,9 @@ export default function AdvertiserCreditsPage() {
                         ? "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/30"
                         : "bg-yellow-400 text-zinc-900 hover:bg-yellow-300 shadow-yellow-400/20 border border-yellow-500/40"
                     )}
-                    onClick={() => navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : isServicos ? '?ret=servicos' : isFretes ? '?ret=fretes' : isViagens ? '?ret=viagens' : ''}`)}
+                    onClick={() => p.category === 'products'
+                      ? navigate('/merchant/creditos')
+                      : navigate(`/anunciante/checkout/${p.id}${isImoveis ? '?ret=imoveis' : isVeiculos ? '?ret=veiculos' : isServicos ? '?ret=servicos' : isFretes ? '?ret=fretes' : isViagens ? '?ret=viagens' : ''}`)}
                   >
                     {p.button_label || "ADQUIRIR AGORA"} <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-2 transition-all" />
                   </Button>

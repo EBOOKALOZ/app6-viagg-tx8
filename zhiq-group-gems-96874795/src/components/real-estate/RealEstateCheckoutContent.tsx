@@ -272,9 +272,10 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                     }
                 };
 
-                // Attempt to find store_id
+                // store_id é NOT NULL em credit_purchases — lança erro claro se não achar
                 const { data: storeInfo } = await supabase.from('merchant_stores').select('id').eq('user_id', userData.user.id).maybeSingle();
-                if (storeInfo) merchantPayload.store_id = storeInfo.id;
+                if (!storeInfo?.id) throw new Error("Loja não encontrada. Acesse o painel do lojista para garantir que sua loja está ativa antes de comprar créditos de mercado.");
+                merchantPayload.store_id = storeInfo.id;
 
                 const { data: merchantOrder, error: merchantErr } = await (supabase
                     .from('credit_purchases')
