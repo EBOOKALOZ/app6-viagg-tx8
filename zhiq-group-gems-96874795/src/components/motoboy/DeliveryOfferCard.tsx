@@ -279,9 +279,14 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
 
             {/* Info resumida */}
             <div className="flex items-center gap-3 px-6 pb-5 text-xs text-white/50">
-              <span className="flex items-center gap-1">
-                <Store className="h-3.5 w-3.5 text-[#ffb800]" />
-                  {'Centro, Blumenau, SC'}
+              <span className="flex items-center gap-1 min-w-0 truncate">
+                <Store className="h-3.5 w-3.5 text-[#ffb800] shrink-0" />
+                <span className="truncate">
+                  {[offer.loja_bairro, offer.loja_cidade, offer.loja_estado].filter(Boolean).join(', ')
+                    || offer.loja_endereco
+                    || offer.loja_nome
+                    || 'Loja Parceira'}
+                </span>
               </span>
               <span className="w-1 h-1 bg-white/20 rounded-full" />
               <span className="flex items-center gap-1">

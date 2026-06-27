@@ -50,13 +50,13 @@ export function ActiveDeliveryCard({
   const [pickupError, setPickupError] = useState('');
   const [focusMarkerId, setFocusMarkerId] = useState<string | undefined>(undefined);
   
-  // Localização do motoboy baseada EXCLUSIVAMENTE no cadastro de perfil
   const { user } = useAuth();
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [motoboyLocationLabel, setMotoboyLocationLabel] = useState('');
   const [motoboyAvatar, setMotoboyAvatar] = useState<string | null>(null);
   const [motoboyName, setMotoboyName] = useState<string>('Motoboy');
 
+  // Carrega avatar/nome e endereço de fallback (caso GPS não esteja disponível)
   useEffect(() => {
     if (!user?.id) return;
 
@@ -67,29 +67,35 @@ export function ActiveDeliveryCard({
 
     supabase
       .from('motoboy_profiles')
-      .select('cidade, bairro, estado, nome, sobrenome, avatar_url')
+      .select('cidade, bairro, estado, nome, sobrenome, avatar_url, latitude_residencia, longitude_residencia')
       .eq('user_id', user.id)
       .maybeSingle()
       .then(async ({ data }) => {
-        if (data?.cidade) {
-          const coords = getCityCoordinates(data.cidade);
-          if (coords) {
-             setPosition(coords);
-          } else {
-             const addressQuery = [data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
-             const geo = await geocodeAddress(addressQuery);
-             if (geo) setPosition(geo);
-          }
-          setMotoboyLocationLabel(
-            [data.bairro, data.cidade, data.estado].filter(Boolean).join(', ')
-          );
-        }
-        if ((data as any)?.avatar_url) {
-          console.log('[ActiveDeliveryCard] Avatar de motoboy_profiles:', (data as any).avatar_url);
-          setMotoboyAvatar((data as any).avatar_url);
-        }
+        if ((data as any)?.avatar_url) setMotoboyAvatar((data as any).avatar_url);
         const fullName = [(data as any)?.nome, (data as any)?.sobrenome].filter(Boolean).join(' ');
         if (fullName) setMotoboyName(fullName);
+        setMotoboyLocationLabel([data?.bairro, data?.cidade, data?.estado].filter(Boolean).join(', '));
+
+        // Fallback de posição — só usa se GPS não forneceu nada ainda
+        setPosition(prev => {
+          if (prev) return prev; // GPS já definiu posição, não sobrescreve
+          if ((data as any)?.latitude_residencia && (data as any)?.longitude_residencia) {
+            return { lat: (data as any).latitude_residencia, lng: (data as any).longitude_residencia };
+          }
+          return prev;
+        });
+
+        if (!data?.cidade) return;
+        setPosition(prev => {
+          if (prev) return prev;
+          const coords = getCityCoordinates(data.cidade!);
+          return coords ?? prev;
+        });
+        if (!position) {
+          const addressQuery = [data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
+          const geo = await geocodeAddress(addressQuery);
+          if (geo) setPosition(prev => prev ?? geo);
+        }
       });
 
     supabase
@@ -98,12 +104,38 @@ export function ActiveDeliveryCard({
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data?.avatar_url) {
-          console.log('[ActiveDeliveryCard] Avatar de profiles (fallback):', data.avatar_url);
-          setMotoboyAvatar((prev) => prev ?? data.avatar_url);
-        }
+        if (data?.avatar_url) setMotoboyAvatar((prev) => prev ?? data.avatar_url);
         if (data?.name) setMotoboyName((prev) => prev === 'Motoboy' ? data.name : prev);
       });
+  }, [user?.id]);
+
+  // GPS real em tempo real → atualiza posição no mapa + tabela motoboy_locations
+  useEffect(() => {
+    if (!user?.id || !navigator.geolocation) return;
+    let lastSent = 0;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setPosition({ lat, lng });
+        setMotoboyLocationLabel('Sua posição atual');
+
+        // Envia para motoboy_locations a cada 8s (evita flood)
+        const now = Date.now();
+        if (now - lastSent > 8000) {
+          lastSent = now;
+          supabase
+            .from('motoboy_locations')
+            .upsert({ motoboy_id: user.id, lat, lng, updated_at: new Date().toISOString() },
+              { onConflict: 'motoboy_id' })
+            .then(() => {});
+        }
+      },
+      (err) => console.warn('[ActiveDeliveryCard] GPS error:', err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, [user?.id]);
 
   // Garantir SEMPRE uma imagem no marcador: avatar real, ou avatar gerado pelas iniciais

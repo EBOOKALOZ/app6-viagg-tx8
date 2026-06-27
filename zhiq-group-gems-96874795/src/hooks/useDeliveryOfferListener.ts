@@ -179,6 +179,9 @@ export function useDeliveryOfferListener() {
 
     let lojaNome: string = row.store_name_snapshot || '';
     let lojaLogo: string | null = null;
+    let lojaBairro = '';
+    let lojaCidade = '';
+    let lojaEstado = '';
 
     if (row.delivery_order_id) {
       try {
@@ -193,14 +196,19 @@ export function useDeliveryOfferListener() {
         }
 
         if (so?.merchant_id) {
-          const { data: ms } = await supabase
-            .from('merchant_stores')
-            .select('nome_loja, logo_url')
+          const { data: ms } = await (supabase
+            .from('merchant_stores') as any)
+            .select('nome_loja, logo_url, bairro, cidade, estado')
             .eq('user_id', so.merchant_id)
             .maybeSingle();
-          
-          if (!lojaNome && ms?.nome_loja) lojaNome = ms.nome_loja;
-          if (ms?.logo_url) lojaLogo = ms.logo_url;
+
+          if (ms) {
+            if (!lojaNome && ms.nome_loja) lojaNome = ms.nome_loja;
+            if (ms.logo_url) lojaLogo = ms.logo_url;
+            lojaBairro = ms.bairro || '';
+            lojaCidade = ms.cidade || '';
+            lojaEstado = ms.estado || '';
+          }
         }
       } catch {
         // fallback
@@ -220,9 +228,9 @@ export function useDeliveryOfferListener() {
       loja_nome: lojaNome,
       loja_logo: lojaLogo,
       loja_endereco: lojaEndereco,
-      loja_bairro: '',
-      loja_cidade: '',
-      loja_estado: '',
+      loja_bairro: lojaBairro,
+      loja_cidade: lojaCidade,
+      loja_estado: lojaEstado,
       timer_seconds: 120,
       expires_at: row.expires_at || undefined,
       pickup_lat: row.pickup_lat_snapshot ?? null,

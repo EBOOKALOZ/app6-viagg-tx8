@@ -133,6 +133,14 @@ export default function MerchantDeliveryView() {
   const [routePolyline, setRoutePolyline] = useState<[number, number][] | null>(null);
   const [storeInfo, setStoreInfo] = useState<{ nome_loja: string; logo_url: string | null; endereco: string | null } | null>(null);
 
+  /* ── Status flags (declarados cedo para uso em qualquer hook/effect abaixo) ── */
+  const isCancelled = order?.status === "cancelled" || order?.status === "cancelada";
+  const isCompleted = order?.status === "completed"
+    || order?.status === "finalizada"
+    || order?.status === "finalizado"
+    || order?.status === "delivered";
+  const isActive = !isCancelled && !isCompleted;
+
   /* ── Fetch order ── */
   const fetchOrder = useCallback(async () => {
     if (!orderId) return;
@@ -276,32 +284,45 @@ export default function MerchantDeliveryView() {
     })();
   }, [order?.merchant_id]);
 
-  /* ── Watch motoboy live location ── */
+  /* ── Watch motoboy live location (realtime + polling a cada 8s) ── */
   useEffect(() => {
-    if (!order?.motoboy_id) { setMotoboyLocation(null); return; }
+    const TERMINAL = ['completed', 'finalizada', 'finalizado', 'delivered', 'cancelled', 'cancelada'];
+    const isTerminal = TERMINAL.includes(order?.status ?? '');
+    if (!order?.motoboy_id || isTerminal) {
+      setMotoboyLocation(null);
+      return;
+    }
     const motoboyId = order.motoboy_id;
+    let alive = true;
 
     const fetchLocation = async () => {
       const { data } = await supabase
         .from("motoboy_locations")
-        .select("lat, lng")
+        .select("lat, lng, updated_at")
         .eq("motoboy_id", motoboyId)
         .maybeSingle();
+      if (!alive) return;
       if (data?.lat && data?.lng) {
         setMotoboyLocation({ lat: Number(data.lat), lng: Number(data.lng) });
       } else {
+        // Fallback: posição de residência quando GPS ainda não foi enviado
         const { data: profile } = await supabase
           .from("motoboy_profiles")
           .select("latitude_residencia, longitude_residencia")
           .eq("user_id", motoboyId)
           .maybeSingle();
+        if (!alive) return;
         if (profile?.latitude_residencia && profile?.longitude_residencia) {
           setMotoboyLocation({ lat: Number(profile.latitude_residencia), lng: Number(profile.longitude_residencia) });
         }
       }
     };
-    fetchLocation();
 
+    fetchLocation();
+    // Polling a cada 8s — garante atualização mesmo se realtime falhar
+    const poll = setInterval(fetchLocation, 8000);
+
+    // Realtime como complemento (atualização imediata quando chega)
     const channel = supabase
       .channel(`motoboy-loc-${motoboyId}`)
       .on(
@@ -313,8 +334,13 @@ export default function MerchantDeliveryView() {
         }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [order?.motoboy_id]);
+
+    return () => {
+      alive = false;
+      clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [order?.motoboy_id, order?.status]);
 
   /* ── Realtime subscription ── */
   useEffect(() => {
@@ -344,16 +370,32 @@ export default function MerchantDeliveryView() {
     return () => clearInterval(interval);
   }, [orderId, order?.status, fetchOrder]);
 
-  /* ── Calculate route polyline ── */
+  /* ── Calculate route polyline (dinâmica: motoboy → loja → cliente) ── */
   useEffect(() => {
     if (!order?.pickup_lat || !order?.pickup_lng || !order?.destination_lat || !order?.destination_lng) return;
+    const step = order ? (STATUS_MAP[order.status]?.stepIndex ?? 0) : 0;
     let alive = true;
-    (async () => {
+
+    const calcRoute = async () => {
       try {
-        const route = await fetchMapboxRoute(
-          { lat: order.pickup_lat!, lng: order.pickup_lng! },
-          { lat: order.destination_lat!, lng: order.destination_lng! }
-        );
+        let from: { lat: number; lng: number };
+        let to: { lat: number; lng: number };
+
+        if (motoboyLocation && step === 1) {
+          // Motoboy indo à loja: motoboy → loja (coleta)
+          from = motoboyLocation;
+          to = { lat: order.pickup_lat!, lng: order.pickup_lng! };
+        } else if (motoboyLocation && step >= 2) {
+          // Motoboy entregando: motoboy → cliente (destino)
+          from = motoboyLocation;
+          to = { lat: order.destination_lat!, lng: order.destination_lng! };
+        } else {
+          // Ainda procurando / sem posição: rota fixa loja → cliente
+          from = { lat: order.pickup_lat!, lng: order.pickup_lng! };
+          to = { lat: order.destination_lat!, lng: order.destination_lng! };
+        }
+
+        const route = await fetchMapboxRoute(from, to);
         if (!alive) return;
         if (route?.geometry?.coordinates) {
           const coords: [number, number][] = route.geometry.coordinates
@@ -364,9 +406,17 @@ export default function MerchantDeliveryView() {
       } catch (e) {
         console.warn("[MerchantDeliveryView] route fetch failed:", e);
       }
-    })();
+    };
+
+    calcRoute();
     return () => { alive = false; };
-  }, [order?.pickup_lat, order?.pickup_lng, order?.destination_lat, order?.destination_lng]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    order?.pickup_lat, order?.pickup_lng,
+    order?.destination_lat, order?.destination_lng,
+    order?.status,
+    motoboyLocation?.lat, motoboyLocation?.lng,
+  ]);
 
   /* ── Copy pickup code ── */
   const copyCode = async () => {
@@ -463,12 +513,6 @@ export default function MerchantDeliveryView() {
 
   /* ── Status helpers ── */
   const statusInfo = order ? (STATUS_MAP[order.status] ?? { stepIndex: 0, badge: order.status, badgeClass: "bg-slate-500 text-white" }) : null;
-  const isCancelled = order?.status === "cancelled" || order?.status === "cancelada";
-  const isCompleted = order?.status === "completed"
-    || order?.status === "finalizada"
-    || order?.status === "finalizado"
-    || order?.status === "delivered";
-  const isActive = !isCancelled && !isCompleted;
 
   /* ── Currency formatter ── */
   const brl = (v: number | null) =>

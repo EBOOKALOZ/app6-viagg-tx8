@@ -105,18 +105,42 @@ export function GlobalCallProvider({ children }: GlobalCallProviderProps) {
   const stopBeepLoop = useCallback(() => {}, []);
 
   // 📡 Presence Heartbeat (Motoboy only)
+  // Importante: envia coordenadas reais (GPS ou cadastro) — nunca 0,0
+  // pois o dispatcher usa proximidade e 0,0 colocaria o motoboy no oceano.
   useEffect(() => {
     if (activeProfile !== 'motoboy' || !user?.id) return;
+    const userId = user.id;
+
+    // Cache das coordenadas de residência (fallback quando GPS indisponível)
+    let fallbackLat: number | null = null;
+    let fallbackLng: number | null = null;
+
+    supabase
+      .from('motoboy_profiles')
+      .select('latitude_residencia, longitude_residencia')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.latitude_residencia && data?.longitude_residencia) {
+          fallbackLat = data.latitude_residencia;
+          fallbackLng = data.longitude_residencia;
+        }
+      });
 
     const pulse = async () => {
       try {
         const pos = await getCurrentPosition().catch(() => null);
-        console.log('[PresenceHeartbeat] 📡 Pulso de presença...');
-        
-        await supabase.rpc('update_motoboy_presence', {
-          p_lat: pos?.lat ?? 0,
-          p_lng: pos?.lng ?? 0
-        });
+        const lat = pos?.lat ?? fallbackLat;
+        const lng = pos?.lng ?? fallbackLng;
+
+        // Não envia presença se não há coordenada válida (evita 0,0 no oceano)
+        if (!lat || !lng) {
+          console.warn('[PresenceHeartbeat] ⚠️ Sem coordenadas — pulso ignorado');
+          return;
+        }
+
+        console.log('[PresenceHeartbeat] 📡 Pulso de presença:', { lat, lng, fromGPS: !!pos });
+        await supabase.rpc('update_motoboy_presence', { p_lat: lat, p_lng: lng });
       } catch (err) {
         console.error('[PresenceHeartbeat] ❌ Erro:', err);
       }

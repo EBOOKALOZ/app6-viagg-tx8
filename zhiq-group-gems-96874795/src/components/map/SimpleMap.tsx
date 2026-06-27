@@ -79,7 +79,7 @@ function createCustomIcon(type: MapMarker['type'], label?: string, avatarUrl?: s
     },
     motoboy: {
       gradient: 'linear-gradient(135deg,#f97316 0%,#ea580c 100%)',
-      shadowColor: 'rgba(249,115,22,0.4)',
+      shadowColor: 'rgba(249,115,22,0.5)',
       Icon: Bike,
       defaultLabel: 'Motoboy',
       pulse: true,
@@ -169,6 +169,46 @@ function createCustomIcon(type: MapMarker['type'], label?: string, avatarUrl?: s
       className: 'custom-marker-pro',
       iconSize: [cardW, 90],
       iconAnchor: [cardW / 2, 88],
+    });
+  }
+
+  // ═══ MEGA MOTO icon for motoboy type ═══
+  if (type === 'motoboy') {
+    const nameEl = (label || 'Motoboy').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'marker-container marker-pulse';
+    wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+    wrapper.innerHTML = `
+      <div style="
+        width:64px;height:64px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#f97316 0%,#ea580c 100%);
+        border:3px solid #fff;
+        box-shadow:0 0 0 4px rgba(249,115,22,0.3),0 12px 24px -4px rgba(249,115,22,0.5);
+        display:flex;align-items:center;justify-content:center;
+        font-size:32px;line-height:1;
+      ">🏍️</div>
+      <div style="
+        width:0;height:0;margin-top:-4px;
+        border-left:9px solid transparent;border-right:9px solid transparent;
+        border-top:11px solid #fff;
+        filter:drop-shadow(0 2px 2px rgba(0,0,0,0.15));
+      "></div>
+      <div style="
+        margin-top:4px;padding:4px 12px;
+        background:rgba(234,88,12,0.95);
+        backdrop-filter:blur(4px);
+        color:#fff;font-size:11px;font-weight:700;
+        border-radius:9999px;white-space:nowrap;
+        box-shadow:0 4px 12px rgba(234,88,12,0.4);
+        border:1px solid rgba(255,255,255,0.2);
+      ">${nameEl}</div>
+    `;
+    return L.divIcon({
+      html: wrapper as unknown as string,
+      className: 'custom-marker-pro',
+      iconSize: [64, 96],
+      iconAnchor: [32, 84],
     });
   }
 
