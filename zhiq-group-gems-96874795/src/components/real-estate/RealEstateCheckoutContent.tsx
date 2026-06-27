@@ -458,7 +458,9 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
             toast.info("Cobrança gerada! Aguardando pagamento...", { duration: 3000 });
         } catch (error: any) {
             console.error("[RealEstateCheckout] Erro ao gerar cobrança:", error);
-            toast.error("Erro ao gerar cobrança. Tente novamente.");
+            toast.error("Erro ao gerar cobrança. Tente novamente.", {
+                description: error?.message || error?.details || String(error),
+            });
         } finally {
             setIsProcessing(false);
         }
