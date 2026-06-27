@@ -8,6 +8,7 @@
  */
 import { useState } from "react";
 import { Loader2, User, Phone, Mail, MessageSquare, CreditCard, Store } from "lucide-react";
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { useStoreCart } from "@/hooks/useStoreCart";
 import type { CheckoutMode } from "./StoreCartDrawer";
 
@@ -195,6 +196,8 @@ export function PurchaseIntentionForm({ cart, storeName, checkoutMode, onSuccess
           Seus dados serão compartilhados apenas com o vendedor desta loja para viabilizar o contato comercial.
         </p>
       </div>
+
+      <FormDisclaimerStrip />
 
       {/* Submit */}
       <button

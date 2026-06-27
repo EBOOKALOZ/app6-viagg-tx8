@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { supabase } from "@/integrations/supabase/client";
 import {
     Dialog,
@@ -225,6 +226,7 @@ export default function SellerContactModal({ product, open, onClose }: SellerCon
 
                 {/* Action Buttons */}
                 <div className="px-5 pb-5 space-y-2.5">
+                    <FormDisclaimerStrip />
                     {/* WhatsApp Button */}
                     <button
                         onClick={handleWhatsAppClick}

@@ -8,24 +8,14 @@ import { MarketServiceCard } from "@/components/services/MarketServiceCard";
 import { SellServiceCTA } from "@/components/services/SellServiceCTA";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
-import { ChevronsUpDown, LayoutGrid } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { SERVICE_CATEGORY_GROUPS, SERVICE_ITEM_ICONS, resolveServiceTypeIcon } from "@/lib/services/serviceCategories";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
+import { resolveServiceTypeIcon, resolveServiceTypeLabel } from "@/lib/services/serviceCategories";
 
 export default function PublicServicesHome() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState("all");
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
-
-  const SelectedCategoryIcon = useMemo(
-    () => (categoryFilter === "all" ? LayoutGrid : resolveServiceTypeIcon(categoryFilter)),
-    [categoryFilter]
-  );
+  const [cityFilter] = useState("all");
 
   const { data: rawServiceListings = [], isLoading } = useQuery<any[]>({
     queryKey: ["public-services"],
@@ -66,17 +56,22 @@ export default function PublicServicesHome() {
     refetchOnWindowFocus: true,
   });
 
-  const cities = useMemo(() => {
-    const seen = new Map<string, string>();
+  /* Categorias com pelo menos 1 listing — nunca mostra vazia */
+  const activeServiceCategories = useMemo(() => {
+    const counts = new Map<string, number>();
     rawServiceListings.forEach((s) => {
-      const raw = String(s.city || "").trim();
-      if (!raw) return;
-      const key = raw.toLowerCase();
-      if (!seen.has(key)) seen.set(key, raw);
+      if (s.service_type) {
+        counts.set(s.service_type, (counts.get(s.service_type) || 0) + 1);
+      }
     });
-    return Array.from(seen.entries())
-      .map(([key, raw]) => ({ key, label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+    return Array.from(counts.entries())
+      .map(([value, count]) => ({
+        value,
+        label: resolveServiceTypeLabel(value),
+        count,
+        Icon: resolveServiceTypeIcon(value),
+      }))
+      .sort((a, b) => b.count - a.count);
   }, [rawServiceListings]);
 
   const filteredServices = useMemo(() => {
@@ -132,70 +127,22 @@ export default function PublicServicesHome() {
         <p className="text-white/70 text-sm">
           Divulgue sua empresa e receba contatos de clientes interessados.
         </p>
-        <Popover open={categoryPickerOpen} onOpenChange={setCategoryPickerOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full sm:w-[360px] h-12 justify-between rounded-2xl border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white"
-            >
-              <span className="flex items-center gap-2.5 truncate">
-                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/30 shrink-0">
-                  <SelectedCategoryIcon className="h-[18px] w-[18px]" />
-                </span>
-                {categoryFilter === "all" ? "Todas as categorias" : categoryFilter}
-              </span>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-lg shadow-xl bg-white" align="start">
-            <Command className="bg-white">
-              <CommandInput placeholder="Pesquisar categoria..." className="h-11 text-zinc-900 placeholder:text-zinc-400" />
-              <CommandList className="max-h-[400px] bg-white">
-                <CommandEmpty className="text-zinc-500">Nenhuma categoria encontrada.</CommandEmpty>
-                <CommandGroup heading="Geral">
-                  <CommandItem
-                    value="Todos"
-                    className="text-zinc-900 data-[selected=true]:text-zinc-900"
-                    onSelect={() => { setCategoryFilter("all"); setCategoryPickerOpen(false); }}
-                  >
-                    Todas as categorias
-                  </CommandItem>
-                </CommandGroup>
-                {SERVICE_CATEGORY_GROUPS.map((g) => (
-                  <CommandGroup
-                    key={g.group}
-                    heading={
-                      <span className="flex items-center gap-2">
-                        <span className="flex items-center justify-center w-6 h-6 rounded-md bg-gradient-to-br from-violet-100 to-violet-200 text-violet-700 shrink-0">
-                          <g.icon className="h-[15px] w-[15px]" />
-                        </span>
-                        {g.group}
-                      </span>
-                    }
-                  >
-                    {g.items.map((item) => {
-                      const ItemIcon = SERVICE_ITEM_ICONS[item] || g.icon;
-                      return (
-                        <CommandItem
-                          key={item}
-                          value={item}
-                          className="text-zinc-900 data-[selected=true]:text-zinc-900 gap-3"
-                          onSelect={() => { setCategoryFilter(item); setCategoryPickerOpen(false); }}
-                        >
-                          <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 text-violet-700 shrink-0 ring-1 ring-violet-200/60 shadow-sm">
-                            <ItemIcon className="h-[19px] w-[19px]" />
-                          </span>
-                          {item}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
       </section>
+
+      {/* ── Faixa de categorias — fundo verde escuro, edge-to-edge, nunca vazia ── */}
+      {activeServiceCategories.length > 0 && (
+        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6 mt-4">
+          <CategoryFilterBar
+            categories={activeServiceCategories}
+            activeValue={categoryFilter}
+            onSelect={setCategoryFilter}
+            totalCount={rawServiceListings.length}
+            allLabel="Todos"
+            allEmoji="🔧"
+            variant="dark"
+          />
+        </div>
+      )}
 
       <section className="p-4">
         {isLoading && <p className="text-center text-white/70">Carregando serviços...</p>}

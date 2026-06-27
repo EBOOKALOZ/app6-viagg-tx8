@@ -1815,7 +1815,7 @@ const scrollToProducts = () => {
                     </h2>
                     <div ref={gridRef} className={carouselMode
                         ? "flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide"
-                        : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
+                        : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5"
                     }>
                         {filtered
                             .flatMap(product => {

@@ -11,6 +11,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import {
     Dialog,
     DialogContent,
@@ -339,13 +340,14 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                         </div>
 
                         {/* ── Disclaimer ── */}
-                        <div className="px-5 pb-3">
+                        <div className="px-5 pb-3 space-y-2">
                             <div className="flex items-start gap-2 bg-blue-50 rounded-lg p-2.5">
                                 <Shield className="h-3.5 w-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
                                 <p className="text-[10px] text-blue-600 leading-relaxed">
                                     Você está entrando em contato diretamente com a loja. Seus dados serão compartilhados apenas com o vendedor deste produto.
                                 </p>
                             </div>
+                            <FormDisclaimerStrip />
                         </div>
 
                         {/* ── Submit Button ── */}

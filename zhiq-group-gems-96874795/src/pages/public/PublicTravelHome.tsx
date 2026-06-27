@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,18 +6,15 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
-import { Plane, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plane, Loader2 } from "lucide-react";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
+import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 
 export default function PublicTravelHome() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const filterScrollRef = useRef<HTMLDivElement>(null);
-  const scrollFilters = (dir: "left" | "right") => {
-    filterScrollRef.current?.scrollBy({ left: dir === "right" ? 160 : -160, behavior: "smooth" });
-  };
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["public-travel-home"],
@@ -47,18 +44,27 @@ export default function PublicTravelHome() {
     refetchOnWindowFocus: true,
   });
 
-  const usedCategories = TRAVEL_CATEGORIES.filter(c =>
-    listings.some((l: any) => l.category === c.value)
-  );
+  /* Categorias com pelo menos 1 listing — nunca mostra vazia */
+  const activeCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    listings.forEach((l: any) => {
+      if (l.category) counts.set(l.category, (counts.get(l.category) || 0) + 1);
+    });
+    return TRAVEL_CATEGORIES
+      .filter((c) => (counts.get(c.value) || 0) > 0)
+      .map((c) => ({ value: c.value, label: c.label, emoji: c.emoji, count: counts.get(c.value) || 0 }));
+  }, [listings]);
 
-  const filtered = listings.filter((l: any) => {
-    if (categoryFilter !== "all" && l.category !== categoryFilter) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      if (!l.title?.toLowerCase().includes(q) && !l.destination?.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return (listings as any[]).filter((l: any) => {
+      if (categoryFilter !== "all" && l.category !== categoryFilter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!l.title?.toLowerCase().includes(q) && !l.destination?.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [listings, categoryFilter, search]);
 
   return (
     <MarketLayout
@@ -71,9 +77,9 @@ export default function PublicTravelHome() {
       hideStoreNav
       myAccountPath="/viagens/minha-conta"
     >
-      <div className="w-full px-4 lg:px-6 pt-0 bg-yellow-400">
-        <InstitutionalSafetyBanner />
+      <InstitutionalSafetyBanner />
 
+      <div className="w-full px-4 lg:px-6 pt-0 bg-yellow-400">
         {/* CTA para agências */}
         <div className="pb-4 pt-2">
           <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
@@ -92,76 +98,63 @@ export default function PublicTravelHome() {
         </div>
       </div>
 
-      <div className="w-full px-4 lg:px-6 py-12 bg-yellow-400">
+      <div className="w-full py-12 bg-yellow-400">
         <div className="max-w-[1920px] mx-auto space-y-8">
 
-          <div className="w-full flex flex-col items-center text-center gap-2">
+          <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
             <div className="flex items-center gap-2 justify-center">
               <div className="p-2 bg-sky-600/10 rounded-lg">
                 <Plane className="w-5 h-5 text-sky-600" />
               </div>
               <span className="text-xs font-black text-sky-600 uppercase tracking-widest">Pacotes & Destinos</span>
             </div>
-            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">VIAGENS <span className="text-orange-500">&</span> TURISMO</h1>
-            <p className="text-zinc-500 font-medium max-w-xl text-center">Pacotes completos, roteiros nacionais e internacionais — fale direto com a agencia.</p>
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
+              VIAGENS <span className="text-orange-500">&</span> TURISMO
+            </h1>
+            <p className="text-zinc-500 font-medium max-w-xl text-center">
+              Pacotes completos, roteiros nacionais e internacionais — fale direto com a agência.
+            </p>
           </div>
 
-          <div className="relative flex items-center gap-1">
-            {/* Seta esquerda */}
-            <button
-              onClick={() => scrollFilters("left")}
-              className="shrink-0 bg-white/90 backdrop-blur shadow-sm rounded-full p-1 border border-zinc-200/70 transition-all hover:scale-110 z-10"
-            >
-              <ChevronLeft className="w-3.5 h-3.5 text-zinc-500" />
-            </button>
-
-            {/* Lista de filtros */}
-            <div ref={filterScrollRef} className="flex gap-2 overflow-x-auto pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth flex-1">
-              <button
-                onClick={() => setCategoryFilter("all")}
-                className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all ${categoryFilter === "all" ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
-              >
-                Todas
-              </button>
-              {usedCategories.map(c => (
-                <button
-                  key={c.value}
-                  onClick={() => setCategoryFilter(c.value)}
-                  className={`flex-none px-4 py-2 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${categoryFilter === c.value ? "bg-orange-500 text-white" : "bg-white text-zinc-600 border border-zinc-200 hover:border-orange-300"}`}
-                >
-                  {c.emoji} {c.label}
-                </button>
-              ))}
+          {/* ── Faixa de categorias — fundo verde, edge-to-edge, nunca vazia ── */}
+          {activeCategories.length > 0 && (
+            <div className="-mx-0 w-full bg-emerald-900 py-3 px-4 lg:px-6">
+              <CategoryFilterBar
+                categories={activeCategories}
+                activeValue={categoryFilter}
+                onSelect={setCategoryFilter}
+                totalCount={listings.length}
+                allLabel="Todas"
+                allEmoji="✈️"
+                variant="dark"
+              />
             </div>
-
-            {/* Seta direita */}
-            <button
-              onClick={() => scrollFilters("right")}
-              className="shrink-0 bg-white/90 backdrop-blur shadow-sm rounded-full p-1 border border-zinc-200/70 transition-all hover:scale-110 z-10"
-            >
-              <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
-            </button>
-          </div>
+          )}
 
           {isLoading ? (
             <div className="flex items-center gap-2 py-16 justify-center text-zinc-400">
               <Loader2 className="w-6 h-6 animate-spin" /> Carregando...
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20 space-y-4">
+            <div className="text-center py-20 space-y-4 px-4">
               <div className="text-6xl">✈️</div>
               <h2 className="text-2xl font-black text-zinc-700">Nenhuma viagem encontrada</h2>
-              <p className="text-zinc-500">Seja a primeira agencia a anunciar aqui!</p>
-              <button onClick={() => navigate("/auth?entry=advertiser")} className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl">
+              <p className="text-zinc-500">Seja a primeira agência a anunciar aqui!</p>
+              <button
+                onClick={() => navigate("/auth?entry=advertiser")}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl"
+              >
                 Anunciar viagem
               </button>
             </div>
           ) : (
-            <HorizontalCarousel gap="gap-4" snap cardWidth="w-[calc(100vw-2rem)] sm:w-80" alwaysShowArrows>
-              {filtered.map((tr: any) => (
-                <MarketTravelCard key={tr.id} travel={tr} />
-              ))}
-            </HorizontalCarousel>
+            <div className="px-4 lg:px-6">
+              <HorizontalCarousel gap="gap-4" snap cardWidth="w-[calc(100vw-2rem)] sm:w-80" alwaysShowArrows>
+                {filtered.map((tr: any) => (
+                  <MarketTravelCard key={tr.id} travel={tr} />
+                ))}
+              </HorizontalCarousel>
+            </div>
           )}
         </div>
       </div>

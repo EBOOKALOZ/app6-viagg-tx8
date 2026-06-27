@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { Textarea } from "@/components/ui/textarea";
 import {
   MessageSquare,
@@ -379,6 +380,8 @@ export function ContactIntentionModal({
                     Seus dados são protegidos. Você não será adicionado a listas de email ou grupos sem autorização.
                   </p>
                 </div>
+
+                <FormDisclaimerStrip />
 
                 <Button
                   onClick={handleSubmit}

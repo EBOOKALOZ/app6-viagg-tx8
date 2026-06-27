@@ -13,6 +13,7 @@ import {
   ShoppingCart, Minus, Plus, Trash2, Loader2, Package,
   Store, ChevronRight, MessageCircle, CheckCircle, User, Phone,
 } from "lucide-react";
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { StoreGroup, useMarketplaceCart } from "@/hooks/useMarketplaceCart";
 
 // ─── Helpers ────────────────────────────
@@ -187,6 +188,8 @@ export function MarketplaceCartDrawer({ open, onOpenChange, cart }: MarketplaceC
                 />
               </div>
             </div>
+
+            <FormDisclaimerStrip />
 
             {/* Order summary */}
             <div className="bg-white rounded-xl p-4 border border-gray-100 space-y-2 mt-4">

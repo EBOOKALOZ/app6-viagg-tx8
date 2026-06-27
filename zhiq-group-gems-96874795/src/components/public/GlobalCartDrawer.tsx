@@ -9,6 +9,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import {
   ShoppingBag, Minus, Plus, Trash2, MapPin, X, Loader2,
   ChevronDown, CheckCircle, Store as StoreIcon, Send, PartyPopper,
@@ -332,11 +333,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
               )}
             </div>
 
-            <div className="w-full bg-gray-50 rounded-xl p-4 text-center">
-              <p className="text-[11px] text-gray-400 leading-relaxed">
-                A plataforma Viagg-TX8 organizou sua intenção de compra. O pagamento será feito diretamente com a loja, conforme as condições combinadas entre vocês.
-              </p>
-            </div>
+            <FormDisclaimerStrip />
 
             {user ? (
               <button onClick={() => { handleClose(); navigate("/anunciante/mensagens"); }}

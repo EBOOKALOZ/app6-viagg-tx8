@@ -1,24 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SellRealEstateCTA } from '@/components/real-estate/SellRealEstateCTA';
-import { ShieldCheck, Zap, Users, SlidersHorizontal, Trees, Tractor, MapPin, Wheat, LayoutGrid } from 'lucide-react';
+import { ShieldCheck, Zap, Users, Trees, Tractor, MapPin, Wheat, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-
-// Tira acento + minúsculas, p/ casar "Sítio" com "sitio" etc.
-const normType = (s: unknown) =>
-  String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
-
-// Categorias de imóvel (cards). key = valor normalizado p/ filtrar property_type.
-const REAL_ESTATE_CATEGORIES = [
-  { key: "all", label: "Todos", icon: LayoutGrid, color: "bg-zinc-700" },
-  { key: "sitio", label: "Sítios", icon: Trees, color: "bg-emerald-600" },
-  { key: "chacara", label: "Chácaras", icon: Tractor, color: "bg-lime-600" },
-  { key: "lote", label: "Lotes Urbanos", icon: MapPin, color: "bg-amber-600" },
-  { key: "fazenda", label: "Fazendas", icon: Wheat, color: "bg-orange-600" },
-];
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategoryFilterBar } from '@/components/ui/CategoryFilterBar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
@@ -26,6 +11,27 @@ import { getListingImageUrl } from '@/lib/real-estate/mediaUtils';
 import { MarketLayout } from '@/components/layout/MarketLayout';
 import { MarketNavButtons } from '@/components/layout/MarketNavButtons';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+
+// Tira acento + minúsculas, p/ casar "Sítio" com "sitio" etc.
+const normType = (s: unknown) =>
+  String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+
+const PROPERTY_TYPE_META: Record<string, { label: string; Icon: LucideIcon }> = {
+  sitio:   { label: "Sítios",   Icon: Trees },
+  fazenda: { label: "Fazendas", Icon: Wheat },
+  chacara: { label: "Chácaras", Icon: Tractor },
+  lote:    { label: "Lotes",    Icon: MapPin },
+  terreno: { label: "Terrenos", Icon: MapPin },
+};
+
+// Normaliza variações ("lote urbano" → "lote") usando includes, igual ao filtro.
+const canonicalizeType = (raw: string): string => {
+  const n = normType(raw);
+  for (const key of Object.keys(PROPERTY_TYPE_META)) {
+    if (n.includes(key)) return key;
+  }
+  return n;
+};
 
 export const PublicRealEstateHome = () => {
   const navigate = useNavigate();
@@ -37,8 +43,6 @@ export const PublicRealEstateHome = () => {
   const { data: rawPropertyListings = [], isLoading } = useQuery<any[]>({
     queryKey: ['public-real-estate-home-unified'],
     queryFn: async () => {
-
-      // 1ª tentativa: view pública
       const { data: viewData, error: viewError } = await supabase
         .from('public_real_estate_listings' as any)
         .select('*')
@@ -47,7 +51,6 @@ export const PublicRealEstateHome = () => {
       const source = (!viewError && viewData && viewData.length > 0)
         ? viewData
         : await (async () => {
-            // 2ª tentativa: tabela direta
             const { data: raw } = await supabase
               .from('real_estate_listings' as any)
               .select('*')
@@ -70,12 +73,12 @@ export const PublicRealEstateHome = () => {
           .order('sort_order', { ascending: true })
           .limit(1)
           .maybeSingle();
-        
+
         let thumbnailUrl = null;
         const hasThumb = !!media?.thumb_masked_storage_path;
         const storagePath = media?.thumb_masked_storage_path || media?.original_storage_path;
         if (storagePath) thumbnailUrl = getListingImageUrl(storagePath, hasThumb ? 'public' : 'original');
-        
+
         return { ...prop, thumbnail_url: thumbnailUrl };
       }));
 
@@ -85,53 +88,59 @@ export const PublicRealEstateHome = () => {
     refetchOnWindowFocus: true,
   });
 
+  /* Tipos de imóvel com pelo menos 1 listing — nunca mostra vazio */
+  const activePropertyTypes = useMemo(() => {
+    const counts = new Map<string, number>();
+    rawPropertyListings.forEach((p) => {
+      if (!p.property_type) return;
+      const key = canonicalizeType(p.property_type);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([key, count]) => {
+        const meta = PROPERTY_TYPE_META[key];
+        return {
+          value: key,
+          label: meta?.label ?? (key.charAt(0).toUpperCase() + key.slice(1)),
+          count,
+          Icon: meta?.Icon as LucideIcon | undefined,
+        };
+      })
+      .filter(({ count }) => count > 0)
+      .sort((a, b) => b.count - a.count);
+  }, [rawPropertyListings]);
 
   const cities = useMemo(() => {
-      const seen = new Map<string, string>();
-      rawPropertyListings.forEach(v => {
-          const raw = String(v.city || "").trim();
-          if (!raw) return;
-          const k = raw.toLowerCase();
-          if (!seen.has(k)) seen.set(k, raw);
-      });
-      return Array.from(seen.entries())
-          .map(([key, raw]) => ({ key, label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() }))
-          .sort((a, b) => a.label.localeCompare(b.label));
+    const seen = new Map<string, string>();
+    rawPropertyListings.forEach(v => {
+      const raw = String(v.city || "").trim();
+      if (!raw) return;
+      const k = raw.toLowerCase();
+      if (!seen.has(k)) seen.set(k, raw);
+    });
+    return Array.from(seen.entries())
+      .map(([key, raw]) => ({ key, label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [rawPropertyListings]);
 
   const neighborhoods = useMemo(() => {
-      const seen = new Map<string, string>();
-      rawPropertyListings.forEach(v => {
-          const raw = String(v.neighborhood || "").trim();
-          if (!raw) return;
-          const k = raw.toLowerCase();
-          if (!seen.has(k)) seen.set(k, raw);
-      });
-      return Array.from(seen.entries())
-          .map(([key, raw]) => ({ key, label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() }))
-          .sort((a, b) => a.label.localeCompare(b.label));
+    const seen = new Map<string, string>();
+    rawPropertyListings.forEach(v => {
+      const raw = String(v.neighborhood || "").trim();
+      if (!raw) return;
+      const k = raw.toLowerCase();
+      if (!seen.has(k)) seen.set(k, raw);
+    });
+    return Array.from(seen.entries())
+      .map(([key, raw]) => ({ key, label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [rawPropertyListings]);
-
-  const propertyTypes = useMemo(() => {
-      const seen = new Map<string, string>();
-      rawPropertyListings.forEach(v => {
-          const raw = String(v.property_type || "").trim();
-          if (!raw) return;
-          const k = raw.toLowerCase();
-          if (!seen.has(k)) seen.set(k, raw);
-      });
-      return Array.from(seen.entries())
-          .map(([key, raw]) => ({ key, label: raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase() }))
-          .sort((a, b) => a.label.localeCompare(b.label));
-  }, [rawPropertyListings]);
-
 
   const propertyListings = useMemo(() => {
     return rawPropertyListings.filter(p => {
       if (cityFilter !== "all" && p.city?.trim().toLowerCase() !== cityFilter) return false;
       if (neighborhoodFilter !== "all" && p.neighborhood?.trim().toLowerCase() !== neighborhoodFilter) return false;
       if (propertyTypeFilter !== "all" && !normType(p.property_type).includes(propertyTypeFilter)) return false;
-      
       if (search.trim()) {
         const q = search.toLowerCase();
         return (
@@ -168,17 +177,12 @@ export const PublicRealEstateHome = () => {
       </div>
 
       <div className="min-h-screen">
-        {/* Hero / Module Identity */}
+        {/* Hero */}
         <section className="relative h-[480px] flex items-center justify-center overflow-hidden bg-zinc-950">
           <div className="absolute inset-0 opacity-40">
-            <img 
-              src="/images/cidade-sunset.jpg" 
-              className="w-full h-full object-cover grayscale"
-              alt="Background"
-            />
+            <img src="/images/cidade-sunset.jpg" className="w-full h-full object-cover grayscale" alt="Background" />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent z-0" />
-          
           <div className="container relative z-10 px-4 text-center space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-1000">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30 text-primary text-xs font-black uppercase tracking-widest backdrop-blur-md">
               <ShieldCheck className="w-4 h-4" />
@@ -196,39 +200,23 @@ export const PublicRealEstateHome = () => {
           </div>
         </section>
 
-        {/* Main Content Area */}
-        <main className="container px-4 py-20 space-y-32">
-
-          {/* Categorias de imóvel */}
-          <div className="space-y-8">
-            <div className="flex flex-col gap-3 items-center text-center">
-              <h3 className="text-4xl font-black tracking-tighter uppercase">Explore por Categoria</h3>
-              <div className="h-1.5 w-24 bg-primary rounded-full" />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {REAL_ESTATE_CATEGORIES.map((c) => {
-                const Icon = c.icon;
-                const active = propertyTypeFilter === c.key;
-                return (
-                  <button
-                    key={c.key}
-                    onClick={() => setPropertyTypeFilter(c.key)}
-                    className={cn(
-                      "group relative overflow-hidden rounded-[28px] p-6 flex flex-col items-center gap-3 border transition-all",
-                      active
-                        ? "border-primary bg-primary/10 ring-2 ring-primary scale-[1.02]"
-                        : "border-white/10 bg-zinc-900/60 hover:border-primary/40 hover:bg-zinc-900"
-                    )}
-                  >
-                    <div className={cn("w-16 h-16 rounded-3xl flex items-center justify-center shadow-xl transition-transform group-hover:scale-110", c.color)}>
-                      <Icon className="w-8 h-8 text-white" />
-                    </div>
-                    <span className="font-black uppercase tracking-tight text-sm">{c.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* ── Faixa de categorias — verde escuro, edge-to-edge, nunca vazia ── */}
+        {activePropertyTypes.length > 0 && (
+          <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
+            <CategoryFilterBar
+              categories={activePropertyTypes}
+              activeValue={propertyTypeFilter}
+              onSelect={setPropertyTypeFilter}
+              totalCount={rawPropertyListings.length}
+              allLabel="Todos"
+              allEmoji="🏠"
+              variant="dark"
+            />
           </div>
+        )}
+
+        {/* Main Content */}
+        <main className="container px-4 py-20 space-y-32">
 
           {/* Listings Grid */}
           <div className="space-y-12">
@@ -247,14 +235,14 @@ export const PublicRealEstateHome = () => {
               </div>
             ) : propertyListings.length === 0 ? (
               <div className="py-32 text-center bg-zinc-900/40 rounded-[40px] border-2 border-dashed border-zinc-800">
-                  <p className="text-zinc-500 font-bold text-lg">Nenhum imóvel encontrado para esta busca.</p>
-                  <Button 
-                    variant="link" 
-                    className="text-primary font-black uppercase tracking-widest mt-4"
-                    onClick={() => setSearch("")}
-                  >
-                    Limpar Filtros
-                  </Button>
+                <p className="text-zinc-500 font-bold text-lg">Nenhum imóvel encontrado para esta busca.</p>
+                <Button
+                  variant="link"
+                  className="text-primary font-black uppercase tracking-widest mt-4"
+                  onClick={() => { setSearch(""); setPropertyTypeFilter("all"); }}
+                >
+                  Limpar Filtros
+                </Button>
               </div>
             ) : (
               <div className="relative w-screen left-1/2 -translate-x-1/2">
@@ -268,12 +256,12 @@ export const PublicRealEstateHome = () => {
             )}
           </div>
 
-          {/* The BIG CTA Banner */}
+          {/* CTA Banner */}
           <div className="animate-in zoom-in-95 duration-1000">
             <SellRealEstateCTA variant="banner" />
           </div>
 
-          {/* Features / Why Viagg Real Estate */}
+          {/* Features */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-16 py-10">
             <div className="space-y-6 group">
               <div className="w-16 h-16 rounded-3xl bg-primary shadow-xl shadow-primary/20 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3">

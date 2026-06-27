@@ -9,8 +9,8 @@ import { SellFreightCTA } from "@/components/freight/SellFreightCTA";
 import { FreightTriageWidget } from "@/components/freight/FreightTriageWidget";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FREIGHT_VEHICLE_TYPES } from "@/lib/freight/vehicleTypes";
+import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 
 export default function PublicFreightHome() {
   const navigate = useNavigate();
@@ -57,6 +57,18 @@ export default function PublicFreightHome() {
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
   });
+
+  const activeVehicleTypes = useMemo(() => {
+    const counts = new Map<string, number>();
+    rawFreightListings.forEach((s) => {
+      if (s.vehicle_type) {
+        counts.set(s.vehicle_type, (counts.get(s.vehicle_type) || 0) + 1);
+      }
+    });
+    return FREIGHT_VEHICLE_TYPES
+      .filter((v) => (counts.get(v.value) || 0) > 0)
+      .map((v) => ({ type: v, count: counts.get(v.value) || 0 }));
+  }, [rawFreightListings]);
 
   const filteredFreight = useMemo(() => {
     return rawFreightListings.filter((s) => {
@@ -115,19 +127,27 @@ export default function PublicFreightHome() {
         </div>
 
         <FreightTriageWidget />
-
-        <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-          <SelectTrigger className="w-full sm:w-[280px] h-12 rounded-2xl border-white/10 bg-white/5 text-white">
-            <SelectValue placeholder="Tipo de veículo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os veículos</SelectItem>
-            {FREIGHT_VEHICLE_TYPES.map((v) => (
-              <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </section>
+
+      {/* ── Faixa de categorias — fundo verde, edge-to-edge, nunca vazia ── */}
+      {activeVehicleTypes.length > 0 && (
+        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
+          <CategoryFilterBar
+            categories={activeVehicleTypes.map(({ type, count }) => ({
+              value: type.value,
+              label: type.label,
+              count,
+              Icon: type.icon,
+            }))}
+            activeValue={vehicleFilter}
+            onSelect={setVehicleFilter}
+            totalCount={rawFreightListings.length}
+            allLabel="Todos"
+            allEmoji="🚚"
+            variant="dark"
+          />
+        </div>
+      )}
 
       <section className="p-4">
         {isLoading && <p className="text-center text-white/70">Carregando fretes...</p>}

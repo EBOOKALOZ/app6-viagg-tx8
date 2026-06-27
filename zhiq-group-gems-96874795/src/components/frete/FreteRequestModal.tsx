@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { 
   MapPin, 
   Navigation, 
@@ -934,6 +935,8 @@ export function FreteRequestModal({
                   Sua solicitação será enviada para motoristas disponíveis na região.
                 </p>
               </div>
+
+              <FormDisclaimerStrip />
 
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setCurrentStep('carga')}>

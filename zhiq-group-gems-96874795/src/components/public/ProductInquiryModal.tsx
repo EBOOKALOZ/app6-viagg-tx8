@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react';
+import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import {
   Dialog,
   DialogContent,
@@ -220,6 +221,8 @@ export function ProductInquiryModal({ open, onClose, product }: ProductInquiryMo
                 className="resize-none"
               />
             </div>
+
+            <FormDisclaimerStrip />
 
             <Button
               type="submit"

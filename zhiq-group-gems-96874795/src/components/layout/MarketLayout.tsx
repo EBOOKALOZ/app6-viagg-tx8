@@ -32,6 +32,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
 
 interface MarketLayoutProps {
     children: React.ReactNode;
@@ -265,7 +266,8 @@ export function MarketLayout({
             {/* ── Drawers/Modals ── */}
             {!hideCart && <GlobalCartDrawer open={cartOpen} onOpenChange={setCartOpen} globalCart={globalCart} />}
 
-
+            {/* ── Flash de aviso (3s, some após 15 min de sessão) ── */}
+            <SessionSafetyFlash />
         </div>
     );
 }

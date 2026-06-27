@@ -8,6 +8,7 @@ import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { Button } from "@/components/ui/button";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
+import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 import { SlidersHorizontal } from "lucide-react";
 import {
   Sheet,
@@ -185,6 +186,23 @@ export default function AllVehiclesPage() {
     return Array.from(seen).sort((a, b) => Number(b) - Number(a));
   }, [rawVehicleListings]);
 
+  /* Marcas com pelo menos 1 listing — nunca mostra vazia */
+  const activeBrands = useMemo(() => {
+    const counts = new Map<string, number>();
+    rawVehicleListings.forEach((v) => {
+      const raw = String(v.brand || "").trim();
+      if (raw) counts.set(raw.toLowerCase(), (counts.get(raw.toLowerCase()) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .map(([key, count]) => ({
+        value: key,
+        label: key.charAt(0).toUpperCase() + key.slice(1),
+        count,
+        emoji: "🚗",
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [rawVehicleListings]);
+
   // Neighborhood list (similar to MercadoLocalViagg)
   const neighborhoods = useMemo(() => {
     const seen = new Map<string, string>();
@@ -229,6 +247,21 @@ export default function AllVehiclesPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Faixa de categorias por marca — verde escuro, edge-to-edge, nunca vazia ── */}
+      {activeBrands.length > 0 && (
+        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
+          <CategoryFilterBar
+            categories={activeBrands}
+            activeValue={brandFilter}
+            onSelect={setBrandFilter}
+            totalCount={rawVehicleListings.length}
+            allLabel="Todos"
+            allEmoji="🚗"
+            variant="dark"
+          />
+        </div>
+      )}
 
       <section className="p-4">
         {vehiclesLoading && <p className="text-center text-white/70">Carregando veículos...</p>}
