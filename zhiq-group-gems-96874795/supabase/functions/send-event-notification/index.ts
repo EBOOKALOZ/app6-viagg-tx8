@@ -79,7 +79,7 @@ const INTEREST_LABELS: Record<string, string> = {
 };
 
 interface EventPayload {
-  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup" | "package_purchase";
+  source?: "ledger" | "lead" | "order" | "balance_alert" | "offer" | "wallet_topup" | "package_purchase" | "receipt";
   advertiser_account_id?: string;
   advertiser_user_id?: string;
   store_id?: string;
@@ -118,6 +118,10 @@ interface EventPayload {
   amount_brl?: number | null;
   package_name?: string | null;
   credits?: number | null;
+  // Recibo de pagamento (source = "receipt")
+  order_short_id?: string | null;
+  payment_method?: string | null;
+  paid_at?: string | null;
 }
 
 interface Recipient {
@@ -529,6 +533,63 @@ function packagePurchaseTemplate(ev: EventPayload, ownerName: string) {
   return { subject, html };
 }
 
+function receiptTemplate(ev: EventPayload, ownerName: string) {
+  const greeting = ownerName ? `Olá, ${ownerName}!` : "Olá!";
+  const amount = formatBRL(ev.amount_brl);
+  const pkg = ev.package_name || "Compra de créditos";
+  const credits = Number(ev.credits || 0);
+  const orderRef = (ev.order_short_id || "").toUpperCase().slice(0, 8) || "—";
+  let paidDate = "—";
+  if (ev.paid_at) {
+    try {
+      const d = new Date(ev.paid_at);
+      paidDate = d.toLocaleDateString("pt-BR", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+        hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo",
+      });
+    } catch { /* mantém "—" */ }
+  }
+  const methodMap: Record<string, string> = {
+    mercado_pago: "MercadoPago",
+    pix: "PIX",
+    credit_card: "Cartão de crédito",
+    debit_card: "Cartão de débito",
+    boleto: "Boleto bancário",
+  };
+  const methodLabel = methodMap[ev.payment_method || ""] || ev.payment_method || "Online";
+  const creditRow = credits > 0
+    ? `<tr><td style="padding:8px 0; color:#52525b; font-size:14px; border-bottom:1px solid #f4f4f5;">Créditos adicionados</td><td style="padding:8px 0; text-align:right; font-size:14px; font-weight:700; color:#16a34a; border-bottom:1px solid #f4f4f5;">+${credits.toLocaleString("pt-BR")} créditos</td></tr>`
+    : "";
+  const subject = `Viagg-TX8 • Recibo de pagamento #${orderRef}`;
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background:#f4f4f5; margin:0; padding:20px;">
+      <div style="max-width:600px; margin:0 auto; background:white; border-radius:12px; padding:40px;">
+        ${LOGO_HEADER}
+        <h1 style="color:#18181b; font-size:22px;">Recibo de pagamento 🧾</h1>
+        <p style="color:#52525b; font-size:15px;">${greeting}</p>
+        <p style="color:#52525b; font-size:15px;">Seu pagamento foi confirmado. Guarde este recibo para seus registros.</p>
+        <div style="margin:24px 0; background:#f8fafc; border-radius:10px; padding:24px;">
+          <table style="width:100%; border-collapse:collapse;">
+            <tr><td style="padding:8px 0; color:#52525b; font-size:14px; border-bottom:1px solid #f4f4f5;">Nº do pedido</td><td style="padding:8px 0; text-align:right; font-size:14px; font-weight:600; color:#18181b; border-bottom:1px solid #f4f4f5;">#${orderRef}</td></tr>
+            <tr><td style="padding:8px 0; color:#52525b; font-size:14px; border-bottom:1px solid #f4f4f5;">Data</td><td style="padding:8px 0; text-align:right; font-size:14px; color:#18181b; border-bottom:1px solid #f4f4f5;">${paidDate}</td></tr>
+            <tr><td style="padding:8px 0; color:#52525b; font-size:14px; border-bottom:1px solid #f4f4f5;">Produto</td><td style="padding:8px 0; text-align:right; font-size:14px; font-weight:600; color:#18181b; border-bottom:1px solid #f4f4f5;">${pkg}</td></tr>
+            ${creditRow}
+            <tr><td style="padding:8px 0; color:#52525b; font-size:14px; border-bottom:1px solid #f4f4f5;">Método</td><td style="padding:8px 0; text-align:right; font-size:14px; color:#18181b; border-bottom:1px solid #f4f4f5;">${methodLabel}</td></tr>
+            <tr><td style="padding:12px 0 0; color:#18181b; font-size:16px; font-weight:700;">Total pago</td><td style="padding:12px 0 0; text-align:right; font-size:18px; font-weight:700; color:#f59e0b;">${amount}</td></tr>
+          </table>
+        </div>
+        <div style="text-align:center; margin:8px 0 20px; padding:10px; background:#ecfdf5; border-radius:8px;">
+          <span style="color:#16a34a; font-size:14px; font-weight:700;">✅ Pagamento confirmado</span>
+        </div>
+        ${ctaButton("/anunciante/creditos", "Ver meus créditos")}
+        <hr style="border:none; border-top:1px solid #e4e4e7; margin:24px 0;">
+        <p style="color:#a1a1aa; font-size:12px;">Equipe Viagg-TX8 — guarde este e-mail como comprovante.</p>
+      </div>
+    </body></html>`;
+  return { subject, html };
+}
+
 async function sendViaResend(to: string, subject: string, html: string) {
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -580,7 +641,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const { subject, html } =
-      ev.source === "package_purchase" ? packagePurchaseTemplate(ev, recipient.name)
+      ev.source === "receipt" ? receiptTemplate(ev, recipient.name)
+      : ev.source === "package_purchase" ? packagePurchaseTemplate(ev, recipient.name)
       : ev.source === "wallet_topup" ? walletTopupTemplate(ev, recipient.name)
       : ev.source === "balance_alert" ? balanceAlertTemplate(ev, recipient.name)
       : ev.source === "offer" ? offerTemplate(ev, recipient.name)

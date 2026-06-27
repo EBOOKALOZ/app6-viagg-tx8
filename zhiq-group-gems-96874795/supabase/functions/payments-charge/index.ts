@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
         p_metadata: {},
       },
     );
-    if (acctErr) return json({ error: `conta: ${acctErr.message}` }, 400);
+    if (acctErr) return json({ ok: false, error: `conta: ${acctErr.message}` });
     const targetAccountId = (acct as { id: string }).id;
 
     // 2. Gateway ativo + credenciais (service_role).
@@ -93,16 +93,17 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
     if (gwErr || !gw) {
-      return json({ error: "nenhum gateway ativo" }, 400);
+      return json({ ok: false, error: "nenhum gateway ativo" });
     }
     if (gw.provider_code !== "mercadopago") {
       return json({
+        ok: false,
         error: `gateway ativo é ${gw.provider_code}; esta função só faz mercadopago`,
-      }, 400);
+      });
     }
     const creds = gw.credentials as MpCreds;
     if (!creds?.access_token) {
-      return json({ error: "gateway sem access_token" }, 400);
+      return json({ ok: false, error: "gateway sem access_token" });
     }
 
     // 3. Cria a ordem (pending).
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
         p_metadata: input.metadata ?? {},
       },
     );
-    if (orderErr) return json({ error: `ordem: ${orderErr.message}` }, 400);
+    if (orderErr) return json({ ok: false, error: `ordem: ${orderErr.message}` });
     const orderRow = order as { id: string; status: string };
 
     // 4. Charge no MP.
@@ -185,7 +186,9 @@ Deno.serve(async (req) => {
         p_reason: charge.error ?? "charge falhou",
         p_metadata: {},
       });
-      return json({ error: charge.error ?? "charge falhou", order_id: orderRow.id }, 502);
+      // Retorna 200 (não 502) para que o supabase client exponha o body do erro
+      // ao caller — com 5xx o invoke() retorna { data: null } e perde o motivo real.
+      return json({ ok: false, error: charge.error ?? "charge falhou", order_id: orderRow.id });
     }
 
     // 5. Vincula provider + pending → waiting_payment.
@@ -198,9 +201,10 @@ Deno.serve(async (req) => {
     });
     if (setErr) {
       return json({
+        ok: false,
         error: `set_provider: ${setErr.message}`,
         order_id: orderRow.id,
-      }, 500);
+      });
     }
 
     // 5b. Cartão tokenizado: o /v1/payments processa NA HORA (status já volta
@@ -209,6 +213,9 @@ Deno.serve(async (req) => {
     //     waiting_payment e o saldo nunca apareceria. Então, quando o cartão
     //     volta `approved`, aplicamos a confirmação aqui mesmo via a MESMA RPC
     //     do webhook (idempotente: o webhook real depois vira no-op).
+    //     Quando o cartão volta `rejected`, aplicamos charge.failed imediatamente
+    //     p/ a ordem não ficar presa em waiting_payment sem saída.
+    const statusDetail = (charge as { status_detail?: string }).status_detail ?? null;
     let syncedPaid = false;
     if (isCardToken && charge.status === "approved") {
       const { error: applyErr } = await svc.rpc("pay_webhook_apply_event", {
@@ -225,12 +232,33 @@ Deno.serve(async (req) => {
         p_external_reference: reference,
       });
       if (applyErr) {
-        // Não falha a cobrança (o cartão JÁ foi aprovado no MP). Loga p/ o
-        // webhook reconciliar; o cliente vê o status pelo poll.
         console.error("sync apply_event falhou:", applyErr.message);
       } else {
         syncedPaid = true;
       }
+    } else if (isCardToken && charge.status === "rejected") {
+      // Cartão recusado na hora — marca a ordem como failed para não ficar presa.
+      await svc.rpc("pay_webhook_apply_event", {
+        p_provider_name: "mercadopago",
+        p_provider_payment_id: charge.provider_payment_id,
+        p_provider_event_id: `sync:${charge.provider_payment_id}:rejected`,
+        p_event_type: "charge.failed",
+        p_raw_payload: {
+          id: charge.provider_payment_id,
+          status: "rejected",
+          status_detail: statusDetail,
+          source: "charge_sync",
+        },
+        p_normalized_payload: { status: "rejected", event_type: "charge.failed" },
+        p_external_reference: reference,
+      }).catch((e: Error) => console.error("sync rejected apply_event falhou:", e.message));
+      return json({
+        ok: false,
+        error: "Cartão recusado" + (statusDetail ? `: ${statusDetail}` : ""),
+        order_id: orderRow.id,
+        provider_status: "rejected",
+        status_detail: statusDetail,
+      });
     }
 
     return json({
@@ -247,8 +275,8 @@ Deno.serve(async (req) => {
       expires_at: charge.expires_at ?? null,
     });
   } catch (e) {
-    return json({
-      error: e instanceof Error ? e.message : "erro interno",
-    }, 500);
+    const msg = e instanceof Error ? e.message : "erro interno";
+    console.error("payments-charge: exception:", msg);
+    return json({ ok: false, error: msg });
   }
 });

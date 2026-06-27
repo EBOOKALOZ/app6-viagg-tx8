@@ -306,15 +306,19 @@ export default function AdvertiserListingsPage() {
     refetchOnMount: 'always',
     staleTime: 0,
     queryFn: async () => {
-      const { data: advertiserData } = await supabase
-        .from('advertiser_accounts' as any).select('id').eq('user_id', user?.id).maybeSingle();
+      // Step 1: get all account IDs for this user
+      const { data: accts } = await (supabase
+        .from('advertiser_accounts' as any)
+        .select('id')
+        .eq('user_id', user!.id) as any);
+      const accountIds = ((accts || []) as any[]).map((a: any) => a.id).filter(Boolean);
 
       const [pRes, mRes] = await Promise.all([
-        advertiserData?.id
-          ? supabase.from("advertiser_listings" as any)
+        accountIds.length > 0
+          ? (supabase.from("advertiser_listings" as any)
               .select(`*, advertiser_listing_media(media_url)`)
-              .eq("advertiser_account_id", advertiserData.id)
-          : Promise.resolve({ data: [] }),
+              .in("advertiser_account_id", accountIds) as any)
+          : Promise.resolve({ data: [], error: null }),
         supabase.from("merchant_marketing_products" as any)
           .select(`id, title, image_url, price_label, category, is_active, created_at, campaign_type`)
           .eq("created_by_user_id", user?.id),

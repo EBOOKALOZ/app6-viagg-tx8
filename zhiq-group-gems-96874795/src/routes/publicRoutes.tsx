@@ -38,6 +38,7 @@ import {
   RealEstateDashboard,
   VehicleDetailPage,
   CampaignSharePage,
+  TrackingRedirectPage,
   MinhasOfertas,
   Rates,
   LegalPage,
@@ -109,6 +110,7 @@ export const publicRoutes = (
     <Route path="/mercado/leiloes" element={<AllAuctionsPage />} />
     <Route path="/mercado/leiloes/:id" element={<AuctionMarketDetailPage />} />
     <Route path="/divulgar/:campaignId" element={<CampaignSharePage />} />
+    <Route path="/c/:token" element={<TrackingRedirectPage />} />
     <Route path="/minhas-ofertas" element={<ProtectedRoute><MinhasOfertas /></ProtectedRoute>} />
     <Route path="/rates" element={<Rates />} />
 

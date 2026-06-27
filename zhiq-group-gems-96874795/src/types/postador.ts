@@ -331,6 +331,9 @@ export type PostingLot = {
     lot_updated_at: string;
     items: PostingLotItem[];
     operator_name: string | null;
+    tracking_token: string | null;
+    click_count: number;
+    first_clicked_at: string | null;
 };
 
 export type PostingLotEvent = {

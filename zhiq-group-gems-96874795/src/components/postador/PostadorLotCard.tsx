@@ -6,11 +6,16 @@ import { toast } from "sonner";
 import {
     Store, MapPin, ShoppingBag, CheckCircle, Loader2,
     Send, Timer, Shield, Package, ChevronDown, ChevronUp,
-    AlertTriangle, Sparkles,
+    AlertTriangle, Sparkles, MousePointerClick,
 } from "lucide-react";
 import type { PostingLot, PostingLotItem } from "@/types/postador";
 import { chatCompletion } from "@/lib/aiapi";
 import WhatsAppPreviewModal from "@/components/postador/WhatsAppPreviewModal";
+
+function buildTrackingUrl(lot: PostingLot): string {
+    const base = window.location.origin;
+    return lot.tracking_token ? `${base}/c/${lot.tracking_token}` : `${base}/mercado`;
+}
 
 function buildLotMessage(lot: PostingLot): string {
     const lines: string[] = [];
@@ -25,8 +30,7 @@ function buildLotMessage(lot: PostingLot): string {
     });
     lines.push("");
     lines.push("─────────────────────");
-    lines.push("📢 Quer anunciar seu produto aqui?");
-    lines.push("👉 https://zhiq-group-gems-96874795.lovable.app/anunciante/meus-anuncios");
+    lines.push(`🔗 Ver ofertas: ${buildTrackingUrl(lot)}`);
     return lines.join("\n");
 }
 
@@ -192,7 +196,7 @@ Mantenha o texto bem formatado e fácil de ler.`;
 
             const aiText = await chatCompletion(userPrompt, 'glm-4-plus', systemPrompt);
             
-            const finalMsg = `${aiText}\n\n─────────────────────\n📢 Quer anunciar seu produto aqui?\n👉 https://zhiq-group-gems-96874795.lovable.app/anunciante/meus-anuncios`;
+            const finalMsg = `${aiText}\n\n─────────────────────\n🔗 Ver ofertas: ${buildTrackingUrl(lot)}`;
             
             setPreviewText(finalMsg);
             setShowPreview(true);
@@ -448,6 +452,19 @@ Mantenha o texto bem formatado e fácil de ler.`;
                                 </div>
                             ))}
                         </div>
+                        {lot.tracking_token && (
+                            <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                <MousePointerClick className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                <span className="text-[10px] font-black text-emerald-400">
+                                    {lot.click_count} clique{lot.click_count !== 1 ? 's' : ''} no link rastreável
+                                </span>
+                                {lot.first_clicked_at && (
+                                    <span className="text-[9px] text-white/30 ml-auto">
+                                        1º: {new Date(lot.first_clicked_at).toLocaleDateString('pt-BR')}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         <p className="text-[8px] text-white/12 font-mono truncate">lote: {lot.lot_id.slice(0, 12)}…</p>
                     </div>
                 )}

@@ -153,13 +153,25 @@ export function WalletTopupButton({
       toast.info("Pagamento enviado! Confirmando...", { duration: 3000 });
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "";
-      // Instabilidade do Mercado Pago (ex.: "MP 500: internal_error" ou o
-      // genérico "non-2xx" do invoke): mostra um aviso claro ao lojista.
+      const MP_REJECTION: Record<string, string> = {
+        cc_rejected_insufficient_amount: "Saldo insuficiente no cartão.",
+        cc_rejected_bad_filled_card_number: "Número do cartão incorreto.",
+        cc_rejected_bad_filled_date: "Data de vencimento inválida.",
+        cc_rejected_bad_filled_security_code: "CVV inválido.",
+        cc_rejected_bad_filled_other: "Dados do cartão incorretos.",
+        cc_rejected_blacklist: "Cartão bloqueado pelo banco.",
+        cc_rejected_call_for_authorize: "Ligue para o banco para autorizar.",
+        cc_rejected_card_disabled: "Cartão desabilitado.",
+        cc_rejected_high_risk: "Transação bloqueada por segurança.",
+        cc_rejected_duplicated_payment: "Pagamento duplicado detectado.",
+        cc_rejected_max_attempts: "Limite de tentativas atingido. Tente outro cartão.",
+      };
+      const isRejected = /Cartão recusado/i.test(raw);
+      const detailCode = isRejected ? raw.split(":").slice(1).join(":").trim() : "";
       const isMpInstavel =
+        !isRejected &&
         /non-2xx|internal_error|MP 5\d\d|comunica|timeout|failed to fetch/i.test(raw);
-      const description = isMpInstavel
-        ? "O Mercado Pago está com instabilidade momentânea. Isso costuma ser temporário — aguarde alguns segundos e tente novamente, ou tente mais tarde."
-        : raw || "Falha no pagamento";
+      const description = raw || "Falha no pagamento";
       toast.error("Não foi possível concluir o pagamento", { description });
       throw err; // deixa o Brick exibir o erro também
     }

@@ -101,6 +101,7 @@ export const TravelAccountPage = lazy(() => import("@/pages/public/TravelAccount
 export const AllAuctionsPage = lazy(() => import("@/pages/public/AllAuctionsPage"));
 export const AuctionMarketDetailPage = lazy(() => import("@/pages/public/AuctionMarketDetailPage"));
 export const CampaignSharePage = lazy(() => import("@/pages/public/CampaignSharePage"));
+export const TrackingRedirectPage = lazy(() => import("@/pages/public/TrackingRedirectPage"));
 
 /* ── Motoboy ── */
 export const MotoboyPanel = lazy(() => import("@/pages/MotoboyPanel"));

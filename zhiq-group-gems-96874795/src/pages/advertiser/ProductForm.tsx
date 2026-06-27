@@ -202,6 +202,7 @@ export const ProductForm = () => {
         .from('advertiser_accounts' as any)
         .select('id')
         .eq('user_id', user.id)
+        .limit(1)
         .maybeSingle();
 
       let accountId = advertiserData?.id;
