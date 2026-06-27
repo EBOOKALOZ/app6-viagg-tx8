@@ -25,6 +25,7 @@ import { StorePremiumCard, StoreProduct } from "@/components/public/store/StoreP
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import DiscountRequestModal from "@/components/public/DiscountRequestModal";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
+import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 type TabValue = "home" | "all" | "promo";
 
@@ -898,6 +899,8 @@ export default function StorePublicPage() {
                     merchant_store_id: storeId || null,
                 } : null}
             />
+
+            <InstitutionalSafetyBanner />
 
             {/* Rodapé simples — só desktop (no celular já tem o menu/rodapé) */}
             <footer className="hidden md:block mt-auto">

@@ -7,7 +7,7 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketServiceCard } from "@/components/services/MarketServiceCard";
 import { SellServiceCTA } from "@/components/services/SellServiceCTA";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
-import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
+import { Wrench, Loader2 } from "lucide-react";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 import { resolveServiceTypeIcon, resolveServiceTypeLabel } from "@/lib/services/serviceCategories";
 
@@ -122,39 +122,58 @@ export default function PublicServicesHome() {
         </div>
       </div>
 
-      <section className="px-4 pt-6 space-y-3">
-        <h1 className="text-2xl font-black text-white tracking-tight">Serviços</h1>
-        <p className="text-white/70 text-sm">
-          Divulgue sua empresa e receba contatos de clientes interessados.
-        </p>
-      </section>
+      <div className="w-full py-10 bg-[#F5E62B]">
+        <div className="max-w-[1920px] mx-auto space-y-6">
+          <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
+            <div className="flex items-center gap-2 justify-center">
+              <div className="p-2 bg-violet-600/10 rounded-lg">
+                <Wrench className="w-5 h-5 text-violet-600" />
+              </div>
+              <span className="text-xs font-black text-violet-600 uppercase tracking-widest">Prestadores & Empresas</span>
+            </div>
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
+              SERVIÇOS <span className="text-orange-500">&</span> PROFISSIONAIS
+            </h1>
+            <p className="text-zinc-500 font-medium max-w-xl text-center">
+              Encontre prestadores de serviço na sua região — fale direto com quem faz.
+            </p>
+          </div>
 
-      {/* ── Faixa de categorias — fundo verde escuro, edge-to-edge, nunca vazia ── */}
-      {activeServiceCategories.length > 0 && (
-        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6 mt-4">
-          <CategoryFilterBar
-            categories={activeServiceCategories}
-            activeValue={categoryFilter}
-            onSelect={setCategoryFilter}
-            totalCount={rawServiceListings.length}
-            allLabel="Todos"
-            allEmoji="🔧"
-            variant="dark"
-          />
+          {activeServiceCategories.length > 0 && (
+            <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
+              <CategoryFilterBar
+                categories={activeServiceCategories}
+                activeValue={categoryFilter}
+                onSelect={setCategoryFilter}
+                totalCount={rawServiceListings.length}
+                allLabel="Todos"
+                allEmoji="🔧"
+                variant="dark"
+              />
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex items-center gap-2 py-16 justify-center text-zinc-400">
+              <Loader2 className="w-6 h-6 animate-spin" /> Carregando serviços...
+            </div>
+          ) : filteredServices.length === 0 ? (
+            <div className="text-center py-20 space-y-4 px-4">
+              <div className="text-6xl">🔧</div>
+              <h2 className="text-2xl font-black text-zinc-700">Nenhum serviço encontrado</h2>
+              <p className="text-zinc-500">Seja o primeiro a anunciar aqui!</p>
+            </div>
+          ) : (
+            <div className="px-4 lg:px-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredServices.map((s) => (
+                  <MarketServiceCard key={s.id} service={s} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-
-      <section className="p-4">
-        {isLoading && <p className="text-center text-white/70">Carregando serviços...</p>}
-        {!isLoading && filteredServices.length === 0 && (
-          <p className="text-center text-white/70">Nenhum serviço encontrado.</p>
-        )}
-        <HorizontalCarousel gap="gap-4">
-          {filteredServices.map((s) => (
-            <MarketServiceCard key={s.id} service={s} />
-          ))}
-        </HorizontalCarousel>
-      </section>
+      </div>
 
       <section className="p-4">
         <SellServiceCTA variant="banner" />

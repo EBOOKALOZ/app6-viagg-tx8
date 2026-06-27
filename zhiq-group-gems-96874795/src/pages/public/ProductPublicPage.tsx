@@ -22,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
+import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 // ─── Helpers ────────────────────────────
 function normalizeImageUrl(url: string | null | undefined): string | null {
@@ -431,6 +432,8 @@ export default function ProductPublicPage() {
                     </div>
                 </div>
             </div>
+
+            <InstitutionalSafetyBanner />
         </MarketLayout>
     );
 }

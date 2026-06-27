@@ -18,6 +18,7 @@ import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { OfertaRapidaModal } from "@/components/public/MiniCadastroModal";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
+import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 // ─── Helpers ────────────────────────────
 
@@ -545,6 +546,7 @@ export default function AuctionPublicPage() {
       )}
 
       {/* ═══ FOOTER ═══ */}
+      <InstitutionalSafetyBanner />
       <FooterNeutral compact />
     </div>
   );

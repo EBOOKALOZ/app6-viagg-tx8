@@ -7,7 +7,6 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
 import { Plane, Loader2 } from "lucide-react";
-import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 
@@ -149,11 +148,11 @@ export default function PublicTravelHome() {
             </div>
           ) : (
             <div className="px-4 lg:px-6">
-              <HorizontalCarousel gap="gap-4" snap cardWidth="w-[calc(100vw-2rem)] sm:w-80" alwaysShowArrows>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {filtered.map((tr: any) => (
                   <MarketTravelCard key={tr.id} travel={tr} />
                 ))}
-              </HorizontalCarousel>
+              </div>
             </div>
           )}
         </div>

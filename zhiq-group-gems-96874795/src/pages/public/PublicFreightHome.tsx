@@ -8,7 +8,7 @@ import { MarketFreightCard } from "@/components/freight/MarketFreightCard";
 import { SellFreightCTA } from "@/components/freight/SellFreightCTA";
 import { FreightTriageWidget } from "@/components/freight/FreightTriageWidget";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
-import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
+import { Truck, Loader2 } from "lucide-react";
 import { FREIGHT_VEHICLE_TYPES } from "@/lib/freight/vehicleTypes";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 
@@ -118,48 +118,67 @@ export default function PublicFreightHome() {
         </div>
       </div>
 
-      <section className="px-4 pt-6 space-y-4">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-black text-white tracking-tight">🚚 Fretes & Transportes</h1>
-          <p className="text-white/70 text-sm">
-            Mudanças, móveis, eletrodomésticos, equipamentos e cargas grandes — peça orçamento direto.
-          </p>
+      <div className="w-full py-10 bg-[#F5E62B]">
+        <div className="max-w-[1920px] mx-auto space-y-6">
+          <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
+            <div className="flex items-center gap-2 justify-center">
+              <div className="p-2 bg-blue-600/10 rounded-lg">
+                <Truck className="w-5 h-5 text-blue-600" />
+              </div>
+              <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Transportadoras & Autônomos</span>
+            </div>
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
+              FRETES <span className="text-orange-500">&</span> MUDANÇAS
+            </h1>
+            <p className="text-zinc-500 font-medium max-w-xl text-center">
+              Mudanças, móveis, eletrodomésticos e cargas grandes — peça orçamento direto.
+            </p>
+          </div>
+
+          <div className="px-4 lg:px-6">
+            <FreightTriageWidget />
+          </div>
+
+          {activeVehicleTypes.length > 0 && (
+            <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
+              <CategoryFilterBar
+                categories={activeVehicleTypes.map(({ type, count }) => ({
+                  value: type.value,
+                  label: type.label,
+                  count,
+                  Icon: type.icon,
+                }))}
+                activeValue={vehicleFilter}
+                onSelect={setVehicleFilter}
+                totalCount={rawFreightListings.length}
+                allLabel="Todos"
+                allEmoji="🚚"
+                variant="dark"
+              />
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex items-center gap-2 py-16 justify-center text-zinc-400">
+              <Loader2 className="w-6 h-6 animate-spin" /> Carregando fretes...
+            </div>
+          ) : filteredFreight.length === 0 ? (
+            <div className="text-center py-20 space-y-4 px-4">
+              <div className="text-6xl">🚚</div>
+              <h2 className="text-2xl font-black text-zinc-700">Nenhum frete encontrado</h2>
+              <p className="text-zinc-500">Seja o primeiro a anunciar aqui!</p>
+            </div>
+          ) : (
+            <div className="px-4 lg:px-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filteredFreight.map((s) => (
+                  <MarketFreightCard key={s.id} freight={s} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
-        <FreightTriageWidget />
-      </section>
-
-      {/* ── Faixa de categorias — fundo verde, edge-to-edge, nunca vazia ── */}
-      {activeVehicleTypes.length > 0 && (
-        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
-          <CategoryFilterBar
-            categories={activeVehicleTypes.map(({ type, count }) => ({
-              value: type.value,
-              label: type.label,
-              count,
-              Icon: type.icon,
-            }))}
-            activeValue={vehicleFilter}
-            onSelect={setVehicleFilter}
-            totalCount={rawFreightListings.length}
-            allLabel="Todos"
-            allEmoji="🚚"
-            variant="dark"
-          />
-        </div>
-      )}
-
-      <section className="p-4">
-        {isLoading && <p className="text-center text-white/70">Carregando fretes...</p>}
-        {!isLoading && filteredFreight.length === 0 && (
-          <p className="text-center text-white/70">Nenhum frete encontrado.</p>
-        )}
-        <HorizontalCarousel gap="gap-4">
-          {filteredFreight.map((s) => (
-            <MarketFreightCard key={s.id} freight={s} />
-          ))}
-        </HorizontalCarousel>
-      </section>
+      </div>
 
       <section className="p-4">
         <SellFreightCTA variant="banner" />

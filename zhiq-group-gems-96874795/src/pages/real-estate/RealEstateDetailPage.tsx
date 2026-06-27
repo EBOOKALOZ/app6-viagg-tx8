@@ -16,6 +16,9 @@ import { ContactIntentionModal } from '@/components/listings/ContactIntentionMod
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { MarketLayout } from '@/components/layout/MarketLayout';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
+import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
+import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { StoreLocationMap } from '@/components/StoreLocationMap';
 
 export const RealEstateDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,6 +66,21 @@ export const RealEstateDetailPage = () => {
     enabled: !!id,
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
+  });
+
+  // ─── QUERY: Side listings ──────────────────────────────────────────────────
+  const { data: sideListings = [] } = useQuery({
+    queryKey: ['realestate-side-listings', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('real_estate_listings' as any)
+        .select('id, title, description, property_type, price_brl, total_area_m2, bedrooms, bathrooms, public_location, thumbnail_url, visibility_status')
+        .eq('visibility_status', 'published')
+        .neq('id', id!)
+        .limit(4);
+      return (data ?? []) as any[];
+    },
+    enabled: !!id,
   });
 
   // ─── Cobrança por CLIQUE no anúncio (6 cr do dono, anti-spam no backend) ──
@@ -237,10 +255,18 @@ export const RealEstateDetailPage = () => {
       )}
 
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] gap-6 items-start">
+          {/* ── Coluna esquerda ── */}
+          <div className="hidden lg:flex flex-col gap-4">
+            {sideListings.slice(0, 2).map((p: any) => (
+              <MarketPropertyCard key={p.id} property={p} />
+            ))}
+            {sideListings.length > 0 && (
+              <button onClick={() => navigate('/imoveis')} className="text-xs font-bold text-emerald-600 hover:underline text-center py-1">Ver mais imóveis →</button>
+            )}
+          </div>
 
-          {/* ─── COLUNA PRINCIPAL ─── */}
-          <div className="lg:col-span-8 space-y-8">
+        <div className="space-y-8">
 
             {/* GALERIA PREMIUM */}
             <section className="space-y-4">
@@ -354,14 +380,6 @@ export const RealEstateDetailPage = () => {
               </div>
             </section>
 
-            {/* CTA MOBILE (aparece só no mobile, acima da descrição) */}
-            <div className="lg:hidden">
-              <PriceCard
-                price={priceFormatted}
-                onInterest={handleInterest}
-              />
-            </div>
-
             {/* DESCRIÇÃO */}
             {property.description && (
               <section className="bg-white rounded-3xl p-6 sm:p-8 shadow-[0_10px_40px_-20px_rgba(0,0,0,0.2)] ring-1 ring-black/5 space-y-4">
@@ -379,25 +397,50 @@ export const RealEstateDetailPage = () => {
               </section>
             )}
 
-            {/* CARD DE SEGURANÇA MOBILE */}
-            <div className="lg:hidden">
-              <SecurityCard />
-            </div>
+            {(property.latitude && property.longitude) && (
+              <section className="space-y-3 p-6 sm:p-8 rounded-3xl bg-white shadow-[0_10px_40px_-20px_rgba(0,0,0,0.2)] ring-1 ring-black/5">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-[#FF6A00]" />
+                  <h3 className="font-black text-zinc-900 text-sm">Localização do imóvel</h3>
+                </div>
+                {property.public_address_label && (
+                  <p className="text-xs text-zinc-500 font-medium">{property.public_address_label}</p>
+                )}
+                <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
+                  <StoreLocationMap
+                    initialLat={property.latitude}
+                    initialLng={property.longitude}
+                    addressLabel={property.public_address_label ?? property.city}
+                    markerLabel={property.title}
+                    readOnly
+                    hasConfirmedLocation
+                    onLocationSelect={() => {}}
+                    className="w-full h-full"
+                  />
+                </div>
+              </section>
+            )}
+
+            <PriceCard
+              price={priceFormatted}
+              onInterest={handleInterest}
+            />
+            <SecurityCard />
+        </div>
+
+          {/* ── Coluna direita ── */}
+          <div className="hidden lg:flex flex-col gap-4">
+            {sideListings.slice(2, 4).map((p: any) => (
+              <MarketPropertyCard key={p.id} property={p} />
+            ))}
+            {sideListings.length > 0 && (
+              <button onClick={() => navigate('/imoveis')} className="text-xs font-bold text-emerald-600 hover:underline text-center py-1">Ver mais imóveis →</button>
+            )}
           </div>
-
-          {/* ─── COLUNA LATERAL (desktop sticky) ─── */}
-          <aside className="hidden lg:block lg:col-span-4">
-            <div className="sticky top-24 space-y-5">
-              <PriceCard
-                price={priceFormatted}
-                onInterest={handleInterest}
-              />
-              <SecurityCard />
-            </div>
-          </aside>
-
         </div>
       </div>
+
+      <InstitutionalSafetyBanner />
     </MarketLayout>
 
     {/* Modal de interesse de contato */}

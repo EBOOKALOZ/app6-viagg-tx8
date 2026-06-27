@@ -19,6 +19,7 @@ import { useStoreCart } from "@/hooks/useStoreCart";
 import { StoreCartDrawer } from "@/components/public/StoreCartDrawer";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
+import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function normalizeImageUrl(url: string | null | undefined): string | null {
@@ -696,6 +697,8 @@ export default function ProductLandingPage() {
                 open={showLeadModal}
                 onClose={() => setShowLeadModal(false)}
             />
+
+            <InstitutionalSafetyBanner />
 
             {/* Rodapé simples — só desktop (no celular não mostra; menu inferior cobre) */}
             <footer className="hidden md:block">

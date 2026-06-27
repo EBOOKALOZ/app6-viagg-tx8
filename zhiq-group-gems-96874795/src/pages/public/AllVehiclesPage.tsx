@@ -7,9 +7,8 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { Button } from "@/components/ui/button";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
-import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, Car, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -248,32 +247,58 @@ export default function AllVehiclesPage() {
         </div>
       </div>
 
-      {/* ── Faixa de categorias por marca — verde escuro, edge-to-edge, nunca vazia ── */}
-      {activeBrands.length > 0 && (
-        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
-          <CategoryFilterBar
-            categories={activeBrands}
-            activeValue={brandFilter}
-            onSelect={setBrandFilter}
-            totalCount={rawVehicleListings.length}
-            allLabel="Todos"
-            allEmoji="🚗"
-            variant="dark"
-          />
-        </div>
-      )}
+      <div className="w-full py-10 bg-[#F5E62B]">
+        <div className="max-w-[1920px] mx-auto space-y-6">
+          <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
+            <div className="flex items-center gap-2 justify-center">
+              <div className="p-2 bg-zinc-900/10 rounded-lg">
+                <Car className="w-5 h-5 text-zinc-900" />
+              </div>
+              <span className="text-xs font-black text-zinc-700 uppercase tracking-widest">Revendas & Proprietários</span>
+            </div>
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
+              VEÍCULOS <span className="text-orange-500">&</span> AUTOMÓVEIS
+            </h1>
+            <p className="text-zinc-500 font-medium max-w-xl text-center">
+              Carros, motos, caminhões e mais — negocie direto com o dono.
+            </p>
+          </div>
 
-      <section className="p-4">
-        {vehiclesLoading && <p className="text-center text-white/70">Carregando veículos...</p>}
-        {!vehiclesLoading && sortedVehicles.length === 0 && (
-          <p className="text-center text-white/70">Nenhum veículo encontrado.</p>
-        )}
-        <HorizontalCarousel gap="gap-4">
-          {sortedVehicles.map(v => (
-            <MarketVehicleCard key={v.id} vehicle={v} />
-          ))}
-        </HorizontalCarousel>
-      </section>
+          {activeBrands.length > 0 && (
+            <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6">
+              <CategoryFilterBar
+                categories={activeBrands}
+                activeValue={brandFilter}
+                onSelect={setBrandFilter}
+                totalCount={rawVehicleListings.length}
+                allLabel="Todos"
+                allEmoji="🚗"
+                variant="dark"
+              />
+            </div>
+          )}
+
+          {vehiclesLoading ? (
+            <div className="flex items-center gap-2 py-16 justify-center text-zinc-400">
+              <Loader2 className="w-6 h-6 animate-spin" /> Carregando veículos...
+            </div>
+          ) : sortedVehicles.length === 0 ? (
+            <div className="text-center py-20 space-y-4 px-4">
+              <div className="text-6xl">🚗</div>
+              <h2 className="text-2xl font-black text-zinc-700">Nenhum veículo encontrado</h2>
+              <p className="text-zinc-500">Seja o primeiro a anunciar aqui!</p>
+            </div>
+          ) : (
+            <div className="px-4 lg:px-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {sortedVehicles.map(v => (
+                  <MarketVehicleCard key={v.id} vehicle={v} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </MarketLayout>
   );
 }

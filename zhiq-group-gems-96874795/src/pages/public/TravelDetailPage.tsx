@@ -6,10 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { ContactIntentionModal } from "@/components/listings/ContactIntentionModal";
+import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { StoreLocationMap } from "@/components/StoreLocationMap";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { Button } from "@/components/ui/button";
-import { Plane, MapPin, Calendar, Users, Check, ArrowLeft, Loader2, DollarSign, Clock } from "lucide-react";
+import { Plane, MapPin, Calendar, Users, Check, ArrowLeft, Loader2, DollarSign, Clock, ShieldCheck } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
 
 export default function TravelDetailPage() {
@@ -27,6 +28,35 @@ export default function TravelDetailPage() {
       const { data } = await (supabase.from("travel_listings") as any)
         .select("*").eq("id", id).single();
       return data;
+    },
+  });
+
+  const { data: sideListings = [] } = useQuery({
+    queryKey: ["travel-side", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data } = await (supabase.from("travel_listings") as any)
+        .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, visibility_status, created_at")
+        .eq("visibility_status", "published")
+        .neq("id", id)
+        .order("is_featured", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(4);
+      const rows = (data || []) as any[];
+      if (rows.length === 0) return [];
+      const ids = rows.map((r: any) => r.id);
+      const { data: mediaRows } = await (supabase.from("travel_media") as any)
+        .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+        .in("listing_id", ids)
+        .order("sort_order", { ascending: true });
+      const mediaMap = new Map<string, string>();
+      for (const m of (mediaRows as any[]) || []) {
+        if (!mediaMap.has(m.listing_id)) {
+          const p = m.public_masked_storage_path || m.original_storage_path;
+          if (p) mediaMap.set(m.listing_id, p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl);
+        }
+      }
+      return rows.map((r: any) => ({ ...r, thumbnail_url: mediaMap.get(r.id) ?? null }));
     },
   });
 
@@ -95,11 +125,26 @@ export default function TravelDetailPage() {
       myAccountPath="/viagens/minha-conta"
     >
       <div style={{ backgroundColor: "#F5E62B" }} className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-          <button onClick={() => navigate("/viagens")} className="flex items-center gap-2 text-sm font-bold text-zinc-600 hover:text-sky-600">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <button onClick={() => navigate("/viagens")} className="flex items-center gap-2 text-sm font-bold text-zinc-600 hover:text-sky-600 mb-6">
             <ArrowLeft className="w-4 h-4" /> Voltar para Viagens
           </button>
 
+          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_260px] gap-6 items-start">
+            {/* Cards laterais esquerdos */}
+            <div className="hidden lg:flex flex-col gap-4">
+              {sideListings[0] && <MarketTravelCard travel={sideListings[0]} />}
+              {sideListings[1] && <MarketTravelCard travel={sideListings[1]} />}
+              <button
+                onClick={() => navigate("/viagens")}
+                className="text-xs font-black text-sky-600 hover:text-sky-700 underline underline-offset-2 text-center py-1"
+              >
+                Ver mais viagens →
+              </button>
+            </div>
+
+            {/* Conteúdo principal */}
+            <div className="space-y-6">
           <div className="rounded-3xl overflow-hidden aspect-video">
             {(media as string[]).length > 0 ? (
               <img src={(media as string[])[0]} alt={listing.title} className="w-full h-full object-contain bg-zinc-900" />
@@ -187,15 +232,35 @@ export default function TravelDetailPage() {
               </div>
             )}
 
-            {/* Banner de aviso antes do botão de interesse */}
-            <div className="-mx-6 px-0">
-              <InstitutionalSafetyBanner />
-            </div>
-
             <Button onClick={handleInterest} className="w-full bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black py-4 h-auto text-sm shadow-lg flex items-center justify-center gap-2 text-center whitespace-normal">
               <Plane className="w-4 h-4 shrink-0" /> TENHO INTERESSE NESTA VIAGEM
             </Button>
+
+            <div className="pt-4 border-t border-zinc-100 flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
+                Contato seguro protegido. Suas informações não são expostas sem sua autorização. A plataforma não é responsável por negociações ou pagamentos entre as partes.
+              </p>
+            </div>
           </div>
+            </div>{/* fim conteúdo principal */}
+
+            {/* Cards laterais direitos */}
+            <div className="hidden lg:flex flex-col gap-4">
+              {sideListings[2] && <MarketTravelCard travel={sideListings[2]} />}
+              {sideListings[3] && <MarketTravelCard travel={sideListings[3]} />}
+              <button
+                onClick={() => navigate("/viagens")}
+                className="text-xs font-black text-sky-600 hover:text-sky-700 underline underline-offset-2 text-center py-1"
+              >
+                Ver mais viagens →
+              </button>
+            </div>
+          </div>{/* fim grid 3 colunas */}
+        </div>
+
+        <div className="mt-8">
+          <InstitutionalSafetyBanner />
         </div>
       </div>
 

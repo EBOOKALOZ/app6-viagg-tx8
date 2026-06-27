@@ -26,7 +26,10 @@ import { toast } from 'sonner';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
 import { MarketLayout } from '@/components/layout/MarketLayout';
+import { MarketVehicleCard } from '@/components/advertiser/MarketVehicleCard';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
+import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { StoreLocationMap } from '@/components/StoreLocationMap';
 
 /* ─────── helpers ─────── */
 const vehicleTypeLabel: Record<string, string> = {
@@ -85,6 +88,22 @@ export const VehicleDetailPage = () => {
     enabled: !!id,
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
+  });
+
+  /* ─── QUERY: Side listings ─── */
+  const { data: sideListings = [] } = useQuery({
+    queryKey: ['vehicle-side-listings', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('vehicle_listings' as any)
+        .select('id, title, vehicle_type, price_brl, brand, model, year, fuel_type, city, state, thumbnail_url, is_featured, visibility_status')
+        .eq('visibility_status', 'published')
+        .neq('id', id!)
+        .order('is_featured', { ascending: false })
+        .limit(4);
+      return (data ?? []) as any[];
+    },
+    enabled: !!id,
   });
 
   /* ─── QUERY: Vehicle Media ─── */
@@ -257,10 +276,18 @@ export const VehicleDetailPage = () => {
 
 
 
-        <div className="w-full px-4 sm:px-6 lg:px-10 py-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-            {/* ─── LEFT: GALLERY & INFO ─── */}
-            <div className="lg:col-span-8 space-y-8">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] gap-6 items-start">
+            {/* ── Coluna esquerda ── */}
+            <div className="hidden lg:flex flex-col gap-4">
+              {sideListings.slice(0, 2).map((v: any) => (
+                <MarketVehicleCard key={v.id} vehicle={v} />
+              ))}
+              {sideListings.length > 0 && (
+                <button onClick={() => navigate('/veiculos')} className="text-xs font-bold text-[#FF6A00] hover:underline text-center py-1">Ver mais veículos →</button>
+              )}
+            </div>
+          <div className="space-y-6">
               {/* Gallery */}
               <div className="space-y-4">
                 <div className="relative aspect-[16/10] rounded-[32px] lg:rounded-[40px] overflow-hidden bg-white shadow-2xl ring-1 ring-zinc-900/10">
@@ -429,69 +456,67 @@ export const VehicleDetailPage = () => {
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* ─── RIGHT: PRICE & CONTACT ─── */}
-            <div className="lg:col-span-4 space-y-6">
-              <div className="sticky top-24 space-y-6">
-                <Card className="border-none shadow-2xl rounded-[35px] overflow-hidden ring-1 ring-zinc-900/10 bg-white">
-                  <CardContent className="p-8 space-y-8">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        Preço
-                      </span>
-                      <div className="text-4xl lg:text-5xl font-black text-[#FF6A00] tracking-tighter">
-                        {vehicle.price_brl
-                          ? formatCurrencyBRL(vehicle.price_brl)
-                          : 'Consulte'}
-                      </div>
+                {(vehicle.latitude && vehicle.longitude) && (
+                  <div className="space-y-3 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-[#FF6A00]" />
+                      <h3 className="font-black text-zinc-900 text-sm">Localização do anunciante</h3>
                     </div>
-
-                    <div className="space-y-4">
-                      <Button
-                        onClick={handleInterest}
-                        className="w-full h-16 rounded-2xl font-black text-lg text-white shadow-xl shadow-[#FF6A00]/30 bg-[#FF6A00] hover:bg-[#E65C00] transition-all active:scale-95"
-                      >
-                        ESTOU INTERESSADO
-                      </Button>
+                    {vehicle.public_address_label && (
+                      <p className="text-xs text-zinc-500 font-medium">{vehicle.public_address_label}</p>
+                    )}
+                    <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
+                      <StoreLocationMap
+                        initialLat={vehicle.latitude}
+                        initialLng={vehicle.longitude}
+                        addressLabel={vehicle.public_address_label ?? vehicle.city}
+                        markerLabel={vehicle.title ?? `${vehicle.brand} ${vehicle.model}`}
+                        readOnly
+                        hasConfirmedLocation
+                        onLocationSelect={() => {}}
+                        className="w-full h-full"
+                      />
                     </div>
+                  </div>
+                )}
 
-                    <div className="pt-6 border-t border-zinc-100 flex items-start gap-3">
-                      <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                      <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
-                        Contato Seguro Protegido por IA. Suas informações não são expostas
-                        sem sua autorização.
-                      </p>
+                <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200 shadow-xl">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preço</span>
+                    <div className="text-4xl lg:text-5xl font-black text-[#FF6A00] tracking-tighter">
+                      {vehicle.price_brl ? formatCurrencyBRL(vehicle.price_brl) : 'Consulte'}
                     </div>
-<Button
-  variant="outline"
-  className="w-full h-12 rounded-2xl font-black text-lg text-[#FF6A00] hover:bg-[#FF6A00]/10"
-  onClick={() => {
-    toast.success('Veículo salvo!');
-  }}
->
-  Salvar
-</Button>
-                  </CardContent>
-                </Card>
-
-                {/* Safety Tip */}
-                <div className="p-6 bg-white shadow-xl ring-1 ring-zinc-900/10 rounded-3xl space-y-3">
-                  <h4 className="font-black text-zinc-900 text-sm uppercase flex items-center gap-2">
-                    <Info className="w-4 h-4 text-[#FF6A00]" /> Dica de Segurança
-                  </h4>
-                  <p className="text-xs text-zinc-600 font-medium leading-relaxed">
-                    Sempre realize visitas em locais públicos e durante o dia. Nunca
-                    transfira valores antes de verificar o veículo pessoalmente. Negocie
-                    através da plataforma para sua segurança.
-                  </p>
+                  </div>
+                  <Button
+                    onClick={handleInterest}
+                    className="w-full h-16 rounded-2xl font-black text-lg text-white shadow-xl shadow-[#FF6A00]/30 bg-[#FF6A00] hover:bg-[#E65C00] transition-all active:scale-95"
+                  >
+                    ESTOU INTERESSADO
+                  </Button>
+                  <div className="pt-4 border-t border-zinc-100 flex items-start gap-3">
+                    <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
+                      Contato Seguro Protegido por IA. Suas informações não são expostas
+                      sem sua autorização.
+                    </p>
+                  </div>
                 </div>
-
               </div>
+          </div>
+            {/* ── Coluna direita ── */}
+            <div className="hidden lg:flex flex-col gap-4">
+              {sideListings.slice(2, 4).map((v: any) => (
+                <MarketVehicleCard key={v.id} vehicle={v} />
+              ))}
+              {sideListings.length > 0 && (
+                <button onClick={() => navigate('/veiculos')} className="text-xs font-bold text-[#FF6A00] hover:underline text-center py-1">Ver mais veículos →</button>
+              )}
             </div>
           </div>
         </div>
+
+        <InstitutionalSafetyBanner />
       </MarketLayout>
 
       {/* Contact Intention Modal */}
