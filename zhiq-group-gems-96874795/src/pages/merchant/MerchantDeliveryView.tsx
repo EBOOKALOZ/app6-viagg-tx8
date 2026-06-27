@@ -129,6 +129,7 @@ export default function MerchantDeliveryView() {
   const [offerSnapshot, setOfferSnapshot] = useState<DeliveryOfferSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [routePolyline, setRoutePolyline] = useState<[number, number][] | null>(null);
   const [storeInfo, setStoreInfo] = useState<{ nome_loja: string; logo_url: string | null; endereco: string | null } | null>(null);
 
@@ -399,6 +400,26 @@ export default function MerchantDeliveryView() {
       setTimeout(() => setCopied(false), 2000);
     } else {
       toast.error("Não foi possível copiar.");
+    }
+  };
+
+  /* ── Cancel order ── */
+  const handleCancel = async () => {
+    if (!orderId) return;
+    if (!window.confirm("Cancelar a chamada? Esta ação não pode ser desfeita.")) return;
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from("service_orders")
+        .update({ status: "cancelled" })
+        .eq("id", orderId);
+      if (error) throw error;
+      toast.success("Chamada cancelada.");
+      setOrder((prev) => prev ? { ...prev, status: "cancelled" } : prev);
+    } catch (err: any) {
+      toast.error(`Erro ao cancelar: ${err?.message ?? "tente novamente"}`);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -702,6 +723,19 @@ export default function MerchantDeliveryView() {
                 </Card>
               );
             })()}
+
+            {/* ── Cancelar chamada (só quando ainda buscando motoboy) ── */}
+            {isActive && !order.motoboy_id && (
+              <Button
+                variant="outline"
+                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold"
+                onClick={handleCancel}
+                disabled={isCancelling}
+              >
+                <X className="h-4 w-4 mr-2" />
+                {isCancelling ? "Cancelando..." : "Cancelar chamada"}
+              </Button>
+            )}
 
             {/* ── Motoboy Card (when assigned) ── */}
             {motoboy && (
