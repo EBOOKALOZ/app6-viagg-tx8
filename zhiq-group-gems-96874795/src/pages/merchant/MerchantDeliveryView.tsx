@@ -727,8 +727,7 @@ export default function MerchantDeliveryView() {
             {/* ── Cancelar chamada (só quando ainda buscando motoboy) ── */}
             {isActive && !order.motoboy_id && (
               <Button
-                variant="outline"
-                className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-semibold"
+                className="w-full bg-red-600 hover:bg-red-700 text-yellow-300 font-semibold border-0"
                 onClick={handleCancel}
                 disabled={isCancelling}
               >
