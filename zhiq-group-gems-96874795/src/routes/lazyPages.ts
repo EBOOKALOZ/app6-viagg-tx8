@@ -13,6 +13,7 @@ export const AdminPaymentDemo = lazy(() => import("@/pages/admin/AdminPaymentDem
 export const AdminFase1Sim = lazy(() => import("@/pages/admin/AdminFase1Sim"));
 export const AdminMercadoPagoSecrets = lazy(() => import("@/pages/admin/AdminMercadoPagoSecrets"));
 export const AdminAutoPoster = lazy(() => import("@/pages/admin/AdminAutoPoster"));
+export const AdminGLMAnalytics = lazy(() => import("@/pages/admin/AdminGLMAnalytics"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
 export const MotoboyLayout = lazy(() => import("@/components/motoboy/MotoboyLayout").then(m => ({ default: m.MotoboyLayout })));
 export const MotoboyOnboardingLayout = lazy(() => import("@/components/motoboy/MotoboyOnboardingLayout").then(m => ({ default: m.MotoboyOnboardingLayout })));
@@ -234,6 +235,7 @@ export const AdminServiceOverview = lazy(() => import("@/pages/admin/AdminServic
 export const AdminFreightOverview = lazy(() => import("@/pages/admin/AdminFreightOverview"));
 export const AdminViagemOverview = lazy(() => import("@/pages/admin/AdminViagemOverview"));
 export const AdminMarketplaceCommerce = lazy(() => import("@/pages/admin/AdminMarketplaceCommerce"));
+export const AdminPromotionPackagesPage = lazy(() => import("@/pages/admin/AdminPromotionPackagesPage"));
 
 /* ── Admin Marketing ── */
 export const AdminMarketingPostagens = lazy(() => import("@/pages/admin/marketing/AdminMarketingPostagens"));

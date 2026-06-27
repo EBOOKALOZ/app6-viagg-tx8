@@ -64,8 +64,8 @@ export const InstitutionalSafetyBanner: React.FC = () => {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {DISCLAIMER_ITEMS.map(({ Icon, text }, i) => (
-                <div key={i} className="flex items-start gap-3 bg-black/20 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                  <div className="shrink-0 mt-0.5 w-8 h-8 rounded-xl bg-[#F5E62B]/15 border border-[#F5E62B]/30 flex items-center justify-center">
+                <div key={i} className="flex flex-col items-center text-center gap-2 bg-black/20 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                  <div className="w-8 h-8 rounded-xl bg-[#F5E62B]/15 border border-[#F5E62B]/30 flex items-center justify-center">
                     <Icon className="w-4 h-4 text-yellow-300" />
                   </div>
                   <p className="text-white/85 text-xs font-medium leading-snug">{text}</p>

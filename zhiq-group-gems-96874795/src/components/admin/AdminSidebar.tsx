@@ -32,11 +32,13 @@ import {
   Banknote,
   Building2,
   Shield,
+  BrainCircuit,
   Camera,
   CreditCard,
   Briefcase,
   Bot,
   Plane,
+  Megaphone,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -139,6 +141,7 @@ const menuSections: MenuSection[] = [
       { title: "Fretes & Transportes", url: "/admin/fretes", icon: Truck },
       { title: "Viagens & Turismo", url: "/admin/viagens", icon: Plane },
       { title: "Créditos", url: "/admin/creditos", icon: Coins },
+      { title: "Pacotes de Promoção", url: "/admin/promotion-packages", icon: Megaphone },
       { title: "Pacotes Imóveis", url: "/admin/imoveis/pacotes", icon: Building2 },
       { title: "Moderação de Imóveis", url: "/admin/imoveis/moderacao", icon: Building2 },
       { title: "Aprovação de Imagens", url: "/admin/imoveis/aprovacao-imagens", icon: Camera },
@@ -156,6 +159,7 @@ const menuSections: MenuSection[] = [
       { title: "Rodapés", url: "/admin/footer-contents", icon: FileText },
       { title: "Tickets (Suporte)", url: "/admin/support", icon: Headphones },
       { title: "Supervisor de IA", url: "/admin/supervisor", icon: Activity },
+      { title: "Análise GLM (IA)", url: "/admin/glm-analytics", icon: BrainCircuit },
       { title: "Métricas (Suporte)", url: "/admin/support/stats", icon: BarChart3 },
       { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
     ],

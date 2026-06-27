@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, ChevronRight, ShieldCheck, Plane, Heart, Star, Calendar } from 'lucide-react';
+import { MapPin, ChevronRight, ShieldCheck, Plane, Heart, Star, Calendar, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { resolveTravelCategoryEmoji } from '@/lib/viagem/travelCategories';
@@ -23,6 +23,7 @@ interface MarketTravelCardProps {
     duration_days?: number | null;
     thumbnail_url?: string | null;
     is_featured?: boolean;
+    is_promoted?: boolean;
   };
 }
 
@@ -77,6 +78,11 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
               {travel.is_featured && (
                 <Badge className="font-black uppercase tracking-widest text-[10px] shadow-lg bg-amber-500 text-white flex items-center gap-1">
                   <Star className="w-3 h-3 fill-current" /> Destaque
+                </Badge>
+              )}
+              {travel.is_promoted && (
+                <Badge className="font-black uppercase tracking-widest text-[10px] shadow-lg flex items-center gap-1 border-0 text-white" style={{ background: "linear-gradient(135deg, #7C3AED 0%, #DB2777 100%)" }}>
+                  <Zap className="w-3 h-3 fill-current" /> Promovido
                 </Badge>
               )}
             </div>

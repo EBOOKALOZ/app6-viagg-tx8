@@ -70,6 +70,8 @@ import {
   AdminFase1Sim,
   AdminMercadoPagoSecrets,
   AdminAutoPoster,
+  AdminPromotionPackagesPage,
+  AdminGLMAnalytics,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -88,6 +90,7 @@ export const adminRoutes = (
       <Route path="/admin/servicos" element={<AdminServiceOverview />} />
       <Route path="/admin/fretes" element={<AdminFreightOverview />} />
       <Route path="/admin/viagens" element={<AdminViagemOverview />} />
+      <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
@@ -144,6 +147,7 @@ export const adminRoutes = (
       <Route path="/admin/imoveis/moderacao" element={<AdminRealEstateModeration />} />
       <Route path="/admin/imoveis/aprovacao-imagens" element={<AdminRealEstateImageModeration />} />
       <Route path="/admin/creditos-teste" element={<AdminCreditGrants />} />
+      <Route path="/admin/glm-analytics" element={<AdminGLMAnalytics />} />
     </Route>
 
     {/* ── Alias /administrador ── */}

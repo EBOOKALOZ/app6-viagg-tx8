@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X, RefreshCw, Phone, Mail } from "lucide-react";
+import { Loader2, Plane, Save, ArrowLeft, Camera, ImagePlus, X, RefreshCw, Phone, Mail, Sparkles, Send } from "lucide-react";
+import { chatCompletion } from "@/lib/aiapi";
 import { StoreLocationPicker, type ValidAddressDetails } from "@/components/merchant/StoreLocationPicker";
 import { TRAVEL_CATEGORIES, TRAVEL_INCLUDES } from "@/lib/viagem/travelCategories";
 import { useToast } from "@/hooks/use-toast";
@@ -73,6 +74,9 @@ export default function ViagemForm() {
   const [existingMedia, setExistingMedia] = useState<ExistingMedia[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [glmOpen, setGlmOpen] = useState(false);
+  const [glmPrompt, setGlmPrompt] = useState("");
+  const [glmLoading, setGlmLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
@@ -492,26 +496,89 @@ export default function ViagemForm() {
       <div className="space-y-4 bg-white rounded-2xl border border-zinc-200 p-5">
         <h2 className="font-black text-zinc-900">Descricao e valores</h2>
         <div>
-          <label className="text-xs font-bold text-zinc-600 mb-1 block">Descricao</label>
-          <Textarea value={form.description} onChange={e => set("description", e.target.value)} rows={4} placeholder="Descreva o pacote, roteiro e diferenciais..." />
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-bold text-zinc-600">Descricao</label>
+            <button
+              type="button"
+              onClick={() => setGlmOpen((v) => !v)}
+              className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-800 transition-colors"
+            >
+              <Sparkles className="h-3 w-3" />
+              Gerar com IA GLM
+            </button>
+          </div>
+
+          {/* Painel GLM inline */}
+          {glmOpen && (
+            <div className="mb-2 rounded-xl border border-violet-200 bg-violet-50 p-3 space-y-2">
+              <p className="text-[11px] font-bold text-violet-700">Descreva o pacote para a IA gerar o texto:</p>
+              <Textarea
+                value={glmPrompt}
+                onChange={e => setGlmPrompt(e.target.value)}
+                rows={2}
+                placeholder="Ex: Pacote para Cancún, 7 dias, all inclusive, saindo de São Paulo, ideal para casais..."
+                className="bg-white border-violet-200 text-zinc-900 placeholder:text-zinc-400 text-xs resize-none"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!glmPrompt.trim() || glmLoading}
+                  onClick={async () => {
+                    setGlmLoading(true);
+                    try {
+                      const dest = form.destination || form.title || "destino";
+                      const result = await chatCompletion(
+                        glmPrompt,
+                        "glm-4-plus",
+                        `Você é um especialista em redação de anúncios turísticos. Crie uma descrição atrativa, persuasiva e completa para um pacote de viagem para ${dest}. Use parágrafos curtos, destaque os principais atrativos e escreva em português brasileiro. Máximo 200 palavras. Não use markdown, apenas texto.`
+                      );
+                      set("description", result.trim());
+                      setGlmOpen(false);
+                      setGlmPrompt("");
+                    } catch {
+                      /* noop */
+                    } finally {
+                      setGlmLoading(false);
+                    }
+                  }}
+                  className="bg-violet-600 hover:bg-violet-700 text-white text-xs h-7 px-3"
+                >
+                  {glmLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                  {glmLoading ? "Gerando…" : "Gerar"}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="text-xs h-7" onClick={() => setGlmOpen(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <Textarea
+            value={form.description}
+            onChange={e => set("description", e.target.value)}
+            rows={4}
+            placeholder="Descreva o pacote, roteiro e diferenciais..."
+            className="bg-zinc-100 border-zinc-200 text-zinc-900 placeholder:text-zinc-400"
+          />
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-bold text-zinc-600 mb-1 block">A partir de</label>
-            <Input value={form.entry_price} onChange={e => set("entry_price", e.target.value)} placeholder="R$ 2.990" />
+            <Input value={form.entry_price} onChange={e => set("entry_price", e.target.value)} placeholder="R$ 2.990" className="bg-zinc-100 border-zinc-200 text-zinc-900 placeholder:text-zinc-400" />
           </div>
           <div>
             <label className="text-xs font-bold text-zinc-600 mb-1 block">Por pessoa</label>
-            <Input type="number" value={form.price_per_person} onChange={e => set("price_per_person", e.target.value)} placeholder="2990" />
+            <Input type="number" value={form.price_per_person} onChange={e => set("price_per_person", e.target.value)} placeholder="2990" className="bg-zinc-100 border-zinc-200 text-zinc-900 placeholder:text-zinc-400" />
           </div>
           <div>
             <label className="text-xs font-bold text-zinc-600 mb-1 block">Total</label>
-            <Input type="number" value={form.total_price} onChange={e => set("total_price", e.target.value)} placeholder="5980" />
+            <Input type="number" value={form.total_price} onChange={e => set("total_price", e.target.value)} placeholder="5980" className="bg-zinc-100 border-zinc-200 text-zinc-900 placeholder:text-zinc-400" />
           </div>
         </div>
         <div>
           <label className="text-xs font-bold text-zinc-600 mb-1 block">Nao incluso</label>
-          <Input value={form.not_included} onChange={e => set("not_included", e.target.value)} placeholder="Passagem aerea, refeicoes extras..." />
+          <Input value={form.not_included} onChange={e => set("not_included", e.target.value)} placeholder="Passagem aerea, refeicoes extras..." className="bg-zinc-100 border-zinc-200 text-zinc-900 placeholder:text-zinc-400" />
         </div>
         <label className="flex items-center gap-2 text-sm cursor-pointer text-zinc-900 font-medium">
           <input type="checkbox" checked={form.installments_available} onChange={e => set("installments_available", e.target.checked)} className="rounded" />

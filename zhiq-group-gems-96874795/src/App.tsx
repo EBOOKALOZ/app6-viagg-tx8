@@ -9,6 +9,7 @@ import { GlobalCallProvider } from "@/contexts/GlobalCallContext";
 import { SoundSettingsProvider } from "@/contexts/SoundSettingsContext";
 import { FloatingCartButton } from "@/components/public/FloatingCartButton";
 import { FloatingSupportButton } from "@/components/public/FloatingSupportButton";
+import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
 import { GlobalRealtime } from "@/components/GlobalRealtime";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageFallback from "@/components/PageFallback";
@@ -96,6 +97,9 @@ export default function App() {
 
                   {/* Carrinho flutuante global para páginas públicas */}
                   <FloatingCartButton />
+
+                  {/* Player de música de fundo — todas as páginas */}
+                  <GlobalAudioPlayer />
 
                   {/* Suporte flutuante DESATIVADO nas páginas públicas — só aparece nos painéis */}
                   {/* <FloatingSupportButton /> */}

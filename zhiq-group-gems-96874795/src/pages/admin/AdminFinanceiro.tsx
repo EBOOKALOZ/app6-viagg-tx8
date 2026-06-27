@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminFinancialStats } from "@/components/admin/financial/AdminFinancialStats";
 import { AdminFinancialCharts } from "@/components/admin/financial/AdminFinancialCharts";
+import { AdminPromotionModuleStats } from "@/components/admin/financial/AdminPromotionModuleStats";
 
 const fmtBRL = (v: number) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -281,6 +282,7 @@ const AdminFinanceiro = () => {
       </Alert>
 
       <AdminFinancialStats />
+      <AdminPromotionModuleStats />
       <CategoryStrip />
       <GlobalLedger />
       <div className="pt-2">

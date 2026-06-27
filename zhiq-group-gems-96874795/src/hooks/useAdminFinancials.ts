@@ -43,6 +43,10 @@ export interface AdminFinancialStats {
     pacotesViagens: number;
     /** Qtd de compras de pacotes de viagens. */
     pacotesViagensQtd: number;
+    /** Receita de pacotes de PROMOÇÃO adquiridos (promotion_purchases). */
+    pacotesPromocao: number;
+    /** Qtd de pacotes de promoção comprados (status=paid). */
+    pacotesPromocaoQtd: number;
 }
 
 export function useAdminFinancialStats() {
@@ -115,6 +119,17 @@ export function useAdminFinancialStats() {
                 ),
                 (o) => o.amount
             );
+
+            // ── Pacotes de Promoção (promotion_purchases) ──
+            let pacotesPromocao = 0;
+            let pacotesPromocaoQtd = 0;
+            try {
+                const { data: promoPurchases } = await (supabase.from("promotion_purchases") as any)
+                    .select("amount_brl")
+                    .eq("status", "paid");
+                pacotesPromocaoQtd = (promoPurchases || []).length;
+                pacotesPromocao = sum(promoPurchases || [], (p: any) => p.amount_brl);
+            } catch { /* tabela pode não existir ainda */ }
 
             // ── 2. Entregas concluídas (comissão, ganho do motoboy, gasto total) ──
             const { data: orders } = await (supabase.from("service_orders") as any)
@@ -190,6 +205,8 @@ export function useAdminFinancialStats() {
                             pacotesFretesQtd,
                             pacotesViagens,
                             pacotesViagensQtd,
+                            pacotesPromocao,
+                            pacotesPromocaoQtd,
                         };
                     }
                 }
@@ -222,6 +239,8 @@ export function useAdminFinancialStats() {
                 pacotesFretesQtd,
                 pacotesViagens,
                 pacotesViagensQtd,
+                pacotesPromocao,
+                pacotesPromocaoQtd,
             };
         },
     });

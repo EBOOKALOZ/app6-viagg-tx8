@@ -33,7 +33,10 @@ import {
   Briefcase,
   Truck,
   Plane,
+  Send,
 } from "lucide-react";
+import { useGlmPostador } from "@/hooks/useGlmPostador";
+import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -107,7 +110,8 @@ export default function AdvertiserPromotionPage() {
 
   const [allItems, setAllItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<CatalogItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<CatalogItem[]>([]); // slots visuais (sempre vazios no load)
+  const [queuedItems, setQueuedItems] = useState<CatalogItem[]>([]);    // itens salvos no DB (fila real)
   const [submitting, setSubmitting] = useState(false);
   const [promoted, setPromoted] = useState<string[]>([]);
   const [savingSlot, setSavingSlot] = useState<string | null>(null); // itemId being saved
@@ -127,6 +131,24 @@ export default function AdvertiserPromotionPage() {
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerTab, setPickerTab] = useState<CategoryTab>("produtos");
   const pickerRef = useRef<HTMLDivElement>(null);
+  const autoOpenedRef = useRef(false);
+
+  // Modal de planos de promoção
+  const [showPlansModal, setShowPlansModal] = useState(false);
+
+  // Balão de mensagem do slot de marca
+  const [showBrandBalloon, setShowBrandBalloon] = useState(false);
+  const brandBalloonTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleBrandClick() {
+    if (brandBalloonTimer.current) clearTimeout(brandBalloonTimer.current);
+    setShowBrandBalloon(true);
+    brandBalloonTimer.current = setTimeout(() => setShowBrandBalloon(false), 5000);
+  }
+
+  /* ── GLM Postador bridge ── */
+  const glmProfile = (routeCategory ?? "produtos") as Parameters<typeof useGlmPostador>[0];
+  const { sending: glmSending, result: glmResult, error: glmError, sendToPostador, reset: resetGlm } = useGlmPostador(glmProfile);
 
   /* ── Fetch advertiser account + store ── */
   const [advertiserAccountId, setAdvertiserAccountId] = useState<string | null>(null);
@@ -157,6 +179,8 @@ export default function AdvertiserPromotionPage() {
     fetchAllItems(advertiserAccountId, storeInfo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, advertiserAccountId]);
+
+  // Os slots ficam sempre vazios ao entrar no painel — o anunciante adiciona manualmente.
 
   async function fetchAllItems(
     accountId: string | null = advertiserAccountId,
@@ -445,28 +469,31 @@ export default function AdvertiserPromotionPage() {
         const savedIds = (savedSlots as any[]).map((r) => r.listing_id);
         setPromoted(savedIds);
 
-        // Rebuild selectedItems: prefer full item from allItems (has bucket etc.),
-        // fallback to the denormalized data stored in the slot row itself
-        const restoredItems: CatalogItem[] = (savedSlots as any[])
+        // Popula a fila real (queuedItems) a partir do DB.
+        // Os slots visuais (selectedItems) ficam SEMPRE vazios no load.
+        const restored: CatalogItem[] = (savedSlots as any[])
           .slice(0, MAX_PROMO_SLOTS)
           .map((slot) => {
             const found = results.find((r) => r.id === slot.listing_id);
             if (found) return found;
-            // Fallback using stored display data
             return {
               id: slot.listing_id,
               title: slot.listing_title ?? "Anúncio",
-              price: slot.listing_price ?? 0,
+              price: slot.listing_price ?? null,
               image: slot.listing_image ?? null,
-              bucket: null,
-              category: slot.listing_type ?? "produtos",
+              bucket: undefined,
+              status: "active",
+              category: (slot.listing_type ?? "produtos") as CategoryTab,
               city: slot.listing_city ?? undefined,
               state: undefined,
               storeId: undefined,
               storeName: undefined,
             } as CatalogItem;
           });
-        setSelectedItems(restoredItems);
+        setQueuedItems(restored);
+        // NÃO popula selectedItems — slots visuais começam vazios
+      } else {
+        setQueuedItems([]);
       }
     } catch (err) {
       console.error(err);
@@ -517,6 +544,7 @@ export default function AdvertiserPromotionPage() {
   /* ── Remove from slot + DB ── */
   function handleRemoveSlot(itemId: string, itemTitle?: string) {
     setSelectedItems((prev) => prev.filter((p) => p.id !== itemId));
+    setQueuedItems((prev) => prev.filter((p) => p.id !== itemId));
     setPromoted((prev) => prev.filter((id) => id !== itemId));
     supabase
       .from("promoted_listing_slots" as any)
@@ -584,9 +612,19 @@ export default function AdvertiserPromotionPage() {
         .upsert(rows, { onConflict: "user_id,listing_id" });
       if (error) throw error;
 
-      setPromoted((prev) => [...prev, ...selectedItems.map((i) => i.id)]);
-      toast.success(`${selectedItems.length} anúncio(s) enviado(s) para divulgação!`);
-      setSelectedItems([]);
+      const sentItems = [...selectedItems];
+      const sentIds = sentItems.map((i) => i.id);
+      toast.success(`${sentItems.length} anúncio(s) enviado(s) para divulgação!`, {
+        description: "Slots liberados — escolha novos anúncios quando quiser.",
+      });
+      setSelectedItems([]);                                    // limpa slots visuais
+      setQueuedItems((prev) => {                              // atualiza fila real (merge)
+        const existingIds = new Set(prev.map((p) => p.id));
+        const news = sentItems.filter((i) => !existingIds.has(i.id));
+        return [...prev, ...news];
+      });
+      setPromoted((prev) => [...new Set([...prev, ...sentIds])]);
+      autoOpenedRef.current = false;
     } catch (err) {
       console.error(err);
       toast.error("Erro ao ativar divulgação.");
@@ -711,7 +749,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
       {/* ═══════════════════════════════════════════
           CARD BUILDER — ALWAYS VISIBLE (3 SLOTS)
       ═══════════════════════════════════════════ */}
-      <div className="bg-[#0D0F12] rounded-3xl border border-[#2A3038]/60 relative w-full md:max-w-[70%] mx-auto">
+      <div className="bg-[#0D0F12] rounded-3xl border border-[#2A3038]/60 relative max-w-sm sm:max-w-none md:max-w-[70%] mx-auto w-full">
         {/* Card Builder Header */}
         <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-2 rounded-t-3xl">
           <div className="flex items-center gap-3">
@@ -726,23 +764,6 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              onClick={() => {
-                const nextSlot = selectedItems.length;
-                if (nextSlot < MAX_PROMO_SLOTS) {
-                  setPickerSlot(nextSlot);
-                  setPickerSearch("");
-                  setPickerTab(routeCategory ?? "produtos");
-                } else {
-                  toast.error("Todos os slots já estão preenchidos!");
-                }
-              }}
-              className="bg-green-600 text-white border-green-500 border hover:bg-green-500 hover:text-white uppercase tracking-wider font-black text-[10px] h-7 px-3 shadow-md transition-all cursor-pointer"
-            >
-              <span className="hidden sm:inline">QUER ANUNCIAR AQUI!!!</span>
-              <span className="sm:hidden">+ ANUNCIAR</span>
-            </Button>
             <Badge className="bg-white/20 text-white border-white/30 text-[10px] font-black uppercase tracking-wider">
               {selectedItems.length}/{MAX_PROMO_SLOTS}
             </Badge>
@@ -752,52 +773,86 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
         {/* 1 Slot de marca + 5 Slots do usuário — 2 linhas × 3 colunas */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-px bg-[#2A3038]/40 relative">
 
-          {/* ── Slot 0: MARCA — clica e vai criar anúncio ── */}
-          <button
-            onClick={() => navigate("/mercado")}
-            className="relative bg-[#0D0F12] aspect-square flex flex-col items-center justify-center overflow-hidden cursor-pointer group/brand w-full transition-all duration-300 hover:bg-[#FF6A00]/10"
-          >
-            {/* fundo decorativo */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[#FF6A00]/20 via-transparent to-[#FF8C33]/10 pointer-events-none" />
-            <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#FF6A00]/8 rounded-full pointer-events-none" />
-            <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-[#FF8C33]/8 rounded-full pointer-events-none" />
-            {/* conteúdo */}
-            <div className="relative z-10 flex flex-col items-center gap-3 text-center px-4">
-              <img
-                src="/assets/brand/viagg-tx8-logo-premium.png"
-                alt="Viagg-TX8"
-                className="w-28 sm:w-32 h-auto object-contain drop-shadow-2xl"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/viagg-logo.png"; }}
-              />
-              <div className="space-y-1">
-                <p className="text-white/90 font-black text-[14px] sm:text-[16px] leading-tight">
-                  Anuncie e publique
-                </p>
-                <p className="text-[#FF6A00] font-black text-[26px] sm:text-[31px] leading-tight uppercase tracking-wide drop-shadow-lg">
-                  GRÁTIS
-                </p>
-                <p className="text-white/60 font-semibold text-[13px]">
-                  seu anúncio aqui
-                </p>
+          {/* ── Slot 0: MARCA — mostra balão ao clicar (não navega) ── */}
+          <div className="relative">
+            <button
+              onClick={handleBrandClick}
+              className="relative bg-[#0D0F12] aspect-square flex flex-col items-center justify-center overflow-hidden cursor-pointer group/brand w-full transition-all duration-300 hover:bg-[#FF6A00]/10"
+            >
+              {/* fundo decorativo */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FF6A00]/20 via-transparent to-[#FF8C33]/10 pointer-events-none" />
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-[#FF6A00]/8 rounded-full pointer-events-none" />
+              <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-[#FF8C33]/8 rounded-full pointer-events-none" />
+              {/* conteúdo */}
+              <div className="relative z-10 flex flex-col items-center gap-3 text-center px-4">
+                <img
+                  src="/assets/brand/viagg-tx8-logo-premium.png"
+                  alt="Viagg-TX8"
+                  className="w-28 sm:w-32 h-auto object-contain drop-shadow-2xl"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/viagg-logo.png"; }}
+                />
+                <div className="space-y-1">
+                  <p className="text-white/90 font-black text-[14px] sm:text-[16px] leading-tight">
+                    Anuncie e publique
+                  </p>
+                  <p className="text-[#FF6A00] font-black text-[26px] sm:text-[31px] leading-tight uppercase tracking-wide drop-shadow-lg">
+                    GRÁTIS
+                  </p>
+                  <p className="text-white/60 font-semibold text-[13px]">
+                    seu anúncio aqui
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Sparkles className="w-4 h-4 text-[#FF6A00]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                    Clique aqui
+                  </span>
+                  <Sparkles className="w-4 h-4 text-[#FF6A00]" />
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Sparkles className="w-4 h-4 text-[#FF6A00]" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                  Clique aqui
-                </span>
-                <Sparkles className="w-4 h-4 text-[#FF6A00]" />
+              {/* borda accent */}
+              <div className="absolute inset-0 border border-[#FF6A00]/25 group-hover/brand:border-[#FF6A00]/60 transition-colors pointer-events-none" />
+            </button>
+
+            {/* Balão de mensagem — aparece ao clicar no card da marca */}
+            {showBrandBalloon && (
+              <div className="absolute top-2 left-2 right-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="bg-[#1B1F24] border border-[#FF6A00]/60 rounded-2xl p-3 shadow-2xl shadow-black/80">
+                  {/* seta apontando para o card */}
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#1B1F24] border-b border-r border-[#FF6A00]/60 rotate-45" />
+
+                  <div className="flex items-start gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-[#FF6A00]/15 border border-[#FF6A00]/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <Megaphone className="w-3.5 h-3.5 text-[#FF6A00]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-black text-[11px] uppercase tracking-wider leading-tight">
+                        Este espaço é dos Divulgadores
+                      </p>
+                      <p className="text-[#A7B0BE] text-[10px] mt-1 leading-relaxed">
+                        Este card é exibido para os <span className="text-[#FF6A00] font-bold">divulgadores da plataforma</span>, não para você como anunciante.
+                        Use os slots ao lado para colocar seus anúncios! 👉
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowBrandBalloon(false); }}
+                      className="text-[#A7B0BE] hover:text-white shrink-0 mt-0.5 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-            {/* borda accent */}
-            <div className="absolute inset-0 border border-[#FF6A00]/25 group-hover/brand:border-[#FF6A00]/60 transition-colors pointer-events-none" />
-          </button>
+            )}
+          </div>
 
           {/* ── Slots 1-5: conteúdo do usuário ── */}
+          {/* Mobile: apenas 1 slot visível (idx 0); sm+ mostra todos */}
           {slots.map((slot, idx) => {
             if (slot) {
               const imgUrl = resolveImage(slot.image, slot.bucket);
               return (
-                <div key={slot.id} className="relative bg-[#1B1F24] group/slot flex flex-col">
+                <div key={slot.id} className={`relative bg-[#1B1F24] group/slot flex flex-col${idx > 0 ? " hidden sm:flex" : ""}`}>
                   <div className="relative aspect-square overflow-hidden">
                     {imgUrl ? (
                       <img src={imgUrl} alt={slot.title} className="w-full h-full object-cover" />
@@ -885,7 +940,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
 
             // ── Empty Slot (CLICKABLE) ──
             return (
-              <div key={`empty-${idx}`} className="relative">
+              <div key={`empty-${idx}`} className={`relative${idx > 0 ? " hidden sm:block" : ""}`}>
                 <button
                   onClick={() => {
                     setPickerSlot(idx);
@@ -1048,9 +1103,8 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
           )}
         </div>
 
-        {/* Action Buttons */}
-        {selectedItems.length > 0 && (
-          <div className="px-3 sm:px-6 py-4 bg-[#0D0F12] border-t border-[#2A3038]/40 rounded-b-3xl space-y-4">
+        {/* Action Buttons — sempre visível; botões desabilitados quando sem itens */}
+        <div className="px-3 sm:px-6 py-4 bg-[#0D0F12] border-t border-[#2A3038]/40 rounded-b-3xl space-y-4">
 
             {/* Network selector */}
             <div className="bg-[#1B1F24] border border-[#2A3038]/60 rounded-xl p-3">
@@ -1089,7 +1143,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
             <div className="flex flex-col md:flex-row gap-3">
               <Button
                 onClick={handleGeneratePromoText}
-                disabled={generatingPromoText || selectedNetworks.length === 0}
+                disabled={generatingPromoText || selectedNetworks.length === 0 || selectedItems.length === 0}
                 variant="outline"
                 className="flex-1 bg-transparent border-[#FF6A00]/40 text-[#FF6A00] hover:bg-[#FF6A00]/10 hover:border-[#FF6A00] font-black uppercase tracking-wider text-xs h-14 rounded-xl transition-all duration-300"
               >
@@ -1105,7 +1159,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
 
               <Button
                 onClick={handlePromote}
-                disabled={submitting}
+                disabled={submitting || selectedItems.length === 0}
                 className="flex-1 bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-wider text-xs h-14 rounded-xl shadow-lg shadow-[#FF6A00]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF6A00]/30"
               >
                 {submitting ? (
@@ -1182,14 +1236,13 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               </div>
             )}
           </div>
-        )}
       </div>
 
       {/* ═══════════════════════════════════════════
           FILA DE PUBLICAÇÃO — lista editável dos
           anúncios que estão nos slots
       ═══════════════════════════════════════════ */}
-      {selectedItems.length > 0 && (
+      {queuedItems.length > 0 && (
         <div className="bg-[#0D0F12] rounded-3xl border border-[#2A3038]/60 overflow-hidden">
 
           {/* Header */}
@@ -1203,7 +1256,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               <div>
                 <p className="text-white font-black text-sm uppercase tracking-wider">Fila de Publicação</p>
                 <p className="text-[#A7B0BE]/60 text-[10px] mt-0.5">
-                  {selectedItems.length} anúncio{selectedItems.length > 1 ? "s" : ""} na fila · clique para editar
+                  {queuedItems.length} anúncio{queuedItems.length > 1 ? "s" : ""} na fila · publicados pelos divulgadores
                 </p>
               </div>
             </div>
@@ -1211,14 +1264,14 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.20)" }}>
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">
-                {promoted.length}/{selectedItems.length} ativos
+                {promoted.length}/{queuedItems.length} ativos
               </span>
             </div>
           </div>
 
           {/* List of queued items */}
           <div className="divide-y divide-[#2A3038]/30">
-            {selectedItems.map((item, idx) => {
+            {queuedItems.map((item, idx) => {
               const imgUrl = resolveImage(item.image, item.bucket);
               const isActive = promoted.includes(item.id);
               const categoryIcon =
@@ -1327,16 +1380,89 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
           </div>
 
           {/* Footer tip */}
-          <div className="px-4 sm:px-6 py-3 border-t border-[#2A3038]/30 flex items-center gap-2"
+          <div className="px-4 sm:px-6 py-3 border-t border-[#2A3038]/30 flex flex-col sm:flex-row items-start sm:items-center gap-2"
             style={{ background: "rgba(255,106,0,0.03)" }}>
-            <Sparkles className="w-3 h-3 text-[#FF6A00]/50 shrink-0" />
-            <p className="text-[9px] text-[#A7B0BE]/40 font-medium">
-              Anúncios ativos serão exibidos para motoboys da sua região automaticamente.
-            </p>
+            <div className="flex items-center gap-2 flex-1">
+              <Sparkles className="w-3 h-3 text-[#FF6A00]/50 shrink-0" />
+              <p className="text-[9px] text-[#A7B0BE]/40 font-medium">
+                Anúncios ativos serão exibidos para motoboys da sua região automaticamente.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
+                style={{ background: "rgba(255,106,0,0.08)", border: "1px solid rgba(255,106,0,0.20)" }}>
+                <Sparkles className="w-3 h-3 text-[#FF6A00] shrink-0" />
+                <p className="text-[10px] text-[#FF6A00] font-black uppercase tracking-wide">
+                  1 anúncio grátis por dia
+                </p>
+              </div>
+              <button
+                onClick={() => setShowPlansModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all hover:opacity-90 active:scale-95"
+                style={{ background: "#EAB308", color: "#000" }}
+              >
+                <Sparkles className="w-3 h-3 shrink-0" />
+                Quer promover mais? Clique aqui!
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {/* ── Botão: Enviar ao Postador de Motoboys via GLM ── */}
+      <div className="space-y-2">
+        <Button
+          onClick={async () => {
+            resetGlm();
+            const res = await sendToPostador();
+            if (res) {
+              if (res.lotsCreated > 0) {
+                toast.success(`${res.lotsCreated} lote(s) enviado(s) ao Postador!`, {
+                  description: "Os motoboys já podem ver e postar seus anúncios.",
+                });
+              } else {
+                toast(`Nenhum lote criado — salve os anúncios nos slots primeiro.`, {
+                  description: res.errors[0] ?? "Slots sem itens salvos.",
+                });
+              }
+            } else {
+              toast.error(glmError ?? "Erro ao enviar ao Postador.");
+            }
+          }}
+          disabled={glmSending || promoted.length === 0}
+          variant="outline"
+          className="w-full bg-gradient-to-r from-[#1a1a2e]/80 to-[#16213e]/80 border-violet-500/40 text-violet-300 hover:bg-violet-500/10 hover:border-violet-400 font-black uppercase tracking-wider text-xs h-12 rounded-xl transition-all duration-300"
+        >
+          {glmSending ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <Send className="w-4 h-4 mr-2" />
+          )}
+          {glmSending
+            ? "GLM organizando lotes..."
+            : "Enviar para Postagens"}
+        </Button>
+
+        {glmResult && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 animate-in fade-in duration-300">
+            <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <span className="text-[10px] text-violet-300 font-bold">
+              {glmResult.lotsCreated} lote(s) GLM enviado(s) ao painel do Postador
+              {glmResult.errors.length > 0 && ` · ${glmResult.errors.length} erro(s)`}
+            </span>
+          </div>
+        )}
+        {glmError && (
+          <p className="text-[10px] text-red-400 px-1">{glmError}</p>
+        )}
+      </div>
+
+      {/* Modal de planos de promoção pago — filtrado pelo perfil atual */}
+      <PromotionPlansModal
+        open={showPlansModal}
+        onClose={() => setShowPlansModal(false)}
+        profileType={routeCategory ?? undefined}
+      />
     </div>
   );
 }

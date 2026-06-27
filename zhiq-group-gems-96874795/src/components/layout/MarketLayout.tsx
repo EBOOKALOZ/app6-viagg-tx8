@@ -149,59 +149,59 @@ export function MarketLayout({
                         {/* Logo + título */}
                         <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
                             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-lg object-contain" />
-                            <span className="text-xl font-black text-white tracking-tight">
+                            <span className="text-xl font-black text-white tracking-tight whitespace-nowrap">
                                 Mercado Local <span className="text-yellow-200">Viagg-TX8™</span>
                             </span>
                         </div>
 
-                        {/* Cesta */}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                            className="relative flex h-auto px-4 py-2.5 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none shrink-0"
-                            title="Cesta"
-                        >
-                            <ShoppingCart className="h-5 w-5" />
-                            <span className="text-sm font-black whitespace-nowrap">
-                                Cesta — {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
-                            </span>
-                            {globalCart.totalItems > 0 && (
-                                <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
-                                    {globalCart.totalItems}
-                                </span>
-                            )}
-                        </button>
-
-                        {/* Motoboy desktop */}
-                        {!hideTopMotoboy && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
-                                className="flex px-4 py-2.5 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50 shrink-0"
-                            >
-                                <span className="text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
-                            </button>
-                        )}
-
-                        {/* Search */}
+                        {/* Search — ocupa todo o espaço central */}
                         {showSearch && (
-                            <div className="max-w-[400px] w-full mx-auto">
+                            <div className="flex-1 min-w-0">
                                 <div className="relative flex">
                                     <Input
                                         placeholder="Buscar produtos, lojas..."
                                         value={search}
                                         onChange={e => setSearch?.(e.target.value)}
                                         onKeyDown={e => { if (e.key === "Enter" && onSearchSubmit) onSearchSubmit(search); }}
-                                        className="w-full pl-4 pr-12 py-2 h-[52px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0"
+                                        className="w-full pl-4 h-[44px] rounded-l-xl rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0"
                                     />
-                                    <button onClick={() => onSearchSubmit?.(search)} className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center">
-                                        <Search className="h-6 w-6 text-white" />
+                                    <button onClick={() => onSearchSubmit?.(search)} className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-xl flex items-center shrink-0">
+                                        <Search className="h-5 w-5 text-white" />
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Direita desktop */}
-                        <div className="flex items-center gap-3 text-white shrink-0">
-                            {headerRight}
+                        {/* Direita: Motoboy + Cesta + headerRight */}
+                        <div className="flex items-center gap-3 shrink-0">
+                            {!hideTopMotoboy && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
+                                    className="flex px-4 py-2 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
+                                >
+                                    <span className="text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
+                                </button>
+                            )}
+
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                                className="relative flex h-auto px-4 py-2 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"
+                                title="Cesta"
+                            >
+                                <ShoppingCart className="h-5 w-5" />
+                                <span className="text-sm font-black whitespace-nowrap">
+                                    Cesta — {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
+                                </span>
+                                {globalCart.totalItems > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
+                                        {globalCart.totalItems}
+                                    </span>
+                                )}
+                            </button>
+
+                            <div className="flex items-center gap-2 text-white">
+                                {headerRight}
+                            </div>
                         </div>
                     </div>
 
