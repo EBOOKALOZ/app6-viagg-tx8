@@ -382,6 +382,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
                         account_type: "platform_main",
                         amount_cents: Math.round((pkg.price_brl || 0) * 100),
                         method: mpMethod,
+                        payer_email: userData.user.email ?? undefined,
                         // back_url também no nível raiz: a payments-charge lê
                         // input.back_url (não input.metadata.back_url). Sem isto,
                         // o MP não recebe auto_return e o cliente fica preso na
