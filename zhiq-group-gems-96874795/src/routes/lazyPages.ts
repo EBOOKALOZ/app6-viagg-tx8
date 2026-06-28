@@ -14,6 +14,7 @@ export const AdminFase1Sim = lazy(() => import("@/pages/admin/AdminFase1Sim"));
 export const AdminMercadoPagoSecrets = lazy(() => import("@/pages/admin/AdminMercadoPagoSecrets"));
 export const AdminAutoPoster = lazy(() => import("@/pages/admin/AdminAutoPoster"));
 export const AdminGLMAnalytics = lazy(() => import("@/pages/admin/AdminGLMAnalytics"));
+export const AdminMotoboyPricing = lazy(() => import("@/pages/admin/AdminMotoboyPricing"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
 export const MotoboyLayout = lazy(() => import("@/components/motoboy/MotoboyLayout").then(m => ({ default: m.MotoboyLayout })));
 export const MotoboyOnboardingLayout = lazy(() => import("@/components/motoboy/MotoboyOnboardingLayout").then(m => ({ default: m.MotoboyOnboardingLayout })));
@@ -87,6 +88,8 @@ export const StorePublicPage = lazy(() => import("@/pages/public/StorePublicPage
 export const AuctionListPage = lazy(() => import("@/pages/public/AuctionListPage"));
 export const AuctionPublicPage = lazy(() => import("@/pages/public/AuctionPublicPage"));
 export const ArrematePublicPage = lazy(() => import("@/pages/public/ArrematePublicPage"));
+export const PublicMotoboyRequest = lazy(() => import("@/pages/public/PublicMotoboyRequest"));
+export const PublicRideTracking = lazy(() => import("@/pages/public/PublicRideTracking"));
 export const MinhasOfertas = lazy(() => import("@/pages/public/MinhasOfertas"));
 export const VenderImovelPage = lazy(() => import("@/pages/public/VenderImovelPage"));
 export const RealEstateCheckoutPage = lazy(() => import("@/pages/public/RealEstateCheckoutPage"));

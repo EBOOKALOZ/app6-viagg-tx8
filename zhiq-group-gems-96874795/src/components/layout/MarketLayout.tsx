@@ -81,17 +81,8 @@ export function MarketLayout({
 
 
     const handleMotoboyClick = () => {
-        if (!user) {
-            localStorage.setItem("viagg_auth_entry", "motoboy");
-            // Usuário anônimo vai direto pro cadastro (signup mode já pré-selecionado)
-            navigate("/auth?entry=motoboy&signup=1");
-            return;
-        }
-        if (availableProfiles?.includes("motoboy")) {
-            navigate("/select-profile?profile=motoboy");
-        } else {
-            navigate("/motoboy/completar");
-        }
+        // Módulo público de chamadas — qualquer pessoa pode solicitar sem login
+        navigate("/chamar-motoboy");
     };
 
     const handleVendedorClick = () => {

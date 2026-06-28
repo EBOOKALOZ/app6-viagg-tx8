@@ -57,6 +57,8 @@ import {
   PublicTravelHome,
   TravelDetailPage,
   TravelAccountPage,
+  PublicMotoboyRequest,
+  PublicRideTracking,
 } from "./lazyPages";
 
 export const publicRoutes = (
@@ -107,6 +109,10 @@ export const publicRoutes = (
     <Route path="/viagens" element={<PublicTravelHome />} />
     <Route path="/viagens/:id" element={<TravelDetailPage />} />
     <Route path="/viagens/minha-conta" element={<ProtectedRoute><TravelAccountPage /></ProtectedRoute>} />
+
+    {/* ── Módulo Motoboy Público (sem auth) ── */}
+    <Route path="/chamar-motoboy" element={<Suspense fallback={<PageFallback />}><PublicMotoboyRequest /></Suspense>} />
+    <Route path="/corrida/:trackingCode" element={<Suspense fallback={<PageFallback />}><PublicRideTracking /></Suspense>} />
     <Route path="/mercado/leiloes" element={<AllAuctionsPage />} />
     <Route path="/mercado/leiloes/:id" element={<AuctionMarketDetailPage />} />
     <Route path="/divulgar/:campaignId" element={<CampaignSharePage />} />

@@ -14,6 +14,7 @@ import {
   EconomicRadarCard,
 } from '@/components/motoboy/premium';
 import { MotoboyCallsButton } from '@/components/motoboy/MotoboyCallsButton';
+import { MotoboyPublicCalls } from '@/components/motoboy/MotoboyPublicCalls';
 
 // Existing components for active states
 import MotoboyActiveCallCard from '@/components/motoboy/MotoboyActiveCallCard';
@@ -216,12 +217,17 @@ export default function MotoboyPanelContent() {
         </div>
       )}
 
-      {/* CTA Principal */}
-      <div className="pt-2 pb-4">
+      {/* CTA Principal — Entregas de Lojistas */}
+      <div className="pt-2">
         <MotoboyCallsButton
           onClick={() => navigate(`${basePath}/rides`)}
           hasActiveCalls={hasActiveCall || (isMotoboy && deliveryPhase === 'ringing')}
         />
+      </div>
+
+      {/* Chamadas Públicas — visitantes sem conta */}
+      <div className="rounded-3xl bg-card border border-border overflow-hidden pb-2">
+        <MotoboyPublicCalls />
       </div>
     </div>
   );

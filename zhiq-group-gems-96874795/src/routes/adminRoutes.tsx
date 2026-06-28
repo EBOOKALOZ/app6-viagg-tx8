@@ -72,6 +72,7 @@ import {
   AdminAutoPoster,
   AdminPromotionPackagesPage,
   AdminGLMAnalytics,
+  AdminMotoboyPricing,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -148,6 +149,7 @@ export const adminRoutes = (
       <Route path="/admin/imoveis/aprovacao-imagens" element={<AdminRealEstateImageModeration />} />
       <Route path="/admin/creditos-teste" element={<AdminCreditGrants />} />
       <Route path="/admin/glm-analytics" element={<AdminGLMAnalytics />} />
+      <Route path="/admin/motoboy-pricing" element={<AdminMotoboyPricing />} />
     </Route>
 
     {/* ── Alias /administrador ── */}
