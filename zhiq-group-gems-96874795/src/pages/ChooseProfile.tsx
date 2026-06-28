@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bike, Store, Car, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import motoboyHero from "@/assets/motoboy-hero.png";
 
 const profiles = [
   {
@@ -94,13 +95,20 @@ export default function ChooseProfile() {
                 }`}
               >
                 <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full overflow-hidden ${
                     isSelected
                       ? "bg-[#C9A443]/20 text-[#C9A443]"
                       : "bg-gray-100 text-gray-500"
                   }`}
                 >
-                  <Icon className="h-6 w-6" />
+                  {p.id === "motoboy" ? (
+                    <>
+                      <img src={motoboyHero} alt="Motoboy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
+                      <Icon className="h-6 w-6 hidden" />
+                    </>
+                  ) : (
+                    <Icon className="h-6 w-6" />
+                  )}
                 </div>
                 <div className="flex-1">
                   <span className="block font-semibold text-gray-900">

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { viaggAI, type AIMessage } from "@/lib/viaggAI";
+import motoboyHero from "@/assets/motoboy-hero.png";
 
 interface ViaggAIChatProps {
   context?: string;
@@ -137,7 +138,7 @@ export function ViaggAIChat({
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all",
+          "w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all overflow-hidden border-2 border-white/20",
           open
             ? "bg-zinc-700 hover:bg-zinc-800"
             : "bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] hover:scale-105"
@@ -146,7 +147,12 @@ export function ViaggAIChat({
         {open ? (
           <X className="w-6 h-6 text-white" />
         ) : (
-          <MessageCircle className="w-6 h-6 text-white" />
+          <div className="w-full h-full relative">
+            <img src={motoboyHero} alt="Chat" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
+            <div className="hidden absolute inset-0 flex items-center justify-center">
+              <MessageCircle className="w-6 h-6 text-white" />
+            </div>
+          </div>
         )}
       </button>
     </div>

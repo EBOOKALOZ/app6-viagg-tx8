@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin = false, requiredProfile }: ProtectedRouteProps) {
-  const { user, initialized, isAdmin, role, activeProfile, availableProfiles, isProfileComplete, isLoading } = useAuth();
+  const { user, initialized, isAdmin, role, activeProfile, availableProfiles, isProfileComplete, isLoading, profileReady } = useAuth();
   const { supportRole, isLoading: isSupportRoleLoading } = useSupportRole();
 
   const location = useLocation();
@@ -80,7 +80,7 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
   // Páginas de conta do comprador — não exigem perfil ativo
   const isBuyerAccountRoute = pathname === "/minha-conta" || pathname === "/viagens/minha-conta";
 
-  const selfManagedProfiles = ["motoboy", "mototaxi", "merchant"];
+  const selfManagedProfiles = ["motoboy", "mototaxi", "merchant", "driver"];
   const isSelfManaged = !!activeProfile && selfManagedProfiles.includes(activeProfile);
 
   /* Motoboy/Mototaxi onboarding lock:
@@ -178,8 +178,8 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
      AGUARDA INICIALIZAÇÃO COMPLETA
      Nunca redirecionar durante o bootstrap
   ============================= */
-  if (!initialized || isLoading || isSupportRoleLoading) {
-    console.log('[ProtectedRoute] Waiting for init…', { initialized, isLoading, pathname, isSupportRoleLoading });
+  if (!initialized || isLoading || isSupportRoleLoading || (!!user && !profileReady && !activeProfile)) {
+    console.log('[ProtectedRoute] Waiting for init…', { initialized, isLoading, pathname, isSupportRoleLoading, profileReady, activeProfile });
     return null;
   }
 

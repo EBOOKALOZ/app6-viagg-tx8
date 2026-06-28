@@ -17,6 +17,8 @@ export const AdminGLMAnalytics = lazy(() => import("@/pages/admin/AdminGLMAnalyt
 export const AdminMotoboyPricing = lazy(() => import("@/pages/admin/AdminMotoboyPricing"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
 export const MotoboyLayout = lazy(() => import("@/components/motoboy/MotoboyLayout").then(m => ({ default: m.MotoboyLayout })));
+export const MototaxiLayout = lazy(() => import("@/components/motoboy/MototaxiLayout").then(m => ({ default: m.MototaxiLayout })));
+export const DriverLayout = lazy(() => import("@/components/driver/DriverLayout").then(m => ({ default: m.DriverLayout })));
 export const MotoboyOnboardingLayout = lazy(() => import("@/components/motoboy/MotoboyOnboardingLayout").then(m => ({ default: m.MotoboyOnboardingLayout })));
 export const OperadorLayout = lazy(() => import("@/components/operador/OperadorLayout").then(m => ({ default: m.OperadorLayout })));
 export const InstitutionalLayout = lazy(() => import("@/components/InstitutionalLayout").then(m => ({ default: m.InstitutionalLayout })));
@@ -89,6 +91,8 @@ export const AuctionListPage = lazy(() => import("@/pages/public/AuctionListPage
 export const AuctionPublicPage = lazy(() => import("@/pages/public/AuctionPublicPage"));
 export const ArrematePublicPage = lazy(() => import("@/pages/public/ArrematePublicPage"));
 export const PublicMotoboyRequest = lazy(() => import("@/pages/public/PublicMotoboyRequest"));
+export const MotoboyInicio = lazy(() => import("@/pages/public/MotoboyInicio"));
+export const CorridasInicio = lazy(() => import("@/pages/public/CorridasInicio"));
 export const PublicRideTracking = lazy(() => import("@/pages/public/PublicRideTracking"));
 export const MinhasOfertas = lazy(() => import("@/pages/public/MinhasOfertas"));
 export const VenderImovelPage = lazy(() => import("@/pages/public/VenderImovelPage"));
@@ -117,6 +121,7 @@ export const MotoboyFinanceContent = lazy(() => import("@/pages/MotoboyFinanceCo
 export const MotoboyGroupsContent = lazy(() => import("@/pages/MotoboyGroupsContent"));
 export const MotoboyExpansaoContent = lazy(() => import("@/pages/MotoboyExpansaoContent"));
 export const MotoboyProfileContent = lazy(() => import("@/pages/MotoboyProfileContent"));
+export const VehicleProfileContent = lazy(() => import("@/pages/VehicleProfileContent"));
 export const MotoboyDashboardPremium = lazy(() => import("@/pages/MotoboyDashboardPremium"));
 export const MotoboyRides = lazy(() => import("@/pages/MotoboyRides"));
 export const MotoboyCentralGrupos = lazy(() => import("@/pages/MotoboyCentralGrupos"));
@@ -124,6 +129,7 @@ export const MototaxiHistory = lazy(() => import("@/pages/MototaxiHistory"));
 export const MotoboyGruposRegras = lazy(() => import("@/pages/MotoboyGruposRegras"));
 export const DeliveryCalls = lazy(() => import("@/pages/DeliveryCalls"));
 export const MotoboyWalletPage = lazy(() => import("@/pages/MotoboyWalletPage"));
+export const MotoboyWalletContent = lazy(() => import("@/pages/MotoboyWalletContent"));
 export const MotoboyPayPremium = lazy(() => import("@/pages/motoboy/MotoboyPayPremium"));
 export const MotoboyArchivedRidesContent = lazy(() => import("@/pages/MotoboyArchivedRidesContent"));
 export const MotoboyAwaitingRide = lazy(() => import("@/pages/MotoboyAwaitingRide"));
@@ -131,6 +137,7 @@ export const MotoboyOfferPreview = lazy(() => import("@/pages/MotoboyOfferPrevie
 export const MotoboyCorridasEmEspera = lazy(() => import("@/pages/MotoboyCorridasEmEspera"));
 export const PostadorPremiumPanel = lazy(() => import("@/pages/PostadorPremiumPanel"));
 export const MotoboyLGPDPage = lazy(() => import("@/pages/motoboy/MotoboyLGPDPage"));
+export const PublicRideDetailPage = lazy(() => import("@/pages/motoboy/PublicRideDetailPage"));
 export const MotoboyCampaignInbox = lazy(() => import("@/pages/motoboy/MotoboyCampaignInbox"));
 
 /* ── Driver / Freteiro / Passageiro ── */
@@ -239,6 +246,10 @@ export const AdminFreightOverview = lazy(() => import("@/pages/admin/AdminFreigh
 export const AdminViagemOverview = lazy(() => import("@/pages/admin/AdminViagemOverview"));
 export const AdminMarketplaceCommerce = lazy(() => import("@/pages/admin/AdminMarketplaceCommerce"));
 export const AdminPromotionPackagesPage = lazy(() => import("@/pages/admin/AdminPromotionPackagesPage"));
+export const MotoboyTestPanel = lazy(() => import("@/pages/admin/MotoboyTestPanel"));
+export const DriverComissao = lazy(() => import("@/pages/driver/DriverComissao"));
+export const PostadorHub = lazy(() => import("@/pages/PostadorHub"));
+export const PostadorDashboard = lazy(() => import("@/pages/PostadorDashboard"));
 
 /* ── Admin Marketing ── */
 export const AdminMarketingPostagens = lazy(() => import("@/pages/admin/marketing/AdminMarketingPostagens"));

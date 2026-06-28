@@ -7,7 +7,8 @@ interface MarketNavButtonsProps {
 }
 
 const ROUTES: { label: string; path: string }[] = [
-  { label: "Motoboy",           path: "__motoboy__" },
+  { label: "Corridas",          path: "/corridas-inicio" },
+  { label: "Motoboy",           path: "/motoboy-inicio" },
   { label: "Mercado",           path: "/mercado" },
   { label: "Imóveis",           path: "/imoveis" },
   { label: "Veículos",          path: "/automoveis" },
@@ -26,12 +27,6 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
       : pathname === path;
 
   const handleClick = (path: string) => {
-    if (path === "__motoboy__") {
-      if (onMotoboyClick) { onMotoboyClick(); return; }
-      localStorage.setItem("viagg_auth_entry", "motoboy");
-      navigate("/auth?entry=motoboy&signup=1");
-      return;
-    }
     if (path === "/mercado" && (pathname === "/mercado" || pathname === "/")) {
       onMercadoClick?.();
       return;

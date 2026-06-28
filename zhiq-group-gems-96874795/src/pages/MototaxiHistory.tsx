@@ -26,7 +26,7 @@ export default function MototaxiHistory() {
       <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/motoboy')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <Logo size="sm" />
@@ -44,8 +44,8 @@ export default function MototaxiHistory() {
       <main className="p-4 space-y-4">
         <h1 className="text-xl font-bold">Minhas Corridas</h1>
 
-        {/* Summary Cards */}
-        {!isLoading && (
+        {/* Summary Cards — só exibe se há corridas */}
+        {!isLoading && completedRides.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
               <CardContent className="p-4 text-center">

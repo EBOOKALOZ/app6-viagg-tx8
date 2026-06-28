@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDeliveryHistoryBell, DeliveryNotification } from '@/hooks/useDeliveryHistoryBell';
-import { useNavigate } from 'react-router-dom';
+
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -60,7 +60,6 @@ function NotificationItem({ item }: { item: DeliveryNotification }) {
 
 export function DeliveryHistoryBell() {
   const { newCount, shouldAnimate, markAsSeen, recentNotifications } = useDeliveryHistoryBell();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const handleOpen = () => {
@@ -70,7 +69,7 @@ export function DeliveryHistoryBell() {
 
   const handleViewAll = () => {
     setOpen(false);
-    navigate('/motoboy/archived');
+    window.location.href = '/motoboy/archived';
   };
 
   return (

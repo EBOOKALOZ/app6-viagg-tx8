@@ -325,7 +325,7 @@ export function usePayoutRequests() {
         .from('payout_requests')
         .select('id, amount_cents, status, created_at')
         .eq('owner_id', user.id)
-        .eq('owner_type', 'motoboy')
+        .eq('owner_type', 'motoboy_profile')
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -354,7 +354,7 @@ export function useRequestPayout() {
       const { data, error } = await supabase
         .from('payout_requests')
         .insert({
-          owner_type: 'motoboy',
+          owner_type: 'motoboy_profile',
           owner_id: user.id,
           amount_cents: amountCents,
           status: 'pending',

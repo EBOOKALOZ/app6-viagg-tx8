@@ -44,29 +44,20 @@ export function useActiveFooterLinks(options?: {
 
   const fetchLinks = useCallback(async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("footer_contents")
-        .select("content_type, profile_type, display_order")
+        .select("content_type, display_order")
         .eq("is_active", true);
 
-      if (profileFilter) {
-        query = query.or(`profile_type.eq.global,profile_type.eq.${profileFilter}`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
 
-      // Prioridade: perfil específico > global
-      const dbConfigMap = new Map<string, { profileType: string; displayOrder: number }>();
+      const dbConfigMap = new Map<string, { displayOrder: number }>();
 
       data?.forEach((item) => {
         const config = CONTENT_TYPE_CONFIG[item.content_type];
         if (!config) return;
-
-        const existing = dbConfigMap.get(item.content_type);
-        if (!existing || (existing.profileType === "global" && item.profile_type !== "global")) {
+        if (!dbConfigMap.has(item.content_type)) {
           dbConfigMap.set(item.content_type, {
-            profileType: item.profile_type,
             displayOrder: item.display_order ?? config.defaultOrder,
           });
         }
@@ -77,22 +68,11 @@ export function useActiveFooterLinks(options?: {
       // Combine DB configs and fallbacks defined in config
       Object.entries(CONTENT_TYPE_CONFIG).forEach(([type, config]) => {
         const dbItem = dbConfigMap.get(type);
-
-        if (dbItem) {
-          finalLinks.push({
-            to: `${routePrefix}${config.baseRoute}`,
-            label: config.label,
-            order: dbItem.displayOrder,
-          });
-        } else {
-          // If not in DB, we inject the most important ones as fallback
-          // (LGPD, terms, privacy, etc) so it never completely disappears
-          finalLinks.push({
-            to: `${routePrefix}${config.baseRoute}`,
-            label: config.label,
-            order: config.defaultOrder,
-          });
-        }
+        finalLinks.push({
+          to: `${routePrefix}${config.baseRoute}`,
+          label: config.label,
+          order: dbItem ? dbItem.displayOrder : config.defaultOrder,
+        });
       });
 
       const merged = [...finalLinks];

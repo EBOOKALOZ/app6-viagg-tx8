@@ -16,6 +16,7 @@ import {
   AdminFinanceAdjustments,
   AdminFinanceReports,
   AdminMotoboyPayments,
+  MotoboyTestPanel,
   AdminIncentives,
   AdminGroupFinder,
   AdminLegalDocuments,
@@ -100,6 +101,7 @@ export const adminRoutes = (
       </Route>
       <Route path="/admin/finance-reports" element={<AdminFinanceReports />} />
       <Route path="/admin/motoboy-payments" element={<AdminMotoboyPayments />} />
+      <Route path="/admin/motoboy-test" element={<MotoboyTestPanel />} />
       <Route path="/admin/incentives" element={<AdminIncentives />} />
       <Route path="/admin/group-finder" element={<AdminGroupFinder />} />
       <Route path="/admin/group-settings" element={<AdminGroupSettings />} />

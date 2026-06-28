@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, PlusCircle, HeadphonesIcon, ChevronRight } from 'lucide-react';
 import MotoboyBottomNav from '@/components/motoboy/MotoboyBottomNav';
+import MototaxiBottomNav from '@/components/motoboy/MototaxiBottomNav';
+import DriverBottomNav from '@/components/driver/DriverBottomNav';
 export const STATUS_COLORS: Record<string, string> = {
     aberto: 'bg-orange-500',
     em_analise: 'bg-blue-500',
@@ -69,7 +71,23 @@ class SupportErrorBoundary extends Component<{ children: ReactNode }, { hasError
 export default function ClientSupportTicketsPage() {
     const navigate = useNavigate();
     const { user, activeProfile } = useAuth();
-    const isMotoboy = activeProfile === 'motoboy' || activeProfile === 'mototaxi';
+    const isMotoboy   = activeProfile === 'motoboy';
+    const isMototaxi  = activeProfile === 'mototaxi';
+    const isDriver    = activeProfile === 'driver';
+    const hasMobileNav = isMotoboy || isMototaxi || isDriver;
+
+    // Identidade visual por perfil
+    const headerBg = isMototaxi
+        ? 'bg-footer-mototaxi'
+        : isDriver
+        ? 'bg-gradient-to-r from-amber-700 to-orange-600'
+        : 'bg-[#FF6A00]';
+    const headerText = isMototaxi ? 'text-footer-mototaxi-foreground' : 'text-white';
+    const btnBg = isMototaxi
+        ? 'bg-footer-mototaxi text-footer-mototaxi-foreground hover:bg-footer-mototaxi-hover'
+        : isDriver
+        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+        : 'bg-[#FF6A00] hover:bg-[#E65C00] text-white';
 
     // Se veio do painel de anunciante (veículos/imóveis/lojista), mostra botão de
     // volta pro painel certo — mesmo contexto salvo pelo AdvertiserPanelLayout.
@@ -102,11 +120,11 @@ export default function ClientSupportTicketsPage() {
         <SupportErrorBoundary>
             <div className="flex flex-col min-h-screen bg-background pb-20 animate-fade-in">
                 {/* Header */}
-                <div className="bg-[#FF6A00] px-4 pt-12 pb-6 text-white">
+                <div className={`${headerBg} ${headerText} px-4 pt-12 pb-6`}>
                     {isAdvertiserPanel && (
                         <button
                             onClick={handleBackToPanel}
-                            className="flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white mb-4 transition-colors"
+                            className="flex items-center gap-1.5 text-xs font-bold opacity-80 hover:opacity-100 mb-4 transition-opacity"
                         >
                             <ChevronRight className="h-4 w-4 rotate-180" /> Voltar ao Painel
                         </button>
@@ -115,14 +133,14 @@ export default function ClientSupportTicketsPage() {
                         <HeadphonesIcon className="h-6 w-6" />
                         <h1 className="text-xl font-bold">Central de Suporte</h1>
                     </div>
-                    <p className="text-sm text-white/80">
+                    <p className="text-sm opacity-80">
                         Acompanhe seus chamados e converse com o suporte.
                     </p>
                 </div>
 
                 <div className="p-4 flex-1 space-y-4 -mt-3 relative z-10">
                     <Button
-                        className="w-full gap-2 shadow-lg rounded-xl h-12 text-md mb-2 bg-[#FF6A00] hover:bg-[#E65C00] text-white"
+                        className={`w-full gap-2 shadow-lg rounded-xl h-12 text-md mb-2 ${btnBg}`}
                         onClick={() => navigate(isMotoboy ? '/motoboy/support/novo' : '/suporte/novo')}
                     >
                         <PlusCircle className="h-5 w-5" />
@@ -192,10 +210,12 @@ export default function ClientSupportTicketsPage() {
                     )}
                 </div>
 
-                {isMotoboy && (
+                {hasMobileNav && (
                     <>
                         <div className="h-20" />
-                        <MotoboyBottomNav />
+                        {isMotoboy   && <MotoboyBottomNav />}
+                        {isMototaxi  && <MototaxiBottomNav />}
+                        {isDriver    && <DriverBottomNav />}
                     </>
                 )}
             </div>

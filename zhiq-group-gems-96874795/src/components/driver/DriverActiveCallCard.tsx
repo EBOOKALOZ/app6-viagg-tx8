@@ -45,7 +45,7 @@ export function DriverActiveCallCard({
   return (
     <Card className={cn(
       "border-2 animate-pulse-slow shadow-lg",
-      isDelivery ? "border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20" : "border-primary/50 bg-primary/5"
+      isDelivery ? "border-blue-500/50 bg-blue-50/50 dark:bg-blue-950/20" : "border-primary/50 bg-primary/5"
     )}>
       <CardContent className="p-4 space-y-4">
         {/* Header with badge */}
@@ -55,7 +55,7 @@ export function DriverActiveCallCard({
             className={cn(
               "px-3 py-1 font-medium",
               isDelivery 
-                ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300" 
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
                 : "bg-primary/10 text-primary"
             )}
           >

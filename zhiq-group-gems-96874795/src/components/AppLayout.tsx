@@ -51,32 +51,34 @@ function MerchantBottomNav() {
    DRIVER BOTTOM NAV
 ================================ */
 function DriverBottomNav() {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const navItems = [
-    { icon: Home, label: "Início", path: "/driver" },
+    { icon: Home,    label: "Início",   path: "/driver" },
     { icon: History, label: "Corridas", path: "/driver/calls" },
-    { icon: Wallet, label: "Carteira", path: "/wallet" },
-    { icon: User, label: "Perfil", path: "/profile" },
+    { icon: Wallet,  label: "Carteira", path: "/driver/wallet" },
+    { icon: User,    label: "Perfil",   path: "/driver/profile" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border px-4 py-2 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-blue-700 backdrop-blur-md border-t-2 border-blue-800 shadow-[0_-4px_20px_rgba(29,78,216,0.35)] px-4 py-2 pb-safe">
       <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = item.path === "/driver"
+            ? location.pathname === "/driver"
+            : location.pathname.startsWith(item.path);
           return (
             <button
               key={item.label}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                }`}
+              onClick={() => { window.location.href = item.path; }}
+              className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+                isActive ? "text-white" : "text-white/70 hover:text-white"
+              }`}
             >
-              <div className={`p-2 rounded-xl ${isActive ? "bg-primary/10" : ""}`}>
-                <item.icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+              <div className={`p-2 rounded-xl ${isActive ? "bg-white/15" : ""}`}>
+                <item.icon className="h-5 w-5" />
               </div>
-              <span className={`text-xs font-medium ${isActive ? "text-primary" : ""}`}>{item.label}</span>
+              <span className="text-xs font-medium">{item.label}</span>
             </button>
           );
         })}
@@ -113,6 +115,16 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Motorista não deve ficar em rotas genéricas — redireciona para o painel próprio
+  useEffect(() => {
+    if (activeProfile === 'driver' && location.pathname === '/profile') {
+      window.location.href = '/driver/profile';
+    }
+    if (activeProfile === 'driver' && location.pathname === '/wallet') {
+      window.location.href = '/driver/wallet';
+    }
+  }, [activeProfile, location.pathname]);
+
   // Se a pessoa chegou aqui vindo de um painel de anunciante (imóveis/veículos/
   // serviços — gravado pelo AdvertiserPanelLayout), mostra o mesmo rodapé neutro
   // do Painel Geral em vez do FooterProfile do perfil ativo (ex: motoboy).
@@ -128,7 +140,6 @@ export function AppLayout() {
       const { data, error } = await supabase.rpc("check_pending_documents");
 
       if (error) {
-        console.error("Erro ao verificar pendências legais:", error);
         return;
       }
 

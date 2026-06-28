@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -84,7 +83,6 @@ interface MotoboyProfileData {
  */
 export default function MotoboyProfileContent() {
   const { user, activeProfile } = useAuth();
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [captchaOpen, setCaptchaOpen] = useState(false);
@@ -339,7 +337,7 @@ export default function MotoboyProfileContent() {
         });
 
         const basePath = profileType === 'mototaxi' ? '/mototaxi' : '/motoboy';
-        navigate(basePath, { replace: true });
+        window.location.href = basePath;
         return;
       }
     } catch (error: any) {

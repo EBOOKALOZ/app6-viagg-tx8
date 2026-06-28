@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
+import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
 import {
   ShoppingBag, Minus, Plus, Trash2, MapPin, X, Loader2,
   ChevronDown, CheckCircle, Store as StoreIcon, Send, PartyPopper,
@@ -111,6 +112,8 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
   }
 
   return (
+    <>
+      {open && <SessionSafetyFlash key={String(open)} />}
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-gray-50 flex flex-col">
         <SheetHeader className="sr-only"><SheetTitle>Cesta de Compras</SheetTitle></SheetHeader>
@@ -350,6 +353,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
         )}
       </SheetContent>
     </Sheet>
+    </>
   );
 }
 

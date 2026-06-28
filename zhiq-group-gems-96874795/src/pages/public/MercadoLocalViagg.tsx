@@ -1093,7 +1093,7 @@ const scrollToProducts = () => {
                     onMercadoClick={scrollToProducts}
                 />
             ) : null}
-            hideTopMotoboy={!isAdvertiser}
+            hideTopMotoboy={false}
             mainClassName="flex flex-col bg-[#F5E62B]"
             hideFooter={isAdvertiser}
             blueFooter={!isAdvertiser}

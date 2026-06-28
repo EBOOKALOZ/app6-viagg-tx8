@@ -212,7 +212,7 @@ export default function DriverCalls() {
           {activeCall && (
             <Badge 
               variant="default" 
-              className={isReserva ? 'bg-amber-500' : 'bg-primary animate-pulse'}
+              className={isReserva ? 'bg-blue-600' : 'bg-primary animate-pulse'}
             >
               {isReserva ? '⏳ Reserva' : '1 ativa'}
             </Badge>
@@ -221,10 +221,10 @@ export default function DriverCalls() {
 
         {/* Chamada Ativa */}
         {activeCall && activeCall.type === 'ride' && (
-          <Card className={`overflow-hidden shadow-lg ${isReserva ? 'border-amber-500/50' : 'border-primary/50'}`}>
-            <CardHeader className={`pb-3 ${isReserva ? 'bg-gradient-to-r from-amber-500/10 to-transparent' : 'bg-gradient-to-r from-primary/10 to-transparent'}`}>
+          <Card className={`overflow-hidden shadow-lg ${isReserva ? 'border-blue-600/50' : 'border-primary/50'}`}>
+            <CardHeader className={`pb-3 ${isReserva ? 'bg-gradient-to-r from-blue-600/10 to-transparent' : 'bg-gradient-to-r from-primary/10 to-transparent'}`}>
               <div className="flex items-center justify-between">
-                <Badge variant="default" className={isReserva ? 'bg-amber-500' : 'bg-primary'}>
+                <Badge variant="default" className={isReserva ? 'bg-blue-600' : 'bg-primary'}>
                   {isReserva ? '⏳ Modo Espera' : 'Chamada Ativa'}
                 </Badge>
                 <span className="text-xs text-muted-foreground">

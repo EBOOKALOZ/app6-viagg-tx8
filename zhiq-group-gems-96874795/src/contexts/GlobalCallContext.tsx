@@ -5,6 +5,7 @@ import { IncomingCall, useRealtimeCalls } from "@/hooks/useRealtimeCalls";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { setupAggressiveAudioUnlock, isAudioEnabled, unlockGlobalAudio } from "@/lib/audioUnlock";
 import IncomingCallModal from "@/components/IncomingCallModal";
 import DeliveryOfferCard from "@/components/motoboy/DeliveryOfferCard";
 import DeliveryQueueCard from "@/components/motoboy/DeliveryQueueCard";
@@ -37,6 +38,7 @@ interface GlobalCallContextType {
   enableSound: () => Promise<void>;
   clearLastAcceptedRideId: () => void;
   stopBeepLoop: () => void;
+  stopPublicRideBip: () => void;
   deliveryOffer: any | null;
   deliveryPhase: 'idle' | 'ringing' | 'queue' | 'accepted';
   acceptDeliveryOffer: (id: string) => Promise<void>;
@@ -51,7 +53,7 @@ interface GlobalCallProviderProps {
 }
 
 export function GlobalCallProvider({ children }: GlobalCallProviderProps) {
-  const { user, activeProfile } = useAuth();
+  const { user, activeProfile, availableProfiles } = useAuth();
   
   // 1. Ouvinte de Entregas (Novo sistema - Motoboy Dashboard)
   const { 
@@ -75,6 +77,11 @@ export function GlobalCallProvider({ children }: GlobalCallProviderProps) {
   });
 
   const { getCurrentPosition } = useGeolocation();
+
+  // Desbloqueio automático de áudio na primeira interação do usuário
+  useEffect(() => {
+    setupAggressiveAudioUnlock();
+  }, []);
 
   const [state, setState] = useState<GlobalCallState>({
     activeCall: null,
@@ -103,6 +110,77 @@ export function GlobalCallProvider({ children }: GlobalCallProviderProps) {
   const [missedCalls, setMissedCalls] = useState<MissedCall[]>([]);
   const isSoundBlocked = false;
   const stopBeepLoop = useCallback(() => {}, []);
+
+  // 🔔 Notificação de chamadas públicas (Motoboy only)
+  const publicRideBipAutoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const publicRideBipAudioRef = useRef<HTMLAudioElement | null>(null);
+  const stopPublicRideBip = useCallback(() => {
+    if (publicRideBipAutoStopRef.current) { clearTimeout(publicRideBipAutoStopRef.current); publicRideBipAutoStopRef.current = null; }
+    if (publicRideBipAudioRef.current) {
+      publicRideBipAudioRef.current.pause();
+      publicRideBipAudioRef.current.src = '';
+      publicRideBipAudioRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id || !availableProfiles.includes('motoboy')) return;
+
+    const BIP_URL = 'https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/audio%20de%20chamada%20motoboy/bip_motoboy_call.mp3';
+    const seenPublicRideIds = new Set<string>();
+
+    const playBipLoop = () => {
+      stopPublicRideBip();
+      if (!isAudioEnabled()) return; // bloqueado pelo browser — botão "Ativar Som" ainda não clicado
+      try {
+        const bip = new Audio(BIP_URL);
+        publicRideBipAudioRef.current = bip;
+        bip.volume = 0.9;
+        bip.loop = true; // toca continuamente até stopPublicRideBip()
+        bip.play().catch(() => {});
+        // Para automaticamente após 3 minutos (expiração máxima da corrida)
+        publicRideBipAutoStopRef.current = setTimeout(() => stopPublicRideBip(), 3 * 60 * 1000);
+      } catch (_) {}
+    };
+
+    const notifyNewRide = (ride: any) => {
+      if (!ride?.id || seenPublicRideIds.has(ride.id)) return;
+      if (ride.expires_at && new Date(ride.expires_at) < new Date()) return;
+      seenPublicRideIds.add(ride.id);
+      playBipLoop();
+      toast('🛵 Nova chamada pública!', {
+        description: `${ride.visitor_name || 'Visitante'} — ver painel motoboy`,
+        duration: 20000,
+        action: { label: 'Ver', onClick: () => { window.location.href = '/motoboy'; } },
+      });
+    };
+
+    // Realtime INSERT (pode ser instável — polling abaixo garante)
+    const channel = supabase
+      .channel('global_public_rides_notify')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'public_rides' },
+        (payload) => notifyNewRide(payload.new))
+      .subscribe();
+
+    // Polling a cada 10s — fallback caso Realtime INSERT não dispare
+    const poll = async () => {
+      const { data } = await supabase
+        .from('public_rides')
+        .select('id, visitor_name, expires_at')
+        .eq('status', 'aguardando_motoboy')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10);
+      (data ?? []).forEach(notifyNewRide);
+    };
+    const pollId = setInterval(poll, 10000);
+
+    return () => {
+      stopPublicRideBip();
+      supabase.removeChannel(channel);
+      clearInterval(pollId);
+    };
+  }, [user?.id, availableProfiles, stopPublicRideBip]);
 
   // 📡 Presence Heartbeat (Motoboy only)
   // Importante: envia coordenadas reais (GPS ou cadastro) — nunca 0,0
@@ -215,9 +293,10 @@ export function GlobalCallProvider({ children }: GlobalCallProviderProps) {
         acceptCall,
         rejectCall,
         closeModal,
-        enableSound: async () => {},
+        enableSound: unlockGlobalAudio,
         clearLastAcceptedRideId: () => setState((prev) => ({ ...prev, lastAcceptedRideId: null })),
         stopBeepLoop,
+        stopPublicRideBip,
         deliveryOffer: currentOffer,
         deliveryPhase: deliveryPhase,
         acceptDeliveryOffer,

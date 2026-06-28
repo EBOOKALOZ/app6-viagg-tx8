@@ -73,7 +73,7 @@ export async function isProfileRegistrationComplete(
 export function getProfileSetupRoute(profileId: string): string {
   switch (profileId) {
     case 'driver':
-      return '/profile'; // Página de perfil com dados do veículo
+      return '/driver/profile'; // Perfil do motorista com dados do veículo
     case 'motoboy':
       return '/motoboy/profile'; // Mesmo layout do perfil completo
     case 'mototaxi':

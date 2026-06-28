@@ -9,12 +9,10 @@ export interface RideHistoryItem {
   value: number;
   status: 'finalizada' | 'cancelada';
   completedAt: Date;
-  // Dados do outro participante
   participantId: string;
   participantName: string;
   participantAvatar?: string;
   participantRating?: number;
-  // Dados da corrida
   distanceKm?: number;
   durationMinutes?: number;
 }
@@ -32,51 +30,37 @@ export function useRideHistory({ role, limit = 20 }: UseRideHistoryOptions) {
 
   const fetchHistory = useCallback(async () => {
     if (!user?.id) {
-      console.log('[useRideHistory] Sem usuário logado');
       setIsLoading(false);
       return;
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const isPassenger = role === 'passenger';
-      const userColumn = isPassenger ? 'passenger_id' : 'moto_taxi_id';
+      const userColumn = isPassenger ? 'customer_id' : 'motoboy_id';
+      const participantColumn = isPassenger ? 'motoboy_id' : 'customer_id';
 
-      console.log('[useRideHistory] ===== BUSCANDO HISTÓRICO =====');
-      console.log('[useRideHistory] role:', role);
-      console.log('[useRideHistory] userColumn:', userColumn);
-      console.log('[useRideHistory] userId:', user.id);
-
-      // Buscar corridas finalizadas ou canceladas
-      const query = (supabase
-        .from('moto_taxi_corridas_legacy' as any)
+      const { data: ridesData, error: ridesError } = await supabase
+        .from('service_orders')
         .select(`
           id,
-          origin_address,
-          destination_address,
-          estimated_price,
-          estimated_km,
-          estimated_time_minutes,
+          pickup_location,
+          destination,
+          total_price,
+          distance_km,
           status,
-          finished_at,
-          canceled_at,
+          completed_at,
           created_at,
-          passenger_id,
-          moto_taxi_id
+          customer_id,
+          motoboy_id
         `)
         .eq(userColumn, user.id)
-        .in('status', ['finalizada', 'cancelada'])
+        .eq('service_type', 'mototaxi')
+        .in('status', ['completed', 'cancelled'])
         .order('created_at', { ascending: false })
-        .limit(limit) as any);
-
-      const { data: ridesData, error: ridesError } = await query;
-
-      console.log('[useRideHistory] ===== RESULTADO =====');
-      console.log('[useRideHistory] Error:', ridesError);
-      console.log('[useRideHistory] Count:', ridesData?.length);
-      console.log('[useRideHistory] Data:', JSON.stringify(ridesData, null, 2));
+        .limit(limit);
 
       if (ridesError) {
         console.error('[useRideHistory] Erro ao buscar corridas:', ridesError);
@@ -86,17 +70,16 @@ export function useRideHistory({ role, limit = 20 }: UseRideHistoryOptions) {
       }
 
       if (!ridesData || ridesData.length === 0) {
-        console.log('[useRideHistory] Nenhuma corrida encontrada para este usuário');
         setHistory([]);
         return;
       }
 
-      // Buscar dados dos participantes (foto, nome)
+      // Buscar dados dos participantes
       const participantIds = ridesData
-        .map(ride => isPassenger ? ride.moto_taxi_id : ride.passenger_id)
+        .map(ride => ride[participantColumn as keyof typeof ride] as string | null)
         .filter((id): id is string => id !== null);
 
-      const uniqueIds = [...new Set(participantIds)] as string[];
+      const uniqueIds = [...new Set(participantIds)];
 
       let profilesMap: Record<string, { name: string; avatar_url: string | null }> = {};
 
@@ -114,27 +97,23 @@ export function useRideHistory({ role, limit = 20 }: UseRideHistoryOptions) {
         }
       }
 
-      // Mapear para o formato de histórico
       const historyItems: RideHistoryItem[] = ridesData.map(ride => {
-        const participantId = isPassenger ? ride.moto_taxi_id : ride.passenger_id;
+        const participantId = ride[participantColumn as keyof typeof ride] as string | null;
         const participant = participantId ? profilesMap[participantId] : null;
-        const completedDate = ride.status === 'finalizada' 
-          ? ride.finished_at 
-          : ride.canceled_at;
+        const statusPt = ride.status === 'completed' ? 'finalizada' : 'cancelada';
 
         return {
           id: ride.id,
-          origin: ride.origin_address,
-          destination: ride.destination_address,
-          value: Number(ride.estimated_price) || 0,
-          status: ride.status as 'finalizada' | 'cancelada',
-          completedAt: new Date(completedDate || new Date()),
+          origin: ride.pickup_location || '',
+          destination: ride.destination || '',
+          value: Number(ride.total_price) || 0,
+          status: statusPt,
+          completedAt: new Date(ride.completed_at || ride.created_at),
           participantId: participantId || '',
           participantName: participant?.name || (isPassenger ? 'Moto-Táxi' : 'Passageiro'),
           participantAvatar: participant?.avatar_url || undefined,
-          participantRating: 4.8, // Placeholder - poderia vir de moto_taxi_historico
-          distanceKm: ride.estimated_km ? Number(ride.estimated_km) : undefined,
-          durationMinutes: ride.estimated_time_minutes || undefined,
+          participantRating: 4.8,
+          distanceKm: ride.distance_km ? Number(ride.distance_km) : undefined,
         };
       });
 

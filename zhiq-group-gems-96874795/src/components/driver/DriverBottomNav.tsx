@@ -10,11 +10,9 @@ type NavItem = {
   variant?: "default" | "danger";
 };
 
-export default function MotoboyBottomNav() {
+export default function DriverBottomNav() {
   const location = useLocation();
-  const { activeProfile, clearActiveProfile } = useAuth();
-
-  const basePath = activeProfile === 'mototaxi' ? '/mototaxi' : '/motoboy';
+  const { clearActiveProfile } = useAuth();
 
   const handleSair = async () => {
     await clearActiveProfile();
@@ -22,23 +20,23 @@ export default function MotoboyBottomNav() {
   };
 
   const navItems: NavItem[] = [
-    { icon: Home,       label: "Início",    path: basePath },
-    { icon: Users,      label: "Grupos",    path: `${basePath}/grupos` },
-    { icon: History,    label: "Histórico", path: `${basePath}/historico` },
-    { icon: Wallet,     label: "Carteira",  path: `${basePath}/wallet` },
-    { icon: Megaphone,  label: "Postador",  path: `${basePath}/postador` },
-    { icon: TrendingUp, label: "Comissão",  path: `${basePath}/postador/comissao` },
-    { icon: User,       label: "Perfil",    path: `${basePath}/profile` },
-    { icon: LogOut,     label: "Sair",      onClick: handleSair, variant: "danger" },
+    { icon: Home,        label: "Início",    path: "/driver" },
+    { icon: Users,       label: "Grupos",    path: "/driver/groups" },
+    { icon: History,     label: "Histórico", path: "/driver/history" },
+    { icon: Wallet,      label: "Carteira",  path: "/driver/wallet" },
+    { icon: Megaphone,   label: "Postador",  path: "/driver/postador" },
+    { icon: TrendingUp,  label: "Comissão",  path: "/driver/comissao" },
+    { icon: User,        label: "Perfil",    path: "/driver/profile" },
+    { icon: LogOut,      label: "Sair",      onClick: handleSair, variant: "danger" },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-footer-motoboy backdrop-blur-md border-t-2 border-footer-motoboy-border px-1 py-1.5 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-blue-700 backdrop-blur-md border-t-2 border-blue-800 shadow-[0_-4px_20px_rgba(29,78,216,0.35)] px-1 py-1.5 pb-safe">
       <div className="flex items-stretch justify-between max-w-md mx-auto gap-0.5">
         {navItems.map((item) => {
           const isActive = !!item.path && (
-            item.path === basePath
-              ? location.pathname === basePath
+            item.path === "/driver"
+              ? location.pathname === "/driver"
               : location.pathname.startsWith(item.path)
           );
           const danger = item.variant === "danger";
@@ -50,11 +48,11 @@ export default function MotoboyBottomNav() {
                 isActive
                   ? "text-white"
                   : danger
-                  ? "text-red-200 hover:text-red-100"
+                  ? "text-red-300 hover:text-red-200"
                   : "text-white/70 hover:text-white"
               }`}
             >
-              <div className={`p-1 rounded-lg transition-all ${isActive ? "bg-white/20" : ""}`}>
+              <div className={`p-1 rounded-lg transition-all ${isActive ? "bg-white/15" : ""}`}>
                 <item.icon className="h-[18px] w-[18px]" />
               </div>
               <span className="text-[10px] font-medium leading-none truncate w-full text-center">

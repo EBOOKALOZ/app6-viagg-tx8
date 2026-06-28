@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, MapPin, ArrowLeft, Phone, Megaphone, HelpCircle, Repeat } from "lucide-react";
+import { Menu, MapPin, Phone, Megaphone, HelpCircle, Repeat } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import NotificationCenter from "@/components/NotificationCenter";
 import { cn } from "@/lib/utils";
 
-interface MotoboyPanelHeaderProps {
+interface DriverPanelHeaderProps {
   avatarUrl?: string;
   userName?: string;
   city?: string;
@@ -16,19 +16,16 @@ interface MotoboyPanelHeaderProps {
   isOnline?: boolean;
 }
 
-export function MotoboyPanelHeader({
+export function DriverPanelHeader({
   avatarUrl,
-  userName = "Motoboy",
+  userName = "Motorista",
   city = "Cidade",
   state = "UF",
   showBackButton = false,
   isOnline = false,
-}: MotoboyPanelHeaderProps) {
-  const { clearActiveProfile, activeProfile } = useAuth();
+}: DriverPanelHeaderProps) {
+  const { clearActiveProfile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  const isMototaxi = activeProfile === "mototaxi";
-  const basePath = isMototaxi ? "/mototaxi" : "/motoboy";
 
   const initials = userName
     .split(" ")
@@ -37,57 +34,24 @@ export function MotoboyPanelHeader({
     .slice(0, 2)
     .toUpperCase();
 
-  // Cores específicas por perfil
-  const headerBg = isMototaxi
-    ? "bg-gradient-to-r from-yellow-700 via-yellow-600 to-amber-500"
-    : "bg-motoboy-header";
-  const sheetBg = isMototaxi
-    ? "bg-gradient-to-b from-yellow-800 via-yellow-900 to-black"
-    : "bg-gradient-to-b from-motoboy via-motoboy-hover to-black";
-  const subtitleColor = isMototaxi ? "text-yellow-200/80" : "text-orange-200/80";
-
-  // Itens do hambúrguer — apenas o que NÃO está no nav inferior
-  const menuItems = isMototaxi
-    ? [
-        { icon: Phone,     label: "Corridas",  path: `${basePath}/grupos` },
-        { icon: Megaphone, label: "Campanhas", path: `${basePath}/campanhas` },
-      ]
-    : [
-        { icon: Phone,     label: "Chamadas",  path: `${basePath}/delivery-calls` },
-        { icon: Megaphone, label: "Campanhas", path: `${basePath}/campanhas` },
-      ];
-
-  const panelLabel = isMototaxi ? "Painel Moto-Táxi" : "Painel Motoboy";
-
   return (
     <>
-      <header className={cn("relative px-4 pt-6 pb-8", headerBg)}>
+      <header className="relative px-4 pt-6 pb-8 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700">
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-          <span className="text-[16px] font-bold tracking-widest uppercase text-white/50">{panelLabel}</span>
+          <span className="text-[16px] font-bold tracking-widest uppercase text-white/50">Painel Motorista</span>
         </div>
         <div className="flex items-center justify-between">
-          {showBackButton && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => { window.location.href = basePath; }}
-              className="text-white hover:bg-white/10 mr-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
-
           {/* Avatar + Info */}
-          <div className="flex items-center gap-4 flex-1">
+          <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="h-16 w-16 border-2 border-white/30 shadow-lg">
                 <AvatarImage src={avatarUrl} alt={userName} />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white font-bold text-lg">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-lg">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full border-2 border-background shadow-sm transition-colors duration-300",
+                "absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full border-2 border-blue-900 shadow-sm transition-colors duration-300",
                 isOnline ? "bg-emerald-500" : "bg-slate-400"
               )} />
             </div>
@@ -112,13 +76,8 @@ export function MotoboyPanelHeader({
           </div>
 
           <div className="flex items-center gap-1">
-            <NotificationCenter profileType={isMototaxi ? "mototaxi" : "motoboy"} />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setMenuOpen(true)}
-              className="text-white hover:bg-white/10"
-            >
+            <NotificationCenter profileType="driver" />
+            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(true)} className="text-white hover:bg-white/10">
               <Menu className="h-5 w-5" />
             </Button>
           </div>
@@ -128,10 +87,7 @@ export function MotoboyPanelHeader({
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent
           side="right"
-          className={cn(
-            "border-l-0 p-0 text-white [&>button]:text-white/70 [&>button]:hover:text-white",
-            sheetBg
-          )}
+          className="bg-gradient-to-b from-blue-900 via-blue-950 to-black border-l-0 p-0 text-white [&>button]:text-white/70 [&>button]:hover:text-white"
         >
           <div className="flex flex-col justify-between h-full">
             <div>
@@ -144,17 +100,19 @@ export function MotoboyPanelHeader({
                 </Avatar>
                 <div className="flex flex-col">
                   <span className="font-semibold text-base text-white">{userName}</span>
-                  <span className={cn("text-xs", subtitleColor)}>
-                    {isMototaxi ? "Moto-Táxi" : "Motoboy"} • {isOnline ? "Disponível" : "Offline"}
+                  <span className="text-xs text-blue-200/80">
+                    Motorista • {isOnline ? "Disponível" : "Offline"}
                   </span>
                 </div>
               </div>
 
               <div className="border-t border-white/10 mx-4" />
 
-              {/* Itens exclusivos do hambúrguer (não duplicam o nav inferior) */}
               <nav className="flex flex-col gap-1 px-4 pt-4">
-                {menuItems.map((item) => (
+                {[
+                  { icon: Phone,     label: "Corridas",   path: "/driver/calls" },
+                  { icon: Megaphone, label: "Campanhas",  path: "/driver/campanhas" },
+                ].map((item) => (
                   <button
                     key={item.label}
                     onClick={() => { setMenuOpen(false); window.location.href = item.path; }}

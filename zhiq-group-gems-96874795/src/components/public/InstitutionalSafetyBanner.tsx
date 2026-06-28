@@ -26,6 +26,7 @@ const SEGMENT_WARNINGS = [
 ];
 
 export const InstitutionalSafetyBanner: React.FC = () => {
+  return null;
   return (
     <div className="w-full mb-8 mt-0">
       <div className="relative overflow-hidden bg-[#D90000] border-y border-white/20 shadow-2xl">

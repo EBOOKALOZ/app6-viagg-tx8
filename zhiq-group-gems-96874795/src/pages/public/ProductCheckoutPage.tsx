@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
     ShoppingCart, 
@@ -187,6 +188,7 @@ export default function ProductCheckoutPage() {
 
     return (
         <MarketLayout>
+            <SessionSafetyFlash />
             <div className="bg-[#F5E62B] min-h-screen py-12 px-4">
                 <div className="container max-w-4xl mx-auto space-y-8">
                     

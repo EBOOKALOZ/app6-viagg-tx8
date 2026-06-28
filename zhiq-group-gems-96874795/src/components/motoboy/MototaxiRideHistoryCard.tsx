@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, MapPin, Star, CheckCircle, XCircle, Route, ChevronLeft, ChevronRight, DollarSign, Percent, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom';
+
 
 export interface MototaxiRideHistoryItem {
   id: string;
@@ -45,7 +45,6 @@ export function MototaxiRideHistoryCard({
   totalEarnings,
   onPageChange,
 }: MototaxiRideHistoryCardProps) {
-  const navigate = useNavigate();
   
   if (items.length === 0 && !isLoading) {
     return (
@@ -69,7 +68,7 @@ export function MototaxiRideHistoryCard({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/mototaxi/history')}
+            onClick={() => { window.location.href = '/mototaxi/history'; }}
             className="text-xs"
           >
             Ver tudo

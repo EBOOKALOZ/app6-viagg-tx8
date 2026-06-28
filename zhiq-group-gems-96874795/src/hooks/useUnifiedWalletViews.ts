@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { startOfDay, startOfWeek, startOfMonth, isAfter } from 'date-fns';
@@ -28,8 +28,18 @@ export interface WalletPayout {
     pix_key: string;
 }
 
+// Mapeia o activeProfile (interno) para o label do filtro (exibição)
+const PROFILE_TO_FILTER: Record<string, string> = {
+    motoboy:   'Motoboy',
+    mototaxi:  'Motoboy',   // mototaxi usa o mesmo profile_type que motoboy no ledger
+    driver:    'Motorista',
+    merchant:  'Lojista',
+    freteiro:  'Frete',
+    passenger: 'Passageiro',
+};
+
 export function useUnifiedWalletViews() {
-    const { user } = useAuth();
+    const { user, activeProfile } = useAuth();
 
     const [overview, setOverview] = useState<WalletOverview | null>(null);
     const [statement, setStatement] = useState<WalletStatement[]>([]);
@@ -38,7 +48,15 @@ export function useUnifiedWalletViews() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [filterProfile, setFilterProfile] = useState<string>('Todos');
+    // Filtra automaticamente pelo perfil ativo; usuário pode trocar manualmente
+    const defaultFilter = PROFILE_TO_FILTER[activeProfile || ''] || 'Todos';
+    const [filterProfile, setFilterProfile] = useState<string>(defaultFilter);
+
+    // Sincroniza filtro quando o perfil ativo muda (ex: troca de perfil)
+    useEffect(() => {
+        const mapped = PROFILE_TO_FILTER[activeProfile || ''] || 'Todos';
+        setFilterProfile(mapped);
+    }, [activeProfile]);
 
     const fetchWalletData = useCallback(async () => {
         if (!user?.id) return;

@@ -73,17 +73,12 @@ export function MarketLayout({
     blueFooter = false,
     blueFooterLabel = "Mercado Local",
     myAccountPath,
-    hideTopMotoboy = true
+    hideTopMotoboy = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
     const { user, isLoading, availableProfiles, activeProfile, signOut } = useAuth();
     const isMerchant = activeProfile === 'merchant';
 
-
-    const handleMotoboyClick = () => {
-        // Módulo público de chamadas — qualquer pessoa pode solicitar sem login
-        navigate("/chamar-motoboy");
-    };
 
     const handleVendedorClick = () => {
         navigate("/auth");
@@ -162,17 +157,8 @@ export function MarketLayout({
                             </div>
                         )}
 
-                        {/* Direita: Motoboy + Cesta + headerRight */}
+                        {/* Direita: Cesta + headerRight */}
                         <div className="flex items-center gap-3 shrink-0">
-                            {!hideTopMotoboy && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleMotoboyClick(); }}
-                                    className="flex px-4 py-2 items-center justify-center bg-white rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none border border-orange-200/50"
-                                >
-                                    <span className="text-xs font-black whitespace-nowrap uppercase tracking-wide text-[#FF6A00]">Motoboy</span>
-                                </button>
-                            )}
-
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
                                 className="relative flex h-auto px-4 py-2 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"

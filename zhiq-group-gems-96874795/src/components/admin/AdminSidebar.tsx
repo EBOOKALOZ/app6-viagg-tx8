@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -134,6 +135,7 @@ const menuSections: MenuSection[] = [
     items: [
       { title: "Usuários", url: "/admin/users", icon: Users },
       { title: "Motoboys", url: "/admin/perfis/motoboys", icon: Bike },
+      { title: "🧪 Teste Motoboy", url: "/admin/motoboy-test", icon: Bike },
       { title: "Lojas", url: "/admin/lojas", icon: Store },
       { title: "Imóveis", url: "/admin/imoveis", icon: Building2 },
       { title: "Veículos", url: "/admin/vehicles", icon: Car },
@@ -180,6 +182,7 @@ export function AdminSidebar() {
   // const { supportRole } = useSupportRole(); // TEMPORARILY DISABLED
   const marketingRole = null; // Temporário
   const supportRole = null; // Temporário
+  const [sidebarSearch, setSidebarSearch] = useState("");
 
   const isPostador = marketingRole === "postador";
   const isSupportOnly = !!supportRole && !isAdmin;
@@ -217,6 +220,20 @@ export function AdminSidebar() {
       .filter((s) => s.title === "Marketing" || s.title === "Institucional");
   }
 
+  // Filtro de busca: filtra itens cujo título contém o texto digitado
+  if (sidebarSearch.trim()) {
+    const q = sidebarSearch.toLowerCase();
+    filteredSections = filteredSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) =>
+          item.title.toLowerCase().includes(q) ||
+          section.title.toLowerCase().includes(q)
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  }
+
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
@@ -231,21 +248,53 @@ export function AdminSidebar() {
       style={isMultiPerfil ? { backgroundColor: "#E8F5E9" } : undefined}
     >
       {/* Header */}
-      <div className="flex h-16 items-center border-b px-5 gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-          SP
+      <div className="border-b">
+        <div className="flex h-16 items-center px-5 gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm shrink-0">
+            SP
+          </div>
+          <div>
+            <h1 className="text-base font-bold text-foreground leading-none">SuperPainel</h1>
+            <span className="text-[10px] font-semibold text-primary uppercase tracking-widest">
+              Centro Nacional
+            </span>
+          </div>
         </div>
-        <div>
-          <h1 className="text-base font-bold text-foreground leading-none">SuperPainel</h1>
-          <span className="text-[10px] font-semibold text-primary uppercase tracking-widest">
-            Centro Nacional
-          </span>
+        {/* Caixa de pesquisa */}
+        <div className="px-3 pb-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              placeholder="Buscar menu..."
+              className="w-full h-8 pl-8 pr-8 rounded-lg border border-border bg-muted/50 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
+            />
+            {sidebarSearch && (
+              <button
+                onClick={() => setSidebarSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
       <ScrollArea className="flex-1">
         <nav className="p-3 space-y-5">
+          {filteredSections.length === 0 && sidebarSearch.trim() && (
+            <div className="py-8 text-center">
+              <Search className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">Nenhum item encontrado</p>
+              <button onClick={() => setSidebarSearch("")} className="mt-2 text-[10px] text-primary underline">
+                Limpar busca
+              </button>
+            </div>
+          )}
           {filteredSections.map((section, sectionIdx) => {
             const isGestao = section.title === "Gestão";
             return (
@@ -258,7 +307,7 @@ export function AdminSidebar() {
                 <span
                   className={cn(
                     "text-[10px] font-bold uppercase tracking-[0.15em] flex items-center gap-1.5",
-                    isGestao ? "text-zinc-900" : "text-muted-foreground"
+                    isGestao ? "text-zinc-900" : "text-zinc-900"
                   )}
                 >
                   {section.emoji && <span className="text-xs">{section.emoji}</span>}
@@ -278,7 +327,7 @@ export function AdminSidebar() {
                           ? "bg-primary text-primary-foreground shadow-md"
                           : isGestao
                           ? "text-zinc-800 hover:bg-yellow-300"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          : "text-zinc-900 hover:bg-muted hover:text-black"
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
@@ -303,7 +352,7 @@ export function AdminSidebar() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2.5 text-muted-foreground hover:text-destructive text-[13px]"
+          className="w-full justify-start gap-2.5 text-zinc-900 hover:text-destructive text-[13px]"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />

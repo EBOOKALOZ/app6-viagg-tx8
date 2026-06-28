@@ -75,8 +75,10 @@ export default function App() {
                       {motoboyRoutes}
                     </Route>
 
-                    {/* ── Driver / Freteiro / Passageiro ── */}
-                    {driverRoutes}
+                    {/* ── Driver / Freteiro / Passageiro — ErrorBoundary isolado ── */}
+                    <Route element={<ErrorBoundary><Outlet /></ErrorBoundary>}>
+                      {driverRoutes}
+                    </Route>
 
                     {/* ── Admin — ErrorBoundary isolado ── */}
                     <Route element={<ErrorBoundary><Outlet /></ErrorBoundary>}>

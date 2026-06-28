@@ -1,17 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, Phone, User, Package, ArrowRight, Clock, Bike,
+  MapPin, Phone, User, Package, ArrowRight, Bike, XCircle,
   CheckCircle, CreditCard, QrCode, Loader2, Copy, ChevronRight,
-  Navigation, AlertCircle,
+  Navigation, AlertCircle, Map, Search, Lock, Pencil, ChevronLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import motoboyHero from "@/assets/motoboy-hero.png";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 import { viaggAI } from "@/lib/viaggAI";
+import { RideMapPremium } from "@/components/map/RideMapPremium";
+import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TIPOS
@@ -61,7 +66,10 @@ export default function PublicMotoboyRequest() {
   const [packageDescription, setPackageDescription] = useState("");
   const [originLat, setOriginLat] = useState<number | null>(null);
   const [originLng, setOriginLng] = useState<number | null>(null);
+  const [destLat, setDestLat] = useState<number | null>(null);
+  const [destLng, setDestLng] = useState<number | null>(null);
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [showOriginMap, setShowOriginMap] = useState(false);
 
   // State
   const [step, setStep] = useState<Step>("form");
@@ -71,6 +79,31 @@ export default function PublicMotoboyRequest() {
   const [submitting, setSubmitting] = useState(false);
   const [payMethod, setPayMethod] = useState<"pix" | "credit_card">("pix");
   const [payProcessing, setPayProcessing] = useState(false);
+
+  // ── Restaura corrida em andamento ao recarregar a página ──
+  useEffect(() => {
+    const saved = localStorage.getItem('public_ride_pending');
+    if (!saved) return;
+    try {
+      const { rideId } = JSON.parse(saved);
+      if (!rideId) return;
+      supabase.from('public_rides')
+        .select('id, tracking_code, status, estimated_price')
+        .eq('id', rideId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data) { localStorage.removeItem('public_ride_pending'); return; }
+          setRide(data as PendingRide);
+          if (data.status === 'motoboy_aceitou' || data.status === 'aguardando_pagamento') {
+            setStep('payment');
+          } else if (data.status === 'aguardando_motoboy') {
+            setStep('waiting');
+          } else {
+            localStorage.removeItem('public_ride_pending');
+          }
+        });
+    } catch (_) { localStorage.removeItem('public_ride_pending'); }
+  }, []);
 
   // ── GPS ──
   const handleGetGPS = () => {
@@ -85,6 +118,7 @@ export default function PublicMotoboyRequest() {
         setOriginLng(pos.coords.longitude);
         setOriginAddress(`Lat ${pos.coords.latitude.toFixed(5)}, Lng ${pos.coords.longitude.toFixed(5)}`);
         setGpsLoading(false);
+        setShowOriginMap(true);
         toast.success("Localização obtida!");
       },
       () => {
@@ -98,21 +132,25 @@ export default function PublicMotoboyRequest() {
   const handleCalculate = async () => {
     if (!visitorName.trim()) { toast.error("Informe seu nome"); return; }
     if (formatPhone(visitorPhone).length < 10) { toast.error("Informe um WhatsApp válido"); return; }
-    if (!originAddress.trim()) { toast.error("Informe o endereço de coleta"); return; }
-    if (!destinationAddress.trim()) { toast.error("Informe o endereço de entrega"); return; }
+    if (!originLat || !originLng) { toast.error("Informe o endereço de coleta e use GPS ou buscar"); return; }
+    if (!destLat || !destLng) { toast.error("Marque o ponto de entrega no mapa"); return; }
+
+    // Garante que destinationAddress reflita as coordenadas do mapa se o campo texto estiver vazio
+    const effectiveDestAddr = destinationAddress.trim() ||
+      `Lat ${destLat.toFixed(5)}, Lng ${destLng.toFixed(5)}`;
+    if (!destinationAddress.trim()) setDestinationAddress(effectiveDestAddr);
 
     setSubmitting(true);
     try {
       let price: RidePrice;
 
       if (originLat && originLng) {
-        // Coordenadas disponíveis → usar Haversine via RPC
-        // Como não temos as coords do destino, usamos uma estimativa
+        // Usa as coordenadas reais de coleta E entrega para cálculo preciso
         const { data, error } = await supabase.rpc("calculate_ride_price", {
           p_origin_lat: originLat,
           p_origin_lng: originLng,
-          p_dest_lat: originLat + 0.05,   // fallback: ~5.5 km de distância estimada
-          p_dest_lng: originLng + 0.05,
+          p_dest_lat: destLat,
+          p_dest_lng: destLng,
         });
         if (error) throw error;
         price = data as RidePrice;
@@ -173,7 +211,9 @@ export default function PublicMotoboyRequest() {
           origin_address: originAddress.trim(),
           origin_lat: originLat,
           origin_lng: originLng,
-          destination_address: destinationAddress.trim(),
+          destination_address: destinationAddress.trim() || (destLat && destLng ? `Lat ${destLat.toFixed(5)}, Lng ${destLng.toFixed(5)}` : ""),
+          destination_lat: destLat,
+          destination_lng: destLng,
           package_description: packageDescription.trim() || null,
           distance_km: priceData.distance_km,
           estimated_duration_min: priceData.duration_min,
@@ -187,6 +227,7 @@ export default function PublicMotoboyRequest() {
 
       if (error) throw error;
       setRide(data as PendingRide);
+      localStorage.setItem('public_ride_pending', JSON.stringify({ rideId: (data as PendingRide).id }));
       setStep("waiting");
     } catch (err) {
       toast.error("Erro ao criar solicitação. Tente novamente.");
@@ -196,10 +237,23 @@ export default function PublicMotoboyRequest() {
     }
   };
 
-  // ── REALTIME: aguardando motoboy aceitar ──
+  // ── REALTIME + POLLING: aguardando motoboy aceitar ──
+  // Realtime pode falhar para visitantes anônimos; polling de 4s garante a transição.
   useEffect(() => {
     if (step !== "waiting" || !ride) return;
 
+    const handleStatusUpdate = (status: string) => {
+      if (status === "motoboy_aceitou" || status === "aguardando_pagamento") {
+        toast.success("🛵 Motoboy encontrado! Realize o pagamento para confirmar.");
+        setStep("payment");
+      } else if (status === "cancelado") {
+        toast.error("Corrida expirada — nenhum motoboy disponível no momento.");
+        localStorage.removeItem('public_ride_pending');
+        setStep("form");
+      }
+    };
+
+    // 1) Realtime (melhor caso)
     const channel = supabase
       .channel(`public_ride_${ride.id}`)
       .on(
@@ -208,20 +262,40 @@ export default function PublicMotoboyRequest() {
         (payload) => {
           const updated = payload.new as PendingRide;
           setRide((prev) => prev ? { ...prev, ...updated } : prev);
-          if (updated.status === "motoboy_aceitou") {
-            toast.success("🛵 Motoboy encontrado! Realize o pagamento para confirmar.");
-            setStep("payment");
-          }
-          if (updated.status === "cancelado") {
-            toast.error("Corrida expirada — nenhum motoboy disponível no momento.");
-            setStep("form");
-          }
+          handleStatusUpdate(updated.status);
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [step, ride]);
+    // 2) Polling a cada 4s (fallback caso realtime não funcione para anônimos)
+    const poll = setInterval(async () => {
+      const { data } = await supabase
+        .from("public_rides")
+        .select("id, tracking_code, status, estimated_price")
+        .eq("id", ride.id)
+        .maybeSingle();
+      if (!data) return;
+      setRide((prev) => prev ? { ...prev, ...data } : prev);
+      handleStatusUpdate(data.status);
+    }, 4000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+    };
+  }, [step, ride?.id]);
+
+  // ── Cancelar chamada ──
+  const handleCancel = () => {
+    if (!ride) return;
+    localStorage.removeItem('public_ride_pending');
+    // fire-and-forget: não aguarda resposta (visitante anônimo pode não ter permissão de UPDATE)
+    supabase.from('public_rides').update({ status: 'cancelado' }).eq('id', ride.id).catch(() => {});
+    toast.info("Chamada cancelada.");
+    setRide(null);
+    setPriceData(null);
+    setStep('form');
+  };
 
   // ── STEP 4: Confirmar pagamento (simulado para v1) ──
   const handleConfirmPayment = async () => {
@@ -238,6 +312,7 @@ export default function PublicMotoboyRequest() {
       if (!data) throw new Error("Pagamento não confirmado pelo servidor.");
 
       toast.success("✅ Pagamento confirmado! Seu motoboy está a caminho.");
+      localStorage.removeItem('public_ride_pending');
       setStep("confirmed");
     } catch (err) {
       toast.error("Erro ao confirmar pagamento. Tente novamente.");
@@ -257,12 +332,27 @@ export default function PublicMotoboyRequest() {
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-[#F5E62B]">
-      {/* Header */}
-      <header className="pt-8 pb-6 px-4 text-center">
+    <MarketLayout
+      showSearch={false}
+      hideCart
+      headerChildren={<MarketNavButtons />}
+      blueFooter
+      blueFooterLabel="🛵 Motoboy"
+      mainClassName="bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-[#F5E62B]"
+    >
+      {/* Título da página */}
+      <div className="pt-6 pb-4 px-4 text-center relative">
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute left-4 top-6 md:top-8 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors shadow-sm"
+          title="Voltar"
+        >
+          <ChevronLeft className="w-6 h-6" />
+        </button>
         <div className="flex items-center justify-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shadow-lg">
-            <Bike className="w-7 h-7 text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shadow-lg overflow-hidden border border-white/30">
+            <img src={motoboyHero} alt="Motoboy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
+            <Bike className="w-7 h-7 text-white hidden" />
           </div>
           <div className="text-left">
             <h1 className="text-2xl font-black text-white leading-none">Chamar Motoboy</h1>
@@ -270,7 +360,7 @@ export default function PublicMotoboyRequest() {
           </div>
         </div>
         <StepIndicator current={step} />
-      </header>
+      </div>
 
       {/* Card principal */}
       <div className="px-4 pb-24 max-w-md mx-auto">
@@ -283,6 +373,11 @@ export default function PublicMotoboyRequest() {
             packageDescription={packageDescription} setPackageDescription={setPackageDescription}
             gpsLoading={gpsLoading} onGetGPS={handleGetGPS}
             hasGPS={!!(originLat && originLng)}
+            originLat={originLat} originLng={originLng}
+            onMapSelect={(lat, lng) => { setOriginLat(lat); setOriginLng(lng); }}
+            destLat={destLat} destLng={destLng}
+            onDestMapSelect={(lat, lng) => { setDestLat(lat); setDestLng(lng); }}
+            showMap={showOriginMap} setShowMap={setShowOriginMap}
             submitting={submitting} onSubmit={handleCalculate}
           />
         )}
@@ -301,7 +396,7 @@ export default function PublicMotoboyRequest() {
         )}
 
         {step === "waiting" && ride && (
-          <WaitingStep ride={ride} />
+          <WaitingStep ride={ride} onCancel={handleCancel} />
         )}
 
         {step === "payment" && ride && (
@@ -328,7 +423,7 @@ export default function PublicMotoboyRequest() {
         context="Assistente de solicitação de motoboy. O visitante está no processo de solicitar uma entrega pela plataforma VIAGG. Responda dúvidas sobre custos, prazos, itens aceitos e como funciona o serviço."
         welcomeMessage="Olá! 🛵 Sou a IA Viagg-TX8. Posso te ajudar com dúvidas sobre a entrega ou o nosso serviço!"
       />
-    </div>
+    </MarketLayout>
   );
 }
 
@@ -360,6 +455,11 @@ interface FormStepProps {
   destinationAddress: string; setDestinationAddress: (v: string) => void;
   packageDescription: string; setPackageDescription: (v: string) => void;
   gpsLoading: boolean; onGetGPS: () => void; hasGPS: boolean;
+  originLat: number | null; originLng: number | null;
+  onMapSelect: (lat: number, lng: number) => void;
+  destLat: number | null; destLng: number | null;
+  onDestMapSelect: (lat: number, lng: number) => void;
+  showMap: boolean; setShowMap: (v: boolean) => void;
   submitting: boolean; onSubmit: () => void;
 }
 
@@ -367,8 +467,124 @@ function FormStep({
   visitorName, setVisitorName, visitorPhone, setVisitorPhone,
   originAddress, setOriginAddress, destinationAddress, setDestinationAddress,
   packageDescription, setPackageDescription,
-  gpsLoading, onGetGPS, hasGPS, submitting, onSubmit,
+  gpsLoading, onGetGPS, hasGPS, originLat, originLng, onMapSelect,
+  destLat, destLng, onDestMapSelect,
+  showMap, setShowMap,
+  submitting, onSubmit,
 }: FormStepProps) {
+  const [geocoding, setGeocoding] = useState(false);
+  const [locationLocked, setLocationLocked] = useState(false);
+  const [originPlace, setOriginPlace] = useState<string | null>(null);
+  const [destPlace, setDestPlace] = useState<string | null>(null);
+
+  const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
+    const token = import.meta.env.VITE_MAPBOX_TOKEN;
+    // Mapbox Geocoding API — dados mais completos para o Brasil
+    if (token) {
+      try {
+        const res = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${token}&language=pt&country=BR&limit=1`
+        );
+        const data = await res.json();
+        const feature = data.features?.[0];
+        if (feature) {
+          const ctx: { id: string; text: string; short_code?: string }[] = feature.context || [];
+          const neighborhood =
+            ctx.find(c => c.id.startsWith("neighborhood") || c.id.startsWith("locality"))?.text || "";
+          const city = ctx.find(c => c.id.startsWith("place"))?.text || "";
+          const state =
+            ctx.find(c => c.id.startsWith("region"))?.short_code?.replace("BR-", "") ||
+            ctx.find(c => c.id.startsWith("region"))?.text || "";
+          const result = [neighborhood, city, state].filter(Boolean).join(", ");
+          if (result) return result;
+        }
+      } catch { /* cai no fallback */ }
+    }
+    // Fallback Nominatim
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`
+      );
+      const data = await res.json();
+      const addr = data.address || {};
+      const bairro = addr.suburb || addr.neighbourhood || addr.residential || addr.city_district || addr.quarter || "";
+      const cidade = addr.city || addr.town || addr.village || addr.municipality || "";
+      const estado = addr.state_code?.replace("BR-", "") || "";
+      return [bairro, cidade, estado].filter(Boolean).join(", ") || null;
+    } catch {
+      return null;
+    }
+  };
+
+  useEffect(() => {
+    if (!originLat || !originLng) { setOriginPlace(null); return; }
+    reverseGeocode(originLat, originLng).then(setOriginPlace);
+  }, [originLat, originLng]);
+
+  useEffect(() => {
+    if (!destLat || !destLng) { setDestPlace(null); return; }
+    reverseGeocode(destLat, destLng).then(setDestPlace);
+  }, [destLat, destLng]);
+
+  const geocodeAddress = async (address: string) => {
+    if (!address.trim()) return null;
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=br`,
+      { headers: { "Accept-Language": "pt-BR" } }
+    );
+    const data = await res.json();
+    if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return null;
+  };
+
+  const handleGeocode = async () => {
+    if (!originAddress.trim()) {
+      toast.error("Digite um endereço de coleta para buscar");
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const [originResult, destResult] = await Promise.all([
+        geocodeAddress(originAddress),
+        destinationAddress.trim() ? geocodeAddress(destinationAddress) : Promise.resolve(null),
+      ]);
+      if (originResult) {
+        onMapSelect(originResult.lat, originResult.lng);
+        setShowMap(true);
+        if (destResult) onDestMapSelect(destResult.lat, destResult.lng);
+        toast.success(destResult ? "Coleta e Entrega localizadas no mapa!" : "Coleta localizada no mapa!");
+      } else {
+        toast.error("Endereço de coleta não encontrado. Tente ser mais específico.");
+      }
+    } catch {
+      toast.error("Erro ao buscar endereços.");
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  const handleGecodeDest = async () => {
+    if (!destinationAddress.trim()) {
+      toast.error("Digite um endereço de entrega para buscar");
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const result = await geocodeAddress(destinationAddress);
+      if (result) {
+        onDestMapSelect(result.lat, result.lng);
+        setShowMap(true);
+        toast.success("Pino de entrega marcado no mapa!");
+      } else {
+        toast.error("Endereço de entrega não encontrado. Tente ser mais específico.");
+      }
+    } catch {
+      toast.error("Erro ao buscar endereço de entrega.");
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-6 space-y-5">
       <div>
@@ -402,36 +618,134 @@ function FormStep({
       {/* Origem */}
       <Field label="Endereço de coleta" icon={<MapPin className="w-4 h-4 text-green-500" />}>
         <div className="space-y-2">
-          <Input
-            value={originAddress}
-            onChange={(e) => setOriginAddress(e.target.value)}
-            placeholder="Rua, número, bairro, cidade"
-            className="rounded-xl border-zinc-200"
-          />
-          <button
-            onClick={onGetGPS}
-            disabled={gpsLoading}
-            className="flex items-center gap-2 text-[#FF6A00] text-xs font-bold hover:underline"
-          >
-            {gpsLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Navigation className="w-3 h-3" />
-            )}
-            {hasGPS ? "✅ Localização obtida" : "Usar minha localização atual"}
-          </button>
+          <div className="flex gap-2">
+            <Input
+              value={originAddress}
+              onChange={(e) => setOriginAddress(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleGeocode(); }}
+              placeholder="Rua, número, bairro, cidade"
+              className="rounded-xl border-zinc-200 flex-1"
+            />
+            <button
+              onClick={handleGeocode}
+              disabled={geocoding}
+              className="flex items-center gap-1.5 px-3 h-10 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white text-xs font-black rounded-xl transition-colors shrink-0"
+            >
+              {geocoding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              Buscar
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onGetGPS}
+              disabled={gpsLoading}
+              className="flex items-center gap-1.5 text-[#FF6A00] text-xs font-bold hover:underline"
+            >
+              {gpsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
+              {hasGPS ? "✅ GPS obtido" : "Usar GPS"}
+            </button>
+            <span className="text-zinc-300">|</span>
+            <button
+              onClick={() => setShowMap((v) => !v)}
+              className="flex items-center gap-1.5 text-blue-500 text-xs font-bold hover:underline"
+            >
+              <Map className="w-3 h-3" />
+              {showMap ? "Ocultar mapa" : "Selecionar no mapa"}
+            </button>
+          </div>
+
+          {showMap && !locationLocked && (
+            <>
+              <RideMapPremium
+                originLat={originLat ?? undefined}
+                originLng={originLng ?? undefined}
+                destLat={destLat ?? undefined}
+                destLng={destLng ?? undefined}
+                onOriginChange={(lat, lng) => {
+                  if (lat === 0 && lng === 0) { onMapSelect(0, 0); } // reset
+                  else { onMapSelect(lat, lng); setOriginAddress(`Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`); }
+                }}
+                onDestChange={(lat, lng) => {
+                  if (lat === 0 && lng === 0) onDestMapSelect(0, 0); // reset
+                  else onDestMapSelect(lat, lng);
+                }}
+                height={300}
+                className="mt-1 w-full"
+              />
+              <p className="text-[10px] text-zinc-400 text-center mt-1">
+                Arraste os pinos para ajustar a posição exata
+              </p>
+              <button
+                onClick={() => { setLocationLocked(true); setShowMap(false); }}
+                disabled={!originLat || !originLng}
+                style={{ position: "relative", zIndex: 1000 }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 hover:bg-green-600 active:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl transition-colors"
+              >
+                <Lock className="w-4 h-4" />
+                Travar e adicionar localização
+              </button>
+            </>
+          )}
+
+          {locationLocked && originLat && originLng && (
+            <div className="rounded-xl border border-green-300 bg-green-50 overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 py-2 bg-green-500">
+                <div className="flex items-center gap-2">
+                  <Lock className="w-3.5 h-3.5 text-white" />
+                  <p className="text-xs font-black text-white tracking-wide">Localização travada</p>
+                </div>
+                <button
+                  onClick={() => { setLocationLocked(false); setShowMap(true); }}
+                  className="flex items-center gap-1 text-[11px] text-white/80 hover:text-white font-bold"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Alterar
+                </button>
+              </div>
+
+              {/* Coleta */}
+              <div className="flex items-start gap-2.5 px-3 py-2.5 border-b border-green-200">
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[10px]">📦</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-green-700 uppercase tracking-widest">Coleta</p>
+                  <p className="text-xs font-black text-zinc-900 truncate">
+                    {originPlace || originAddress || "Buscando localização…"}
+                  </p>
+                  <p className="text-[10px] text-zinc-400 font-mono">
+                    {originLat.toFixed(6)}, {originLng.toFixed(6)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Entrega */}
+              <div className="flex items-start gap-2.5 px-3 py-2.5">
+                <div className="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[10px]">🏁</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Entrega</p>
+                  {destLat && destLng ? (
+                    <>
+                      <p className="text-xs font-black text-zinc-900 truncate">
+                        {destPlace || "Buscando localização…"}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 font-mono">
+                        {destLat.toFixed(6)}, {destLng.toFixed(6)}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-xs text-zinc-400 italic">Não marcado — abra o mapa e toque para marcar</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Field>
 
-      {/* Destino */}
-      <Field label="Endereço de entrega" icon={<MapPin className="w-4 h-4 text-red-500" />}>
-        <Input
-          value={destinationAddress}
-          onChange={(e) => setDestinationAddress(e.target.value)}
-          placeholder="Rua, número, bairro, cidade"
-          className="rounded-xl border-zinc-200"
-        />
-      </Field>
 
       {/* Pacote */}
       <Field label="O que será entregue? (opcional)" icon={<Package className="w-4 h-4" />}>
@@ -581,15 +895,34 @@ function PriceStep({
   );
 }
 
-function WaitingStep({ ride }: { ride: PendingRide }) {
-  const [elapsed, setElapsed] = useState(0);
+function WaitingStep({ ride, onCancel }: { ride: PendingRide; onCancel: () => void }) {
+  const CYCLE = 180; // 3 minutos
+  const [timeLeft, setTimeLeft] = useState(CYCLE);
+  const [showCancel, setShowCancel] = useState(false);
+
   useEffect(() => {
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const t = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          setShowCancel(true);
+          return CYCLE; // reinicia
+        }
+        return prev - 1;
+      });
+    }, 1000);
     return () => clearInterval(t);
   }, []);
 
+  const R = 36;
+  const circ = 2 * Math.PI * R;
+  const dashOffset = circ * (1 - timeLeft / CYCLE);
+  const min = Math.floor(timeLeft / 60);
+  const sec = timeLeft % 60;
+  const label = min > 0 ? `${min}:${sec.toString().padStart(2, '0')}` : `${sec}s`;
+
   return (
     <div className="bg-white rounded-3xl shadow-2xl p-8 text-center space-y-6">
+      {/* Ícone motoboy */}
       <div className="relative mx-auto w-24 h-24">
         <div className="absolute inset-0 rounded-full bg-orange-100 animate-ping opacity-50" />
         <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center shadow-xl">
@@ -604,16 +937,48 @@ function WaitingStep({ ride }: { ride: PendingRide }) {
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-2 text-zinc-400 text-sm">
-        <Clock className="w-4 h-4" />
-        <span>Aguardando há {elapsed}s</span>
+      {/* Contador regressivo verde */}
+      <div className="flex flex-col items-center gap-1">
+        <div className="relative" style={{ width: 88, height: 88 }}>
+          <svg width="88" height="88" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="44" cy="44" r={R} fill="none" stroke="#dcfce7" strokeWidth="8" />
+            <circle
+              cx="44" cy="44" r={R}
+              fill="none"
+              stroke="#16a34a"
+              strokeWidth="8"
+              strokeDasharray={circ}
+              strokeDashoffset={dashOffset}
+              strokeLinecap="round"
+              style={{ transition: 'stroke-dashoffset 0.9s linear' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-lg font-black text-green-600 tabular-nums">{label}</span>
+          </div>
+        </div>
+        <p className="text-[10px] font-bold text-green-600 uppercase tracking-wide">
+          {showCancel ? 'nova tentativa' : 'buscando motoboy'}
+        </p>
       </div>
 
+      {/* Código */}
       <div className="bg-zinc-50 rounded-2xl p-4 space-y-2">
         <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">Código da sua corrida</p>
         <p className="text-2xl font-black text-zinc-900 tracking-widest">{ride.tracking_code}</p>
         <p className="text-xs text-zinc-400">Anote para consultar o status depois</p>
       </div>
+
+      {/* Cancelar — aparece após o primeiro ciclo de 3 min */}
+      {showCancel && (
+        <button
+          onClick={onCancel}
+          className="w-full h-12 rounded-2xl border-2 border-red-300 bg-white text-red-500 font-black text-sm flex items-center justify-center gap-2 hover:bg-red-50 active:bg-red-100 transition-colors"
+        >
+          <XCircle className="w-5 h-5" />
+          Cancelar chamada
+        </button>
+      )}
 
       <p className="text-xs text-zinc-400">
         O motoboy tem 15 minutos para aceitar. Você será notificado imediatamente.

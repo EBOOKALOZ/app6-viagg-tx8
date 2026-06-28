@@ -59,8 +59,8 @@
     --motoboy-foreground: 0 0% 100%;
     --motoboy-hover: 25 100% 42%;
     --motoboy-light: 25 100% 96%;
-    --motoboy-header: 25 100% 94%;
-    --motoboy-header-foreground: 25 70% 20%;
+    --motoboy-header: 55 91% 57%;
+    --motoboy-header-foreground: 40 80% 12%;
     --motoboy-surface: 145 20% 96%;
     --motoboy-dashboard-bg: 148 18% 94%;
     --info-foreground: 0 0% 100%;
@@ -82,6 +82,18 @@
     --footer-motoboy-foreground: 0 0% 100%;
     --footer-motoboy-hover: 25 100% 42%;
     --footer-motoboy-border: 25 100% 45%;
+
+    /* Footer Moto-Táxi (amarelo) */
+    --footer-mototaxi-bg: 56 91% 56%;
+    --footer-mototaxi-foreground: 220 20% 10%;
+    --footer-mototaxi-hover: 56 91% 50%;
+    --footer-mototaxi-border: 56 91% 45%;
+
+    /* Footer Driver / Motorista (azul profissional) */
+    --footer-driver-bg: 217 91% 40%;
+    --footer-driver-foreground: 0 0% 100%;
+    --footer-driver-hover: 217 91% 32%;
+    --footer-driver-border: 217 91% 34%;
 
     /* Footer Merchant (preto institucional) */
     --footer-merchant-bg: 0 0% 12%;
@@ -181,8 +193,8 @@
     --motoboy-foreground: 0 0% 100%;
     --motoboy-hover: 25 100% 48%;
     --motoboy-light: 25 60% 15%;
-    --motoboy-header: 25 40% 18%;
-    --motoboy-header-foreground: 25 30% 85%;
+    --motoboy-header: 55 85% 42%;
+    --motoboy-header-foreground: 55 100% 95%;
     --motoboy-surface: 25 25% 12%;
 
     /* Merchant/Lojista Identity - Dark mode */
@@ -202,6 +214,18 @@
     --footer-motoboy-foreground: 0 0% 100%;
     --footer-motoboy-hover: 25 100% 42%;
     --footer-motoboy-border: 25 100% 45%;
+
+    /* Footer Moto-Táxi - Dark mode amarelo */
+    --footer-mototaxi-bg: 56 91% 56%;
+    --footer-mototaxi-foreground: 220 20% 10%;
+    --footer-mototaxi-hover: 56 91% 50%;
+    --footer-mototaxi-border: 56 91% 45%;
+
+    /* Footer Driver / Motorista - Dark mode (azul profissional) */
+    --footer-driver-bg: 217 91% 40%;
+    --footer-driver-foreground: 0 0% 100%;
+    --footer-driver-hover: 217 91% 32%;
+    --footer-driver-border: 217 91% 34%;
   }
 }
 

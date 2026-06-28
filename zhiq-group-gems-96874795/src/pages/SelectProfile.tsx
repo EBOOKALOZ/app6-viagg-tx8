@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2, CarFront, Briefcase, Truck, Plane } from "lucide-react";
+import { LogOut, Loader2, CarFront, Car, Briefcase, Truck, Plane } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -19,9 +19,9 @@ import appTheme from "@/assets/viagg_search_loop.mp3";
 /** Onboarding routes per profile */
 const ONBOARDING_ROUTES: Record<string, string> = {
   motoboy: "/motoboy/profile",
-  mototaxi: "/mototaxi/profile",
+  mototaxi: "/mototaxi",
   merchant: "/loja/minha-loja", // Redirecionado diretamente para o dashboard unificado!
-  driver: "/driver/completar",
+  driver: "/driver",
   passenger: "/passenger/completar",
 };
 
@@ -32,10 +32,13 @@ const ONBOARDING_ROUTES: Record<string, string> = {
 const PROFILE_HERO_IMAGES: Record<string, string> = {
   merchant: new URL("@/assets/comerciante-hero.png", import.meta.url).href,
   motoboy: new URL("@/assets/motoboy-hero.png", import.meta.url).href,
+  mototaxi: "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/platform-assets/moto-taxi.png",
 };
 
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
   motoboy: "Entregas rápidas de moto",
+  mototaxi: "Transporte de passageiros de moto",
+  driver: "Realize corridas de carro e gerencie suas comissões",
   merchant: "Aqui você gerencia sua loja, vende seus produtos e solicita aqui sua entrega",
   imoveis: "Anuncie imóveis e fale direto com os interessados",
   veiculos: "Anuncie veículos e fale direto com os interessados",
@@ -106,8 +109,15 @@ const SERVICOS_MOSAIC = [
   "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=400&q=70&auto=format&fit=crop",
 ];
 
+// Mosaico de 3 imagens para o card de Motorista.
+const DRIVER_MOSAIC = [
+  "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=500&q=70&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=500&q=70&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=500&q=70&auto=format&fit=crop",
+];
+
 // Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, Fretes, Viagens e Comprador.
-const CARD_ORDER = ["motoboy", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem"];
+const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================
@@ -170,7 +180,7 @@ export default function SelectProfile() {
     if (percent >= 100 && backendReady) {
       navigatedRef.current = true;
       const target = navigationTarget.current;
-      if (target) navigate(target, { replace: true });
+      if (target) window.location.href = target;
     }
   }, [percent, backendReady, progressActive, navigate]);
 
@@ -283,6 +293,12 @@ export default function SelectProfile() {
           p_user_id: user.id,
         } as any);
         if (error) console.warn("[SelectProfile] ensure_merchant_profile function is not ready in backend, continuing anyway:", error.message);
+      } else if (selected === "driver") {
+        // Garante que a linha driver_profiles existe (upsert silencioso)
+        const { error } = await supabase
+          .from("driver_profiles")
+          .upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+        if (error) console.warn("[SelectProfile] driver_profiles upsert failed, continuing anyway:", error.message);
       }
 
       // Adiciona o novo perfil ao array existente (não substitui)
@@ -318,7 +334,7 @@ export default function SelectProfile() {
         setBackendReady(true);
       } else {
         // Non-animated: navigate immediately
-        navigate(target, { replace: true });
+        window.location.href = target;
       }
     } catch (err: any) {
       toast({
@@ -353,13 +369,15 @@ export default function SelectProfile() {
               const isSel = selected === profile.id && !isComingSoon;
               const heroImage = PROFILE_HERO_IMAGES[profile.id];
               const isMotoboy = profile.id === "motoboy";
+              const isMotoTaxi = profile.id === "mototaxi";
               const isMerchant = profile.id === "merchant";
               const isImoveis = profile.id === "imoveis";
               const isVeiculos = profile.id === "veiculos";
               const isServicos = profile.id === "servicos";
               const isFretes = profile.id === "freteiro";
               const isViagem = profile.id === "viagem";
-              const isHighlighted = isMotoboy || isMerchant || isImoveis || isVeiculos || isServicos || isFretes || isViagem;
+              const isDriver = profile.id === "driver";
+              const isHighlighted = isMotoboy || isMotoTaxi || isMerchant || isImoveis || isVeiculos || isServicos || isFretes || isViagem || isDriver;
 
               return (
                 <div
@@ -379,6 +397,8 @@ export default function SelectProfile() {
                         "scale-[1.03] ring-[5px]",
                         isMotoboy
                           ? "ring-orange-500 shadow-[0_0_24px_rgba(249,115,22,0.5)]"
+                          : isMotoTaxi
+                            ? "ring-blue-500 shadow-[0_0_24px_rgba(59,130,246,0.6)]"
                           : isMerchant
                             ? "ring-yellow-400 shadow-[0_0_24px_rgba(234,179,8,0.5)]"
                             : isImoveis
@@ -391,23 +411,29 @@ export default function SelectProfile() {
                                     ? "ring-indigo-400 shadow-[0_0_24px_rgba(99,102,241,0.5)]"
                                     : isViagem
                                       ? "ring-sky-400 shadow-[0_0_24px_rgba(14,165,233,0.5)]"
+                                      : isDriver
+                                      ? "ring-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.5)]"
                                       : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                       )
                       : cn(
                         "ring-1 ring-white/15",
                         isMotoboy && "hover:ring-orange-400/50 hover:shadow-[0_0_12px_rgba(249,115,22,0.2)]",
+                        isMotoTaxi && "hover:ring-blue-400/60 hover:shadow-[0_0_12px_rgba(59,130,246,0.25)]",
                         isMerchant && "hover:ring-yellow-300/50 hover:shadow-[0_0_12px_rgba(234,179,8,0.2)]",
                         isImoveis && "hover:ring-emerald-400/50 hover:shadow-[0_0_12px_rgba(16,185,129,0.2)]",
                         isVeiculos && "hover:ring-blue-400/50 hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]",
                         isServicos && "hover:ring-violet-400/50 hover:shadow-[0_0_12px_rgba(139,92,246,0.2)]",
                         isFretes && "hover:ring-indigo-400/50 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]",
                         isViagem && "hover:ring-sky-400/50 hover:shadow-[0_0_12px_rgba(14,165,233,0.2)]",
+                        isDriver && "hover:ring-amber-400/50 hover:shadow-[0_0_12px_rgba(245,158,11,0.2)]",
                       )),
                   )}
                 >
                   {/* Background layer */}
                   {isMotoboy && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700" />
+                  ) : isMotoTaxi && isSel ? (
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700" />
                   ) : isMerchant && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600" />
                   ) : isImoveis && isSel ? (
@@ -418,6 +444,11 @@ export default function SelectProfile() {
                     <div className={cn(
                       "absolute inset-0 bg-gradient-to-br transition-all duration-300",
                       isSel ? "from-indigo-600 via-indigo-700 to-indigo-900" : "from-indigo-800 via-indigo-900 to-slate-900"
+                    )} />
+                  ) : isDriver ? (
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-br transition-all duration-300",
+                      isSel ? "from-amber-500 via-amber-600 to-orange-800" : "from-amber-800 via-amber-900 to-slate-900"
                     )} />
                   ) : isViagem ? (
                     <div className={cn(
@@ -525,6 +556,31 @@ export default function SelectProfile() {
                         ))}
                       </div>
                     </>
+                  ) : isDriver ? (
+                    <>
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <Car className={cn(
+                          "transition-all duration-300",
+                          isSel ? "w-28 h-28 text-white/30" : "w-24 h-24 text-white/15"
+                        )} />
+                      </div>
+                      <div className={cn(
+                        "absolute inset-0 grid grid-cols-1 grid-rows-3 gap-0.5 transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-80"
+                      )}>
+                        {DRIVER_MOSAIC.map((src, i) => (
+                          <img
+                            key={i}
+                            src={src}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                            className="h-full w-full object-cover"
+                          />
+                        ))}
+                      </div>
+                    </>
                   ) : isViagem ? (
                     <>
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -568,6 +624,8 @@ export default function SelectProfile() {
                     "absolute inset-0",
                     isMotoboy && isSel
                       ? "bg-gradient-to-t from-orange-900/70 via-transparent to-transparent"
+                      : isMotoTaxi && isSel
+                        ? "bg-gradient-to-t from-blue-900/60 via-transparent to-transparent"
                       : isMerchant && isSel
                         ? "bg-gradient-to-t from-yellow-900/70 via-transparent to-transparent"
                         : isImoveis && isSel

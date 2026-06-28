@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, Wifi, WifiOff, Loader2 } from 'lucide-react';
@@ -49,7 +48,6 @@ interface AvailableDeliveriesProps {
 export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesProps = {}) {
   const { user } = useAuth();
   const { requestDelivery } = usePaymentsOrchestrator();
-  const navigate = useNavigate();
   const [deliveries, setDeliveries] = useState<AvailableDelivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
@@ -331,7 +329,7 @@ export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesPro
 
       toast.success('Entrega aceita! Redirecionando...');
       onAccept?.();
-      navigate('/motoboy/rides');
+      window.location.href = '/motoboy/rides';
     } catch (error: any) {
       console.error('[AvailableDeliveries] Erro ao aceitar entrega:', error);
       toast.error(error.message || 'Erro ao aceitar entrega');

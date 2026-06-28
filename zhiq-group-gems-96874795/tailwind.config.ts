@@ -106,6 +106,18 @@ export default {
 				hover: 'hsl(var(--footer-motoboy-hover))',
 				border: 'hsl(var(--footer-motoboy-border))'
 			},
+			'footer-mototaxi': {
+				DEFAULT: 'hsl(var(--footer-mototaxi-bg))',
+				foreground: 'hsl(var(--footer-mototaxi-foreground))',
+				hover: 'hsl(var(--footer-mototaxi-hover))',
+				border: 'hsl(var(--footer-mototaxi-border))'
+			},
+			'footer-driver': {
+				DEFAULT: 'hsl(var(--footer-driver-bg))',
+				foreground: 'hsl(var(--footer-driver-foreground))',
+				hover: 'hsl(var(--footer-driver-hover))',
+				border: 'hsl(var(--footer-driver-border))'
+			},
 			'footer-merchant': {
 				DEFAULT: 'hsl(var(--footer-merchant-bg))',
 				foreground: 'hsl(var(--footer-merchant-foreground))',
