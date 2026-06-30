@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { usePostadorPremium } from "@/hooks/usePostadorPremium";
 import { usePostadorLotes } from "@/hooks/usePostadorLotes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -636,13 +636,23 @@ function LotKpiBar({ kpis, isLoading }: {
 
 export default function PostadorPremiumPanel() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
 
+    // Detecta qual perfil está usando o painel para auditoria correta
+    const callerProfile = location.pathname.startsWith("/mototaxi")
+        ? ("mototaxi" as const)
+        : location.pathname.startsWith("/driver")
+        ? ("driver" as const)
+        : location.pathname.startsWith("/motoboy")
+        ? ("motoboy" as const)
+        : ("postador" as const);
+
     // POSTADOR 3 — Lots
-    const lots = usePostadorLotes();
+    const lots = usePostadorLotes(callerProfile);
 
     // POSTADOR 2 — Legacy operational board
-    const legacy = usePostadorPremium();
+    const legacy = usePostadorPremium(callerProfile);
 
     const [activeTab, setActiveTab] = useState<"lotes" | "board" | "groups" | "history">("lotes");
 

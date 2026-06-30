@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMotoboyCommission } from "@/hooks/useMotoboyCommission";
 import { toast } from "sonner";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { startAuditEntry, finishAuditEntry, type AuditProfileType } from "@/lib/postingAudit";
 import type {
     PendingQueueItem,
     PostadorKPIsView,
@@ -19,7 +20,7 @@ import type {
 // POSTADOR 2 — com fluxo de reserva (claim)/confirmação/prova
 // ═══════════════════════════════════════
 
-export function usePostadorPremium() {
+export function usePostadorPremium(callerProfileType: AuditProfileType = "postador") {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const commission = useMotoboyCommission(user?.id);
@@ -191,6 +192,16 @@ export function usePostadorPremium() {
             pendingKeys.current.add(key);
             setActionState((prev) => ({ ...prev, [key]: "loading" }));
 
+            // Auditoria operacional (silenciosa)
+            const boardItem = operationalBoard.find((b) => b.target_id === targetId);
+            let auditId: string | null = null;
+            auditId = await startAuditEntry({
+                operatorId: user.id,
+                profileType: callerProfileType,
+                campaignQueueId: boardItem?.campaign_queue_id ?? undefined,
+                groupId: boardItem?.whatsapp_group_id ?? undefined,
+            });
+
             try {
                 // ═══════════════════════════════════════
                 // Step 1: CLAIM via target_id (POSTADOR 2)
@@ -311,6 +322,7 @@ export function usePostadorPremium() {
                 }
 
                 // ── Success ──
+                if (auditId) void finishAuditEntry(auditId, { success: true, proofType, proofUrl });
                 toast.success("✅ Postagem confirmada com sucesso!");
                 setActionState((prev) => ({ ...prev, [key]: "success" }));
 
@@ -324,6 +336,7 @@ export function usePostadorPremium() {
                 }), 3000);
             } catch (err: any) {
                 console.error("[PostadorPremium] confirmPosting error:", err);
+                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err?.message ?? "unknown_error" });
                 toast.error("Ocorreu um erro inesperado. Tente novamente.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));
             } finally {

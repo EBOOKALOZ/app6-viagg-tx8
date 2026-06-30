@@ -48,12 +48,12 @@ export function StoreAppLayout() {
     );
   }
 
-  if (error || !store) {
+  if (error) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
         <p className="text-red-500 mb-4">Falha ao acessar os dados da loja.</p>
         <p className="text-zinc-500 text-sm mb-6">{error?.message}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="px-6 py-2 bg-yellow-500 text-black font-semibold rounded-md"
         >
@@ -62,6 +62,7 @@ export function StoreAppLayout() {
       </div>
     );
   }
+  // !store sem error = lojista sem loja criada ainda → permite entrar (a página interna trata)
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 pb-20 md:pb-0">

@@ -33,6 +33,7 @@ const PROFILE_HERO_IMAGES: Record<string, string> = {
   merchant: new URL("@/assets/comerciante-hero.png", import.meta.url).href,
   motoboy: new URL("@/assets/motoboy-hero.png", import.meta.url).href,
   mototaxi: "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/platform-assets/moto-taxi.png",
+  driver: "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/motorista-card.png/Motorista.png",
 };
 
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
@@ -242,6 +243,26 @@ export default function SelectProfile() {
         setProgressActive(false);
         return;
       }
+    }
+
+    // Lojista: vai direto para o painel do anunciante (AdvertiserProtectedRoute cuida do acesso).
+    // Não usa a rota /loja/minha-loja para evitar bloqueio por loja inexistente.
+    if (selected === "merchant") {
+      navigationTarget.current = "/anunciante/painel";
+      // Atualiza perfil no BD em background (sem bloquear a navegação)
+      void (async () => {
+        try {
+          await supabase.rpc("ensure_merchant_profile", { p_user_id: user.id } as any).catch(() => {});
+          const updated = availableProfiles.includes("merchant")
+            ? availableProfiles
+            : [...availableProfiles, "merchant"];
+          await (supabase.from("profiles") as any)
+            .update({ available_profiles: updated, active_profile: "merchant" })
+            .eq("id", user.id);
+        } catch { /* silencioso */ }
+      })();
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
     }
 
     // Imóveis: vai pro painel resumido de vendedores de imóveis.
@@ -557,30 +578,17 @@ export default function SelectProfile() {
                       </div>
                     </>
                   ) : isDriver ? (
-                    <>
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <Car className={cn(
-                          "transition-all duration-300",
-                          isSel ? "w-28 h-28 text-white/30" : "w-24 h-24 text-white/15"
-                        )} />
-                      </div>
-                      <div className={cn(
-                        "absolute inset-0 grid grid-cols-1 grid-rows-3 gap-0.5 transition-opacity duration-300",
-                        isSel ? "opacity-25 blur-[2px]" : "opacity-80"
-                      )}>
-                        {DRIVER_MOSAIC.map((src, i) => (
-                          <img
-                            key={i}
-                            src={src}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-                            className="h-full w-full object-cover"
-                          />
-                        ))}
-                      </div>
-                    </>
+                    <img
+                      src={heroImage}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                      className={cn(
+                        "absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-90",
+                      )}
+                    />
                   ) : isViagem ? (
                     <>
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

@@ -8,7 +8,7 @@ interface MarketNavButtonsProps {
 
 const ROUTES: { label: string; path: string }[] = [
   { label: "Corridas",          path: "/corridas-inicio" },
-  { label: "Motoboy",           path: "/motoboy-inicio" },
+  // { label: "Motoboy",           path: "/motoboy-inicio" }, // Hidden per user request
   { label: "Mercado",           path: "/mercado" },
   { label: "Imóveis",           path: "/imoveis" },
   { label: "Veículos",          path: "/automoveis" },

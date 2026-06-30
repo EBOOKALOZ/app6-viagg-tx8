@@ -209,7 +209,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
     ...(showMerchantOnlyItems ? [{ name: "Minha Loja", href: "/loja/minha-loja", icon: Store }] : []),
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
-    ...(showMerchantOnlyItems ? [{ name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone }] : []),
+    ...(showMerchantOnlyItems ? [{ name: "Divulgar Grátis", href: "/anunciante/produtos/divulgar-gratis", icon: Megaphone }] : []),
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     ...(showMerchantOnlyItems ? [
       { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },

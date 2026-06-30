@@ -121,7 +121,8 @@ export const advertiserRoutes = (
     <Route path="/anunciante/ofertas-recebidas" element={<Suspense fallback={<PageFallback />}><AdvertiserOffersPage /></Suspense>} />
     <Route path="/anunciante/pedidos"          element={<Suspense fallback={<PageFallback />}><StoreOrdersPage /></Suspense>} />
     <Route path="/anunciante/visitas"          element={<Suspense fallback={<PageFallback />}><AdvertiserVisitsPage /></Suspense>} />
-    <Route path="/anunciante/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
+    <Route path="/anunciante/divulgar-gratis"         element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
+    <Route path="/anunciante/produtos/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/carteira"        element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
     <Route path="/anunciante/suporte"        element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
   </Route>

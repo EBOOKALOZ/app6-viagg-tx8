@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, Loader2 } from "lucide-react";
+import { X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { viaggAI, type AIMessage } from "@/lib/viaggAI";
-import motoboyHero from "@/assets/motoboy-hero.png";
+import viaggLogo from "@/assets/logo.png";
 
 interface ViaggAIChatProps {
   context?: string;
@@ -16,7 +16,7 @@ interface ViaggAIChatProps {
 export function ViaggAIChat({
   context,
   placeholder = "Pergunte à IA Viagg-TX8...",
-  welcomeMessage = "Olá! 👋 Sou a IA Viagg-TX8. Como posso te ajudar com sua entrega?",
+  welcomeMessage = "Olá! 👋 Somos a IA Viagg-TX8. Como posso te ajudar com sua entrega?",
   className,
 }: ViaggAIChatProps) {
   const [open, setOpen] = useState(false);
@@ -30,6 +30,13 @@ export function ViaggAIChat({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
+
+  // Abre o chat quando o card de IA na página de corridas é clicado
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("viagg-ai:open", handler);
+    return () => window.removeEventListener("viagg-ai:open", handler);
+  }, []);
 
   async function handleSend() {
     const text = input.trim();
@@ -59,8 +66,8 @@ export function ViaggAIChat({
           {/* Header */}
           <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
+                <img src={viaggLogo} alt="Viagg-TX8" className="w-full h-full object-cover" />
               </div>
               <div>
                 <p className="text-white font-black text-sm leading-none">IA Viagg-TX8</p>
@@ -83,8 +90,8 @@ export function ViaggAIChat({
                 )}
               >
                 {msg.role === "assistant" && (
-                  <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mr-2 shrink-0 mt-1">
-                    <Bot className="w-3 h-3 text-[#FF6A00]" />
+                  <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 mt-1">
+                    <img src={viaggLogo} alt="IA" className="w-full h-full object-cover" />
                   </div>
                 )}
                 <div
@@ -101,8 +108,8 @@ export function ViaggAIChat({
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center mr-2 shrink-0 mt-1">
-                  <Bot className="w-3 h-3 text-[#FF6A00]" />
+                <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 mt-1">
+                  <img src={viaggLogo} alt="IA" className="w-full h-full object-cover" />
                 </div>
                 <div className="bg-white shadow-sm border border-zinc-100 rounded-2xl rounded-tl-sm px-3 py-2">
                   <Loader2 className="w-4 h-4 text-[#FF6A00] animate-spin" />
@@ -138,21 +145,20 @@ export function ViaggAIChat({
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all overflow-hidden border-2 border-white/20",
+          "w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all overflow-hidden border-2 border-amber-400/30",
           open
-            ? "bg-zinc-700 hover:bg-zinc-800"
-            : "bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] hover:scale-105"
+            ? "bg-zinc-800 hover:bg-zinc-900"
+            : "bg-[#0d3728] hover:scale-105"
         )}
       >
         {open ? (
           <X className="w-6 h-6 text-white" />
         ) : (
-          <div className="w-full h-full relative">
-            <img src={motoboyHero} alt="Chat" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
-            <div className="hidden absolute inset-0 flex items-center justify-center">
-              <MessageCircle className="w-6 h-6 text-white" />
-            </div>
-          </div>
+          <img
+            src={viaggLogo}
+            alt="IA Viagg-TX8"
+            className="w-full h-full object-cover"
+          />
         )}
       </button>
     </div>

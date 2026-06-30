@@ -313,7 +313,7 @@ function PromoCardWidget({ onCountChange }: { onCountChange?: (n: number) => voi
 // MAIN — CENTRAL DE POSTAGENS
 // ═══════════════════════════════════════
 export default function MotoboyCampaignInbox() {
-    const postador = usePostadorOperacional();
+    const postador = usePostadorOperacional("motoboy");
     const [activeTab, setActiveTab] = useState<"campanhas" | "historico">("campanhas");
     const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
     const [promoCount, setPromoCount] = useState(0);

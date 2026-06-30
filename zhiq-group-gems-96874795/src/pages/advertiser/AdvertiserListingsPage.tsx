@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Package,
   Plus,
@@ -29,6 +29,15 @@ import {
   Play,
   Pause,
   Send,
+  Star,
+  Brain,
+  Sparkles,
+  LayoutGrid,
+  List as ListIcon,
+  Share2,
+  Activity,
+  Calendar,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +114,29 @@ export default function AdvertiserListingsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>('listings');
+
+  // ── Novas UI states ──
+  const [statusFilter, setStatusFilter] = useState<"all"|"active"|"paused"|"review">("all");
+  const [viewMode, setViewMode] = useState<"grid"|"list">("list");
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("viagg_fav_mercado") || "[]")); }
+    catch { return new Set<string>(); }
+  });
+
+  const toggleFav = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      try { localStorage.setItem("viagg_fav_mercado", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  const handleShare = (id: string) => {
+    const url = `${window.location.origin}/produto/${id}`;
+    navigator.clipboard?.writeText(url).then(() => toast.success("Link copiado!")).catch(() => {});
+  };
 
   // ── Hooks de leilão e créditos ──
   const { receivedOffers, loadingOffers, respondOffer } = useAdvertiserArremate();
@@ -467,10 +499,30 @@ export default function AdvertiserListingsPage() {
     onError: (err: any) => toast.error(`Erro ao alterar status: ${err.message}`)
   });
 
-  const filteredListings = listingsQuery.data?.filter(l =>
-    l.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    l.city?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // KPI computado dos dados carregados
+  const kpi = useMemo(() => {
+    const all = listingsQuery.data ?? [];
+    return {
+      total:  all.length,
+      active: all.filter(l => ["active","published"].includes(l.status?.toLowerCase())).length,
+      paused: all.filter(l => l.status?.toLowerCase() === "paused").length,
+      review: all.filter(l => ["pending_review","moderating"].includes(l.status?.toLowerCase())).length,
+    };
+  }, [listingsQuery.data]);
+
+  const filteredListings = listingsQuery.data?.filter(l => {
+    const matchesSearch = (
+      l.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      l.city?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const s = l.status?.toLowerCase();
+    const matchesStatus =
+      statusFilter === "all" ? true :
+      statusFilter === "active" ? ["active","published"].includes(s) :
+      statusFilter === "paused" ? s === "paused" :
+      statusFilter === "review" ? ["pending_review","moderating"].includes(s) : true;
+    return matchesSearch && matchesStatus;
+  });
 
   // ── Aceitar oferta com créditos ──
   const handleAcceptOffer = async (offerId: string) => {
@@ -479,22 +531,45 @@ export default function AdvertiserListingsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-black text-[#F5F7FA] tracking-tight flex items-center gap-3">
-            <Package className="w-8 h-8 text-[#FF6A00]" />
-            MEUS ANÚNCIOS
-          </h1>
-          <p className="text-[#A7B0BE] font-medium tracking-tight">Gerencie suas ofertas e acompanhe o status de cada publicação.</p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* ── Header com KPI ── */}
+      <div className="bg-gradient-to-br from-[#FF6A00] to-[#E05A00] -mx-4 md:-mx-6 -mt-6 px-6 pt-8 pb-6 mb-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+          <div>
+            <h1 className="text-2xl font-black text-white flex items-center gap-3">
+              <Package className="w-7 h-7 text-white/80" />
+              MEUS ANÚNCIOS — MERCADO
+            </h1>
+            <p className="text-white/70 text-sm mt-1">Gerencie suas ofertas e acompanhe o status de cada publicação.</p>
+          </div>
+          <Button
+            onClick={() => navigate("/anunciante/anuncios/novo")}
+            className="bg-white text-[#FF6A00] font-black uppercase text-xs tracking-widest h-11 px-5 rounded-xl shadow-lg gap-2 hover:bg-white/90 shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Novo Anúncio
+          </Button>
         </div>
-        <Button
-          onClick={() => navigate("/anunciante/anuncios/novo")}
-          className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest h-12 px-6 rounded-xl shadow-lg shadow-[#FF6A00]/20 gap-2 transition-all hover:scale-105 active:scale-95"
-        >
-          <Plus className="w-5 h-5" /> Novo Anúncio
-        </Button>
+
+        {/* KPI bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[
+            { label: "Total",      value: kpi.total,  icon: Activity,     color: "text-white"       },
+            { label: "Publicados", value: kpi.active, icon: CheckCircle2, color: "text-green-200"   },
+            { label: "Pausados",   value: kpi.paused, icon: Clock,        color: "text-orange-200"  },
+            { label: "Em Análise", value: kpi.review, icon: AlertCircle,  color: "text-yellow-200"  },
+          ].map(k => {
+            const Icon = k.icon;
+            return (
+              <div key={k.label} className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 flex items-center gap-2">
+                <Icon className={cn("h-4 w-4 shrink-0", k.color)} />
+                <div>
+                  <div className="text-xl font-black text-white leading-none">{k.value}</div>
+                  <div className="text-[10px] text-white/60">{k.label}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <AdvertiserCommercialRuleCard />
@@ -531,16 +606,56 @@ export default function AdvertiserListingsPage() {
       {/* ──────────────────────────────────────────────── */}
       {activeTab === 'listings' && (
         <>
-          <div className="flex flex-col sm:flex-row gap-4">
+          {/* GLM IA Banner */}
+          <div className="flex items-center gap-3 bg-violet-950/40 border border-violet-700/30 rounded-2xl px-4 py-3">
+            <div className="h-9 w-9 rounded-xl bg-violet-700/30 border border-violet-600/30 flex items-center justify-center shrink-0">
+              <Brain className="h-4 w-4 text-violet-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[13px] font-semibold text-violet-300">Gestão Inteligente — GLM IA</p>
+              <p className="text-[11px] text-violet-500">Análise de performance, precificação competitiva e previsão de demanda por categoria</p>
+            </div>
+            <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
+          </div>
+
+          {/* Search + View Toggle */}
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A7B0BE] group-focus-within:text-[#FF6A00] transition-colors" />
               <Input
                 placeholder="Buscar por título, cidade ou categoria..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 rounded-xl border-[#2A3038] bg-[#1B1F24] text-[#F5F7FA] placeholder:text-[#A7B0BE] focus-visible:ring-[#FF6A00]/20 focus-visible:border-[#FF6A00] transition-all font-medium"
+                className="pl-12 h-11 rounded-xl border-[#2A3038] bg-[#1B1F24] text-[#F5F7FA] placeholder:text-[#A7B0BE] focus-visible:ring-[#FF6A00]/20 focus-visible:border-[#FF6A00] transition-all font-medium"
               />
             </div>
+            <div className="flex gap-1 bg-[#1B1F24] border border-[#2A3038] rounded-xl p-1 shrink-0">
+              <button onClick={() => setViewMode("grid")} className={cn("p-2 rounded-lg transition-colors", viewMode === "grid" ? "bg-[#FF6A00] text-white" : "text-[#A7B0BE] hover:text-white")} title="Grade"><LayoutGrid className="h-4 w-4" /></button>
+              <button onClick={() => setViewMode("list")} className={cn("p-2 rounded-lg transition-colors", viewMode === "list" ? "bg-[#FF6A00] text-white" : "text-[#A7B0BE] hover:text-white")} title="Lista"><ListIcon className="h-4 w-4" /></button>
+            </div>
+          </div>
+
+          {/* Status filter tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {([
+              { key: "all",    label: "Todos",       count: kpi.total  },
+              { key: "active", label: "✓ Publicados", count: kpi.active },
+              { key: "paused", label: "⏸ Pausados",  count: kpi.paused },
+              { key: "review", label: "🕐 Em Análise",count: kpi.review },
+            ] as const).map(f => (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={cn(
+                  "shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border whitespace-nowrap transition-all",
+                  statusFilter === f.key
+                    ? "bg-[#FF6A00] text-white border-[#FF6A00] shadow-sm shadow-[#FF6A00]/20"
+                    : "bg-[#1B1F24] text-[#A7B0BE] border-[#2A3038] hover:border-[#FF6A00]/40 hover:text-white"
+                )}
+              >
+                {f.label}{f.count > 0 ? ` (${f.count})` : ""}
+              </button>
+            ))}
           </div>
 
           {listingsQuery.isLoading ? (
@@ -561,7 +676,87 @@ export default function AdvertiserListingsPage() {
                 <Button onClick={() => navigate("/anunciante/anuncios/novo")} className="h-14 px-10 rounded-2xl bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-[#FF6A00]/20">começar agora</Button>
               </CardContent>
             </Card>
+          ) : viewMode === "grid" ? (
+            /* ── Grade de cards ── */
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filteredListings.map((listing) => {
+                const isFav    = favorites.has(listing.id);
+                const isActive = ["active","published"].includes(listing.status?.toLowerCase());
+                const days     = (() => { try { return Math.max(0, Math.floor((Date.now() - new Date(listing.raw.created_at).getTime()) / 86_400_000)); } catch { return 0; } })();
+                return (
+                  <div key={listing.id} className="bg-[#1B1F24] border border-[#2A3038] rounded-2xl overflow-hidden flex flex-col hover:shadow-xl hover:shadow-black/30 transition-all hover:-translate-y-0.5">
+                    {/* Imagem */}
+                    <div className="relative h-44 bg-[#14171B] overflow-hidden">
+                      {listing.image ? (
+                        <img src={listing.image} alt="" className={cn("w-full h-full object-cover", !isActive && "opacity-50")} onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="w-10 h-10 text-[#2A3038]" /></div>
+                      )}
+                      <div className="absolute top-2 left-2">{getStatusBadge(listing.status)}</div>
+                      <button onClick={e => toggleFav(listing.id, e)} className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/40 backdrop-blur-sm hover:bg-black/60">
+                        <Star className={cn("h-3.5 w-3.5", isFav ? "fill-yellow-400 text-yellow-400" : "text-white/70")} />
+                      </button>
+                      {listing.listingMode && listing.listingMode !== "normal" && (
+                        <div className="absolute bottom-2 left-2"><ListingModeBadge mode={listing.listingMode} endsAt={listing.auctionEndsAt} /></div>
+                      )}
+                    </div>
+                    {/* Conteúdo */}
+                    <div className="p-4 flex flex-col flex-1 gap-2">
+                      <h3 className="font-bold text-[14px] text-[#F5F7FA] line-clamp-2 leading-snug">{listing.title || "Sem título"}</h3>
+                      <div className="flex items-center gap-2 text-[11px] text-[#A7B0BE]">
+                        <span className="text-sm">🛒</span>
+                        <span className="font-semibold">{listing.typeLabel}</span>
+                      </div>
+                      {(listing.city || listing.state) && (
+                        <div className="flex items-center gap-1 text-[11px] text-[#A7B0BE]">
+                          <MapPin className="h-3 w-3 shrink-0 text-[#FF6A00]" />
+                          {[listing.city, listing.state].filter(Boolean).join(", ")}
+                        </div>
+                      )}
+                      <div className="text-lg font-black text-[#FF6A00] leading-none">{formatCurrencyBRL(listing.price)}</div>
+                      <div className="flex items-center gap-3 text-[10px] text-[#A7B0BE] pt-1 border-t border-[#2A3038]">
+                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {days}d</span>
+                        <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-violet-400" />GLM: {isActive ? "Ativo" : "Inativo"}</span>
+                      </div>
+                      {/* Ações */}
+                      <div className="flex gap-2 mt-auto pt-2">
+                        <Button size="sm" onClick={() => { if (listing.source === "merchant_marketing_products") navigate("/anunciante/minha-loja"); else navigate(`/anunciante/anuncios/editar/produto/${listing.id}`); }} className="flex-1 h-9 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black text-[10px] uppercase rounded-xl gap-1">
+                          <Edit className="h-3 w-3" /> Editar
+                        </Button>
+                        <button onClick={() => handleShare(listing.id)} className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white hover:border-[#FF6A00]/40 transition-colors" title="Copiar link"><Share2 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => window.open(`/produto/${listing.id}`, "_blank")} className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white transition-colors" title="Ver anúncio"><Eye className="h-3.5 w-3.5" /></button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white transition-colors"><MoreVertical className="h-3.5 w-3.5" /></button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl shadow-2xl border-zinc-100">
+                            <DropdownMenuItem disabled={dispatchingId === listing.id} onClick={() => dispatchToQueue(listing.id, listing.category)} className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-[#25D366] hover:bg-[#25D366]/10 mb-1">
+                              {dispatchingId === listing.id ? <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</> : <><Send className="w-4 h-4" /> Divulgar</>}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {isActive ? (
+                              <DropdownMenuItem onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status, source: listing.source })} className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-amber-600 hover:bg-amber-50 mb-1">
+                                <Pause className="w-4 h-4" /> Pausar
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status, source: listing.source })} className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-emerald-600 hover:bg-emerald-50 mb-1">
+                                <Play className="w-4 h-4" /> Ativar
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => deleteListing.mutate({ id: listing.id, category: listing.category, source: listing.source })} className="text-destructive font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer hover:bg-red-50">
+                              <Trash2 className="w-4 h-4" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
+            /* ── Tabela (modo lista, original) ── */
             <div className="bg-[#1B1F24] rounded-[32px] border border-[#2A3038] shadow-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">

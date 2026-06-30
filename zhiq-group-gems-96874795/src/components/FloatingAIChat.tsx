@@ -89,7 +89,7 @@ export function FloatingAIChat() {
       const { data, error: fnError } = await supabase.functions.invoke('ai-chat', {
         body: {
           messages: apiMessages,
-          model: 'glm-4-plus',
+          model: undefined, // usa modelo padrão configurado em src/lib/ai/config.ts
           max_tokens: 800,
           temperature: 0.7,
         },

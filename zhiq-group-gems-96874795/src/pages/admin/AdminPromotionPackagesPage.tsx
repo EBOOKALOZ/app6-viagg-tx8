@@ -309,7 +309,7 @@ export default function AdminPromotionPackagesPage() {
     if (!glmCmd.trim()) return;
     setGlmBusy(true); setGlmPreview(null); setGlmParsed(null);
     try {
-      const raw = await chatCompletion(glmCmd, "glm-4-plus", buildGlmPrompt(packages));
+      const raw = await chatCompletion(glmCmd, undefined, buildGlmPrompt(packages));
       const parsed = JSON.parse(raw.trim()) as Record<string, unknown>;
       setGlmParsed(parsed);
       setGlmPreview((parsed.confirmation_message as string) ?? "Operação pronta.");

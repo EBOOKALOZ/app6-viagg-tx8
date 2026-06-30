@@ -196,7 +196,7 @@ ${context}`;
         ? `Histórico da conversa:\n${history}\n\nNova pergunta: ${question}`
         : question;
 
-      const reply = await chatCompletion(fullQuestion, "glm-4-plus", systemPrompt);
+      const reply = await chatCompletion(fullQuestion, undefined, systemPrompt);
       setMessages((m) => [...m, { role: "assistant", content: reply, ts: Date.now() }]);
     } catch (e: any) {
       setError(e?.message ?? "Erro ao conectar com a IA. Verifique se a edge function ai-chat está deployada.");

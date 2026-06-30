@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-const MODEL = "glm-4-plus";
+const MODEL = "gpt-4o-mini";
 const KIND_LABEL: Record<"imovel" | "veiculo" | "servico" | "produto", string> = {
   imovel: "imóvel",
   veiculo: "veículo",

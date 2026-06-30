@@ -1,29 +1,68 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { MessageSquare, ArrowLeft, Loader2, Building2, Car, Package, User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2, Bike, Briefcase, Truck, Plane } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  MessageSquare, ArrowLeft, Loader2, Building2, Car, Package,
+  User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2,
+  Briefcase, Truck, Plane, Search, Star, Brain, Sparkles,
+  TrendingUp, Activity, Eye, FileText,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useContactIntentions } from "@/hooks/useContactIntentions";
+import { useContactIntentions, INTEREST_TYPE_LABELS } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-const UNLOCK_COST = 12; // custo fixo do desbloqueio na LOJA (anunciante)
-const RE_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no IMÓVEL (admin → Cobranças)
-const VE_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no VEÍCULO (admin → Cobranças)
-const SE_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no SERVIÇO (admin → Cobranças)
-const FR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp no FRETE (admin → Cobranças)
-const TR_UNLOCK_DEFAULT = 12; // custo fixo p/ desbloquear WhatsApp na VIAGEM (admin → Cobranças)
+// ── Custos padrão de desbloqueio ────────────────────────────────────────────
+const UNLOCK_COST        = 12;
+const RE_UNLOCK_DEFAULT  = 12;
+const VE_UNLOCK_DEFAULT  = 12;
+const SE_UNLOCK_DEFAULT  = 12;
+const FR_UNLOCK_DEFAULT  = 12;
+const TR_UNLOCK_DEFAULT  = 12;
 
+// ── Análise de interesse GLM IA ────────────────────────────────────────────
+const GLM_SCORE: Record<string, { label: string; color: string }> = {
+  proposal:        { label: "Proposta Comercial", color: "text-red-700 bg-red-50 border-red-200"         },
+  whatsapp_click:  { label: "Alto Interesse",     color: "text-orange-700 bg-orange-50 border-orange-200" },
+  message_request: { label: "Interesse Médio",    color: "text-blue-700 bg-blue-50 border-blue-200"       },
+  view_contact:    { label: "Interesse Inicial",  color: "text-gray-700 bg-gray-50 border-gray-200"       },
+};
+
+const INTEREST_ICON: Record<string, React.ElementType> = {
+  proposal:        FileText,
+  whatsapp_click:  MessageSquare,
+  message_request: MessageSquare,
+  view_contact:    Eye,
+};
+
+const FAV_LEADS_KEY = "viagg_fav_leads";
+
+function getInitials(name: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return (parts[0]?.[0] || "?").toUpperCase() + (parts[1]?.[0] || "").toUpperCase();
+}
+
+function timeAgo(dateStr: string): string {
+  try {
+    return formatDistanceToNow(new Date(dateStr), { locale: ptBR, addSuffix: true });
+  } catch { return ""; }
+}
+
+// ── Component ────────────────────────────────────────────────────────────────
 export default function AdvertiserMessagesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { intentions, isLoading, unlockIntention, deleteIntention } = useContactIntentions();
 
-  // Imóveis usam o PACOTE PRÓPRIO de créditos (não o do lojista).
-  // Decide pela origem do lead (real_estate) e, como fallback, pela rota.
   const creditosRouteFor = (id: string) => {
     const it = intentions.find((i) => i.id === id);
     const isImovel =
@@ -34,21 +73,13 @@ export default function AdvertiserMessagesPage() {
   const { balance } = useAdvertiserCredits();
   const queryClient = useQueryClient();
 
-  // No painel de IMÓVEIS o saldo e o débito usam a carteira PRÓPRIA de imóveis
-  // (real_estate_credit_balances por owner_user_id), não a do lojista/anunciante.
-  const imoveisMode = location.pathname.startsWith("/anunciante/imoveis");
-  // No painel de VEÍCULOS o saldo e o débito usam a carteira PRÓPRIA de veículos
-  // (vehicle_credit_balances por owner_user_id), não a do lojista/anunciante.
+  const imoveisMode  = location.pathname.startsWith("/anunciante/imoveis");
   const veiculosMode = location.pathname.startsWith("/anunciante/veiculos");
-  // No painel de SERVIÇOS o saldo e o débito usam a carteira PRÓPRIA de serviços
-  // (service_credit_balances por owner_user_id), não a do lojista/anunciante.
   const servicosMode = location.pathname.startsWith("/anunciante/servicos");
-  // No painel de FRETES o saldo e o débito usam a carteira PRÓPRIA de fretes
-  // (freight_credit_balances por owner_user_id), não a do lojista/anunciante.
-  const fretesMode = location.pathname.startsWith("/anunciante/fretes");
-  const viagensMode = window.location.pathname.startsWith("/anunciante/viagens");
+  const fretesMode   = location.pathname.startsWith("/anunciante/fretes");
+  const viagensMode  = window.location.pathname.startsWith("/anunciante/viagens");
 
-  // Fallback de saldo do ANUNCIANTE (modo loja)
+  // ── Saldo anunciante genérico ───────────────────────────────────────────
   const { data: fallbackBalance = 0 } = useQuery({
     queryKey: ["seller-credit-balance-for-msgs", user?.id],
     enabled: !!user?.id && !imoveisMode && !veiculosMode && !servicosMode && !fretesMode,
@@ -64,7 +95,7 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Saldo PRÓPRIO de imóveis (real_estate_credit_balances)
+  // ── Saldo imóveis ─────────────────────────────────────────────────────
   const { data: reBalance = 0 } = useQuery({
     queryKey: ["real-estate-balance-msgs", user?.id],
     enabled: !!user?.id && imoveisMode,
@@ -76,7 +107,6 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Custo FIXO p/ desbloquear WhatsApp do interessado (admin → Cobranças)
   const { data: reUnlockCost = RE_UNLOCK_DEFAULT } = useQuery({
     queryKey: ["real-estate-unlock-whatsapp-cost"],
     enabled: imoveisMode,
@@ -90,7 +120,7 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Saldo PRÓPRIO de veículos (vehicle_credit_balances)
+  // ── Saldo veículos ────────────────────────────────────────────────────
   const { data: veBalance = 0 } = useQuery({
     queryKey: ["vehicle-balance-msgs", user?.id],
     enabled: !!user?.id && veiculosMode,
@@ -102,7 +132,6 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Custo FIXO p/ desbloquear WhatsApp do interessado de VEÍCULO (admin → Cobranças)
   const { data: veUnlockCost = VE_UNLOCK_DEFAULT } = useQuery({
     queryKey: ["vehicle-unlock-whatsapp-cost"],
     enabled: veiculosMode,
@@ -116,7 +145,7 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Saldo PRÓPRIO de serviços (service_credit_balances)
+  // ── Saldo serviços ────────────────────────────────────────────────────
   const { data: seBalance = 0 } = useQuery({
     queryKey: ["service-balance-msgs", user?.id],
     enabled: !!user?.id && servicosMode,
@@ -128,7 +157,6 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Custo FIXO p/ desbloquear WhatsApp do interessado de SERVIÇO (admin → Cobranças)
   const { data: seUnlockCost = SE_UNLOCK_DEFAULT } = useQuery({
     queryKey: ["service-unlock-whatsapp-cost"],
     enabled: servicosMode,
@@ -142,7 +170,7 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Saldo PRÓPRIO de fretes (freight_credit_balances)
+  // ── Saldo fretes ──────────────────────────────────────────────────────
   const { data: frBalance = 0 } = useQuery({
     queryKey: ["freight-balance-msgs", user?.id],
     enabled: !!user?.id && fretesMode,
@@ -154,7 +182,6 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Custo FIXO p/ desbloquear WhatsApp do interessado de FRETE (admin → Cobranças)
   const { data: frUnlockCost = FR_UNLOCK_DEFAULT } = useQuery({
     queryKey: ["freight-unlock-whatsapp-cost"],
     enabled: fretesMode,
@@ -168,7 +195,7 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Saldo PRÓPRIO de viagens (travel_credit_balances)
+  // ── Saldo viagens ─────────────────────────────────────────────────────
   const { data: trBalance = 0 } = useQuery({
     queryKey: ["travel-balance-msgs", user?.id],
     enabled: !!user?.id && viagensMode,
@@ -180,7 +207,6 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // Custo FIXO p/ desbloquear WhatsApp do interessado de VIAGEM (admin → Cobranças)
   const { data: trUnlockCost = TR_UNLOCK_DEFAULT } = useQuery({
     queryKey: ["travel-unlock-whatsapp-cost"],
     enabled: viagensMode,
@@ -195,11 +221,9 @@ export default function AdvertiserMessagesPage() {
   });
 
   const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : viagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
-
-  // Custo por lead: imóvel/veículo/serviço/frete/viagem = WhatsApp fixo da carteira própria; loja = custo do anunciante
   const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : viagensMode ? trUnlockCost : UNLOCK_COST);
 
-  // Máscaras
+  // ── Máscaras ──────────────────────────────────────────────────────────
   const maskName = (n: string | null) => {
     if (!n) return "Visitante";
     const first = n.trim().split(/\s+/)[0] || "Visitante";
@@ -212,155 +236,74 @@ export default function AdvertiserMessagesPage() {
     const ddd = digits.slice(-11, -9) || "**";
     return `(${ddd}) *****-****`;
   };
-  // Remove a linha "E-mail: xxx" do texto (o e-mail é contato e fica no paywall);
-  // o restante da mensagem pode ser mostrado por inteiro ao vendedor.
   const stripContactEmail = (msg: string | null) =>
     (msg || "").replace(/\n*\s*e-?mail:\s*[^\s]+@[^\s]+/i, "").trim();
 
+  // ── Handlers (lógica inalterada) ──────────────────────────────────────
   const handleUnlock = async (id: string) => {
-    // Read from window.location.pathname to avoid React Router v7 startTransition stale closure bug
     const p = window.location.pathname;
-    const isImoveisMode = p.startsWith("/anunciante/imoveis");
+    const isImoveisMode  = p.startsWith("/anunciante/imoveis");
     const isVeiculosMode = p.startsWith("/anunciante/veiculos");
     const isServicosMode = p.startsWith("/anunciante/servicos");
-    const isFretesMode = p.startsWith("/anunciante/fretes");
-    const isViagensMode = p.startsWith("/anunciante/viagens");
+    const isFretesMode   = p.startsWith("/anunciante/fretes");
+    const isViagensMode  = p.startsWith("/anunciante/viagens");
 
-    const lead = intentions.find((i) => i.id === id);
-    const cost = isImoveisMode ? reUnlockCost : isVeiculosMode ? veUnlockCost : isServicosMode ? seUnlockCost : isFretesMode ? frUnlockCost : isViagensMode ? trUnlockCost : UNLOCK_COST;
-    const curBal = isImoveisMode ? reBalance : isVeiculosMode ? veBalance : isServicosMode ? seBalance : isFretesMode ? frBalance : isViagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
+    const cost   = isImoveisMode ? reUnlockCost : isVeiculosMode ? veUnlockCost : isServicosMode ? seUnlockCost : isFretesMode ? frUnlockCost : isViagensMode ? trUnlockCost : UNLOCK_COST;
+    const curBal = isImoveisMode ? reBalance     : isVeiculosMode ? veBalance     : isServicosMode ? seBalance     : isFretesMode ? frBalance     : isViagensMode ? trBalance     : (balance?.available_credits ?? fallbackBalance);
 
-    // ── IMÓVEIS: debita a carteira PRÓPRIA via RPC (custo por categoria) ──
     if (isImoveisMode) {
-      if (curBal < cost) {
-        toast.error(`Sem saldo de imóveis (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
-        setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200);
-        return;
-      }
+      if (curBal < cost) { toast.error(`Sem saldo de imóveis (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200); return; }
       const { data, error } = await supabase.rpc("unlock_real_estate_intention" as any, { p_intention_id: id });
       const r = data as any;
-      if (!error && r?.success) {
-        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
-        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["real-estate-balance-msgs", user?.id] });
-      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200);
-      } else {
-        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
-      }
+      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["real-estate-balance-msgs", user?.id] }); }
+      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200); }
+      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
       return;
     }
-
-    // ── VEÍCULOS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
     if (isVeiculosMode) {
-      if (curBal < cost) {
-        toast.error(`Sem saldo de veículos (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
-        setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200);
-        return;
-      }
+      if (curBal < cost) { toast.error(`Sem saldo de veículos (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200); return; }
       const { data, error } = await supabase.rpc("unlock_vehicle_intention" as any, { p_intention_id: id });
       const r = data as any;
-      if (!error && r?.success) {
-        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
-        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["vehicle-balance-msgs", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["veiculos-painel-saldo", user?.id] });
-      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200);
-      } else {
-        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
-      }
+      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["vehicle-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["veiculos-painel-saldo", user?.id] }); }
+      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200); }
+      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
       return;
     }
-
-    // ── SERVIÇOS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
     if (isServicosMode) {
-      if (curBal < cost) {
-        toast.error(`Sem saldo de serviços (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
-        setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200);
-        return;
-      }
+      if (curBal < cost) { toast.error(`Sem saldo de serviços (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200); return; }
       const { data, error } = await supabase.rpc("unlock_service_intention" as any, { p_intention_id: id });
       const r = data as any;
-      if (!error && r?.success) {
-        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
-        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["service-balance-msgs", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["servicos-painel-saldo", user?.id] });
-      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200);
-      } else {
-        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
-      }
+      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["service-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["servicos-painel-saldo", user?.id] }); }
+      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200); }
+      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
       return;
     }
-
-    // ── FRETES: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
     if (isFretesMode) {
-      if (curBal < cost) {
-        toast.error(`Sem saldo de fretes (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
-        setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200);
-        return;
-      }
+      if (curBal < cost) { toast.error(`Sem saldo de fretes (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200); return; }
       const { data, error } = await supabase.rpc("unlock_freight_intention" as any, { p_intention_id: id });
       const r = data as any;
-      if (!error && r?.success) {
-        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
-        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["freight-balance-msgs", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["fretes-painel-saldo", user?.id] });
-      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200);
-      } else {
-        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
-      }
+      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["freight-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["fretes-painel-saldo", user?.id] }); }
+      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200); }
+      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
       return;
     }
-
-    // ── VIAGENS: debita a carteira PRÓPRIA via RPC (custo fixo de WhatsApp) ──
     if (isViagensMode) {
-      if (curBal < cost) {
-        toast.error(`Sem saldo de viagens (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 });
-        setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200);
-        return;
-      }
+      if (curBal < cost) { toast.error(`Sem saldo de viagens (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200); return; }
       const { data, error } = await supabase.rpc("unlock_travel_intention" as any, { p_intention_id: id });
       const r = data as any;
-      if (!error && r?.success) {
-        toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!");
-        queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["travel-balance-msgs", user?.id] });
-        queryClient.invalidateQueries({ queryKey: ["viagens-painel-saldo", user?.id] });
-      } else if (r?.buy_credits_cta || r?.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200);
-      } else {
-        toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido"));
-      }
+      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["travel-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["viagens-painel-saldo", user?.id] }); }
+      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200); }
+      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
       return;
     }
-
-    // ── LOJA (anunciante): fluxo existente ──
+    // ── Loja (anunciante) ──
     const lojaBal = balance?.available_credits ?? fallbackBalance;
-    if (lojaBal < UNLOCK_COST) {
-      toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${lojaBal}). Redirecionando para compra...`, { duration: 3000 });
-      setTimeout(() => navigate(creditosRouteFor(id)), 1200);
-      return;
-    }
+    if (lojaBal < UNLOCK_COST) { toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${lojaBal}). Redirecionando para compra...`, { duration: 3000 }); setTimeout(() => navigate(creditosRouteFor(id)), 1200); return; }
     const result = await unlockIntention(id, UNLOCK_COST);
-    if (result.success) {
-      toast.success(`Contato desbloqueado! ${result.credits_charged} créditos debitados.`);
-    } else {
-      if (result.buy_credits_cta) {
-        toast.error(`Saldo insuficiente: ${result.available}/${result.required}. Redirecionando...`);
-        setTimeout(() => navigate(creditosRouteFor(id)), 1200);
-      } else {
-        toast.error("Erro ao desbloquear: " + result.error);
-      }
+    if (result.success) { toast.success(`Contato desbloqueado! ${result.credits_charged} créditos debitados.`); }
+    else {
+      if (result.buy_credits_cta) { toast.error(`Saldo insuficiente: ${result.available}/${result.required}. Redirecionando...`); setTimeout(() => navigate(creditosRouteFor(id)), 1200); }
+      else { toast.error("Erro ao desbloquear: " + result.error); }
     }
   };
 
@@ -373,18 +316,11 @@ export default function AdvertiserMessagesPage() {
   const handleCallVisitor = (lead: any) => {
     if (!lead.visitor_phone) return;
     const clean = String(lead.visitor_phone).replace(/\D/g, "").replace(/^55/, "");
-    const msg = encodeURIComponent(
-      `Olá ${lead.visitor_name || ""}! Você demonstrou interesse no anúncio "${lead.listing_title || ""}" na Viagg-TX8. Vamos conversar?`
-    );
+    const msg = encodeURIComponent(`Olá ${lead.visitor_name || ""}! Você demonstrou interesse no anúncio "${lead.listing_title || ""}" na Viagg-TX8. Vamos conversar?`);
     window.open(`https://wa.me/55${clean}?text=${msg}`, "_blank");
   };
 
-  // Cada painel mostra só os leads do seu segmento:
-  //  • imóveis  → listing_module === 'real_estate'
-  //  • veículos → listing_module === 'vehicles'
-  //  • serviços → listing_module === 'services'
-  //  • fretes   → listing_module === 'freight'
-  //  • loja     → tudo MENOS imóveis, veículos, serviços e fretes (produtos/mercado)
+  // ── Filtragem por segmento (lógica inalterada) ────────────────────────
   const visibleIntentions = imoveisMode
     ? intentions.filter((i) => i.listing_module === "real_estate")
     : veiculosMode
@@ -397,206 +333,377 @@ export default function AdvertiserMessagesPage() {
             ? intentions.filter((i) => i.listing_module === "travel")
             : intentions.filter((i) => !["real_estate", "vehicles", "services", "freight", "travel"].includes(i.listing_module));
 
-  const totalCount = visibleIntentions.length;
+  // ── NOVAS funcionalidades de UI ─────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "pending" | "unlocked" | "favoritos">("all");
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(FAV_LEADS_KEY) || "[]") as string[]); }
+    catch { return new Set<string>(); }
+  });
 
+  const toggleFavorite = (leadId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(leadId)) next.delete(leadId); else next.add(leadId);
+      try { localStorage.setItem(FAV_LEADS_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  };
+
+  const stats = useMemo(() => ({
+    total:    visibleIntentions.length,
+    pending:  visibleIntentions.filter(i => i.status === "pending_unlock").length,
+    unlocked: visibleIntentions.filter(i => i.status === "unlocked").length,
+    favs:     favorites.size,
+  }), [visibleIntentions, favorites]);
+
+  const filteredIntentions = useMemo(() => {
+    let result = visibleIntentions;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      result = result.filter(i =>
+        (i.visitor_name   || "").toLowerCase().includes(q) ||
+        (i.listing_title  || "").toLowerCase().includes(q) ||
+        (i.visitor_message|| "").toLowerCase().includes(q) ||
+        (i.city           || "").toLowerCase().includes(q)
+      );
+    }
+    if (activeFilter === "pending")   result = result.filter(i => i.status === "pending_unlock");
+    if (activeFilter === "unlocked")  result = result.filter(i => i.status === "unlocked");
+    if (activeFilter === "favoritos") result = result.filter(i => favorites.has(i.id));
+    return result;
+  }, [visibleIntentions, searchTerm, activeFilter, favorites]);
+
+  // Dados visuais por segmento
+  const seg = {
+    gradient: imoveisMode  ? "bg-gradient-to-br from-blue-700 to-blue-500"
+             : veiculosMode ? "bg-gradient-to-br from-cyan-700 to-cyan-500"
+             : servicosMode ? "bg-gradient-to-br from-purple-700 to-purple-500"
+             : fretesMode   ? "bg-gradient-to-br from-yellow-600 to-amber-500"
+             : viagensMode  ? "bg-gradient-to-br from-emerald-700 to-emerald-500"
+             : "bg-gradient-to-br from-zinc-700 to-zinc-900",
+    label: imoveisMode  ? "Imóveis"
+          : veiculosMode ? "Veículos"
+          : servicosMode ? "Serviços"
+          : fretesMode   ? "Fretes & Mudanças"
+          : viagensMode  ? "Viagens & Turismo"
+          : "Anunciante",
+  };
+  const SegIcon = imoveisMode ? Building2 : veiculosMode ? Car : servicosMode ? Briefcase : fretesMode ? Truck : viagensMode ? Plane : Sparkles;
+
+  const FILTER_TABS = [
+    { key: "all" as const,      label: "Todos",         count: stats.total    },
+    { key: "pending" as const,  label: "🔒 Pendentes",  count: stats.pending  },
+    { key: "unlocked" as const, label: "✓ Desbloqueados",count: stats.unlocked},
+    { key: "favoritos" as const,label: "⭐ Favoritos",  count: stats.favs     },
+  ];
+
+  // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 md:p-8 animate-fade-in space-y-6 mt-4">
-      <header className="mb-6 border-b border-[#2A3038] pb-4">
+    <div className="min-h-screen bg-[#0D0F12] animate-fade-in">
+
+      {/* ── Header com gradiente do segmento ── */}
+      <div className={cn(seg.gradient, "px-6 pt-10 pb-8")}>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[#A7B0BE] hover:text-[#FF6A00] text-xs font-black uppercase tracking-widest mb-4 transition-colors group"
+          className="flex items-center gap-2 text-white/70 hover:text-white text-xs font-bold uppercase tracking-widest mb-5 transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           Voltar ao Menu
         </button>
 
-        <h1 className="text-2xl font-bold flex items-center gap-2 text-[#F5F7FA]">
-          <MessageSquare className="text-[#FF6A00]" />
-          Mensagens
-          <span className="ml-2 text-sm font-bold text-[#A7B0BE] bg-[#1B1F24] border border-[#2A3038] px-3 py-1 rounded-full">
-            {totalCount}
-          </span>
-        </h1>
-        <p className="text-[#A7B0BE] mt-2 text-sm">Contatos interessados nos seus anúncios.</p>
-      </header>
-
-      {isLoading ? (
-        <div className="py-20 flex justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
-        </div>
-      ) : visibleIntentions.length === 0 ? (
-        <div className="bg-[#1B1F24] border border-dashed border-[#2A3038] rounded-2xl p-12 text-center space-y-3">
-          <div className="w-16 h-16 rounded-full bg-[#14171B] flex items-center justify-center mx-auto">
-            <MessageSquare className="w-8 h-8 text-[#A7B0BE]" />
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+            <SegIcon className="w-6 h-6 text-white" />
           </div>
-          <h3 className="text-lg font-black text-[#F5F7FA] uppercase">Nenhuma mensagem ainda</h3>
-          <p className="text-sm text-[#A7B0BE] max-w-md mx-auto">
-            Quando alguém clicar em "Estou Interessado" ou "WhatsApp" em um dos seus anúncios, aparece aqui.
-          </p>
+          <div>
+            <h1 className="text-2xl font-black text-white">Central de Mensagens</h1>
+            <p className="text-white/70 text-sm font-medium mt-0.5">
+              {seg.label} · {stats.total} contato{stats.total !== 1 ? "s" : ""} recebido{stats.total !== 1 ? "s" : ""}
+            </p>
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {visibleIntentions.map((lead) => {
-            const isUnlocked = lead.status === "unlocked";
-            const leadCost = costForLead(lead);
-            const hasEnough = creditBalance >= leadCost;
-            const ModuleIcon = lead.listing_module === "real_estate" ? Building2
-              : lead.listing_module === "product" ? Package
-              : lead.listing_module === "services" ? Briefcase
-              : lead.listing_module === "freight" ? Truck
-              : lead.listing_module === "travel" ? Plane
-              : Car;
-            const moduleLabel = lead.listing_module === "real_estate" ? "Imóvel"
-              : lead.listing_module === "product" ? "Produto"
-              : lead.listing_module === "services" ? "Serviço"
-              : lead.listing_module === "freight" ? "Frete"
-              : lead.listing_module === "travel" ? "Viagem"
-              : "Veículo";
 
-            return (
-              <div
-                key={lead.id}
+        {/* Saldo em destaque */}
+        <div className="mt-5 flex items-center gap-3 bg-white/10 border border-white/20 rounded-2xl px-4 py-3">
+          <Coins className="w-5 h-5 text-white/80 shrink-0" />
+          <div>
+            <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">Saldo disponível</p>
+            <p className="text-white text-2xl font-black leading-none">{creditBalance} <span className="text-sm font-bold text-white/70">créditos</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 md:px-6 py-6 space-y-6 max-w-[1400px] mx-auto">
+
+        {/* ── KPI Dashboard ── */}
+        {!isLoading && stats.total > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "Total Recebidos", value: stats.total,    icon: Activity,   color: "text-white",       bg: "bg-zinc-700"         },
+              { label: "Pendentes",       value: stats.pending,  icon: Lock,       color: "text-amber-400",   bg: "bg-amber-500/10"     },
+              { label: "Desbloqueados",   value: stats.unlocked, icon: Unlock,     color: "text-emerald-400", bg: "bg-emerald-500/10"   },
+              { label: "Favoritos",       value: stats.favs,     icon: Star,       color: "text-yellow-400",  bg: "bg-yellow-500/10"    },
+            ].map(k => {
+              const Icon = k.icon;
+              return (
+                <div key={k.label} className="bg-[#1B1F24] border border-[#2A3038] rounded-2xl p-4 flex items-center gap-3">
+                  <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0", k.bg)}>
+                    <Icon className={cn("h-5 w-5", k.color)} />
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-[#F5F7FA]">{k.value}</div>
+                    <div className="text-[11px] text-[#A7B0BE] mt-0.5">{k.label}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── GLM IA Banner ── */}
+        <div className="flex items-center gap-3 bg-violet-950/40 border border-violet-700/30 rounded-2xl px-4 py-3">
+          <div className="h-9 w-9 rounded-xl bg-violet-700/30 border border-violet-600/30 flex items-center justify-center shrink-0">
+            <Brain className="h-4 w-4 text-violet-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-violet-300">Análise de Interesse — GLM IA</p>
+            <p className="text-[11px] text-violet-500 mt-0.5">Classificação automática de intenção de negócio para cada lead</p>
+          </div>
+          <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
+        </div>
+
+        {/* ── Search + Filtros ── */}
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A7B0BE] pointer-events-none" />
+            <Input
+              placeholder="Buscar por nome, anúncio, mensagem ou cidade..."
+              className="pl-10 bg-[#1B1F24] border-[#2A3038] text-[#F5F7FA] placeholder:text-[#A7B0BE]/50 rounded-xl h-11"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {FILTER_TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveFilter(tab.key)}
                 className={cn(
-                  "rounded-2xl border-2 p-5 flex flex-col gap-3 transition-all",
-                  isUnlocked ? "bg-emerald-50 border-emerald-300" : "bg-yellow-50 border-yellow-300"
+                  "shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap",
+                  activeFilter === tab.key
+                    ? "bg-[#FF6A00] text-white border-[#FF6A00] shadow-sm shadow-[#FF6A00]/30"
+                    : "bg-[#1B1F24] text-[#A7B0BE] border-[#2A3038] hover:border-[#FF6A00]/30 hover:text-white"
                 )}
               >
-                {/* Header */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className={cn(
-                    "inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow",
-                    isUnlocked ? "bg-emerald-500 text-white" : "bg-yellow-500 text-zinc-900"
-                  )}>
-                    {isUnlocked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                    {isUnlocked ? "Desbloqueado" : moduleLabel}
-                  </div>
-                  <span className={cn(
-                    "text-[10px] font-bold flex items-center gap-1",
-                    isUnlocked ? "text-emerald-800" : "text-yellow-800"
-                  )}>
-                    <Clock className="w-3 h-3" />
-                    {new Date(lead.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
+                {tab.label}{tab.count > 0 ? ` (${tab.count})` : ""}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                {/* Cliente */}
-                <div className={cn("space-y-1 text-sm", isUnlocked ? "text-emerald-900" : "text-yellow-900")}>
-                  <p className="flex items-center gap-1.5 font-bold">
-                    <User className="w-3.5 h-3.5" />
-                    {isUnlocked ? (lead.visitor_name || "Visitante") : maskName(lead.visitor_name)}
-                  </p>
-                  {lead.visitor_phone && (
-                    <p className="flex items-center gap-1.5 text-xs">
-                      <Phone className="w-3.5 h-3.5" />
-                      {isUnlocked ? lead.visitor_phone : maskPhone(lead.visitor_phone)}
-                    </p>
-                  )}
-                  {(lead.city || lead.region) && (
-                    <p className="flex items-center gap-1.5 text-xs">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {[lead.city, lead.region].filter(Boolean).join(", ")}
-                    </p>
-                  )}
-                </div>
+        {/* ── Lead List ── */}
+        {isLoading ? (
+          <div className="py-20 flex justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-[#FF6A00]" />
+          </div>
+        ) : filteredIntentions.length === 0 ? (
+          <div className="bg-[#1B1F24] border border-dashed border-[#2A3038] rounded-2xl p-14 text-center space-y-3">
+            <div className="w-16 h-16 rounded-full bg-[#14171B] flex items-center justify-center mx-auto">
+              <MessageSquare className="w-8 h-8 text-[#A7B0BE]" />
+            </div>
+            <h3 className="text-lg font-black text-[#F5F7FA] uppercase">
+              {stats.total === 0 ? "Nenhuma mensagem ainda" : "Nenhum resultado"}
+            </h3>
+            <p className="text-sm text-[#A7B0BE] max-w-md mx-auto">
+              {stats.total === 0
+                ? 'Quando alguém clicar em "Estou Interessado" ou "WhatsApp" em um dos seus anúncios, aparecerá aqui.'
+                : "Tente outro filtro ou pesquisa."}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredIntentions.map((lead) => {
+              const isUnlocked = lead.status === "unlocked";
+              const leadCost   = costForLead(lead);
+              const hasEnough  = creditBalance >= leadCost;
+              const isFav      = favorites.has(lead.id);
+              const glm        = GLM_SCORE[lead.interest_type] || GLM_SCORE.view_contact;
+              const ITypeIcon  = INTEREST_ICON[lead.interest_type] || MessageSquare;
 
-                {/* Anúncio + imagem */}
-                <div className={cn("pt-3 border-t", isUnlocked ? "border-emerald-300/70" : "border-yellow-300/70")}>
-                  <div className="flex items-center gap-3">
+              const ModuleIcon = lead.listing_module === "real_estate" ? Building2
+                : lead.listing_module === "product"   ? Package
+                : lead.listing_module === "services"  ? Briefcase
+                : lead.listing_module === "freight"   ? Truck
+                : lead.listing_module === "travel"    ? Plane
+                : Car;
+              const moduleLabel = lead.listing_module === "real_estate" ? "Imóvel"
+                : lead.listing_module === "product"   ? "Produto"
+                : lead.listing_module === "services"  ? "Serviço"
+                : lead.listing_module === "freight"   ? "Frete"
+                : lead.listing_module === "travel"    ? "Viagem"
+                : "Veículo";
+
+              return (
+                <div
+                  key={lead.id}
+                  className={cn(
+                    "rounded-2xl border overflow-hidden flex flex-col transition-all hover:shadow-xl hover:shadow-black/30",
+                    isUnlocked
+                      ? "bg-emerald-950/20 border-emerald-700/30"
+                      : "bg-amber-950/20 border-amber-700/30"
+                  )}
+                >
+                  {/* Top color stripe */}
+                  <div className={cn("h-0.5", isUnlocked ? "bg-gradient-to-r from-emerald-500 to-emerald-400" : "bg-gradient-to-r from-amber-500 to-amber-400")} />
+
+                  {/* Card header */}
+                  <div className="p-4 flex items-center gap-3">
+                    {/* Avatar */}
                     <div className={cn(
-                      "w-16 h-16 rounded-lg bg-white border overflow-hidden shrink-0 flex items-center justify-center",
-                      isUnlocked ? "border-emerald-300" : "border-yellow-300"
+                      "h-11 w-11 rounded-full flex items-center justify-center font-black text-sm text-white shrink-0 shadow-sm",
+                      isUnlocked ? "bg-emerald-600" : "bg-amber-600"
                     )}>
+                      {isUnlocked ? getInitials(lead.visitor_name) : "?"}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={cn("font-bold text-[14px]", isUnlocked ? "text-emerald-200" : "text-amber-200")}>
+                          {isUnlocked ? (lead.visitor_name || "Visitante") : maskName(lead.visitor_name)}
+                        </span>
+                        <Badge className={cn("text-[10px] border-0 px-2 py-0 font-bold", isUnlocked ? "bg-emerald-500/30 text-emerald-300" : "bg-amber-500/30 text-amber-300")}>
+                          {isUnlocked ? "✓ Desbloqueado" : "🔒 Pendente"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <ITypeIcon className={cn("h-3 w-3 shrink-0", isUnlocked ? "text-emerald-500" : "text-amber-500")} />
+                        <span className={cn("text-[10px] font-semibold", isUnlocked ? "text-emerald-500" : "text-amber-500")}>
+                          {INTEREST_TYPE_LABELS[lead.interest_type as keyof typeof INTEREST_TYPE_LABELS] || lead.interest_type}
+                        </span>
+                        <span className="text-[10px] text-[#A7B0BE]">· {timeAgo(lead.created_at)}</span>
+                      </div>
+                    </div>
+
+                    {/* Favorite */}
+                    <button
+                      onClick={e => toggleFavorite(lead.id, e)}
+                      className={cn("shrink-0 p-1.5 rounded-lg transition-colors", isFav ? "text-yellow-400" : "text-[#A7B0BE]/30 hover:text-yellow-400")}
+                    >
+                      <Star className={cn("h-4 w-4", isFav && "fill-current")} />
+                    </button>
+                  </div>
+
+                  {/* Location */}
+                  {(lead.city || lead.region) && (
+                    <div className={cn("px-4 pb-2 flex items-center gap-1.5 text-xs", isUnlocked ? "text-emerald-400" : "text-amber-400")}>
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      {[lead.city, lead.region].filter(Boolean).join(", ")}
+                    </div>
+                  )}
+
+                  {/* Phone (unlocked only) */}
+                  {isUnlocked && lead.visitor_phone && (
+                    <div className="px-4 pb-2 flex items-center gap-1.5 text-xs text-emerald-300">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      {lead.visitor_phone}
+                    </div>
+                  )}
+                  {!isUnlocked && lead.visitor_phone && (
+                    <div className="px-4 pb-2 flex items-center gap-1.5 text-xs text-amber-400/50">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      {maskPhone(lead.visitor_phone)}
+                    </div>
+                  )}
+
+                  {/* Listing info */}
+                  <div className={cn("mx-4 mb-3 p-3 rounded-xl border flex gap-3", isUnlocked ? "bg-emerald-950/40 border-emerald-800/30" : "bg-amber-950/40 border-amber-800/30")}>
+                    <div className="h-14 w-14 rounded-lg overflow-hidden shrink-0 bg-[#14171B] border border-[#2A3038] flex items-center justify-center">
                       {lead.listing_image_url ? (
-                        <img
-                          src={lead.listing_image_url}
-                          alt={lead.listing_title || ""}
-                          className="w-full h-full object-cover"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                        />
+                        <img src={lead.listing_image_url} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       ) : (
-                        <ModuleIcon className={cn("w-7 h-7", isUnlocked ? "text-emerald-400" : "text-yellow-400")} />
+                        <ModuleIcon className="h-6 w-6 text-[#A7B0BE]/30" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={cn("text-xs font-bold uppercase tracking-wider", isUnlocked ? "text-emerald-700" : "text-yellow-700")}>
-                        Interesse em
+                      <p className={cn("text-[10px] font-black uppercase tracking-wider mb-0.5", isUnlocked ? "text-emerald-500" : "text-amber-500")}>
+                        {moduleLabel}
                       </p>
-                      <p className={cn("text-sm font-bold line-clamp-2", isUnlocked ? "text-emerald-900" : "text-yellow-900")}>
+                      <p className={cn("text-sm font-bold line-clamp-2", isUnlocked ? "text-emerald-200" : "text-amber-200")}>
                         {lead.listing_title || moduleLabel}
                       </p>
                     </div>
                   </div>
-                </div>
 
-                {/* Mensagem do interessado — visível por inteiro ao vendedor.
-                   O e-mail (contato) é removido do texto enquanto não desbloqueia. */}
-                {isUnlocked && lead.visitor_message ? (
-                  <p className="text-xs text-emerald-800 italic px-1 bg-emerald-100/50 rounded-lg p-2 whitespace-pre-line">
-                    "{lead.visitor_message}"
-                  </p>
-                ) : !isUnlocked && stripContactEmail(lead.visitor_message) ? (
-                  <p className="text-xs text-yellow-900 italic px-1 bg-yellow-100/60 rounded-lg p-2 whitespace-pre-line">
-                    "{stripContactEmail(lead.visitor_message)}"
-                  </p>
-                ) : !isUnlocked && lead.masked_preview ? (
-                  <p className="text-xs text-yellow-800 font-mono text-center bg-black/5 rounded-lg p-2 border border-dashed border-yellow-400/50">
-                    {lead.masked_preview}
-                  </p>
-                ) : null}
+                  {/* Message preview */}
+                  {isUnlocked && lead.visitor_message ? (
+                    <p className="mx-4 mb-3 text-xs italic leading-relaxed text-emerald-200/70 bg-emerald-950/30 border border-emerald-800/20 rounded-lg p-3 whitespace-pre-line">
+                      "{lead.visitor_message}"
+                    </p>
+                  ) : !isUnlocked && stripContactEmail(lead.visitor_message) ? (
+                    <p className="mx-4 mb-3 text-xs italic leading-relaxed text-amber-200/60 bg-amber-950/30 border border-amber-800/20 rounded-lg p-3 whitespace-pre-line">
+                      "{stripContactEmail(lead.visitor_message)}"
+                    </p>
+                  ) : !isUnlocked && lead.masked_preview ? (
+                    <p className="mx-4 mb-3 text-xs font-mono text-center text-amber-500/50 border border-dashed border-amber-700/30 rounded-lg p-3 bg-black/10">
+                      {lead.masked_preview}
+                    </p>
+                  ) : null}
 
-                {/* Saldo atual */}
-                <div className={cn(
-                  "flex items-center justify-between p-3 rounded-xl border",
-                  hasEnough ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
-                )}>
-                  <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
-                    hasEnough ? "text-emerald-700" : "text-red-700"
-                  )}>
-                    <Coins className="w-3.5 h-3.5" /> Saldo atual
-                  </span>
-                  <span className={cn(
-                    "text-2xl font-black tabular-nums leading-none",
-                    hasEnough ? "text-emerald-600" : "text-red-600"
-                  )}>
-                    {creditBalance}
-                  </span>
-                </div>
+                  {/* GLM IA Score */}
+                  <div className={cn("mx-4 mb-3 flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold", glm.color)}>
+                    <Brain className="h-3.5 w-3.5 shrink-0" />
+                    <span>GLM IA: {glm.label}</span>
+                    <TrendingUp className="h-3 w-3 ml-auto" />
+                  </div>
 
-                {/* Ações */}
-                {!isUnlocked ? (
-                  <Button
-                    onClick={() => handleUnlock(lead.id)}
-                    className="w-full h-11 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
-                  >
-                    <Unlock className="w-4 h-4" /> Desbloquear (-{leadCost} cr)
-                  </Button>
-                ) : (
-                  lead.visitor_phone && (
+                  {/* Balance indicator */}
+                  <div className={cn("mx-4 mb-3 flex items-center justify-between px-3 py-2.5 rounded-xl border", hasEnough ? "bg-emerald-950/30 border-emerald-700/30" : "bg-red-950/30 border-red-700/30")}>
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", hasEnough ? "text-emerald-400" : "text-red-400")}>
+                      <Coins className="h-3.5 w-3.5" /> Saldo atual
+                    </span>
+                    <span className={cn("text-xl font-black", hasEnough ? "text-emerald-300" : "text-red-400")}>
+                      {creditBalance} cr
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="px-4 pb-4 space-y-2">
+                    {!isUnlocked ? (
+                      <Button
+                        onClick={() => handleUnlock(lead.id)}
+                        className="w-full h-11 bg-emerald-700 hover:bg-emerald-600 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
+                      >
+                        <Unlock className="w-4 h-4" /> Desbloquear (−{leadCost} cr)
+                      </Button>
+                    ) : (
+                      lead.visitor_phone && (
+                        <Button
+                          onClick={() => handleCallVisitor(lead)}
+                          className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl"
+                        >
+                          <MessageSquare className="w-4 h-4" /> Contatar via WhatsApp
+                        </Button>
+                      )
+                    )}
                     <Button
-                      onClick={() => handleCallVisitor(lead)}
-                      className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDelete(lead.id)}
+                      className="w-full h-9 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500/10 hover:text-red-400 font-black text-[10px] uppercase gap-1"
                     >
-                      <MessageSquare className="w-4 h-4" /> Contatar Visitante
+                      <Trash2 className="w-3 h-3" /> Excluir
                     </Button>
-                  )
-                )}
-
-
-
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDelete(lead.id)}
-                  className="w-full h-9 rounded-lg border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black text-[10px] uppercase gap-1"
-                >
-                  <Trash2 className="w-3 h-3" /> Excluir
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

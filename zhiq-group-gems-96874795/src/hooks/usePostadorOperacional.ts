@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { startAuditEntry, finishAuditEntry, type AuditProfileType } from "@/lib/postingAudit";
 import type {
     CampaignQueueItem,
     WhatsAppGroupItem,
@@ -50,7 +51,7 @@ function friendlyError(reason: string | null | undefined): string {
 // GANCHO PRINCIPAL (MAIN HOOK)
 // ═══════════════════════════════════════
 
-export function usePostadorOperacional() {
+export function usePostadorOperacional(callerProfileType: AuditProfileType = "postador") {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [postingState, setPostingState] = useState<Record<string, "loading" | "success" | "error">>({});
@@ -233,6 +234,20 @@ export function usePostadorOperacional() {
             pendingKeys.current.add(key);
             setPostingState((prev) => ({ ...prev, [key]: "loading" }));
 
+            // Auditoria operacional (silenciosa — nunca bloqueia o fluxo)
+            const campaign = campaigns.find((c) => c.id === campaignId);
+            const group = groups.find((g) => g.id === groupId);
+            let auditId: string | null = null;
+            auditId = await startAuditEntry({
+                operatorId: user.id,
+                profileType: callerProfileType,
+                campaignQueueId: campaignId,
+                groupId,
+                groupName: group?.group_name ?? undefined,
+                campaignTitle: campaign?.title ?? undefined,
+                templateHash: templateHash ?? undefined,
+            });
+
             try {
                 // Step 1: Check eligibility via RPC
                 const { data: eligibility, error: eligErr } = await (supabase.rpc as any)(
@@ -292,6 +307,7 @@ export function usePostadorOperacional() {
                 }
 
                 // ── Success ──
+                if (auditId) void finishAuditEntry(auditId, { success: true });
                 toast.success("✅ Postagem confirmada com sucesso!");
                 setPostingState((prev) => ({ ...prev, [key]: "success" }));
 
@@ -308,6 +324,7 @@ export function usePostadorOperacional() {
                 setTimeout(() => setPostingState((prev) => { const n = { ...prev }; delete n[key]; return n; }), 3000);
             } catch (err: any) {
                 console.error("[Postador] markAsPosted error:", err);
+                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err?.message ?? "unknown_error" });
                 // GUARDA 7: Nunca expor erro bruto — sempre use mensagem amigável
                 toast.error(friendlyError("unknown_error"));
                 setPostingState((prev) => ({ ...prev, [key]: "error" }));

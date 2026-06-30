@@ -194,7 +194,7 @@ O texto deve ser animado, usar emojis adequados e ter um call to action (CTA) cl
 Mantenha o texto bem formatado e fácil de ler.`;
             const userPrompt = `Por favor, crie um texto de divulgação para os seguintes itens:\n${context}\n\nLembre-se de adicionar placeholders para o link da loja, ex: [LINK DA LOJA].`;
 
-            const aiText = await chatCompletion(userPrompt, 'glm-4-plus', systemPrompt);
+            const aiText = await chatCompletion(userPrompt, undefined, systemPrompt);
             
             const finalMsg = `${aiText}\n\n─────────────────────\n🔗 Ver ofertas: ${buildTrackingUrl(lot)}`;
             

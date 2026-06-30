@@ -72,8 +72,15 @@ import {
   AdminMercadoPagoSecrets,
   AdminAutoPoster,
   AdminPromotionPackagesPage,
-  AdminGLMAnalytics,
+  AdminAIAnalytics,
+  AdminAICommandCenter,
+  AdminAIHistoryPage,
+  AdminAIConfigPage,
+  AdminPostingAuditPage,
   AdminMotoboyPricing,
+  AdminPostPreviewCenter,
+  AdminRealtimeDashboard,
+  AdminMapDashboard,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -150,8 +157,21 @@ export const adminRoutes = (
       <Route path="/admin/imoveis/moderacao" element={<AdminRealEstateModeration />} />
       <Route path="/admin/imoveis/aprovacao-imagens" element={<AdminRealEstateImageModeration />} />
       <Route path="/admin/creditos-teste" element={<AdminCreditGrants />} />
-      <Route path="/admin/glm-analytics" element={<AdminGLMAnalytics />} />
+      {/* Novas URLs canônicas */}
+      <Route path="/admin/ai-analytics" element={<AdminAIAnalytics />} />
+      <Route path="/admin/ai" element={<AdminAICommandCenter />} />
+      <Route path="/admin/ai-historico" element={<AdminAIHistoryPage />} />
+      <Route path="/admin/ai-config" element={<AdminAIConfigPage />} />
+      {/* Aliases legados — redirect para novos URLs */}
+      <Route path="/admin/glm-analytics" element={<Navigate to="/admin/ai-analytics" replace />} />
+      <Route path="/admin/glm" element={<Navigate to="/admin/ai" replace />} />
+      <Route path="/admin/glm-historico" element={<Navigate to="/admin/ai-historico" replace />} />
+      <Route path="/admin/auditoria-postagens" element={<AdminPostingAuditPage />} />
+      <Route path="/admin/pre-visualizacao" element={<AdminPostPreviewCenter />} />
       <Route path="/admin/motoboy-pricing" element={<AdminMotoboyPricing />} />
+      {/* Central de Eventos + Mapa */}
+      <Route path="/admin/eventos" element={<AdminRealtimeDashboard />} />
+      <Route path="/admin/mapa"    element={<AdminMapDashboard />} />
     </Route>
 
     {/* ── Alias /administrador ── */}

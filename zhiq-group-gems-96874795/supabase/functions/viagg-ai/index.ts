@@ -1,7 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const GLM_API_KEY = Deno.env.get("GLM_API_KEY") ?? "";
-const GLM_ENDPOINT = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+// Prioridade: AI_API_KEY (genérico) → OPENAI_API_KEY → GLM_API_KEY (legado)
+const GLM_API_KEY = Deno.env.get("AI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || Deno.env.get("GLM_API_KEY") || "";
+const GLM_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 
 const SISTEMA_BASE = `Você é a IA Viagg-TX8, assistente inteligente da plataforma VIAGG de entregas por motoboy.
 Você auxilia clientes, visitantes, motoboys e administradores.
@@ -40,7 +41,7 @@ serve(async (req) => {
         Authorization: `Bearer ${GLM_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "glm-4-flash",
+        model: "gpt-4o-mini",
         messages: finalMessages,
         max_tokens: maxTokens ?? 600,
         temperature: 0.7,

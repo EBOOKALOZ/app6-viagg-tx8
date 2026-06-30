@@ -106,6 +106,11 @@ export default function ChooseProfile() {
                       <img src={motoboyHero} alt="Motoboy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
                       <Icon className="h-6 w-6 hidden" />
                     </>
+                  ) : p.id === "passenger" ? (
+                    <>
+                      <img src="https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/motorista-card.png/Motorista.png" alt="Motorista" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
+                      <Icon className="h-6 w-6 hidden" />
+                    </>
                   ) : (
                     <Icon className="h-6 w-6" />
                   )}

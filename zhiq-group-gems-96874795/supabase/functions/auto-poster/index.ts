@@ -50,11 +50,11 @@ serve(async (req) => {
         });
         const context = lines.join("\n");
 
-        // 3. Call AIAPI (GLM-4-Plus)
-        const AIAPI_URL = Deno.env.get("AIAPI_BASE_URL") || "https://api.aiapi.world/v1";
-        const AIAPI_KEY = Deno.env.get("AIAPI_KEY");
+        // 3. Call OpenAI (gpt-4o-mini)
+        const AIAPI_URL = Deno.env.get("AIAPI_BASE_URL") || "https://api.openai.com/v1";
+        const AIAPI_KEY = Deno.env.get("AI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || Deno.env.get("AIAPI_KEY");
 
-        if (!AIAPI_KEY) throw new Error("AIAPI_KEY is missing");
+        if (!AIAPI_KEY) throw new Error("OPENAI_API_KEY is missing");
 
         const systemPrompt = `Você é um copywriter especialista em marketing digital e vendas para WhatsApp e Instagram. 
 Crie um texto de venda persuasivo (copy) que divulgue os itens fornecidos, usando gatilhos mentais (urgência, escassez, prova social).
@@ -68,7 +68,7 @@ O texto deve ser animado, usar emojis adequados e ter um call to action (CTA) cl
                 "Authorization": `Bearer ${AIAPI_KEY}`
             },
             body: JSON.stringify({
-                model: "glm-4-plus",
+                model: "gpt-4o-mini",
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userPrompt }

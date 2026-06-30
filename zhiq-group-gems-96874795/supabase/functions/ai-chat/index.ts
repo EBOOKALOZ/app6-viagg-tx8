@@ -1,45 +1,69 @@
 // Edge Function: ai-chat
-// Suporta chaves ZhipuAI/z.ai (formato id.secret → JWT) e chaves Bearer simples.
+// Proxy server-side para a API de IA ativa (OpenAI-compatible).
 //
-// Variáveis de ambiente:
-//   AIAPI_BASE_URL  (ex.: https://api.z.ai/v1)
-//   AIAPI_KEY       (ex.: eebc698...wYU2GC... — formato ZhipuAI id.secret)
+// Variáveis de ambiente obrigatórias (Supabase → Edge Functions → Secrets):
+//   AI_API_KEY       chave do provedor ativo (sk-proj-...)
+//   SUPABASE_URL     (injetado automaticamente)
+//   SUPABASE_SERVICE_ROLE_KEY (injetado automaticamente)
+//
+// Opcionais (fallback para config DB quando ausentes):
+//   AIAPI_BASE_URL   sobrescreve a base URL do banco
+//   OPENAI_API_KEY   legado — fallback de AI_API_KEY
+//   AIAPI_KEY        legado — fallback de OPENAI_API_KEY
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve }         from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient }  from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/** Gera JWT para autenticação ZhipuAI (formato id.secret) */
-async function buildZhipuToken(apiKey: string): Promise<string> {
-  const dotIdx = apiKey.indexOf(".");
-  const keyId = apiKey.slice(0, dotIdx);
-  const keySecret = apiKey.slice(dotIdx + 1);
+/* ── Cache de config em memória (evita query por request) ────────────────── */
 
-  const now = Date.now();
-  const toB64url = (buf: ArrayBuffer) =>
-    btoa(String.fromCharCode(...new Uint8Array(buf)))
-      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-
-  const enc = new TextEncoder();
-  const header = toB64url(enc.encode(JSON.stringify({ alg: "HS256", sign_type: "SIGN" })).buffer);
-  const payload = toB64url(enc.encode(JSON.stringify({
-    api_key: keyId,
-    exp: now + 3_600_000,
-    timestamp: now,
-  })).buffer);
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw", enc.encode(keySecret),
-    { name: "HMAC", hash: "SHA-256" },
-    false, ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(`${header}.${payload}`));
-  return `${header}.${payload}.${toB64url(sig)}`;
+interface CachedAIConfig {
+  baseUrl:   string;
+  model:     string;
+  cachedAt:  number;
 }
+
+let _configCache: CachedAIConfig | null = null;
+const CONFIG_TTL = 60_000; // 1 minuto
+
+async function getDBConfig(): Promise<CachedAIConfig> {
+  const now = Date.now();
+  if (_configCache && now - _configCache.cachedAt < CONFIG_TTL) return _configCache;
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, serviceKey);
+
+    const { data } = await sb
+      .from("ai_platform_config")
+      .select("base_url, model")
+      .eq("singleton", true)
+      .single();
+
+    if (data) {
+      _configCache = { baseUrl: data.base_url, model: data.model, cachedAt: now };
+    }
+  } catch (e) {
+    console.warn("[ai-chat] Não foi possível ler config do banco:", e);
+  }
+
+  if (!_configCache) {
+    _configCache = {
+      baseUrl:  "https://api.openai.com/v1",
+      model:    "gpt-4o-mini",
+      cachedAt: now,
+    };
+  }
+
+  return _configCache;
+}
+
+/* ── Handler principal ───────────────────────────────────────────────────── */
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,36 +71,43 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model = "glm-4-plus", max_tokens = 1024, temperature = 0.7 } =
-      await req.json();
+    const {
+      messages,
+      model: bodyModel,
+      max_tokens   = 1024,
+      temperature  = 0.7,
+    } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
         JSON.stringify({ ok: false, error: "Campo 'messages' é obrigatório." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const BASE_URL = Deno.env.get("AIAPI_BASE_URL") || "https://api.z.ai/v1";
-    const API_KEY = Deno.env.get("AIAPI_KEY");
+    // Base URL: env var (prioridade) → banco de dados
+    const dbCfg  = await getDBConfig();
+    const BASE_URL = Deno.env.get("AIAPI_BASE_URL") || dbCfg.baseUrl;
+    const model    = bodyModel ?? dbCfg.model;
+
+    // Chave de API: prioridade genérica → OpenAI → legado
+    const API_KEY =
+      Deno.env.get("AI_API_KEY") ||
+      Deno.env.get("OPENAI_API_KEY") ||
+      Deno.env.get("AIAPI_KEY");
 
     if (!API_KEY) {
       return new Response(
         JSON.stringify({ ok: false, error: "Chave da IA não configurada no servidor." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
-    // Chaves ZhipuAI têm formato "id.secret" — gera JWT. Senão, usa Bearer direto.
-    const token = API_KEY.includes(".")
-      ? await buildZhipuToken(API_KEY)
-      : API_KEY;
 
     const upstream = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":  "application/json",
+        "Authorization": `Bearer ${API_KEY}`,
       },
       body: JSON.stringify({ model, messages, max_tokens, temperature }),
     });
@@ -88,29 +119,29 @@ serve(async (req) => {
     } catch {
       console.error("[ai-chat] resposta não-JSON:", responseText.slice(0, 300));
       return new Response(
-        JSON.stringify({ ok: false, error: `URL da API inválida (${upstream.status}). Resposta: ${responseText.slice(0, 120)}` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ ok: false, error: `Resposta inválida da API (${upstream.status}): ${responseText.slice(0, 120)}` }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     if (!upstream.ok) {
-      const errMsg = data?.error?.message || data?.msg || data?.error || `Erro ${upstream.status} da API de IA`;
+      const errMsg = data?.error?.message || data?.msg || `Erro ${upstream.status} da API de IA`;
       console.error("[ai-chat] upstream error:", upstream.status, errMsg);
       return new Response(
         JSON.stringify({ ok: false, error: errMsg }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     return new Response(JSON.stringify(data), {
-      status: 200,
+      status:  200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("[ai-chat] erro:", err);
     return new Response(
       JSON.stringify({ ok: false, error: err.message || "Erro interno" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

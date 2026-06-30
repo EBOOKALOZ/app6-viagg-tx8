@@ -4,13 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PostingLot, LotKPIs } from "@/types/postador";
+import { startAuditEntry, finishAuditEntry, type AuditProfileType } from "@/lib/postingAudit";
 
 // ═══════════════════════════════════════
 // usePostadorLotes — POSTADOR 3
 // Lotes de 3 produtos por loja
 // ═══════════════════════════════════════
 
-export function usePostadorLotes() {
+export function usePostadorLotes(callerProfileType: AuditProfileType = "postador") {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [actionState, setActionState] = useState<Record<string, "loading" | "success" | "error">>({});
@@ -157,9 +158,16 @@ export function usePostadorLotes() {
             pendingKeys.current.add(key);
             setActionState((prev) => ({ ...prev, [key]: "loading" }));
 
+            // Auditoria operacional (silenciosa)
+            const lot = availableLots.find((l) => l.lot_id === lotId);
+            let auditId: string | null = null;
+            auditId = await startAuditEntry({
+                operatorId: user.id,
+                profileType: callerProfileType,
+            });
+
             try {
                 // Passo 1: Reservar (Claim) se ainda não estiver reservado
-                const lot = availableLots.find(l => l.lot_id === lotId);
                 if (lot && lot.lot_status === "available") {
                     const { data: claimData, error: claimErr } = await (supabase.rpc as any)(
                         "claim_posting_lot",
@@ -192,6 +200,7 @@ export function usePostadorLotes() {
                     return;
                 }
 
+                if (auditId) void finishAuditEntry(auditId, { success: true, proofType, proofUrl });
                 toast.success("✅ Lote confirmado! Cooldown de 6 dias ativado.");
                 setActionState((prev) => ({ ...prev, [key]: "success" }));
                 confirmedKeys.current.add(key);
@@ -203,6 +212,7 @@ export function usePostadorLotes() {
                 }), 3000);
             } catch (err: any) {
                 console.error("[PostadorLotes] erro ao confirmar lote (confirmLot):", err);
+                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err?.message ?? "unknown_error" });
                 toast.error("Erro ao confirmar postagem. Tente novamente.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));
             } finally {

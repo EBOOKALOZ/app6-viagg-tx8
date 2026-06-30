@@ -13,8 +13,18 @@ export const AdminPaymentDemo = lazy(() => import("@/pages/admin/AdminPaymentDem
 export const AdminFase1Sim = lazy(() => import("@/pages/admin/AdminFase1Sim"));
 export const AdminMercadoPagoSecrets = lazy(() => import("@/pages/admin/AdminMercadoPagoSecrets"));
 export const AdminAutoPoster = lazy(() => import("@/pages/admin/AdminAutoPoster"));
-export const AdminGLMAnalytics = lazy(() => import("@/pages/admin/AdminGLMAnalytics"));
+// Novos nomes canônicos
+export const AdminAIAnalytics      = lazy(() => import("@/pages/admin/AdminGLMAnalytics"));
+export const AdminAICommandCenter  = lazy(() => import("@/pages/admin/AdminGLMCommandCenter"));
+export const AdminAIHistoryPage    = lazy(() => import("@/pages/admin/AdminGLMHistoryPage"));
+export const AdminAIConfigPage     = lazy(() => import("@/pages/admin/AdminAIConfigPage"));
+// Aliases legados (mantidos para qualquer import direto existente)
+export const AdminGLMAnalytics     = AdminAIAnalytics;
+export const AdminGLMCommandCenter = AdminAICommandCenter;
+export const AdminGLMHistoryPage   = AdminAIHistoryPage;
+export const AdminPostingAuditPage = lazy(() => import("@/pages/admin/AdminPostingAuditPage"));
 export const AdminMotoboyPricing = lazy(() => import("@/pages/admin/AdminMotoboyPricing"));
+export const AdminPostPreviewCenter = lazy(() => import("@/pages/admin/AdminPostPreviewCenter"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
 export const MotoboyLayout = lazy(() => import("@/components/motoboy/MotoboyLayout").then(m => ({ default: m.MotoboyLayout })));
 export const MototaxiLayout = lazy(() => import("@/components/motoboy/MototaxiLayout").then(m => ({ default: m.MototaxiLayout })));
@@ -92,7 +102,8 @@ export const AuctionPublicPage = lazy(() => import("@/pages/public/AuctionPublic
 export const ArrematePublicPage = lazy(() => import("@/pages/public/ArrematePublicPage"));
 export const PublicMotoboyRequest = lazy(() => import("@/pages/public/PublicMotoboyRequest"));
 export const MotoboyInicio = lazy(() => import("@/pages/public/MotoboyInicio"));
-export const CorridasInicio = lazy(() => import("@/pages/public/CorridasInicio"));
+export const CorridasInicio   = lazy(() => import("@/pages/public/CorridasInicio"));
+export const SolicitarCorrida = lazy(() => import("@/pages/public/SolicitarCorrida"));
 export const PublicRideTracking = lazy(() => import("@/pages/public/PublicRideTracking"));
 export const MinhasOfertas = lazy(() => import("@/pages/public/MinhasOfertas"));
 export const VenderImovelPage = lazy(() => import("@/pages/public/VenderImovelPage"));
@@ -264,3 +275,7 @@ export const AdminMarketingRadar = lazy(() => import("@/pages/admin/marketing/Ad
 export const AdminAISupervisorPage = lazy(() => import("@/pages/admin/support/AdminAISupervisorPage"));
 export const ClientSupportTicketsPage = lazy(() => import("@/pages/support/ClientSupportTicketsPage"));
 export const ClientTicketConversationPage = lazy(() => import("@/pages/support/ClientTicketConversationPage"));
+
+/* ── Central de Eventos (EDA) + Mapa Inteligente ── */
+export const AdminRealtimeDashboard = lazy(() => import("@/pages/admin/AdminRealtimeDashboard"));
+export const AdminMapDashboard      = lazy(() => import("@/pages/admin/AdminMapDashboard"));

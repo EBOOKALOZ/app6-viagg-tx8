@@ -38,8 +38,29 @@ async function callAI(messages: AIMessage[], options?: AIOptions): Promise<AIRes
     }),
   });
 
-  if (!res.ok) throw new Error(`IA Viagg-TX8: erro HTTP ${res.status}`);
-  return res.json();
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const msg = `IA Viagg-TX8: HTTP ${res.status} — ${body.slice(0, 200)}`;
+    console.error("[ViaggAI]", msg);
+    throw new Error(msg);
+  }
+
+  const text = await res.text();
+  let data: AIResponse;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    console.error("[ViaggAI] resposta não-JSON:", text.slice(0, 300));
+    throw new Error("IA Viagg-TX8: resposta inválida do servidor.");
+  }
+
+  // A edge function retorna { content, error? } mesmo quando a OpenAI falha.
+  // Se vier campo 'error', loga mas devolve o content amigável ao usuário.
+  if ((data as any).error) {
+    console.error("[ViaggAI] erro reportado pela edge function:", (data as any).error);
+  }
+
+  return data;
 }
 
 export const viaggAI = {

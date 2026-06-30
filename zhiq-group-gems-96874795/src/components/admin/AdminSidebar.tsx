@@ -40,6 +40,11 @@ import {
   Bot,
   Plane,
   Megaphone,
+  Monitor,
+  History,
+  SlidersHorizontal,
+  Radio,
+  MapPin,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -62,6 +67,26 @@ interface MenuSection {
 }
 
 const menuSections: MenuSection[] = [
+  {
+    title: "Central de Eventos",
+    emoji: "⚡",
+    items: [
+      { title: "Console em Tempo Real", url: "/admin/eventos", icon: Radio,  badge: "LIVE" },
+      { title: "Mapa Inteligente",      url: "/admin/mapa",   icon: MapPin, badge: "IA"   },
+    ],
+  },
+  {
+    title: "Central de IA",
+    emoji: "🤖",
+    items: [
+      { title: "Centro de Comando IA", url: "/admin/ai", icon: BrainCircuit },
+      { title: "Análise de Chat IA", url: "/admin/ai-analytics", icon: Bot },
+      { title: "Histórico de Consumo", url: "/admin/ai-historico", icon: History },
+      { title: "Configuração da IA", url: "/admin/ai-config", icon: SlidersHorizontal, badge: "NOVO" },
+      { title: "Pré-Visualização", url: "/admin/pre-visualizacao", icon: Monitor },
+      { title: "Auditoria Operacional", url: "/admin/auditoria-postagens", icon: Shield },
+    ],
+  },
   {
     title: "Centro de Comando",
     emoji: "🔷",
@@ -161,7 +186,6 @@ const menuSections: MenuSection[] = [
       { title: "Rodapés", url: "/admin/footer-contents", icon: FileText },
       { title: "Tickets (Suporte)", url: "/admin/support", icon: Headphones },
       { title: "Supervisor de IA", url: "/admin/supervisor", icon: Activity },
-      { title: "Análise GLM (IA)", url: "/admin/glm-analytics", icon: BrainCircuit },
       { title: "Métricas (Suporte)", url: "/admin/support/stats", icon: BarChart3 },
       { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
     ],

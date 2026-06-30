@@ -530,7 +530,7 @@ export default function ViagemForm() {
                       const dest = form.destination || form.title || "destino";
                       const result = await chatCompletion(
                         glmPrompt,
-                        "glm-4-plus",
+                        undefined,
                         `Você é um especialista em redação de anúncios turísticos. Crie uma descrição atrativa, persuasiva e completa para um pacote de viagem para ${dest}. Use parágrafos curtos, destaque os principais atrativos e escreva em português brasileiro. Máximo 200 palavras. Não use markdown, apenas texto.`
                       );
                       set("description", result.trim());

@@ -37,6 +37,9 @@ import {
 } from "lucide-react";
 import { useGlmPostador } from "@/hooks/useGlmPostador";
 import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
+import { PromotionActiveDashboard } from "@/components/promotion/PromotionActiveDashboard";
+import { CampaignTrackingCard } from "@/components/promotion/CampaignTrackingCard";
+import { PromotionFloatingBalloon } from "@/components/promotion/PromotionFloatingBalloon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -105,7 +108,9 @@ export default function AdvertiserPromotionPage() {
     if (pathname.includes("/servicos/")) return "servicos";
     if (pathname.includes("/fretes/")) return "fretes";
     if (pathname.includes("/viagens/")) return "viagens";
-    return null; // rota genérica → mostra todas
+    if (pathname.includes("/produtos/")) return "produtos";
+    // rota genérica /anunciante/divulgar-gratis → contexto de lojista (marketplace)
+    return "produtos";
   }, [pathname]);
 
   const [allItems, setAllItems] = useState<CatalogItem[]>([]);
@@ -669,7 +674,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
           const instruction = networkInstructions[networkId] || networkId;
           const userPrompt = `Rede social: ${instruction}\n\nItens para divulgar:\n${itemsContext}\n\nGere o texto de divulgação para esta rede:`;
           try {
-            results[networkId] = await chatCompletion(userPrompt, "glm-4-plus", systemPrompt);
+            results[networkId] = await chatCompletion(userPrompt, undefined, systemPrompt);
           } catch {
             results[networkId] = "Erro ao gerar. Tente novamente.";
           }
@@ -1379,6 +1384,18 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
             })}
           </div>
 
+          {/* Card inteligente de acompanhamento (sempre visível — gratuito ou pago) */}
+          {user?.id && (
+            <CampaignTrackingCard
+              userId={user.id}
+              category={routeCategory as any}
+              onUpgrade={() => setShowPlansModal(true)}
+            />
+          )}
+
+          {/* Painel vivo da campanha ativa (só para plano pago) */}
+          {user?.id && <PromotionActiveDashboard userId={user.id} />}
+
           {/* Footer tip */}
           <div className="px-4 sm:px-6 py-3 border-t border-[#2A3038]/30 flex flex-col sm:flex-row items-start sm:items-center gap-2"
             style={{ background: "rgba(255,106,0,0.03)" }}>
@@ -1463,6 +1480,14 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
         onClose={() => setShowPlansModal(false)}
         profileType={routeCategory ?? undefined}
       />
+
+      {/* Balão flutuante de conversão (aparece 2 s após carregar, fecha com X, reaparece em 8 h) */}
+      {user?.id && (
+        <PromotionFloatingBalloon
+          userId={user.id}
+          onOpenPlans={() => setShowPlansModal(true)}
+        />
+      )}
     </div>
   );
 }
