@@ -24,7 +24,7 @@ export function useAIPostador(profile: ProfileType) {
       setState({ sending: false, result, error: null });
       return result;
     } catch (err: any) {
-      const msg = err?.message ?? "Erro ao enviar ao Postador";
+      const msg = err?.message ?? "Erro ao enviar ao Impulsionar";
       setState({ sending: false, result: null, error: msg });
       return null;
     }
@@ -32,8 +32,9 @@ export function useAIPostador(profile: ProfileType) {
 
   const reset = useCallback(() => setState({ sending: false, result: null, error: null }), []);
 
-  return { ...state, sendToPostador, reset };
+  return { ...state, sendToPostador, sendToImpulsionar: sendToPostador, reset };
 }
 
-/** Alias legado */
+/** Aliases */
 export const useGlmPostador = useAIPostador;
+export const useAIImpulsionar = useAIPostador;

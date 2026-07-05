@@ -36,49 +36,63 @@ export function DriverPanelHeader({
 
   return (
     <>
-      <header className="relative px-4 pt-6 pb-8 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700">
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-          <span className="text-[16px] font-bold tracking-widest uppercase text-white/50">Painel Motorista</span>
-        </div>
-        <div className="flex items-center justify-between">
+      <header className="relative px-3 py-1.5 bg-gradient-to-r from-blue-900 via-blue-800 to-blue-700 shadow-md">
+        <div className="flex items-center justify-between gap-2">
+          {showBackButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { window.location.href = "/driver"; }}
+              className="text-white hover:bg-white/10 h-8 w-8 mr-1 shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* Avatar + Info */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Avatar className="h-16 w-16 border-2 border-white/30 shadow-lg">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <div className="relative shrink-0">
+              <Avatar className="h-10 w-10 border border-white/30 shadow shrink-0">
                 <AvatarImage src={avatarUrl} alt={userName} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-lg">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-xs">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <div className={cn(
-                "absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full border-2 border-blue-900 shadow-sm transition-colors duration-300",
+                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-blue-900 shadow-sm transition-colors duration-300",
                 isOnline ? "bg-emerald-500" : "bg-slate-400"
               )} />
             </div>
 
-            <div className="flex flex-col items-start gap-1">
-              <span className="text-sm font-semibold text-white">
+            <div className="flex flex-col items-start min-w-0 justify-center gap-0.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/80 bg-black/20 px-1.5 py-0.5 rounded leading-none shrink-0">
+                Painel Motorista
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-white truncate max-w-full leading-tight">
                 {userName}
               </span>
-              <span className={cn(
-                "text-[10px] font-bold uppercase tracking-wider",
-                isOnline ? "text-emerald-300" : "text-white/40"
-              )}>
-                {isOnline ? "Disponível" : "Offline"}
-              </span>
-              <div className="flex items-center gap-1 text-white/70">
-                <MapPin className="h-3 w-3" />
-                <span className="text-xs font-medium">
-                  {city} – {state}
+              <div className="flex items-center gap-2 max-w-full">
+                <span className={cn(
+                  "text-[9px] font-bold uppercase tracking-wider shrink-0 leading-none",
+                  isOnline ? "text-emerald-300" : "text-white/60"
+                )}>
+                  {isOnline ? "• Disponível" : "• Offline"}
                 </span>
+                <div className="flex items-center gap-0.5 text-white/70 text-[10px] truncate leading-none">
+                  <MapPin className="h-2.5 w-2.5 shrink-0" />
+                  <span className="truncate">
+                    {city} – {state}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 shrink-0">
+            <div id="global-audio-portal" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
             <NotificationCenter profileType="driver" />
-            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(true)} className="text-white hover:bg-white/10">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(true)} className="text-white hover:bg-white/10 h-8 w-8">
+              <Menu className="h-4 w-4" />
             </Button>
           </div>
         </div>

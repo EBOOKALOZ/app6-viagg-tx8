@@ -1,7 +1,15 @@
 /**
  * adminRoutes — rotas do painel administrativo.
  */
+import { lazy } from "react";
 import { Route, Navigate } from "react-router-dom";
+
+const PostingEngineAdmin = lazy(() => import("@/pages/admin/PostingEngineAdmin"));
+const AdminMotorDashboard = lazy(() => import("@/pages/admin/AdminMotorDashboard"));
+const ExecutiveDashboard = lazy(() => import("@/dashboards/pages/executive/ExecutiveDashboard"));
+const OperationsDashboard = lazy(() => import("@/dashboards/pages/operational/OperationsDashboard"));
+const GovernanceDashboard = lazy(() => import("@/dashboards/pages/governance/GovernanceDashboard"));
+const DashboardShell = lazy(() => import("@/dashboards/shell/DashboardShell"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -81,6 +89,7 @@ import {
   AdminPostPreviewCenter,
   AdminRealtimeDashboard,
   AdminMapDashboard,
+  AdminPostingQueuePage,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -119,7 +128,7 @@ export const adminRoutes = (
       <Route path="/admin/support/stats" element={<AdminSupportStatsPage />} />
       <Route path="/admin/supervisor" element={<AdminAISupervisorPage />} />
       <Route path="/admin/posting" element={<AdminPosting />} />
-      <Route path="/admin/postador-central" element={<AdminPostadorCentral />} />
+      <Route path="/admin/impulsionar-central" element={<AdminPostadorCentral />} />
       <Route path="/admin/auto-poster" element={<AdminAutoPoster />} />
       <Route path="/admin/campaign-queue" element={<AdminCampaignQueue />} />
       <Route path="/admin/campaign-dispatch" element={<AdminCampaignDispatchPanel />} />
@@ -172,6 +181,22 @@ export const adminRoutes = (
       {/* Central de Eventos + Mapa */}
       <Route path="/admin/eventos" element={<AdminRealtimeDashboard />} />
       <Route path="/admin/mapa"    element={<AdminMapDashboard />} />
+      {/* Tier 2.2: Motor Universal de Postagens — Centro de Controle */}
+      <Route path="/admin/motor"             element={<PostingEngineAdmin />} />
+      <Route path="/admin/motor-central"     element={<AdminMotorDashboard />} />
+      {/* M58.1: Executive Dashboard (CEO Cockpit) — Programa CIO */}
+      <Route path="/admin/executivo"         element={<ExecutiveDashboard />} />
+      {/* M58.2: Enterprise Operations Dashboard (NOC) — Programa CIO */}
+      <Route path="/admin/operacional"       element={<OperationsDashboard />} />
+      {/* M58.4: Enterprise Governance Dashboard — Programa CIO */}
+      <Route path="/admin/governanca"        element={<GovernanceDashboard />} />
+      {/* M58.5: Shell DEFINITIVA do Painel Executivo (rota canônica) */}
+      <Route path="/dashboards/*"            element={<DashboardShell />} />
+      {/* M49: Monitor & Fila do Impulsionamento */}
+      <Route path="/admin/fila-impulsionar" element={<AdminPostingQueuePage />} />
+      {/* Redirect legado */}
+      <Route path="/admin/fila-postador" element={<Navigate to="/admin/fila-impulsionar" replace />} />
+      <Route path="/admin/postador-central" element={<Navigate to="/admin/impulsionar-central" replace />} />
     </Route>
 
     {/* ── Alias /administrador ── */}

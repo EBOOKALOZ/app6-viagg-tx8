@@ -63,7 +63,7 @@ function getSeverityConfig(severity?: string) {
 
 function getModuleIcon(type?: string) {
   switch (type) {
-    case 'postador': return '📦';
+    case 'postador': return '🚀';
     case 'delivery': return '🏍️';
     case 'payment':  return '💰';
     case 'promo':    return '🎁';
@@ -173,7 +173,7 @@ export function NotificationCenter({
   const handleNavigate = (n: UserNotification) => {
     if (n.reference_type === 'lot') {
       setIsOpen(false);
-      navigate('/motoboy/postador');
+      navigate('/motoboy/impulsionar');
     } else if (n.reference_type === 'campaign') {
       setIsOpen(false);
       navigate('/motoboy/campanhas');

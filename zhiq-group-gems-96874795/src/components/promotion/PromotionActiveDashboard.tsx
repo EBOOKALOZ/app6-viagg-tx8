@@ -36,7 +36,7 @@ function useActiveCampaign(userId: string) {
     queryFn: async () => {
       const todayISO = startOfDay(new Date()).toISOString();
 
-      const [purchasesRes, pkgsRes, slotsRes, lotsRes, auditRes] =
+      const [purchasesRes, pkgsRes, slotsRes, lotsRes, auditRes, dailyStatsRes] =
         await Promise.allSettled([
           // Compras ativas do usuário
           (supabase.from("promotion_purchases") as any)
@@ -66,6 +66,8 @@ function useActiveCampaign(userId: string) {
             .select("id, profile_type, success, created_at")
             .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
             .limit(200),
+          // M50: uso diário real — substitui estimativas de frontend
+          supabase.rpc('get_advertiser_daily_stats', { p_user_id: userId, p_days: 30 }),
         ]);
 
       function rows(r: PromiseSettledResult<any>): any[] {
@@ -97,10 +99,10 @@ function useActiveCampaign(userId: string) {
       const expiresAt = addDays(purchasedAt, durationDays);
       const daysRemaining = Math.max(0, differenceInDays(expiresAt, new Date()));
 
-      // Publicações feitas: baseado no tempo decorrido e intervalo
+      // Publicações feitas: estimativa por tempo (substituída por dados reais M50 abaixo)
       const minutesSincePurchase = differenceInMinutes(new Date(), purchasedAt);
-      const totalDone = Math.min(maxPubs, Math.floor(minutesSincePurchase / intervalMin));
-      const remaining = Math.max(0, maxPubs - totalDone);
+      let totalDone = Math.min(maxPubs, Math.floor(minutesSincePurchase / intervalMin));
+      let remaining = Math.max(0, maxPubs - totalDone);
 
       // Hoje
       const minutesToday = differenceInMinutes(new Date(), startOfDay(new Date()));
@@ -113,6 +115,40 @@ function useActiveCampaign(userId: string) {
 
       // Última
       const lastAt = addMinutes(new Date(), -minutesSinceLast);
+
+      // ── M50: dados reais de uso diário (substituem estimativas) ─────────
+      const dailyStatsRaw = dailyStatsRes.status === "fulfilled"
+        ? dailyStatsRes.value?.data
+        : null;
+      const todayStats = dailyStatsRaw?.today ?? null;
+      // O RPC exclui a data de hoje do history (hoje vem no campo "today"),
+      // então somar history + dailyUsed NÃO conta hoje em dobro.
+      const usageHistory: Array<{ usage_date: string; daily_used: number }> =
+        dailyStatsRaw?.history ?? [];
+
+      // Sem fallback silencioso: quando o RPC não responde, o painel
+      // exibe um banner e mantém as estimativas EXPLICITAMENTE marcadas.
+      const hasRealData = !!todayStats;
+
+      const dailyUsed: number      = todayStats?.daily_used      ?? todayDone;
+      const dailyLimit: number     = todayStats?.daily_limit      ?? dailyBoosts;
+      const dailyRemaining: number = todayStats?.daily_remaining
+        ?? Math.max(0, dailyLimit - dailyUsed);
+      const resetAt: Date | null   = todayStats?.reset_at
+        ? new Date(todayStats.reset_at)
+        : null;
+      const isBlocked: boolean     = todayStats?.is_blocked       ?? false;
+      const citiesUsed: string[]   = todayStats?.cities_used      ?? [];
+      const planNameReal: string   = todayStats?.plan_name        ?? pkg?.name ?? "Premium";
+
+      // Total real: soma do histórico M50 (30d, sem hoje) + hoje
+      if (hasRealData) {
+        const historySum = usageHistory.reduce(
+          (acc: number, h: any) => acc + (h.daily_used ?? 0), 0
+        );
+        totalDone = Math.min(maxPubs, historySum + dailyUsed);
+        remaining = Math.max(0, maxPubs - totalDone);
+      }
 
       // ── Auditoria por perfil ──
       const byProfile: Record<string, number> = { motoboy: 0, mototaxi: 0, driver: 0 };
@@ -161,8 +197,16 @@ function useActiveCampaign(userId: string) {
         intervalMin,
         totalDone,
         remaining,
-        todayDone,
-        dailyBoosts,
+        // M50: dados diários reais
+        hasRealData,
+        dailyUsed,
+        dailyLimit,
+        dailyRemaining,
+        resetAt,
+        isBlocked,
+        citiesUsed,
+        planNameReal,
+        usageHistory,
         nextAt,
         lastAt,
         byProfile,
@@ -252,7 +296,8 @@ export function PromotionActiveDashboard({ userId }: Props) {
 
   const {
     pkg, purchase, expiresAt, daysRemaining,
-    maxPubs, intervalMin, totalDone, remaining, todayDone, dailyBoosts,
+    maxPubs, intervalMin, totalDone, remaining,
+    hasRealData, dailyUsed, dailyLimit, dailyRemaining, resetAt, isBlocked,
     nextAt, lastAt, byProfile, totalPostadores, slots,
     viewsEstimated, clicksEstimated, storeEstimated, convEstimated,
     schedule, groupsReached, peopleReached, contactsReceived,
@@ -260,7 +305,7 @@ export function PromotionActiveDashboard({ userId }: Props) {
 
   const isExpiring = daysRemaining <= 3;
   const isNearLimit = remaining <= Math.ceil(maxPubs * 0.1);
-  const pctDone = maxPubs > 0 ? Math.round((totalDone / maxPubs) * 100) : 0;
+  const pctDone = maxPubs > 0 ? Math.min(100, Math.round((totalDone / maxPubs) * 100)) : 0;
 
   // IA GLM recomendação
   const now = new Date();
@@ -274,6 +319,16 @@ export function PromotionActiveDashboard({ userId }: Props) {
 
   return (
     <div className="mx-0 my-4 space-y-3 animate-in fade-in duration-500">
+      {/* ── Aviso: dados reais indisponíveis (sem fallback silencioso) ── */}
+      {!hasRealData && (
+        <div className="mx-4 sm:mx-6 flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-[11px] text-amber-300">
+            Não foi possível carregar os dados reais de uso. Os valores abaixo são estimativas temporárias — recarregue a página.
+          </p>
+        </div>
+      )}
+
       {/* ── Cabeçalho ── */}
       <div className="mx-4 sm:mx-6 rounded-2xl bg-gradient-to-br from-[#FF6A00]/20 to-[#1B1F24] border border-[#FF6A00]/30 p-5">
         <div className="flex items-start justify-between gap-3">
@@ -331,11 +386,25 @@ export function PromotionActiveDashboard({ userId }: Props) {
           title="📌 Destaque no Feed"
           badge={<StatusDot active />}
         >
-          <MetricRow label="Exibido hoje" value={`${todayDone} vez${todayDone !== 1 ? "es" : ""}`} highlight />
+          <MetricRow label="Exibido hoje" value={`${dailyUsed} vez${dailyUsed !== 1 ? "es" : ""}`} highlight />
+          <MetricRow label="Limite diário" value={dailyLimit} />
+          <MetricRow label="Restam hoje" value={dailyRemaining} highlight={dailyRemaining === 0} />
           <MetricRow label="Total contratado" value={maxPubs} />
-          <MetricRow label="Restam" value={remaining} highlight={isNearLimit} />
+          <MetricRow label="Publicações restantes" value={remaining} highlight={isNearLimit} />
           <MetricRow label="Última exibição" value={format(lastAt, "HH:mm", { locale: ptBR })} />
-          {isNearLimit && (
+          {resetAt && (
+            <div className="flex items-center gap-1.5 text-[10px] text-[#A7B0BE]/50">
+              <Timer className="w-3 h-3 shrink-0" />
+              <span>Cota renova às {format(resetAt, "HH:mm")} (horário de Brasília)</span>
+            </div>
+          )}
+          {isBlocked && (
+            <div className="flex items-center gap-1.5 mt-1 px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertCircle className="w-3 h-3 text-red-400 shrink-0" />
+              <p className="text-[10px] text-red-300">Limite diário atingido. Cota renova à meia-noite (Brasília).</p>
+            </div>
+          )}
+          {isNearLimit && !isBlocked && (
             <div className="flex items-center gap-1.5 mt-1 px-2 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/20">
               <AlertCircle className="w-3 h-3 text-orange-400 shrink-0" />
               <p className="text-[10px] text-orange-300">Apenas {remaining} publicações restantes. Considere renovar.</p>
@@ -376,7 +445,7 @@ export function PromotionActiveDashboard({ userId }: Props) {
             </span>
             {" "}para todos os postadores e grupos de divulgação.
           </p>
-          <MetricRow label="Hoje apareceu" value={`${todayDone} vez${todayDone !== 1 ? "es" : ""}`} highlight />
+          <MetricRow label="Hoje apareceu" value={`${dailyUsed} vez${dailyUsed !== 1 ? "es" : ""}`} highlight />
           <MetricRow label="Prioridade no feed" value={pkg?.priority ? `Nível ${pkg.priority}` : "Alta"} />
         </SectionCard>
 
@@ -586,7 +655,7 @@ export function PromotionActiveDashboard({ userId }: Props) {
           ))}
         </div>
         <p className="text-[9px] text-[#A7B0BE]/30 text-center mt-3 italic">
-          * valores estimados com base na atividade da campanha. Métricas exatas disponíveis em breve.
+          * publicações: dado real M50 · grupos, visualizações, cliques e contatos: estimativas
         </p>
       </div>
     </div>

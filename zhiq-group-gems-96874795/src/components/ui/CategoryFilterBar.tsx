@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { type LucideIcon } from "lucide-react";
 
@@ -34,25 +33,23 @@ export function CategoryFilterBar({
   className,
 }: CategoryFilterBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scroll = (dir: "left" | "right") =>
-    scrollRef.current?.scrollBy({ left: dir === "left" ? -200 : 200, behavior: "smooth" });
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const activeEl = scrollRef.current.querySelector('[data-active="true"]') as HTMLElement | null;
+    if (activeEl) {
+      activeEl.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [activeValue]);
 
   const isLight = variant === "light";
 
-  /* ── Arrow button ── */
-  const arrowCls = cn(
-    "shrink-0 rounded-full p-1.5 transition-all hover:scale-110 z-10 border shadow-md",
-    isLight
-      ? "bg-white/90 border-zinc-200 text-zinc-500 hover:bg-white hover:shadow-lg"
-      : "bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
-  );
-
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <button onClick={() => scroll("left")} className={arrowCls} aria-label="Anterior">
-        <ChevronLeft className="w-3.5 h-3.5" />
-      </button>
-
       <div
         ref={scrollRef}
         className="flex gap-2.5 overflow-x-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scroll-smooth py-0.5"
@@ -80,10 +77,6 @@ export function CategoryFilterBar({
           />
         ))}
       </div>
-
-      <button onClick={() => scroll("right")} className={arrowCls} aria-label="Próximo">
-        <ChevronRight className="w-3.5 h-3.5" />
-      </button>
     </div>
   );
 }
@@ -104,6 +97,7 @@ interface PillProps {
 function Pill({ isActive, onClick, isLight, emoji, Icon, label, count }: PillProps) {
   return (
     <button
+      data-active={isActive ? "true" : "false"}
       onClick={onClick}
       className={cn(
         "group/pill relative flex items-center gap-2 pl-1.5 pr-3.5 py-1.5 rounded-2xl shrink-0 font-extrabold text-sm transition-all duration-200 whitespace-nowrap select-none",

@@ -18,7 +18,7 @@ const MODULES = [
   {
     icon: MessageSquare,
     color: "from-blue-500 to-sky-600",
-    label: "Postador Automático",
+    label: "Impulsionador Automático",
     description: "Distribua conteúdo automaticamente nos grupos do WhatsApp com IA.",
     status: "em breve",
   },
@@ -98,7 +98,7 @@ export default function DriverComissao() {
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Próximas integrações</p>
         {[
           { step: "1", label: "Conexão com IA GLM", detail: "API de engajamento inteligente" },
-          { step: "2", label: "Postador WhatsApp", detail: "Distribuição automática em grupos" },
+          { step: "2", label: "Impulsionar WhatsApp", detail: "Distribuição automática em grupos" },
           { step: "3", label: "Dashboard de comissões", detail: "Relatórios e histórico de ganhos" },
           { step: "4", label: "Monitoramento em tempo real", detail: "Eventos, métricas e alertas" },
         ].map((item) => (

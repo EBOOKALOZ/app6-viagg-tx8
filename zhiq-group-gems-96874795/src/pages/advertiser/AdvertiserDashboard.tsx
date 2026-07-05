@@ -456,6 +456,14 @@ export default function AdvertiserDashboard() {
               </Button>
               <Button
                 variant="outline"
+                onClick={() => navigate("/anunciante/divulgar-gratis")}
+                className="bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 font-black uppercase text-[10px] sm:text-xs tracking-wider sm:tracking-widest h-12 sm:h-14 px-5 sm:px-8 rounded-xl sm:rounded-2xl border border-violet-500/30 transition-all w-full sm:w-auto gap-2"
+              >
+                <Megaphone className="w-4 h-4 shrink-0" />
+                Divulgar Grátis
+              </Button>
+              <Button
+                variant="outline"
                 onClick={async () => {
                   const { playNotificationSound } = await import("@/lib/notificationSound");
                   playNotificationSound();

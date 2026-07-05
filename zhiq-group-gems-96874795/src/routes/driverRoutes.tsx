@@ -1,8 +1,23 @@
 /**
  * driverRoutes — rotas do motorista, freteiro e passageiro.
  */
+import { lazy } from "react";
 import { Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+
+const DriverOperatorPromo = lazy(() =>
+  import("@/pages/operator/OperatorPromotionPage").then(m => ({
+    default: (props: object) => m.default({ ...props, profileType: "driver" } as any),
+  }))
+);
+const RIDVCampanhasPage  = lazy(() => import("@/pages/ridv/RIDVCampanhasPage"));
+const RIDVResultadosPage = lazy(() => import("@/pages/ridv/RIDVResultadosPage"));
+const RIDVImpactoPage    = lazy(() => import("@/pages/ridv/RIDVImpactoPage"));
+const RIDVAssistantPage  = lazy(() => import("@/pages/ridv/RIDVAssistantPage"));
+const ImpulsionarCampaignManager     = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarCampaignManager })));
+const ImpulsionarAnalytics          = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarAnalytics })));
+const ImpulsionarCreditsManager      = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarCreditsManager })));
+const ImpulsionarNotificationsCenter = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarNotificationsCenter })));
 import { DriverLayout } from "@/components/driver/DriverLayout";
 import {
   AppLayout,
@@ -37,15 +52,25 @@ export const driverRoutes = (
       <Route path="/driver/wallet" element={<Wallet />} />
       <Route path="/driver/comissao" element={<DriverComissao />} />
 
-      {/* ── Hub Postador driver (abas aninhadas) ── */}
-      <Route path="/driver/postador" element={<PostadorHub />}>
+      {/* ── Hub Impulsionar driver (abas aninhadas) ── */}
+      <Route path="/driver/impulsionar" element={<PostadorHub />}>
         <Route index element={<PostadorDashboard />} />
-        <Route path="postagens"  element={<PostadorPremiumPanel />} />
+        <Route path="divulgacoes"  element={<PostadorPremiumPanel />} />
+        <Route path="promover"   element={<DriverOperatorPromo />} />
         <Route path="grupos"     element={<MotoboyGroupsContent />} />
         <Route path="carteira"   element={<MotoboyWalletContent />} />
         <Route path="historico"  element={<MotoboyHistoryContent />} />
         <Route path="comissao"   element={<DriverComissao />} />
-        <Route path="campanhas"  element={<MotoboyCampaignInbox />} />
+        {/* RIDV tabs */}
+        <Route path="campanhas"  element={<RIDVCampanhasPage />} />
+        <Route path="resultados" element={<RIDVResultadosPage />} />
+        <Route path="impacto"    element={<RIDVImpactoPage />} />
+        <Route path="ia-ridv"    element={<RIDVAssistantPage />} />
+        {/* Enterprise tabs */}
+        <Route path="gerenciador"  element={<ImpulsionarCampaignManager />} />
+        <Route path="analytics"    element={<ImpulsionarAnalytics />} />
+        <Route path="creditos"     element={<ImpulsionarCreditsManager />} />
+        <Route path="notificacoes" element={<ImpulsionarNotificationsCenter />} />
       </Route>
     </Route>
 

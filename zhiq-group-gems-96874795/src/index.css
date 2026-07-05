@@ -59,8 +59,8 @@
     --motoboy-foreground: 0 0% 100%;
     --motoboy-hover: 25 100% 42%;
     --motoboy-light: 25 100% 96%;
-    --motoboy-header: 55 91% 57%;
-    --motoboy-header-foreground: 40 80% 12%;
+    --motoboy-header: 25 100% 50%;
+    --motoboy-header-foreground: 0 0% 100%;
     --motoboy-surface: 145 20% 96%;
     --motoboy-dashboard-bg: 148 18% 94%;
     --info-foreground: 0 0% 100%;
@@ -193,8 +193,8 @@
     --motoboy-foreground: 0 0% 100%;
     --motoboy-hover: 25 100% 48%;
     --motoboy-light: 25 60% 15%;
-    --motoboy-header: 55 85% 42%;
-    --motoboy-header-foreground: 55 100% 95%;
+    --motoboy-header: 25 100% 50%;
+    --motoboy-header-foreground: 0 0% 100%;
     --motoboy-surface: 25 25% 12%;
 
     /* Merchant/Lojista Identity - Dark mode */

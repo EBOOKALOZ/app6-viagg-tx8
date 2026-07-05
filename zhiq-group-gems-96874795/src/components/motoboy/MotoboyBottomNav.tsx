@@ -1,4 +1,4 @@
-import { Home, History, User, Megaphone, Users, Wallet, LogOut, TrendingUp } from "lucide-react";
+import { Home, History, User, Rocket, Users, LogOut, TrendingUp } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -22,14 +22,11 @@ export default function MotoboyBottomNav() {
   };
 
   const navItems: NavItem[] = [
-    { icon: Home,       label: "Início",    path: basePath },
-    { icon: Users,      label: "Grupos",    path: `${basePath}/grupos` },
-    { icon: History,    label: "Histórico", path: `${basePath}/historico` },
-    { icon: Wallet,     label: "Carteira",  path: `${basePath}/wallet` },
-    { icon: Megaphone,  label: "Postador",  path: `${basePath}/postador` },
-    { icon: TrendingUp, label: "Comissão",  path: `${basePath}/postador/comissao` },
-    { icon: User,       label: "Perfil",    path: `${basePath}/profile` },
-    { icon: LogOut,     label: "Sair",      onClick: handleSair, variant: "danger" },
+    { icon: Home,   label: "Início",      path: basePath },
+    { icon: Users,  label: "Grupos",      path: `${basePath}/grupos` },
+    { icon: Rocket, label: "Impulsionar", path: `${basePath}/impulsionar` },
+    { icon: User,   label: "Perfil",      path: `${basePath}/profile` },
+    { icon: LogOut, label: "Sair",        onClick: handleSair, variant: "danger" },
   ];
 
   return (

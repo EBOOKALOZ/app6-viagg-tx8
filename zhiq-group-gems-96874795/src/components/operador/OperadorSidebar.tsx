@@ -1,4 +1,4 @@
-import { Send, BarChart3, LogOut } from "lucide-react";
+import { Rocket, Send, BarChart3, LogOut } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const operadorItems = [
-  { title: "Postador", url: "/operador/postador", icon: Send },
-  { title: "Postagens", url: "/operador/postagens", icon: Send },
+  { title: "Impulsionar", url: "/operador/impulsionar", icon: Rocket },
+  { title: "Divulgações", url: "/operador/divulgacoes", icon: Send },
   { title: "Histórico", url: "/operador/historico", icon: BarChart3 },
 ];
 

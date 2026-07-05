@@ -204,7 +204,7 @@ export default function CampaignSharePage() {
 
         {/* Footer */}
         <p className="text-center text-[10px] text-muted-foreground/50 pt-2">
-          Distribuído pela rede Viagg · Postador Operacional
+          Distribuído pela rede Viagg · Central de Impulsionamento
         </p>
       </div>
     </div>

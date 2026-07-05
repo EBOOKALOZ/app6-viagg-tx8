@@ -373,3 +373,17 @@ export type ConfirmLotResult = {
     store_name?: string;
     items_count?: number;
 };
+
+// ═══════════════════════════════════════
+// ALIASES — NOVA NOMENCLATURA IMPULSIONAR
+// Mantém retrocompatibilidade com código legado
+// ═══════════════════════════════════════
+export type ImpulsionarQueueItem = CampaignQueueItem;
+export type ImpulsionarHistoryEntry = PostingHistoryEntry;
+export type ImpulsionarCardView = PostadorCardView;
+export type ImpulsionarQueueCard = PostadorQueueCard;
+export type ImpulsionarLot = PostingLot;
+export type ImpulsionarLotItem = PostingLotItem;
+export type ImpulsionarLotView = PostingLotView;
+export type ImpulsionarKPIs = LotKPIs;
+

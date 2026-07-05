@@ -209,7 +209,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
     ...(showMerchantOnlyItems ? [{ name: "Minha Loja", href: "/loja/minha-loja", icon: Store }] : []),
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
-    ...(showMerchantOnlyItems ? [{ name: "Divulgar Grátis", href: "/anunciante/produtos/divulgar-gratis", icon: Megaphone }] : []),
+    { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     ...(showMerchantOnlyItems ? [
       { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },
@@ -327,9 +327,12 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              {viagensMode && <span className="text-[9px] font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Viagens</span>}
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:bg-white/10">
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </Button>
+        <div className="flex items-center gap-2">
+          <div id="global-audio-portal-mobile" className="relative flex items-center shrink-0" />
+          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white hover:bg-white/10">
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </Button>
+        </div>
       </header>
 
       {/* Mobile Menu Overlay */}
@@ -357,6 +360,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
              {viagensMode && <span className="text-xs font-bold text-[#FF6A00] uppercase tracking-widest mt-0.5">Viagens</span>}
           </div>
           <div className="flex items-center gap-6">
+            <div id="global-audio-portal-desktop" className="relative flex items-center shrink-0" />
             <div className="h-8 w-px bg-[#2A3038]" />
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">

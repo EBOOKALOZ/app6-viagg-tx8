@@ -95,13 +95,13 @@ export const MarketFreightCard: React.FC<MarketFreightCardProps> = ({ freight })
             </div>
           </div>
 
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-end justify-between gap-2">
-              <div className="text-blue-600 font-black text-2xl tracking-tighter">
+          <CardContent className="p-3.5 sm:p-5 space-y-3 sm:space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-1.5 sm:gap-2 items-start">
+              <div className="text-blue-600 font-black text-xl sm:text-2xl tracking-tighter line-clamp-1">
                 {freight.price_label?.trim() || 'Consulte'}
               </div>
               {!!freight.price_per_km && (
-                <span className="text-[11px] font-black text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 shrink-0">
+                <span className="text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 border border-blue-100 rounded-md sm:rounded-lg px-2 py-0.5 sm:py-1 shrink-0">
                   R$ {Number(freight.price_per_km).toFixed(2)}/km
                 </span>
               )}
@@ -130,16 +130,16 @@ export const MarketFreightCard: React.FC<MarketFreightCardProps> = ({ freight })
             </div>
           </CardContent>
 
-          <CardFooter className="px-5 pb-6 pt-0">
+          <CardFooter className="px-3.5 sm:px-5 pb-4 sm:pb-6 pt-0">
             <Button
               onClick={(e) => {
                 e.stopPropagation();
                 handleNavigate();
               }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm h-12 group/btn shadow-lg"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm h-10 sm:h-12 px-2 sm:px-4 group/btn shadow-lg flex items-center justify-center"
             >
-              TENHO INTERESSE
-              <ChevronRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+              <span className="truncate">TENHO INTERESSE</span>
+              <ChevronRight className="w-3.5 sm:w-4 h-3.5 sm:h-4 ml-1 sm:ml-2 shrink-0 group-hover/btn:translate-x-1 transition-transform" />
             </Button>
           </CardFooter>
         </Card>

@@ -23,7 +23,7 @@ export function MerchantPanelHeader({
 
   return (
     <header className="relative px-4 pt-6 pb-8 bg-[#0F3D2E] border-b border-white/10">
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16 border-2 border-white/20 shadow-lg">
             <AvatarImage src={storeLogoUrl} alt={storeName} />
@@ -49,6 +49,9 @@ export function MerchantPanelHeader({
               </div>
             )}
           </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <div id="global-audio-portal" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
         </div>
       </div>
     </header>

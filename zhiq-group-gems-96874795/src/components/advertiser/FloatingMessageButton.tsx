@@ -16,7 +16,20 @@ export function FloatingMessageButton() {
 
     if (isAdvertiser) {
       setShow(true);
-      setTargetPath('/anunciante/mensagens');
+      // Detectar módulo específico para direcionar à página de mensagens correta
+      if (path.startsWith('/anunciante/viagens')) {
+        setTargetPath('/anunciante/viagens/mensagens');
+      } else if (path.startsWith('/anunciante/imoveis')) {
+        setTargetPath('/anunciante/imoveis/mensagens');
+      } else if (path.startsWith('/anunciante/veiculos')) {
+        setTargetPath('/anunciante/veiculos/mensagens');
+      } else if (path.startsWith('/anunciante/servicos')) {
+        setTargetPath('/anunciante/servicos/mensagens');
+      } else if (path.startsWith('/anunciante/fretes')) {
+        setTargetPath('/anunciante/fretes/mensagens');
+      } else {
+        setTargetPath('/anunciante/mensagens');
+      }
     } else if (isMerchant) {
       setShow(true);
       setTargetPath('/merchant/mensagens');

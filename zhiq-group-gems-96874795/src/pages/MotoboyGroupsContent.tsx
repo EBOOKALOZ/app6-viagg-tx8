@@ -326,19 +326,19 @@ export default function MotoboyGroupsContent() {
       subtitle="Gerencie seu Ativo Territorial e blinde sua comissão"
       icon={Shield}
       headerRight={
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2 flex-wrap w-full sm:w-auto">
           <Button
-            onClick={() => navigate('/motoboy/postador')}
+            onClick={() => navigate('/motoboy/impulsionar')}
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center"
           >
-            <Zap className="h-4 w-4 mr-1.5" />
-            Abrir Postador
+            <Zap className="h-4 w-4 mr-1.5 shrink-0" />
+            Central de Impulsionamento
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="border-motoboy text-motoboy hover:bg-motoboy/10">
-                <Plus className="h-4 w-4 mr-1" />
+              <Button size="sm" variant="outline" className="border-motoboy text-motoboy hover:bg-motoboy/10 whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center">
+                <Plus className="h-4 w-4 mr-1 shrink-0" />
                 Vincular Grupo
               </Button>
             </DialogTrigger>

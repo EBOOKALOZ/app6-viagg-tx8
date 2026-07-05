@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
@@ -8,7 +10,7 @@ const STORAGE_KEY = 'global_audio_settings';
 // sessionStorage — sobrevive a window.location.href (full reload) dentro da mesma aba
 const SESSION_INTERACTED_KEY = 'viagg_audio_interacted';
 const SESSION_POSITION_KEY   = 'viagg_audio_position';
-const DEFAULT_VOLUME = 0.09;
+const DEFAULT_VOLUME = 0.03;
 
 interface AudioSettings {
   volume: number;
@@ -93,6 +95,30 @@ export function GlobalAudioPlayer() {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const location = useLocation();
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  // Watch for the portal container element in the DOM
+  useEffect(() => {
+    const findPortal = () => {
+      const isDesktop = window.innerWidth >= 1024;
+      const el = document.getElementById(isDesktop ? 'global-audio-portal-desktop' : 'global-audio-portal-mobile') 
+                 || document.getElementById('global-audio-portal');
+      setPortalTarget(el);
+    };
+
+    findPortal();
+
+    window.addEventListener('resize', findPortal);
+
+    const observer = new MutationObserver(findPortal);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.removeEventListener('resize', findPortal);
+      observer.disconnect();
+    };
+  }, [location.pathname]);
 
   // Inicializar áudio singleton
   useEffect(() => {
@@ -268,21 +294,47 @@ export function GlobalAudioPlayer() {
       : Volume2;
 
   const volumePercent = Math.round(settings.volume * 100);
+  const isMarketPortal = portalTarget && (portalTarget.id === 'global-audio-portal-desktop' || portalTarget.id === 'global-audio-portal-mobile');
 
-  return (
-    <div className="fixed bottom-24 right-4 z-50">
-      {/* Painel de volume */}
+  const componentContent = (
+    <div className={cn(
+      portalTarget ? "relative flex items-center" : "fixed top-28 right-3 z-50"
+    )}>
+      {/* Botão principal */}
+      <button
+        ref={buttonRef}
+        onClick={handleButtonClick}
+        className={cn(
+          isMarketPortal
+            ? 'w-7 h-7 rounded-md bg-[#F5E62B] text-gray-900 flex items-center justify-center hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 shadow-lg'
+            : portalTarget
+              ? 'w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/10 text-white shadow-none active:scale-95'
+              : 'w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95',
+          !portalTarget && (
+            isPanelOpen
+              ? 'bg-primary text-primary-foreground ring-2 ring-primary/50'
+              : settings.muted
+                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          ),
+          !isReady && 'opacity-50'
+        )}
+        title="Controle de áudio"
+        aria-label="Abrir controle de volume"
+        aria-expanded={isPanelOpen}
+      >
+        <VolumeIcon className={cn(isMarketPortal ? 'w-3.5 h-3.5' : portalTarget ? 'w-5 h-5' : 'w-4 h-4', isPlaying && !settings.muted && 'animate-pulse')} />
+      </button>
+
+      {/* Painel de volume (abre para baixo) */}
       <div
         ref={panelRef}
         className={cn(
-          'absolute bottom-16 right-0 mb-2',
-          'bg-[hsl(142,50%,15%)] border border-primary/30',
-          'rounded-2xl shadow-xl p-4',
-          'min-w-[200px]',
-          'transition-all duration-200 ease-out origin-bottom-right',
+          'absolute mt-2 bg-[hsl(142,50%,15%)] border border-primary/30 rounded-2xl shadow-xl p-4 min-w-[200px] transition-all duration-200 ease-out origin-top-right z-[60]',
+          isMarketPortal ? 'top-9 right-0' : portalTarget ? 'top-10 right-0' : 'top-12 right-0',
           isPanelOpen
             ? 'opacity-100 scale-100 translate-y-0'
-            : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+            : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
         )}
       >
         <div className="flex items-center justify-between mb-3">
@@ -326,31 +378,14 @@ export function GlobalAudioPlayer() {
           )}
         </div>
       </div>
-
-      {/* Botão principal */}
-      <button
-        ref={buttonRef}
-        onClick={handleButtonClick}
-        className={cn(
-          'w-12 h-12 rounded-full',
-          'flex items-center justify-center',
-          'shadow-lg transition-all duration-300',
-          'hover:scale-110 active:scale-95',
-          isPanelOpen
-            ? 'bg-primary text-primary-foreground ring-2 ring-primary/50'
-            : settings.muted
-              ? 'bg-muted text-muted-foreground hover:bg-muted/80'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90',
-          !isReady && 'opacity-50'
-        )}
-        title="Controle de áudio"
-        aria-label="Abrir controle de volume"
-        aria-expanded={isPanelOpen}
-      >
-        <VolumeIcon className={cn('w-5 h-5', isPlaying && !settings.muted && 'animate-pulse')} />
-      </button>
     </div>
   );
+
+  if (portalTarget) {
+    return createPortal(componentContent, portalTarget);
+  }
+
+  return componentContent;
 }
 
 export default GlobalAudioPlayer;

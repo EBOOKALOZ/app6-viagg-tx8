@@ -1,4 +1,4 @@
-import { Home, History, User, Megaphone, Users, Wallet, LogOut, TrendingUp } from "lucide-react";
+import { Home, History, User, Rocket, Users, LogOut, TrendingUp } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -20,14 +20,11 @@ export default function DriverBottomNav() {
   };
 
   const navItems: NavItem[] = [
-    { icon: Home,        label: "Início",    path: "/driver" },
-    { icon: Users,       label: "Grupos",    path: "/driver/groups" },
-    { icon: History,     label: "Histórico", path: "/driver/history" },
-    { icon: Wallet,      label: "Carteira",  path: "/driver/wallet" },
-    { icon: Megaphone,   label: "Postador",  path: "/driver/postador" },
-    { icon: TrendingUp,  label: "Comissão",  path: "/driver/comissao" },
-    { icon: User,        label: "Perfil",    path: "/driver/profile" },
-    { icon: LogOut,      label: "Sair",      onClick: handleSair, variant: "danger" },
+    { icon: Home,   label: "Início",      path: "/driver" },
+    { icon: Users,  label: "Grupos",      path: "/driver/groups" },
+    { icon: Rocket, label: "Impulsionar", path: "/driver/impulsionar" },
+    { icon: User,   label: "Perfil",      path: "/driver/profile" },
+    { icon: LogOut, label: "Sair",        onClick: handleSair, variant: "danger" },
   ];
 
   return (

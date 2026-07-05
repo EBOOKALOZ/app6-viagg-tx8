@@ -121,6 +121,7 @@ export function MarketLayout({
                                     </span>
                                 )}
                             </button>
+                            <div id="global-audio-portal-mobile" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
                         </div>
 
                         {/* Direita */}
@@ -137,6 +138,7 @@ export function MarketLayout({
                             <span className="text-xl font-black text-white tracking-tight whitespace-nowrap">
                                 Mercado Local <span className="text-yellow-200">Viagg-TX8™</span>
                             </span>
+                            <div id="global-audio-portal-desktop" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
                         </div>
 
                         {/* Search — ocupa todo o espaço central */}

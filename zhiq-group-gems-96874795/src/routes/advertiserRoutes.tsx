@@ -44,6 +44,7 @@ import {
   AdvertiserViagemListingsPage,
   ViagemForm,
   AdvertiserSupportPage,
+  AdvertiserPostingMonitorPage,
 } from "./lazyPages";
 
 export const advertiserRoutes = (
@@ -125,5 +126,6 @@ export const advertiserRoutes = (
     <Route path="/anunciante/produtos/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/carteira"        element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
     <Route path="/anunciante/suporte"        element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
+    <Route path="/anunciante/monitor"        element={<Suspense fallback={<PageFallback />}><AdvertiserPostingMonitorPage /></Suspense>} />
   </Route>
 );

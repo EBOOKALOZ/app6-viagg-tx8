@@ -378,7 +378,10 @@ export default function SelectProfile() {
       <div className="flex-1 flex flex-col items-center px-4 py-10">
         <div className="w-full max-w-4xl space-y-8">
           <div className="flex flex-col items-center space-y-2 text-center">
-            <Logo size="2xl" />
+            <div className="flex items-center gap-4 justify-center relative">
+              <Logo size="2xl" />
+              <div id="global-audio-portal" className="relative flex items-center shrink-0" />
+            </div>
             <h1 className="text-2xl font-bold text-white mt-4">Selecione seu Perfil</h1>
             <p className="text-sm text-white/50">Escolha como deseja usar a plataforma</p>
           </div>

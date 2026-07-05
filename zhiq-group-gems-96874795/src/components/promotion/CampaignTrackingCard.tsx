@@ -266,9 +266,11 @@ interface Props {
   userId: string;
   category?: CategoryTab;
   onUpgrade?: () => void;
+  onFreeSelect?: () => void;
+  selectedMode?: "free" | "paid" | null;
 }
 
-export function CampaignTrackingCard({ userId, category, onUpgrade }: Props) {
+export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect, selectedMode }: Props) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useCampaignData(userId, category ?? null);
 
@@ -398,6 +400,90 @@ export function CampaignTrackingCard({ userId, category, onUpgrade }: Props) {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── CTAs grandes: escolha obrigatória ── */}
+      <div className="mx-4 sm:mx-6 mb-1">
+        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#A7B0BE]/60 mb-2 text-center">
+          Escolha como deseja divulgar antes de enviar
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+          {/* Botão 1: Divulgar Grátis */}
+          <button
+            onClick={onFreeSelect}
+            className={`group flex items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all active:scale-[0.98] ${
+              selectedMode === "free"
+                ? "border-emerald-400 bg-emerald-500/20 ring-2 ring-emerald-400/40"
+                : "border-emerald-500/40 bg-gradient-to-br from-emerald-500/8 to-[#0D0F12] hover:border-emerald-500/70 hover:from-emerald-500/16"
+            }`}
+          >
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all ${
+              selectedMode === "free"
+                ? "bg-emerald-500/30 border-emerald-400"
+                : "bg-emerald-500/15 border-emerald-500/30 group-hover:bg-emerald-500/25"
+            }`}>
+              <Radio className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-400 mb-0.5">
+                Gratuito · 0 créditos
+              </p>
+              <p className="text-[#F5F7FA] font-black text-sm leading-tight">
+                Divulgar Grátis
+              </p>
+              <p className="text-[#A7B0BE] text-[11px] mt-0.5">
+                1 anúncio por dia • IA GLM distribui automaticamente
+              </p>
+            </div>
+            {selectedMode === "free"
+              ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              : <div className="w-5 h-5 rounded-full border-2 border-[#2A3038] shrink-0" />
+            }
+          </button>
+
+          {/* Botão 2: Upgrade */}
+          {onUpgrade && (
+            <button
+              onClick={() => { onUpgrade(); }}
+              className={`group flex items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all active:scale-[0.98] ${
+                selectedMode === "paid"
+                  ? "border-[#FF6A00] bg-[#FF6A00]/20 ring-2 ring-[#FF6A00]/40"
+                  : "border-[#FF6A00]/40 bg-gradient-to-br from-[#FF6A00]/8 to-[#0D0F12] hover:border-[#FF6A00]/70 hover:from-[#FF6A00]/16"
+              }`}
+            >
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all ${
+                selectedMode === "paid"
+                  ? "bg-[#FF6A00]/30 border-[#FF6A00]"
+                  : "bg-[#FF6A00]/15 border-[#FF6A00]/30 group-hover:bg-[#FF6A00]/25"
+              }`}>
+                <Sparkles className="w-6 h-6 text-[#FF6A00]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#FF6A00] mb-0.5">
+                  Plano Pago · Até 30×/dia
+                </p>
+                <p className="text-[#F5F7FA] font-black text-sm leading-tight">
+                  Fazer Upgrade
+                </p>
+                <p className="text-[#A7B0BE] text-[11px] mt-0.5">
+                  Mais alcance, prioridade alta e relatórios completos
+                </p>
+              </div>
+              {selectedMode === "paid"
+                ? <CheckCircle2 className="w-5 h-5 text-[#FF6A00] shrink-0" />
+                : <ArrowRight className="w-5 h-5 text-[#FF6A00] shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              }
+            </button>
+          )}
+        </div>
+
+        {/* Aviso se nada selecionado */}
+        {!selectedMode && (
+          <p className="mt-2 text-center text-[11px] text-amber-400/80 font-bold">
+            ⚠ Escolha uma opção acima para liberar o envio
+          </p>
+        )}
       </div>
 
       {/* ── Grid principal ── */}

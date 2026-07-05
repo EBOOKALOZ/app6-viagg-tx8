@@ -5,9 +5,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Send, Users, History, TrendingUp, Megaphone,
   Radio, CheckCircle, Clock, Trophy, ArrowRight,
-  Loader2, Zap, Star, Wallet,
+  Loader2, Zap, Star, Wallet, BarChart3, Globe2, Sparkles, Rocket, Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { RIDVHeader } from '@/components/ridv/RIDVHeader';
+import { RIDVStats } from '@/components/ridv/RIDVStats';
+import { RIDVAssistant } from '@/components/ridv/RIDVAssistant';
+import { RIDVCampaignCard } from '@/components/ridv/RIDVCampaignCard';
+import { MOCK_RIDV_CAMPAIGNS } from '@/components/ridv/RIDVCampaignList';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  ImpulsionarStats,
+  ImpulsionarCreditsCard,
+  ImpulsionarProfileContent,
+  ImpulsionarCampaignTabs,
+  ImpulsionarAIAssistant,
+  ImpulsionarEnterpriseKPIs,
+  ImpulsionarCampaignModal,
+} from '@/components/impulsionar';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +100,7 @@ function ActionCard({ icon: Icon, label, description, badge, badgeColor = 'bg-mo
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function PostadorDashboard() {
+  const [showModal, setShowModal] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -94,7 +111,13 @@ export default function PostadorDashboard() {
     ? '/driver'
     : '/motoboy';
 
-  const hub = `${base}/postador`;
+  const profile = pathname.startsWith('/mototaxi')
+    ? 'mototaxi'
+    : pathname.startsWith('/driver')
+    ? 'driver'
+    : 'motoboy';
+
+  const hub = `${base}/impulsionar`;
   const go = (segment: string) => navigate(`${hub}/${segment}`);
 
   const { kpis, operatorKpis, operationalBoard, loadingBoard, historyMine } =
@@ -123,56 +146,173 @@ export default function PostadorDashboard() {
     ? 'bg-amber-600'
     : 'bg-motoboy';
 
+  // Profile data for RIDVHeader
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [userName, setUserName] = useState('Parceiro');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [isOnline, setIsOnline] = useState(false);
+  const profileType = base === '/driver' ? 'driver' : base === '/mototaxi' ? 'mototaxi' : 'motoboy';
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const load = async () => {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profile) {
+          setUserName(profile.name || 'Parceiro');
+          setAvatarUrl(profile.avatar_url || undefined);
+        }
+        // Fetch city/state from the correct profile table
+        const table = profileType === 'driver' ? 'driver_profiles'
+          : profileType === 'mototaxi' ? 'motoboy_profiles'
+          : 'motoboy_profiles';
+        const { data: profData } = await (supabase.from(table as any) as any)
+          .select('cidade, estado, is_online')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (profData) {
+          setCity(profData.cidade || '');
+          setState(profData.estado || '');
+          setIsOnline(profData.is_online || false);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    load();
+  }, [user?.id, profileType]);
+
   return (
     <div className="p-3 pb-24 space-y-4">
 
-      {/* ── Hero: status line ── */}
-      <div className="rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-800 p-4 text-white flex items-start gap-3">
-        <div className="p-2 rounded-xl bg-motoboy/20 shrink-0">
-          <Radio className="h-5 w-5 text-motoboy" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-base leading-tight">Módulo Postador</p>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            {loadingBoard ? 'Carregando...' : `${pendingCount} ${pendingCount === 1 ? 'campanha disponível' : 'campanhas disponíveis'}`}
+      {/* ── RIDV Header ── */}
+      <RIDVHeader
+        avatarUrl={avatarUrl}
+        userName={userName}
+        city={city}
+        state={state}
+        isOnline={isOnline}
+        profileType={profileType as any}
+        memberSince={user?.created_at}
+      />
+
+      {/* ── IA RIDV Assistant (compact) ── */}
+      <RIDVAssistant compact />
+
+      {/* ── RIDV KPI Stats ── */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground/50 px-0.5">
+          Minha Central RIDV
+        </p>
+        <RIDVStats campanhasDisponiveis={pendingCount} isLoading={loadingBoard} />
+      </div>
+
+      {/* ── Preview campanhas RIDV em destaque ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-0.5">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground/50">
+            Campanhas em Destaque
           </p>
+          <button
+            onClick={() => go('campanhas')}
+            className="text-[10px] font-bold text-orange-400 hover:text-orange-300 transition-colors"
+          >
+            Ver todas →
+          </button>
         </div>
-        <div className="text-right shrink-0">
-          <p className={cn('text-sm font-black', tierColor)}>{tierName}</p>
-          <p className="text-[11px] text-zinc-500">{commRate}% comissão</p>
+        <div className="space-y-2">
+          {MOCK_RIDV_CAMPAIGNS.filter((c) => c.priority === 'featured').slice(0, 2).map((c) => (
+            <RIDVCampaignCard
+              key={c.id}
+              campaign={c}
+              compact
+              onShare={(id) => console.log('[RIDV] share', id)}
+              onView={() => go('campanhas')}
+            />
+          ))}
         </div>
       </div>
 
-      {/* ── KPI grid ── */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: 'Pendentes',   value: pendingCount, icon: Clock,        color: 'text-amber-500' },
-          { label: 'Minhas',      value: myPosted,     icon: CheckCircle,  color: 'text-emerald-500' },
-          { label: 'Total geral', value: postedTotal,  icon: Zap,          color: 'text-blue-400' },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="rounded-xl bg-white border border-zinc-100 p-3 text-center shadow-sm">
-            <Icon className={cn('h-4 w-4 mx-auto mb-1', color)} />
-            <p className="text-xl font-black text-zinc-900 leading-none">{value}</p>
-            <p className="text-[10px] text-zinc-400 mt-0.5 font-medium">{label}</p>
+      {/* ── Banner Enterprise Criar Campanha ── */}
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5 text-center sm:text-left">
+          <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-md shrink-0">
+            <Sparkles className="h-6 w-6" />
           </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-black leading-tight">
+              Gerenciador de Campanhas Enterprise IA
+            </h3>
+            <p className="text-xs text-orange-100 mt-0.5">
+              Crie campanhas personalizadas com público-alvo, orçamentos e simulação de alcance RIDV.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          className="px-5 py-3 rounded-2xl bg-zinc-900 hover:bg-black text-white font-black text-xs shadow-lg flex items-center gap-2 shrink-0 transition-all hover:scale-105 active:scale-95"
+        >
+          <Rocket className="h-4 w-4 text-orange-400" />
+          Nova Campanha (com IA)
+        </button>
+      </div>
+
+      {/* ── RIDV quick links ── */}
+      <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-9 gap-2">
+        {[
+          { icon: Rocket,     label: 'Gerenciar',  segment: 'gerenciador',  color: '#ec4899', bg: 'rgba(236,72,153,0.10)' },
+          { icon: BarChart3,  label: 'Analytics',  segment: 'analytics',    color: '#8b5cf6', bg: 'rgba(139,92,246,0.10)' },
+          { icon: Sparkles,   label: 'Créditos',   segment: 'creditos',     color: '#f97316', bg: 'rgba(249,115,22,0.10)' },
+          { icon: Bell,       label: 'Avisos',     segment: 'notificacoes', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)' },
+          { icon: Wallet,     label: 'Carteira',   segment: 'carteira',     color: '#eab308', bg: 'rgba(234,179,8,0.10)' },
+          { icon: History,    label: 'Histórico',  segment: 'historico',    color: '#10b981', bg: 'rgba(16,185,129,0.10)' },
+          { icon: TrendingUp, label: "Comissão",   segment: 'comissao',     color: '#06b6d4', bg: 'rgba(6,182,212,0.10)' },
+          { icon: BarChart3,  label: 'Resultados', segment: 'resultados',   color: '#0ea5e9', bg: 'rgba(14,165,233,0.10)' },
+          { icon: Globe2,     label: 'Impacto',    segment: 'impacto',      color: '#22c55e', bg: 'rgba(34,197,94,0.10)' },
+        ].map(({ icon: Icon, label, segment, color, bg }) => (
+          <button
+            key={segment}
+            onClick={() => go(segment)}
+            className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all hover:-translate-y-0.5 active:scale-95"
+            style={{ background: bg, border: `1px solid ${color}22` }}
+          >
+            <Icon className="h-5 w-5" style={{ color }} />
+            <span className="text-[10px] font-black uppercase tracking-wider truncate max-w-full" style={{ color }}>{label}</span>
+          </button>
         ))}
       </div>
 
-      {/* ── Grupos KPI ── */}
-      <div className="rounded-xl bg-white border border-zinc-100 p-3 shadow-sm flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-emerald-50 shrink-0">
-          <Users className="h-4 w-4 text-emerald-600" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-zinc-900">
-            {validGroups} grupo{validGroups !== 1 ? 's' : ''} válido{validGroups !== 1 ? 's' : ''} para comissão
-          </p>
-          <p className="text-xs text-zinc-400">{totalGroups} grupos cadastrados no total</p>
-        </div>
-        <div className={cn('flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold', tierColor, 'bg-zinc-100')}>
-          <Star className="h-3 w-3" />
-          {tierName}
-        </div>
+      {/* ── Nova Interface Impulsionar Moderna ── */}
+      <ImpulsionarCreditsCard
+        balance={48.50}
+        pendingEarnings={12.00}
+        onWithdraw={() => go('carteira')}
+        onExplore={() => go('campanhas')}
+      />
+
+      <ImpulsionarStats
+        viewsCount={1240 + postedTotal * 15}
+        clicksCount={384 + myPosted * 5}
+        activeCampaigns={pendingCount}
+        loading={loadingBoard}
+      />
+
+      <ImpulsionarEnterpriseKPIs />
+
+      <ImpulsionarProfileContent profileType={profile} />
+
+      <ImpulsionarAIAssistant profileType={profile} />
+
+      <div className="pt-2">
+        <h3 className="text-xs font-black uppercase tracking-wider text-zinc-400 mb-2 px-1">
+          Campanhas e Oportunidades
+        </h3>
+        <ImpulsionarCampaignTabs onSelectCampaign={() => go('divulgacoes')} profileType={profile} />
       </div>
 
       {/* ── Quick actions ── */}
@@ -188,11 +328,11 @@ export default function PostadorDashboard() {
         />
         <ActionCard
           icon={Send}
-          label="Postagens"
+          label="Divulgações"
           description="Board operacional — reserve e confirme alvos"
           badge={pendingCount > 0 ? pendingCount : undefined}
           badgeColor={accentBadge}
-          onClick={() => go('postagens')}
+          onClick={() => go('divulgacoes')}
           accentClass={accentBtn}
         />
         <ActionCard
@@ -234,14 +374,14 @@ export default function PostadorDashboard() {
       {/* ── Últimas postagens ── */}
       {historyMine && historyMine.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest px-1">Últimas postagens</p>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest px-1">Últimas divulgações</p>
           <div className="rounded-xl bg-white border border-zinc-100 shadow-sm divide-y divide-zinc-50">
             {historyMine.slice(0, 5).map((h: any) => (
               <div key={h.id} className="flex items-center gap-3 px-4 py-3">
                 <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-900 truncate">
-                    {h.campaign_title || h.store_name || 'Postagem'}
+                    {h.campaign_title || h.store_name || 'Divulgação'}
                   </p>
                   <p className="text-[11px] text-zinc-400">{fmtDate(h.posted_at)}</p>
                 </div>
@@ -257,6 +397,14 @@ export default function PostadorDashboard() {
           </button>
         </div>
       )}
+
+      <ImpulsionarCampaignModal
+        open={showModal}
+        onOpenChange={setShowModal}
+        onSuccess={() => {
+          go('gerenciador');
+        }}
+      />
 
     </div>
   );

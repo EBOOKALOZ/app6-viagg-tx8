@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": ["src/dashboards/**/*", "src/integrations/supabase/client.ts", "src/integrations/supabase/types.ts", "src/hooks/use-toast.ts"],
+  "compilerOptions": { "noEmit": true, "types": ["vite/client"] }
+}

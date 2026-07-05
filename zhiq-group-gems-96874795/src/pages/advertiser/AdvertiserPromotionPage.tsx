@@ -34,6 +34,7 @@ import {
   Truck,
   Plane,
   Send,
+  Radio,
 } from "lucide-react";
 import { useGlmPostador } from "@/hooks/useGlmPostador";
 import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
@@ -140,6 +141,9 @@ export default function AdvertiserPromotionPage() {
 
   // Modal de planos de promoção
   const [showPlansModal, setShowPlansModal] = useState(false);
+
+  // Escolha obrigatória antes de enviar: 'free' | 'paid' | null
+  const [selectedMode, setSelectedMode] = useState<"free" | "paid" | null>(null);
 
   // Balão de mensagem do slot de marca
   const [showBrandBalloon, setShowBrandBalloon] = useState(false);
@@ -464,11 +468,13 @@ export default function AdvertiserPromotionPage() {
       setAllItems(results);
 
       // Restore saved slots from DB — populates both visual slots and "Ativo" badges
+      // status='active' only; order by position (Queue Module canonical ordering)
       const { data: savedSlots } = await supabase
         .from("promoted_listing_slots" as any)
-        .select("listing_id, listing_type, listing_title, listing_price, listing_image, listing_city")
+        .select("listing_id, listing_type, listing_title, listing_price, listing_image, listing_city, position")
         .eq("user_id", user!.id)
-        .order("created_at", { ascending: true });
+        .eq("status", "active")
+        .order("position", { ascending: true });
 
       if (savedSlots && savedSlots.length > 0) {
         const savedIds = (savedSlots as any[]).map((r) => r.listing_id);
@@ -546,25 +552,32 @@ export default function AdvertiserPromotionPage() {
     handleSaveSlot(item);
   }
 
-  /* ── Remove from slot + DB ── */
-  function handleRemoveSlot(itemId: string, itemTitle?: string) {
+  /* ── Remove from slot + DB (soft delete via update_slot_status RPC — Regra #1) ── */
+  async function handleRemoveSlot(itemId: string, itemTitle?: string) {
     setSelectedItems((prev) => prev.filter((p) => p.id !== itemId));
     setQueuedItems((prev) => prev.filter((p) => p.id !== itemId));
     setPromoted((prev) => prev.filter((id) => id !== itemId));
-    supabase
+
+    const { data: slotRow } = await supabase
       .from("promoted_listing_slots" as any)
-      .delete()
+      .select("id")
       .eq("user_id", user!.id)
       .eq("listing_id", itemId)
-      .then(({ error }) => {
-        if (error) {
-          toast.error("Erro ao remover da divulgação.");
-        } else {
-          toast(itemTitle ? `"${itemTitle}" removido da divulgação` : "Anúncio removido da divulgação", {
-            description: "O slot está livre para um novo anúncio.",
-          });
-        }
+      .maybeSingle();
+
+    if (!slotRow?.id) return;
+
+    const { error } = await supabase.rpc("update_slot_status", {
+      p_slot_id: slotRow.id,
+      p_status:  "removed",
+    });
+    if (error) {
+      toast.error("Erro ao remover da divulgação.");
+    } else {
+      toast(itemTitle ? `"${itemTitle}" removido da divulgação` : "Anúncio removido da divulgação", {
+        description: "O slot está livre para um novo anúncio.",
       });
+    }
   }
 
   /* ── Save single slot → promoted_listing_slots ── */
@@ -575,13 +588,13 @@ export default function AdvertiserPromotionPage() {
       const { error } = await supabase
         .from("promoted_listing_slots" as any)
         .upsert({
-          user_id: user!.id,
-          listing_type: item.category,
-          listing_id: item.id,
+          user_id:       user!.id,
+          listing_type:  item.category,
+          listing_id:    item.id,
           listing_title: item.title,
           listing_price: item.price,
           listing_image: resolvedImage || item.image || null,
-          listing_city: item.city || null,
+          listing_city:  item.city || null,
         }, { onConflict: "user_id,listing_id" });
 
       if (error) throw error;
@@ -603,14 +616,14 @@ export default function AdvertiserPromotionPage() {
     if (selectedItems.length === 0) return;
     setSubmitting(true);
     try {
-      const rows = selectedItems.map((item) => ({
-        user_id: user!.id,
-        listing_type: item.category,
-        listing_id: item.id,
+      const rows = selectedItems.map((item, idx) => ({
+        user_id:       user!.id,
+        listing_type:  item.category,
+        listing_id:    item.id,
         listing_title: item.title,
         listing_price: item.price,
         listing_image: resolveImage(item.image ?? null, item.bucket) || item.image || null,
-        listing_city: item.city || null,
+        listing_city:  item.city || null,
       }));
       const { error } = await supabase
         .from("promoted_listing_slots" as any)
@@ -630,9 +643,9 @@ export default function AdvertiserPromotionPage() {
       });
       setPromoted((prev) => [...new Set([...prev, ...sentIds])]);
       autoOpenedRef.current = false;
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("Erro ao ativar divulgação.");
+      toast.error(`Erro ao ativar divulgação: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setSubmitting(false);
     }
@@ -1145,39 +1158,60 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               </div>
             </div>
 
+            {/* ── Botões principais ── */}
             <div className="flex flex-col md:flex-row gap-3">
+              {/* Grátis: 1 anúncio por dia */}
               <Button
-                onClick={handleGeneratePromoText}
-                disabled={generatingPromoText || selectedNetworks.length === 0 || selectedItems.length === 0}
-                variant="outline"
-                className="flex-1 bg-transparent border-[#FF6A00]/40 text-[#FF6A00] hover:bg-[#FF6A00]/10 hover:border-[#FF6A00] font-black uppercase tracking-wider text-xs h-14 rounded-xl transition-all duration-300"
-              >
-                {generatingPromoText ? (
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                ) : (
-                  <Bot className="w-5 h-5 mr-2" />
-                )}
-                {generatingPromoText
-                  ? `Gerando para ${selectedNetworks.length} rede(s)...`
-                  : `Postador IA — Gerar para ${selectedNetworks.length} Rede(s)`}
-              </Button>
-
-              <Button
-                onClick={handlePromote}
+                onClick={() => { setSelectedMode("free"); handlePromote(); }}
                 disabled={submitting || selectedItems.length === 0}
-                className="flex-1 bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-wider text-xs h-14 rounded-xl shadow-lg shadow-[#FF6A00]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF6A00]/30"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-wider text-xs h-14 rounded-xl shadow-lg shadow-emerald-700/25 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none gap-2"
               >
                 {submitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  <Share2 className="w-5 h-5 mr-2" />
+                  <Radio className="w-5 h-5" />
                 )}
-                {submitting
-                  ? "Enviando para o Postador..."
-                  : `Enviar ${selectedItems.length} Anúncio${selectedItems.length > 1 ? "s" : ""} para Divulgação`}
-                {!submitting && <ArrowRight className="w-5 h-5 ml-2" />}
+                {submitting ? "Enviando..." : "Manter 1 anúncio grátis por dia"}
+              </Button>
+
+              {/* Pago: ver pacotes */}
+              <Button
+                onClick={() => setShowPlansModal(true)}
+                disabled={selectedItems.length === 0}
+                className="flex-1 bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-wider text-xs h-14 rounded-xl shadow-lg shadow-[#FF6A00]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF6A00]/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Ver Pacotes de Divulgação
+                <ArrowRight className="w-5 h-5" />
               </Button>
             </div>
+
+            {/* ── Postador IA (função avançada — abaixo dos botões principais) ── */}
+            <details className="group">
+              <summary className="cursor-pointer list-none flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#A7B0BE]/60 hover:text-[#A7B0BE] transition-colors select-none">
+                <Bot className="w-3.5 h-3.5" />
+                Gerar texto com IA para redes sociais
+                <span className="ml-auto text-[10px] group-open:hidden">▼</span>
+                <span className="ml-auto text-[10px] hidden group-open:inline">▲</span>
+              </summary>
+              <div className="mt-3">
+                <Button
+                  onClick={handleGeneratePromoText}
+                  disabled={generatingPromoText || selectedNetworks.length === 0 || selectedItems.length === 0}
+                  variant="outline"
+                  className="w-full bg-transparent border-[#FF6A00]/40 text-[#FF6A00] hover:bg-[#FF6A00]/10 hover:border-[#FF6A00] font-black uppercase tracking-wider text-xs h-12 rounded-xl transition-all duration-300"
+                >
+                  {generatingPromoText ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <Bot className="w-5 h-5 mr-2" />
+                  )}
+                  {generatingPromoText
+                    ? `Gerando para ${selectedNetworks.length} rede(s)...`
+                    : `Postador IA — Gerar para ${selectedNetworks.length} Rede(s)`}
+                </Button>
+              </div>
+            </details>
 
             {/* Per-network generated texts */}
             {Object.keys(networkTexts).length > 0 && (
@@ -1389,7 +1423,9 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
             <CampaignTrackingCard
               userId={user.id}
               category={routeCategory as any}
-              onUpgrade={() => setShowPlansModal(true)}
+              onUpgrade={() => { setSelectedMode("paid"); setShowPlansModal(true); }}
+              onFreeSelect={() => setSelectedMode("free")}
+              selectedMode={selectedMode}
             />
           )}
 

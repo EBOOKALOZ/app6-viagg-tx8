@@ -279,3 +279,7 @@ export const ClientTicketConversationPage = lazy(() => import("@/pages/support/C
 /* ── Central de Eventos (EDA) + Mapa Inteligente ── */
 export const AdminRealtimeDashboard = lazy(() => import("@/pages/admin/AdminRealtimeDashboard"));
 export const AdminMapDashboard      = lazy(() => import("@/pages/admin/AdminMapDashboard"));
+
+/* ── Monitor de Divulgação (M49) ── */
+export const AdvertiserPostingMonitorPage = lazy(() => import("@/pages/advertiser/AdvertiserPostingMonitorPage"));
+export const AdminPostingQueuePage        = lazy(() => import("@/pages/admin/AdminPostingQueuePage"));

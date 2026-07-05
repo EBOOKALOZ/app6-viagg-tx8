@@ -1,8 +1,20 @@
 /**
  * motoboyRoutes — rotas do painel motoboy e mototáxi.
  */
+import { lazy } from "react";
 import { Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+
+const MotoboyOperatorPromo  = lazy(() => import("@/pages/operator/OperatorPromotionPage").then(m => ({ default: (props: any) => m.default({ ...props, profileType: "motoboy"   }) })));
+const MototaxiOperatorPromo = lazy(() => import("@/pages/operator/OperatorPromotionPage").then(m => ({ default: (props: any) => m.default({ ...props, profileType: "mototaxi"  }) })));
+const RIDVCampanhasPage  = lazy(() => import("@/pages/ridv/RIDVCampanhasPage"));
+const RIDVResultadosPage = lazy(() => import("@/pages/ridv/RIDVResultadosPage"));
+const RIDVImpactoPage    = lazy(() => import("@/pages/ridv/RIDVImpactoPage"));
+const RIDVAssistantPage  = lazy(() => import("@/pages/ridv/RIDVAssistantPage"));
+const ImpulsionarCampaignManager     = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarCampaignManager })));
+const ImpulsionarAnalytics          = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarAnalytics })));
+const ImpulsionarCreditsManager      = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarCreditsManager })));
+const ImpulsionarNotificationsCenter = lazy(() => import("@/components/impulsionar").then(m => ({ default: m.ImpulsionarNotificationsCenter })));
 import {
   MotoboyLayout,
   MototaxiLayout,
@@ -61,15 +73,25 @@ export const motoboyRoutes = (
       <Route path="/motoboy/lgpd" element={<MotoboyLGPDPage />} />
       <Route path="/motoboy/campanhas" element={<MotoboyCampaignInbox />} />
 
-      {/* ── Hub Postador (abas aninhadas) ── */}
-      <Route path="/motoboy/postador" element={<PostadorHub />}>
+      {/* ── Hub Impulsionar (abas aninhadas) ── */}
+      <Route path="/motoboy/impulsionar" element={<PostadorHub />}>
         <Route index element={<PostadorDashboard />} />
-        <Route path="postagens"  element={<PostadorPremiumPanel />} />
+        <Route path="divulgacoes"  element={<PostadorPremiumPanel />} />
+        <Route path="promover"   element={<MotoboyOperatorPromo />} />
         <Route path="grupos"     element={<MotoboyGroupsContent />} />
         <Route path="carteira"   element={<MotoboyWalletContent />} />
         <Route path="historico"  element={<MotoboyHistoricoContent />} />
         <Route path="comissao"   element={<MotoboyFinanceContent />} />
-        <Route path="campanhas"  element={<MotoboyCampaignInbox />} />
+        {/* RIDV tabs */}
+        <Route path="campanhas"  element={<RIDVCampanhasPage />} />
+        <Route path="resultados" element={<RIDVResultadosPage />} />
+        <Route path="impacto"    element={<RIDVImpactoPage />} />
+        <Route path="ia-ridv"   element={<RIDVAssistantPage />} />
+        {/* Enterprise tabs */}
+        <Route path="gerenciador"  element={<ImpulsionarCampaignManager />} />
+        <Route path="analytics"    element={<ImpulsionarAnalytics />} />
+        <Route path="creditos"     element={<ImpulsionarCreditsManager />} />
+        <Route path="notificacoes" element={<ImpulsionarNotificationsCenter />} />
       </Route>
     </Route>
 
@@ -97,15 +119,25 @@ export const motoboyRoutes = (
       <Route path="/mototaxi/grupos" element={<MotoboyGroupsContent />} />
       <Route path="/mototaxi/campanhas" element={<MotoboyCampaignInbox />} />
 
-      {/* ── Hub Postador mototaxi ── */}
-      <Route path="/mototaxi/postador" element={<PostadorHub />}>
+      {/* ── Hub Impulsionar mototaxi ── */}
+      <Route path="/mototaxi/impulsionar" element={<PostadorHub />}>
         <Route index element={<PostadorDashboard />} />
-        <Route path="postagens"  element={<PostadorPremiumPanel />} />
+        <Route path="divulgacoes"  element={<PostadorPremiumPanel />} />
+        <Route path="promover"   element={<MototaxiOperatorPromo />} />
         <Route path="grupos"     element={<MotoboyGroupsContent />} />
         <Route path="carteira"   element={<MotoboyWalletContent />} />
         <Route path="historico"  element={<MototaxiHistory />} />
         <Route path="comissao"   element={<MotoboyFinanceContent />} />
-        <Route path="campanhas"  element={<MotoboyCampaignInbox />} />
+        {/* RIDV tabs */}
+        <Route path="campanhas"  element={<RIDVCampanhasPage />} />
+        <Route path="resultados" element={<RIDVResultadosPage />} />
+        <Route path="impacto"    element={<RIDVImpactoPage />} />
+        <Route path="ia-ridv"   element={<RIDVAssistantPage />} />
+        {/* Enterprise tabs */}
+        <Route path="gerenciador"  element={<ImpulsionarCampaignManager />} />
+        <Route path="analytics"    element={<ImpulsionarAnalytics />} />
+        <Route path="creditos"     element={<ImpulsionarCreditsManager />} />
+        <Route path="notificacoes" element={<ImpulsionarNotificationsCenter />} />
       </Route>
     </Route>
   </>

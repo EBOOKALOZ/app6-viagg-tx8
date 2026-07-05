@@ -675,7 +675,7 @@ export default function PostadorPremiumPanel() {
 
     return (
         <MotoboyPageTemplate
-            title="Postador TX8"
+            title="Impulsionar TX8"
             subtitle="Fortaleça as lojas locais da sua região com campanhas territoriais"
             icon={Zap}
             headerRight={
