@@ -6,6 +6,7 @@
 //   3. advertiser_credit_ledger      → "ledger"        (todo consumo de crédito)
 //                                    → "balance_alert"  (saldo < 6 ou zerado)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveMpGateway } from "../_shared/mp-gateway-resolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -902,19 +903,14 @@ function gatewayLabel(name?: string | null): string {
 }
 
 /** Busca o link OFICIAL do comprovante no Mercado Pago para o pagamento informado.
- *  Usa o access_token do gateway ativo (tabela payment_gateways). Best-effort:
+ *  Usa o access_token do gateway ativo (FASE 1: resolver central — config por
+ *  ambiente → env vars → legado payment_gateways). Best-effort:
  *  retorna null se não houver token, pagamento ou URL de comprovante. */
 async function fetchMpReceiptUrl(supabase: any, providerPaymentId: string): Promise<string | null> {
   try {
     if (!/^\d+$/.test(String(providerPaymentId))) return null; // só payment_id numérico do MP
-    const { data: gw } = await supabase
-      .from("payment_gateways")
-      .select("credentials")
-      .eq("provider_code", "mercadopago")
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-    const token = (gw?.credentials as { access_token?: string } | null)?.access_token;
+    const resolved = await resolveMpGateway(supabase);
+    const token = resolved.ok ? resolved.gw.credentials.access_token : undefined;
     if (!token) return null;
 
     const res = await fetch(`${MP_API}/v1/payments/${encodeURIComponent(providerPaymentId)}`, {

@@ -20,9 +20,16 @@ const FALLBACK_CITY = 'Blumenau';
 const CACHE_KEY = 'weatherRichCache';
 const CACHE_TTL = 10 * 60 * 1000;
 
-function loadCache(): { data: WeatherRichData; ts: number } | null {
+/* Cache por localização — evita exibir o clima de outra cidade que ficou no cache global */
+function cacheKeyFor(lat?: number, lng?: number, city?: string): string {
+  if (lat != null && lng != null) return `${CACHE_KEY}:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  if (city) return `${CACHE_KEY}:${city.trim().toLowerCase()}`;
+  return `${CACHE_KEY}:auto`;
+}
+
+function loadCache(key: string): { data: WeatherRichData; ts: number } | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed?.ts && Date.now() - parsed.ts < CACHE_TTL) {
@@ -32,9 +39,9 @@ function loadCache(): { data: WeatherRichData; ts: number } | null {
   return null;
 }
 
-function saveCache(data: WeatherRichData) {
+function saveCache(key: string, data: WeatherRichData) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
   } catch { }
 }
 
@@ -49,8 +56,18 @@ async function getCoords(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
-export function useWeatherRich(lat?: number, lng?: number, fallbackCity?: string) {
-  const cached = loadCache();
+/**
+ * Prioridade de localização:
+ * 1. lat/lng explícitos
+ * 2. cidade informada (ex.: cidade do CADASTRO do usuário) — vem ANTES do GPS,
+ *    para que o clima seja sempre o da cidade cadastrada quando ela existir
+ * 3. GPS do aparelho
+ * 4. Fallback fixo
+ * `enabled=false` segura a busca (e o loading) até o chamador resolver a localização.
+ */
+export function useWeatherRich(lat?: number, lng?: number, city?: string, enabled = true) {
+  const cacheKey = cacheKeyFor(lat, lng, city);
+  const cached = enabled ? loadCache(cacheKey) : null;
   const [weather, setWeather] = useState<WeatherRichData | null>(cached?.data ?? null);
   const [loading, setLoading] = useState(!cached?.data);
   const [error, setError] = useState(false);
@@ -58,21 +75,21 @@ export function useWeatherRich(lat?: number, lng?: number, fallbackCity?: string
 
   const fetchWeather = async (signal?: AbortSignal) => {
     setError(false);
-    console.log('[useWeatherRich] fetchWeather started with lat/lng/fallbackCity:', { lat, lng, fallbackCity });
+    console.log('[useWeatherRich] fetchWeather started with lat/lng/city:', { lat, lng, city });
 
     let locationQuery = '';
 
     if (lat != null && lng != null) {
       locationQuery = `lat=${lat}&lon=${lng}`;
+    } else if (city) {
+      console.log('[useWeatherRich] using registered city:', city);
+      locationQuery = `q=${encodeURIComponent(city)},BR`;
     } else {
       console.log('[useWeatherRich] requesting getCoords()');
       const coords = await getCoords();
       if (coords) {
         console.log('[useWeatherRich] using GPS:', coords);
         locationQuery = `lat=${coords.lat}&lon=${coords.lng}`;
-      } else if (fallbackCity) {
-        console.log('[useWeatherRich] using fallbackCity:', fallbackCity);
-        locationQuery = `q=${encodeURIComponent(fallbackCity)},BR`;
       } else {
         console.log('[useWeatherRich] using FALLBACK constants:', { FALLBACK_LAT, FALLBACK_LNG });
         locationQuery = `lat=${FALLBACK_LAT}&lon=${FALLBACK_LNG}`;
@@ -115,12 +132,12 @@ export function useWeatherRich(lat?: number, lng?: number, fallbackCity?: string
         description: d.weather[0].description.charAt(0).toUpperCase() + d.weather[0].description.slice(1),
         icon: mapIcon(d.weather[0].icon),
         iconUrl: `https://openweathermap.org/img/wn/${d.weather[0].icon}@2x.png`,
-        cityName: d.name || fallbackCity || FALLBACK_CITY,
+        cityName: d.name || city || FALLBACK_CITY,
         pop: popValue,
         updatedAt: new Date(),
       };
 
-      saveCache(data);
+      saveCache(cacheKey, data);
       setWeather(data);
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -137,6 +154,8 @@ export function useWeatherRich(lat?: number, lng?: number, fallbackCity?: string
   };
 
   useEffect(() => {
+    if (!enabled) return; // aguarda o chamador resolver a localização cadastrada
+
     // Use cache for initial render, but still refresh
     if (cached?.data && Date.now() - (cached.ts ?? 0) < CACHE_TTL) {
       setWeather(cached.data);
@@ -155,7 +174,7 @@ export function useWeatherRich(lat?: number, lng?: number, fallbackCity?: string
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lat, lng, fallbackCity]);
+  }, [lat, lng, city, enabled]);
 
   const minutesAgo = weather
     ? Math.max(0, Math.round((Date.now() - weather.updatedAt.getTime()) / 60000))

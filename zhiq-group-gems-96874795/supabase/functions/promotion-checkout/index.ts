@@ -5,6 +5,7 @@
  * Retorna checkout_url para redirecionar o anunciante.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { resolveMpGateway } from "../_shared/mp-gateway-resolver.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -61,18 +62,13 @@ Deno.serve(async (req) => {
     return json({ error: "package_name, period_days e amount_brl são obrigatórios" }, 400);
   }
 
-  // Carrega credenciais do gateway ativo (mesmo padrão de payments-charge)
-  const { data: gw, error: gwErr } = await svc
-    .from("payment_gateways")
-    .select("provider_code, mode, credentials")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
+  // Carrega credenciais do gateway ativo (mesmo padrão de payments-charge:
+  // FASE 1 — config por ambiente → env vars → legado payment_gateways)
+  const resolved = await resolveMpGateway(svc);
+  if (!resolved.ok) return json({ error: "Gateway MP não configurado" }, 500);
 
-  if (gwErr || !gw) return json({ error: "Gateway MP não configurado" }, 500);
-
-  const creds = gw.credentials as { access_token: string };
-  const sandbox = gw.mode === "sandbox";
+  const creds = resolved.gw.credentials as { access_token: string };
+  const sandbox = resolved.gw.sandbox;
 
   // Cria registro de compra (pending)
   const { data: purchase, error: purchaseErr } = await svc

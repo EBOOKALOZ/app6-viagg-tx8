@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGlobalCall } from "@/contexts/GlobalCallContext";
+import { haversineKm, geocodeAddress } from "@/lib/map/GeoLocationService";
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -177,6 +178,15 @@ export function MotoboyPublicCalls() {
   const knownIdsRef = useRef<Set<string>>(new Set());
   const isFirstLoadRef = useRef(true);
 
+  // Filtra as chamadas para exibir apenas as da mesma região/cidade (raio de 25km)
+  const filteredRides = rides.filter((ride) => {
+    if (!motoboyPos) return true; // Se a posição do motoboy não carregou, exibe tudo por enquanto
+    const originCoords = extractCoords(ride.origin_address, ride.origin_lat, ride.origin_lng);
+    if (!originCoords) return true;
+    const distance = haversineKm(motoboyPos, originCoords);
+    return distance <= 25;
+  });
+
   const handleEnableSound = () => {
     enableSound().then(() => setSoundEnabled(true)).catch(() => setSoundEnabled(true));
   };
@@ -187,11 +197,21 @@ export function MotoboyPublicCalls() {
     let cancelled = false;
     const gpsOk = { v: false };
 
-    // 1) Usa ponto de cadastro como baseline imediata
-    supabase.from('motoboy_profiles').select('latitude_residencia, longitude_residencia').eq('user_id', user.id).maybeSingle()
-      .then(({ data }) => {
-        if (cancelled || gpsOk.v || !data?.latitude_residencia || !data?.longitude_residencia) return;
-        setMotoboyPos({ lat: data.latitude_residencia, lng: data.longitude_residencia });
+    // 1) Usa ponto de cadastro ou cidade/estado geocodificados como baseline imediata
+    supabase.from('motoboy_profiles').select('latitude_residencia, longitude_residencia, cidade, estado').eq('user_id', user.id).maybeSingle()
+      .then(async ({ data }) => {
+        if (cancelled || gpsOk.v) return;
+        if (data?.latitude_residencia && data?.longitude_residencia) {
+          setMotoboyPos({ lat: data.latitude_residencia, lng: data.longitude_residencia });
+        } else if (data?.cidade || data?.estado) {
+          try {
+            const searchQuery = [data.cidade, data.estado].filter(Boolean).join(", ");
+            const results = await geocodeAddress(searchQuery);
+            if (results && results.length > 0 && !gpsOk.v && !cancelled) {
+              setMotoboyPos(results[0].latLng);
+            }
+          } catch (_) {}
+        }
       });
 
     // 2) GPS do browser substitui assim que disponível
@@ -305,17 +325,17 @@ export function MotoboyPublicCalls() {
         </div>
       </div>
 
-      {rides.length === 0 ? (
+      {filteredRides.length === 0 ? (
         <div className="text-center py-12 space-y-3">
           <div className="w-16 h-16 rounded-3xl bg-zinc-100 flex items-center justify-center mx-auto">
             <Bike className="w-9 h-9 text-zinc-300" />
           </div>
-          <p className="font-bold text-zinc-500">Nenhuma chamada pública no momento</p>
-          <p className="text-xs text-zinc-400">Novas solicitações aparecerão aqui automaticamente</p>
+          <p className="font-bold text-zinc-500">Nenhuma chamada pública na sua região</p>
+          <p className="text-xs text-zinc-400">Novas solicitações locais aparecerão aqui automaticamente</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {rides.map((ride) => (
+          {filteredRides.map((ride) => (
             <PublicCallCard
               key={ride.id}
               ride={ride}

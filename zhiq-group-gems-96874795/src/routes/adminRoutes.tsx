@@ -78,6 +78,7 @@ import {
   AdminPaymentDemo,
   AdminFase1Sim,
   AdminMercadoPagoSecrets,
+  AdminMercadoPagoConfig,
   AdminAutoPoster,
   AdminPromotionPackagesPage,
   AdminAIAnalytics,
@@ -90,6 +91,7 @@ import {
   AdminRealtimeDashboard,
   AdminMapDashboard,
   AdminPostingQueuePage,
+  AdminCommissionIntelligence,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -141,6 +143,7 @@ export const adminRoutes = (
       <Route path="/admin/centro-crescimento" element={<AdminCentroCrescimento />} />
       <Route path="/admin/war-room" element={<AdminWarRoom />} />
       <Route path="/admin/creditos" element={<AdminCreditsModule />} />
+      <Route path="/admin/comissao-inteligente" element={<AdminCommissionIntelligence />} />
       <Route path="/admin/pay" element={<AdminPayDashboard />} />
       <Route path="/admin/pay/wallets" element={<AdminPayWallets />} />
       <Route path="/admin/pay/ledger" element={<AdminPayLedger />} />
@@ -150,6 +153,7 @@ export const adminRoutes = (
       <Route path="/admin/pagamentos/demo" element={<AdminPaymentDemo />} />
       <Route path="/admin/pagamentos/simular" element={<AdminFase1Sim />} />
       <Route path="/secrets/mercadopago" element={<AdminMercadoPagoSecrets />} />
+      <Route path="/admin/pagamentos/mercadopago" element={<AdminMercadoPagoConfig />} />
       <Route path="/admin/perfis/dashboard" element={<AdminDashboardMultiPerfil />} />
       <Route path="/admin/perfis/:profileType" element={<AdminMultiPerfil />} />
       {/* Marketing */}

@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2, CarFront, Car, Briefcase, Truck, Plane } from "lucide-react";
+import { LogOut, Loader2, CarFront, Car, Briefcase, Truck, Plane, Camera, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -158,6 +158,30 @@ export default function SelectProfile() {
   const navigationTarget = useRef<string | null>(null);
   const navigatedRef = useRef(false);
 
+  /* ── Foto personalizada por card (bucket avatars/{user}/profile-cards) ── */
+  const [customPhotos, setCustomPhotos] = useState<Record<string, string>>({});
+  const [uploadingCard, setUploadingCard] = useState<string | null>(null);
+  const cardFileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingCardRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      const dir = `${user.id}/profile-cards`;
+      const { data, error } = await supabase.storage.from("avatars").list(dir);
+      if (error || !data || cancelled) return;
+      const map: Record<string, string> = {};
+      for (const f of data) {
+        const cardId = f.name.replace(/\.[^.]+$/, "");
+        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(`${dir}/${f.name}`);
+        map[cardId] = `${publicUrl}?v=${encodeURIComponent(f.updated_at || f.created_at || "")}`;
+      }
+      if (!cancelled) setCustomPhotos(map);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
   useEffect(() => {
     if (!progressActive) {
       setPercent(0);
@@ -215,6 +239,77 @@ export default function SelectProfile() {
   const handleCardClick = (profileId: string) => {
     if (profileId === "passenger" && !isPassengerEnabled) return;
     setSelected((prev) => (prev === profileId ? null : profileId));
+  };
+
+  const openCardPhotoPicker = (profileId: string) => {
+    pendingCardRef.current = profileId;
+    cardFileInputRef.current?.click();
+  };
+
+  const handleCardPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const profileId = pendingCardRef.current;
+    e.target.value = "";
+    if (!file || !profileId || !user?.id) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Selecione uma imagem válida", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "A imagem deve ter no máximo 5MB", variant: "destructive" });
+      return;
+    }
+
+    setUploadingCard(profileId);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const dir = `${user.id}/profile-cards`;
+      // Remove versão antiga com outra extensão para não sobrar arquivo órfão
+      const { data: existing } = await supabase.storage.from("avatars").list(dir);
+      const stale = (existing || []).filter(
+        (f) => f.name.replace(/\.[^.]+$/, "") === profileId && f.name !== `${profileId}.${ext}`
+      );
+      if (stale.length) {
+        await supabase.storage.from("avatars").remove(stale.map((f) => `${dir}/${f.name}`));
+      }
+
+      const path = `${dir}/${profileId}.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      setCustomPhotos((prev) => ({ ...prev, [profileId]: `${publicUrl}?v=${Date.now()}` }));
+      toast({ title: "Foto do card atualizada! 📸" });
+    } catch {
+      toast({ title: "Erro ao enviar a foto", variant: "destructive" });
+    } finally {
+      setUploadingCard(null);
+    }
+  };
+
+  const handleCardPhotoDelete = async (profileId: string) => {
+    if (!user?.id) return;
+    setUploadingCard(profileId);
+    try {
+      const dir = `${user.id}/profile-cards`;
+      const { data: existing } = await supabase.storage.from("avatars").list(dir);
+      const mine = (existing || []).filter((f) => f.name.replace(/\.[^.]+$/, "") === profileId);
+      if (mine.length) {
+        const { error } = await supabase.storage.from("avatars").remove(mine.map((f) => `${dir}/${f.name}`));
+        if (error) throw error;
+      }
+      setCustomPhotos((prev) => {
+        const next = { ...prev };
+        delete next[profileId];
+        return next;
+      });
+      toast({ title: "Foto removida — imagem padrão restaurada" });
+    } catch {
+      toast({ title: "Erro ao remover a foto", variant: "destructive" });
+    } finally {
+      setUploadingCard(null);
+    }
   };
 
   const handleContinue = async () => {
@@ -386,6 +481,15 @@ export default function SelectProfile() {
             <p className="text-sm text-white/50">Escolha como deseja usar a plataforma</p>
           </div>
 
+          {/* Input único e escondido para upload da foto dos cards */}
+          <input
+            ref={cardFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCardPhotoChange}
+          />
+
           <div className="flex justify-center">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl">
             {profileList.map((profile) => {
@@ -489,8 +593,20 @@ export default function SelectProfile() {
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-black/60" />
                   )}
 
-                  {/* Imagem de fundo: mosaico de 6 imagens (imóveis/serviços) ou hero único */}
-                  {isImoveis ? (
+                  {/* Imagem de fundo: foto do usuário (se enviada) > mosaico ou hero padrão */}
+                  {customPhotos[profile.id] ? (
+                    <img
+                      src={customPhotos[profile.id]}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                      className={cn(
+                        "absolute inset-0 h-full w-full object-cover transition-opacity duration-300",
+                        isSel ? "opacity-25 blur-[2px]" : "opacity-95",
+                      )}
+                    />
+                  ) : isImoveis ? (
                     <div
                       className={cn(
                         "absolute inset-0 grid grid-cols-2 grid-rows-3 gap-0.5 transition-opacity duration-300",
@@ -656,6 +772,35 @@ export default function SelectProfile() {
                   {isComingSoon && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <Badge className="bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg">Em breve</Badge>
+                    </div>
+                  )}
+
+                  {/* Botões: adicionar/trocar a própria foto e excluir (volta a imagem padrão) */}
+                  {!isComingSoon && (
+                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); openCardPhotoPicker(profile.id); }}
+                        disabled={uploadingCard === profile.id}
+                        title={customPhotos[profile.id] ? "Trocar sua foto" : "Adicionar sua foto"}
+                        aria-label={`Adicionar sua foto ao card ${profile.label}`}
+                        className="w-8 h-8 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/90 hover:text-white transition-colors shadow-lg"
+                      >
+                        {uploadingCard === profile.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Camera className="w-4 h-4" />}
+                      </button>
+                      {customPhotos[profile.id] && uploadingCard !== profile.id && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleCardPhotoDelete(profile.id); }}
+                          title="Excluir sua foto (volta a imagem padrão)"
+                          aria-label={`Excluir sua foto do card ${profile.label}`}
+                          className="w-8 h-8 rounded-full bg-black/55 hover:bg-red-600/85 backdrop-blur-sm border border-white/25 flex items-center justify-center text-white/90 hover:text-white transition-colors shadow-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   )}
 

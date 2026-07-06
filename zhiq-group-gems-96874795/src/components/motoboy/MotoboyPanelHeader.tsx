@@ -89,13 +89,13 @@ export function MotoboyPanelHeader({
                   isOnline ? "bg-emerald-500" : "bg-slate-400"
                 )} />
               </div>
-              <span className="text-[8px] font-black uppercase tracking-wider text-white/90 bg-black/25 px-1.5 py-0.5 rounded leading-none text-center whitespace-nowrap shadow-sm">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/90 leading-none text-center whitespace-nowrap">
                 {panelLabel}
               </span>
             </div>
 
             <div className="flex flex-col items-start min-w-0 justify-center gap-1">
-              <span className="text-sm sm:text-base font-bold text-white truncate max-w-full leading-tight">
+              <span className="text-sm sm:text-base font-bold text-white max-w-full leading-tight break-words">
                 {userName}
               </span>
               <div className="flex items-center gap-2 max-w-full">

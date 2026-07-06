@@ -20,3 +20,33 @@ export function mercadoPagoPublicKey(): string | undefined {
   const k = import.meta.env.VITE_MERCADOPAGO_PUBLIC_KEY as string | undefined;
   return k && k.trim() ? k.trim() : undefined;
 }
+
+/**
+ * FASE 1 — config central de checkout: busca ambiente ativo + public key da
+ * Configuração Mercado Pago (RPC mp_get_checkout_public_config; a public key
+ * é pública por natureza, nunca expõe secrets). Fallback: VITE_* (comportamento
+ * atual), garantindo zero quebra enquanto a migration não for aplicada.
+ */
+export async function fetchMercadoPagoCheckoutConfig(): Promise<{
+  environment: "sandbox" | "production";
+  publicKey: string | undefined;
+}> {
+  try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.rpc as any)(
+      "mp_get_checkout_public_config",
+    );
+    if (!error && data && typeof data === "object") {
+      const d = data as { environment?: string; public_key?: string | null };
+      const env = d.environment === "production" ? "production" : "sandbox";
+      const pk = d.public_key && d.public_key.trim()
+        ? d.public_key.trim()
+        : mercadoPagoPublicKey();
+      return { environment: env, publicKey: pk };
+    }
+  } catch {
+    // RPC ausente (migration não aplicada) → segue no fallback
+  }
+  return { environment: "sandbox", publicKey: mercadoPagoPublicKey() };
+}

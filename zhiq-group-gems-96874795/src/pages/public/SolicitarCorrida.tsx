@@ -2,14 +2,14 @@
 // Layout: mapa em tela cheia + painel inferior flutuante (estilo Uber/99)
 
 import { useState, useEffect, useCallback, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   MapPin, ChevronLeft, Locate, BrainCircuit, Car, Bike, Package, Truck,
   Check, Phone, MessageCircle, Share2, Shield, ArrowRight,
   Send, Loader2, X, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { ViaggMap, LocateButton } from "@/components/map/ViaggMap";
-import { getCurrentPosition, reverseGeocode, autocomplete } from "@/lib/map/GeoLocationService";
+import { getCurrentPosition, reverseGeocode, autocomplete, geocodeAddress } from "@/lib/map/GeoLocationService";
 import { getRouteOptions, estimatePrice } from "@/lib/map/RouteService";
 import {
   getMockDriversNearby, interpretNaturalLanguageAddress,
@@ -18,6 +18,8 @@ import {
 import { EventService } from "@/lib/events/EventService";
 import type { LatLng, MapAddress, RouteOption, PricePrediction, DriverMarker, AIMapInsight } from "@/lib/map/types";
 import viaggLogo from "@/assets/logo.png";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -178,6 +180,8 @@ function DriverCard({ driver, selected, onSelect }: {
 
 export default function SolicitarCorrida() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const serviceParam = searchParams.get("service");
   const [step, setStep]           = useState<Step>("map");
   const [panelOpen, setPanelOpen] = useState(true); // painel inferior expandido
 
@@ -188,9 +192,172 @@ export default function SolicitarCorrida() {
   const [originText,  setOriginText]  = useState("");
   const [destText,    setDestText]    = useState("");
   const [locating,    setLocating]    = useState(false);
+  const [currentCity, setCurrentCity] = useState("Brasília");
+
+  // Inicialização unificada da localização (Cadastro > Primeiro Cadastrado > GPS > Fallback Brasília)
+  useEffect(() => {
+    const initializeLocation = async () => {
+      setLocating(true);
+      let profileLoc: LatLng | null = null;
+      let cityText = "";
+      let stateText = "";
+      const activeService = serviceParam || "mototaxi";
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // 1. Tenta buscar no perfil do motoboy
+          const { data: motoboy } = await supabase
+            .from('motoboy_profiles')
+            .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (motoboy) {
+            if (motoboy.latitude_residencia && motoboy.longitude_residencia) {
+              profileLoc = { lat: motoboy.latitude_residencia, lng: motoboy.longitude_residencia };
+            }
+            if (motoboy.cidade) cityText = motoboy.cidade;
+            if (motoboy.estado) stateText = motoboy.estado;
+            if (motoboy.endereco_residencia) cityText = motoboy.endereco_residencia;
+          }
+
+          if (!profileLoc) {
+            // 2. Tenta buscar no perfil do motorista/driver
+            const { data: driver } = await supabase
+              .from('driver_profiles')
+              .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (driver) {
+              if (driver.latitude_residencia && driver.longitude_residencia) {
+                profileLoc = { lat: driver.latitude_residencia, lng: driver.longitude_residencia };
+              }
+              if (driver.cidade) cityText = driver.cidade;
+              if (driver.estado) stateText = driver.estado;
+              if (driver.endereco_residencia) cityText = driver.endereco_residencia;
+            }
+          }
+
+          if (!profileLoc) {
+            // 3. Tenta buscar no perfil geral
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('store_latitude, store_longitude, store_address, cidade, estado')
+              .eq('id', user.id)
+              .maybeSingle();
+
+            if (profile) {
+              if (profile.store_latitude && profile.store_longitude) {
+                profileLoc = { lat: profile.store_latitude, lng: profile.store_longitude };
+              }
+              if (profile.store_address) cityText = profile.store_address;
+              else if (profile.cidade) cityText = profile.cidade;
+              if (profile.estado) stateText = profile.estado;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Erro ao buscar localizacao cadastrada do usuario:", err);
+      }
+
+      // Fallback 1.5: Se não achou localização do próprio usuário logado, tenta pegar a de algum motoboy/driver cadastrado no sistema
+      if (!profileLoc) {
+        try {
+          if (activeService === 'motoboy') {
+            const { data: list } = await supabase
+              .from('motoboy_profiles')
+              .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
+              .not('latitude_residencia', 'is', null)
+              .not('longitude_residencia', 'is', null)
+              .limit(1);
+            if (list && list.length > 0) {
+              profileLoc = { lat: list[0].latitude_residencia, lng: list[0].longitude_residencia };
+              if (list[0].endereco_residencia) cityText = list[0].endereco_residencia;
+              else if (list[0].cidade) cityText = list[0].cidade;
+              if (list[0].estado) stateText = list[0].estado;
+            }
+          } else {
+            const { data: list } = await supabase
+              .from('driver_profiles')
+              .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
+              .not('latitude_residencia', 'is', null)
+              .not('longitude_residencia', 'is', null)
+              .limit(1);
+            if (list && list.length > 0) {
+              profileLoc = { lat: list[0].latitude_residencia, lng: list[0].longitude_residencia };
+              if (list[0].endereco_residencia) cityText = list[0].endereco_residencia;
+              else if (list[0].cidade) cityText = list[0].cidade;
+              if (list[0].estado) stateText = list[0].estado;
+            }
+          }
+        } catch (err) {
+          console.warn("Erro ao buscar fallback de cadastro no sistema:", err);
+        }
+      }
+
+      if (profileLoc) {
+        setCenter(profileLoc);
+        setOrigin(profileLoc);
+        if (cityText) {
+          setCurrentCity(cityText);
+          setOriginText(cityText);
+        }
+        setLocating(false);
+      } else if (cityText || stateText) {
+        // Se não temos coordenadas exatas mas temos cidade/estado cadastrados
+        try {
+          const searchQuery = [cityText, stateText].filter(Boolean).join(", ");
+          const results = await geocodeAddress(searchQuery);
+          if (results && results.length > 0) {
+            const loc = results[0].latLng;
+            setCenter(loc);
+            setOrigin(loc);
+            setCurrentCity(cityText || results[0].city || "Brasília");
+            setOriginText(results[0].formattedAddress.split(",").slice(0, 2).join(", "));
+          } else {
+            setCenter(DEFAULT_CENTER);
+          }
+        } catch {
+          setCenter(DEFAULT_CENTER);
+        }
+        setLocating(false);
+      } else {
+        // Se não houver cadastro, tenta usar GPS do dispositivo
+        try {
+          const pos = await getCurrentPosition();
+          const addr = await reverseGeocode(pos);
+          const isBrazil = addr.country === "Brasil" || addr.country === "Brazil" || addr.formattedAddress.includes("Brasil");
+          if (isBrazil) {
+            setCenter(pos);
+            setOrigin(pos);
+            setOriginText(addr.formattedAddress.split(",").slice(0, 2).join(", "));
+            if (addr.city) {
+              setCurrentCity(addr.city);
+            }
+          } else {
+            setCenter(DEFAULT_CENTER);
+          }
+        } catch {
+          // GPS negado/indisponível - usa o DEFAULT_CENTER
+          setCenter(DEFAULT_CENTER);
+        }
+        setLocating(false);
+      }
+    };
+
+    initializeLocation();
+  }, []);
 
   // Serviço / rota / preço
-  const [service,       setService]       = useState("mototaxi");
+  const [service,       setService]       = useState(serviceParam || "mototaxi");
+
+  useEffect(() => {
+    if (serviceParam && SERVICE_TYPES.some((s) => s.id === serviceParam)) {
+      setService(serviceParam);
+    }
+  }, [serviceParam]);
   const [routes,        setRoutes]        = useState<RouteOption[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteOption | undefined>();
   const [price,         setPrice]         = useState<PricePrediction | undefined>();
@@ -203,23 +370,28 @@ export default function SolicitarCorrida() {
   const [aiSearching,    setAiSearching]    = useState(false);
   const [searchProgress, setSearchProgress] = useState(0);
 
-  // ── Auto-localizar via GPS do dispositivo (nunca via IP de internet) ─────────
+  // ── Auto-localizar manual via botão GPS ─────────
   const locateUser = useCallback(async () => {
     setLocating(true);
     try {
-      const pos  = await getCurrentPosition();           // GPS real do dispositivo
-      const addr = await reverseGeocode(pos);            // endereço via coordenadas GPS
-      setCenter(pos);
-      setOrigin(pos);
-      setOriginText(addr.formattedAddress.split(",").slice(0, 2).join(", "));
+      const pos  = await getCurrentPosition();
+      const addr = await reverseGeocode(pos);
+      const isBrazil = addr.country === "Brasil" || addr.country === "Brazil" || addr.formattedAddress.includes("Brasil");
+      if (isBrazil) {
+        setCenter(pos);
+        setOrigin(pos);
+        setOriginText(addr.formattedAddress.split(",").slice(0, 2).join(", "));
+        if (addr.city) {
+          setCurrentCity(addr.city);
+        }
+      } else {
+        toast.info("Geolocalização fora do Brasil ignorada.");
+      }
     } catch {
-      // GPS negado/indisponível — usuário digita manualmente
-      // NÃO usa IP de internet como fallback (IP ≠ localização física)
+      // GPS negado ou indisponível
     }
     setLocating(false);
   }, []);
-
-  useEffect(() => { locateUser(); }, []);
 
   // ── Calcular rotas ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -232,16 +404,97 @@ export default function SolicitarCorrida() {
   }, [origin, destination, service]);
 
   // ── Motoristas e insights ────────────────────────────────────────────────────
-  useEffect(() => { setDrivers(getMockDriversNearby(center, 8)); }, [center]);
   useEffect(() => {
-    generateMapInsights(drivers.length, 6, "Brasília").then(setInsights);
-  }, [drivers.length]);
+    const fetchRealDrivers = async () => {
+      try {
+        let dbDrivers: any[] = [];
+        if (service === 'motoboy') {
+          const { data, error } = await supabase
+            .from('motoboy_profiles')
+            .select('user_id, nome, sobrenome, latitude_residencia, longitude_residencia, cidade, veiculo_modelo, veiculo_marca, veiculo_placa')
+            .not('latitude_residencia', 'is', null)
+            .not('longitude_residencia', 'is', null);
+          if (!error && data) dbDrivers = data;
+        } else {
+          // 'mototaxi' ou 'motorista'
+          const { data, error } = await supabase
+            .from('driver_profiles')
+            .select('user_id, nome, sobrenome, latitude_residencia, longitude_residencia, cidade, veiculo_modelo, veiculo_marca, veiculo_placa')
+            .not('latitude_residencia', 'is', null)
+            .not('longitude_residencia', 'is', null);
+          if (!error && data) dbDrivers = data;
+        }
+
+        // Map and sort by distance to center
+        const mapped = dbDrivers.map((d, index) => {
+          const latLng = { lat: d.latitude_residencia, lng: d.longitude_residencia };
+          const distance = haversineKm(center, latLng);
+          return {
+            id: d.user_id || `driver-${index}`,
+            name: `${d.nome || 'Motoboy'} ${d.sobrenome || ''}`.trim(),
+            type: service as any,
+            latLng,
+            heading: Math.random() * 360,
+            rating: 4.5 + Math.random() * 0.5,
+            trips: 10 + Math.floor(Math.random() * 100),
+            distanceKm: parseFloat(distance.toFixed(2)),
+            etaMin: Math.max(1, Math.round(distance * 2)),
+            vehicle: `${d.veiculo_marca || ''} ${d.veiculo_modelo || ''}`.trim() || (service === 'motoboy' || service === 'mototaxi' ? 'Honda CG 160' : 'VW Gol'),
+            plate: d.veiculo_placa || `ABC${1000 + index}`,
+            isOnline: true,
+          } as DriverMarker;
+        });
+
+        // Ordena por distância (do centro para fora) e filtra num raio de 15km
+        const sorted = mapped
+          .sort((a, b) => a.distanceKm - b.distanceKm)
+          .filter(d => d.distanceKm <= 15);
+
+        // Se não houver nenhum motoboy real cadastrado nessa região, adiciona mocks próximos (dentro de 2km)
+        if (sorted.length === 0) {
+          const mocks = getMockDriversNearby(center, 3).map(m => {
+            const angle = Math.random() * 2 * Math.PI;
+            const radius = Math.random() * 0.015; // dentro de ~1.8km do centro
+            const lat = center.lat + radius * Math.cos(angle);
+            const lng = center.lng + radius * Math.sin(angle);
+            return {
+              ...m,
+              type: service as any,
+              latLng: { lat, lng }
+            };
+          });
+          
+          const mocksWithDistance = mocks.map(m => {
+            const dist = haversineKm(center, m.latLng);
+            return {
+              ...m,
+              distanceKm: parseFloat(dist.toFixed(2)),
+              etaMin: Math.max(1, Math.round(dist * 2)),
+            };
+          }).sort((a, b) => a.distanceKm - b.distanceKm);
+
+          setDrivers(mocksWithDistance);
+        } else {
+          setDrivers(sorted);
+        }
+
+      } catch (err) {
+        console.warn("Erro ao buscar motoboys reais:", err);
+        setDrivers(getMockDriversNearby(center, 5));
+      }
+    };
+
+    fetchRealDrivers();
+  }, [center, service]);
+  useEffect(() => {
+    generateMapInsights(drivers.length, 6, currentCity).then(setInsights);
+  }, [drivers.length, currentCity]);
 
   // ── Busca por linguagem natural ──────────────────────────────────────────────
   async function handleAISearch() {
     if (!aiSearch.trim()) return;
     setAiSearching(true);
-    const addr = await interpretNaturalLanguageAddress(aiSearch, "Brasília");
+    const addr = await interpretNaturalLanguageAddress(aiSearch, currentCity);
     if (addr) { setDestination(addr.latLng); setCenter(addr.latLng); setDestText(addr.formattedAddress.split(",")[0]); }
     setAiSearching(false);
     setAiSearch("");
@@ -252,7 +505,7 @@ export default function SolicitarCorrida() {
     if (!origin || !destination) return;
     setStep("searching");
     setSearchProgress(0);
-    EventService.ride.requested(`ride-${Date.now()}`, "Brasília", { service });
+    EventService.ride.requested(`ride-${Date.now()}`, currentCity, { service });
     let p = 0;
     const iv = setInterval(() => {
       p += Math.random() * 12 + 3;
@@ -340,13 +593,6 @@ export default function SolicitarCorrida() {
         </div>
       </div>
 
-      {/* ── Motoristas online badge ── */}
-      {step === "map" && (
-        <div className="absolute top-16 left-3 z-[1002] bg-[#0D0F12]/85 backdrop-blur border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-white font-semibold">{drivers.length} motoristas online</span>
-        </div>
-      )}
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* PAINEL INFERIOR — STEP: MAP                                          */}
@@ -389,8 +635,17 @@ export default function SolicitarCorrida() {
 
               {/* Origem e Destino */}
               <div className="space-y-2">
-                <AddressInput placeholder="Local de embarque" value={originText} onChange={setOriginText}
-                  onSelect={(a) => { setOrigin(a.latLng); setCenter(a.latLng); }} dotColor="#FF6A00" />
+                <AddressInput
+                  placeholder={
+                    service === "motoboy" || service === "entrega" || service === "frete"
+                      ? "Local de coleta"
+                      : "Local de embarque"
+                  }
+                  value={originText}
+                  onChange={setOriginText}
+                  onSelect={(a) => { setOrigin(a.latLng); setCenter(a.latLng); }}
+                  dotColor="#FF6A00"
+                />
                 {/* Linha de conexão */}
                 <div className="flex items-center gap-2 px-3">
                   <div className="w-3 shrink-0 flex flex-col items-center gap-0.5">
@@ -403,10 +658,23 @@ export default function SolicitarCorrida() {
                     {locating ? "Localizando…" : "Usar minha localização"}
                   </button>
                 </div>
-                <AddressInput placeholder="Destino" value={destText} onChange={setDestText}
-                  onSelect={(a) => { setDestination(a.latLng); setCenter(a.latLng); }} dotColor="#22C55E" />
+                <AddressInput
+                  placeholder={
+                    service === "motoboy" || service === "entrega" || service === "frete"
+                      ? "Local de entrega"
+                      : "Destino"
+                  }
+                  value={destText}
+                  onChange={setDestText}
+                  onSelect={(a) => { setDestination(a.latLng); setCenter(a.latLng); }}
+                  dotColor="#22C55E"
+                />
                 <p className="text-[11px] text-[#A7B0BE] px-1">
-                  💡 Toque no mapa para definir {!origin ? "origem" : "destino"}
+                  💡 Toque no mapa para definir {
+                    service === "motoboy" || service === "entrega" || service === "frete"
+                      ? (!origin ? "coleta" : "entrega")
+                      : (!origin ? "embarque" : "destino")
+                  }
                 </p>
               </div>
 
@@ -502,7 +770,7 @@ export default function SolicitarCorrida() {
                 <AIAssistant context={{
                   distanceKm: price.estimatedKm, durationMin: price.estimatedMin,
                   priceMin: price.min, priceMax: price.max,
-                  driversNearby: drivers.length, city: "Brasília",
+                  driversNearby: drivers.length, city: currentCity,
                 }} />
               )}
 

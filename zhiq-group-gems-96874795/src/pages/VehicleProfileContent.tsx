@@ -521,6 +521,7 @@ export default function VehicleProfileContent() {
             addressLabel={data.endereco_residencia || '📍 Minha Localização'}
             markerLabel="📍 Minha Localização"
             readOnly={residenceLocked}
+            operationRadiusKm={residenceLocked ? (isMototaxi ? 5 : 10) : undefined}
             onLocationSelect={(lat, lng) => setDraftMapCoords({ lat, lng })}
             className="w-full h-[300px] rounded-lg overflow-hidden"
           />

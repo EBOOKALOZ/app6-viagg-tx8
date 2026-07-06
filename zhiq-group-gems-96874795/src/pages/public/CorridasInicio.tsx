@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronLeft, Car, Bike, Package, BrainCircuit, UserPlus, MapPin } from "lucide-react";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
+import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 import { useState } from "react";
 import viaggLogo from "@/assets/logo.png";
 import motoboyHero from "@/assets/motoboy-hero.png";
@@ -22,6 +23,7 @@ interface ProfileCard {
   registerRoute:  string | null;  // null = sem botão de cadastro
   registerLabel:  string;
   imageSrc?:      string;
+  callRoute?:     string | null;
 }
 
 // ─── Cards ────────────────────────────────────────────────────────────────────
@@ -37,11 +39,12 @@ const PROFILES: ProfileCard[] = [
     gradientFrom: "#FF6A00",
     gradientTo:   "#FF8C00",
     Icon:         Bike,
-    route:        "/select-profile?profile=mototaxi",
+    route:        "/mototaxi/profile",
     buttonLabel:  "Acessar Painel",
-    registerRoute:"/motoboy/completar",
+    registerRoute:"/mototaxi/profile",
     registerLabel:"Cadastrar Moto Táxi",
     imageSrc:     "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/platform-assets/moto-taxi.png",
+    callRoute:    "/solicitar-corrida?service=mototaxi",
   },
   {
     id:           "motoboy",
@@ -54,11 +57,12 @@ const PROFILES: ProfileCard[] = [
     gradientFrom: "#DC2626",
     gradientTo:   "#EF4444",
     Icon:         Package,
-    route:        "/select-profile?profile=motoboy",
+    route:        "/motoboy/profile",
     buttonLabel:  "Acessar Painel",
-    registerRoute:"/motoboy/completar",
+    registerRoute:"/motoboy/profile",
     registerLabel:"Cadastrar Motoboy",
     imageSrc:     motoboyHero,
+    callRoute:    "/solicitar-corrida?service=motoboy",
   },
   {
     id:           "motorista",
@@ -71,11 +75,12 @@ const PROFILES: ProfileCard[] = [
     gradientFrom: "#D97706",
     gradientTo:   "#F59E0B",
     Icon:         Car,
-    route:        "/select-profile?profile=driver",
+    route:        "/driver/profile",
     buttonLabel:  "Acessar Painel",
-    registerRoute:"/select-profile",
+    registerRoute:"/driver/profile",
     registerLabel:"Cadastrar Motorista",
     imageSrc:     "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/motorista-card.png/Motorista.png",
+    callRoute:    "/solicitar-corrida?service=motorista",
   },
   {
     id:           "ia",
@@ -92,6 +97,7 @@ const PROFILES: ProfileCard[] = [
     buttonLabel:  "Acessar IA",
     registerRoute:null,
     registerLabel:"",
+    callRoute:    null,
   },
 ];
 
@@ -107,13 +113,13 @@ function ProfileCardItem({
 }) {
   const { Icon } = profile;
   const isIA = profile.id === "ia";
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col gap-2">
       {/* Card principal */}
-      <button
-        onClick={onAccess}
-        className="group relative overflow-hidden bg-zinc-900 border border-zinc-700/50 rounded-3xl shadow-2xl flex flex-col items-center text-center hover:scale-[1.02] active:scale-[0.98] transition-all w-full"
+      <div
+        className="group relative overflow-hidden bg-zinc-900 border border-zinc-700/50 rounded-3xl shadow-2xl flex flex-col items-center text-center transition-all w-full"
       >
         {/* Badge */}
         <span
@@ -177,15 +183,42 @@ function ProfileCardItem({
           </div>
         )}
 
-        {/* Botão de acesso */}
-        <div
-          className="flex items-center gap-2 px-6 py-2.5 mt-4 mb-6 rounded-2xl shadow-lg"
-          style={{ background: `linear-gradient(90deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
-        >
-          <span className="font-black text-sm text-white">{profile.buttonLabel}</span>
-          <ArrowRight className="w-4 h-4 text-white" />
+        {/* Botões de Ação */}
+        <div className="flex gap-3 px-6 mt-5 mb-6 w-full shrink-0">
+          {profile.callRoute ? (
+            <>
+              {/* Botão Acessar Painel */}
+              <button
+                onClick={(e) => { e.stopPropagation(); onAccess(); }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl border font-bold text-xs transition-all hover:bg-white/5 active:scale-[0.98]"
+                style={{ borderColor: `${profile.accent}50`, color: profile.accent }}
+              >
+                {profile.buttonLabel}
+              </button>
+
+              {/* Botão Chamar */}
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate(profile.callRoute!); }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl shadow-lg font-black text-xs text-white transition-all hover:brightness-110 active:scale-[0.98]"
+                style={{ background: `linear-gradient(90deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
+              >
+                Chamar
+                <ArrowRight className="w-3.5 h-3.5 text-white" />
+              </button>
+            </>
+          ) : (
+            /* Botão Único (ex: IA) */
+            <button
+              onClick={(e) => { e.stopPropagation(); onAccess(); }}
+              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-2xl shadow-lg font-black text-xs text-white transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{ background: `linear-gradient(90deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
+            >
+              {profile.buttonLabel}
+              <ArrowRight className="w-3.5 h-3.5 text-white" />
+            </button>
+          )}
         </div>
-      </button>
+      </div>
 
       {/* Botão de cadastro — abaixo do card */}
       {onRegister && (
@@ -303,6 +336,7 @@ export default function CorridasInicio() {
           Voltar ao mercado
         </button>
       </div>
+      <ViaggAIChat welcomeMessage="Olá! 👋 Sou o Assistente IA VIAGG. Como posso te ajudar com as corridas hoje?" />
     </MarketLayout>
   );
 }

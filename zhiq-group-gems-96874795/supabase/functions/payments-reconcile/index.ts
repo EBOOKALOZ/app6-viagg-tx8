@@ -18,6 +18,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import { resolveMpGateway } from "../_shared/mp-gateway-resolver.ts";
 
 const MP_API = "https://api.mercadopago.com";
 
@@ -116,17 +117,10 @@ Deno.serve(async (req) => {
     return json({ ok: false, order_id: orderId, status: order.status, reason: "sem_provider_payment_id" });
   }
 
-  // 2. Credenciais do gateway ativo.
-  const { data: gw, error: gwErr } = await svc
-    .from("payment_gateways")
-    .select("credentials, is_active")
-    .eq("provider_code", "mercadopago")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (gwErr || !gw) return json({ error: "gateway mercadopago inativo" }, 400);
-  const token = (gw.credentials as { access_token?: string })?.access_token;
-  if (!token) return json({ error: "gateway sem access_token" }, 400);
+  // 2. Credenciais do gateway ativo (FASE 1: config por ambiente → env → legado).
+  const resolved = await resolveMpGateway(svc);
+  if (!resolved.ok) return json({ error: resolved.error }, 400);
+  const token = resolved.gw.credentials.access_token!;
 
   // 3. Resolve o pagamento real no MP.
   let payment: MpPayment | null = null;

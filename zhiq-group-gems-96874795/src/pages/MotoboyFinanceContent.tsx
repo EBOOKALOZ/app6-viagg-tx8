@@ -357,39 +357,64 @@ export default function MotoboyFinanceContent() {
           ) : (
             <div className="divide-y max-h-80 overflow-y-auto">
               {timeline.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    {entry.amount_cents > 0 ? (
-                      <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
-                        <ArrowDownLeft className="h-4 w-4 text-success" />
+                <div key={entry.id} className="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {entry.amount_cents > 0 ? (
+                        <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
+                          <ArrowDownLeft className="h-4 w-4 text-success" />
+                        </div>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center">
+                          <ArrowUpRight className="h-4 w-4 text-destructive" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-sm">
+                          {getEntryReferenceLabel(entry.reference_type)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(entry.created_at), "dd/MM 'às' HH:mm", {
+                            locale: ptBR,
+                          })}
+                        </p>
                       </div>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center">
-                        <ArrowUpRight className="h-4 w-4 text-destructive" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-sm">
-                        {getEntryReferenceLabel(entry.reference_type)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(entry.created_at), "dd/MM 'às' HH:mm", {
-                          locale: ptBR,
-                        })}
-                      </p>
                     </div>
+                    <span
+                      className={`font-semibold text-sm ${
+                        entry.amount_cents > 0 ? "text-success" : "text-destructive"
+                      }`}
+                    >
+                      {entry.amount_cents > 0 ? "+" : ""}
+                      {formatCurrency(entry.amount_cents / 100)}
+                    </span>
                   </div>
-                  <span
-                    className={`font-semibold text-sm ${
-                      entry.amount_cents > 0 ? "text-success" : "text-destructive"
-                    }`}
-                  >
-                    {entry.amount_cents > 0 ? "+" : ""}
-                    {formatCurrency(entry.amount_cents / 100)}
-                  </span>
+
+                  {/* Discriminação: valor do serviço, comissão aplicada (pelos grupos) e líquido */}
+                  {entry.gross_cents != null && entry.fee_cents != null && (
+                    <div className="mt-2 ml-11 rounded-lg bg-muted/40 border border-muted px-3 py-2 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Valor do serviço</span>
+                        <span className="font-semibold tabular-nums">
+                          {formatCurrency(entry.gross_cents / 100)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          Comissão da plataforma ({entry.fee_percent}%)
+                        </span>
+                        <span className="font-semibold tabular-nums text-destructive">
+                          − {formatCurrency(entry.fee_cents / 100)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs border-t border-muted pt-1">
+                        <span className="text-muted-foreground">Você recebeu</span>
+                        <span className="font-bold tabular-nums text-success">
+                          {formatCurrency(entry.amount_cents / 100)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -43,7 +43,14 @@ export function DriverLayout() {
         if (driverProfile) {
           setCity(driverProfile.cidade || '');
           setState(driverProfile.estado || '');
-          setIsOnline(driverProfile.is_online || false);
+          // Sempre online ao entrar no painel
+          if (!driverProfile.is_online) {
+            await supabase
+              .from('driver_profiles')
+              .update({ is_online: true })
+              .eq('user_id', user.id);
+          }
+          setIsOnline(true);
         }
       } catch (error) {
         console.error('Erro ao buscar perfil driver:', error);
@@ -65,7 +72,7 @@ export function DriverLayout() {
 
       <main className="flex-1 flex flex-col">
         <div className="px-3 pt-2">
-          <OperationalWeatherCard />
+          <OperationalWeatherCard city={city || undefined} state={state || undefined} />
         </div>
         <Outlet />
       </main>

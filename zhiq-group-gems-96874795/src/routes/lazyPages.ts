@@ -12,6 +12,7 @@ export const AdminPaymentGateways = lazy(() => import("@/pages/admin/AdminPaymen
 export const AdminPaymentDemo = lazy(() => import("@/pages/admin/AdminPaymentDemo"));
 export const AdminFase1Sim = lazy(() => import("@/pages/admin/AdminFase1Sim"));
 export const AdminMercadoPagoSecrets = lazy(() => import("@/pages/admin/AdminMercadoPagoSecrets"));
+export const AdminMercadoPagoConfig = lazy(() => import("@/pages/admin/AdminMercadoPagoConfig"));
 export const AdminAutoPoster = lazy(() => import("@/pages/admin/AdminAutoPoster"));
 // Novos nomes canônicos
 export const AdminAIAnalytics      = lazy(() => import("@/pages/admin/AdminGLMAnalytics"));
@@ -283,3 +284,6 @@ export const AdminMapDashboard      = lazy(() => import("@/pages/admin/AdminMapD
 /* ── Monitor de Divulgação (M49) ── */
 export const AdvertiserPostingMonitorPage = lazy(() => import("@/pages/advertiser/AdvertiserPostingMonitorPage"));
 export const AdminPostingQueuePage        = lazy(() => import("@/pages/admin/AdminPostingQueuePage"));
+
+/* ── Comissão Inteligente (auditoria admin) ── */
+export const AdminCommissionIntelligence = lazy(() => import("@/pages/admin/AdminCommissionIntelligence"));

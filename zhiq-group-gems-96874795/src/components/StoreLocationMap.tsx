@@ -3,6 +3,11 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { AlertCircle, MapPin } from "lucide-react";
 
+const MAP_STYLES = {
+    satellite: "mapbox://styles/mapbox/satellite-streets-v12",
+    streets: "mapbox://styles/mapbox/streets-v12",
+} as const;
+
 interface StoreLocationMapProps {
     initialLat?: number;
     initialLng?: number;
@@ -17,6 +22,7 @@ interface StoreLocationMapProps {
     /** Se false, o pino estático NÃO é mostrado (mesmo em readOnly).
      *  Útil pra abrir o mapa numa região como dica sem fingir que há residência salva. */
     hasConfirmedLocation?: boolean;
+    operationRadiusKm?: number;
 }
 
 export function StoreLocationMap({
@@ -29,6 +35,7 @@ export function StoreLocationMap({
     className = "",
     readOnly = false,
     hasConfirmedLocation = true,
+    operationRadiusKm,
 }: StoreLocationMapProps) {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -47,6 +54,12 @@ export function StoreLocationMap({
 
     const [mapboxError, setMapboxError] = useState<string | null>(null);
     const [isMapLoaded, setIsMapLoaded] = useState(false);
+    const [styleLoadTrigger, setStyleLoadTrigger] = useState(0);
+
+    /* Visual realista por padrão: imagem de satélite real + ruas/nomes por cima.
+       O usuário pode alternar para o mapa desenhado ("Mapa") se preferir. */
+    const [styleMode, setStyleMode] = useState<"satellite" | "streets">("satellite");
+    const styleModeRef = useRef(styleMode);
 
     // Lê o token do ambiente sem hardcodar
     const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -74,7 +87,7 @@ export function StoreLocationMap({
 
             const map = new mapboxgl.Map({
                 container: mapContainer.current,
-                style: "mapbox://styles/mapbox/streets-v12",
+                style: MAP_STYLES[styleModeRef.current],
                 center: [defaultLng, defaultLat],
                 zoom: initialZoom,
                 maxZoom: 22, // permite zoom de rua bem detalhado
@@ -119,9 +132,13 @@ export function StoreLocationMap({
                 clearTimeout(fallbackTimeout);
                 setIsMapLoaded(true); // Oculta estado loading
                 map.resize(); // Garante o preenchimento do container
+            });
 
-                // Adiciona a camada de prédios 3D
-                if (!map.getLayer("3d-buildings")) {
+            /* 'style.load' dispara no carregamento inicial E após cada setStyle (troca
+               Satélite ↔ Mapa), então terreno/fog/camadas são sempre reaplicados. */
+            map.on("style.load", () => {
+                // Prédios 3D só no mapa desenhado — no satélite os telhados reais já aparecem
+                if (styleModeRef.current === "streets" && !map.getLayer("3d-buildings")) {
                     const layers = map.getStyle().layers;
                     if (layers) {
                         const labelLayerId = layers.find(
@@ -258,6 +275,7 @@ export function StoreLocationMap({
                         },
                     });
                 }
+                setStyleLoadTrigger(prev => prev + 1);
             });
 
             map.on("error", (e) => {
@@ -369,6 +387,108 @@ export function StoreLocationMap({
             .addTo(map);
     }, [initialLat, initialLng, isMapLoaded, readOnly, markerLabel, hasConfirmedLocation]);
 
+    // Efeito para desenhar o círculo/região de atuação no mapa
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map || !isMapLoaded) return;
+
+        const sourceId = "operation-radius-source";
+        const fillLayerId = "operation-radius-fill";
+        const strokeLayerId = "operation-radius-stroke";
+
+        // Se não houver coordenadas ou se não houver raio de atuação
+        if (!hasConfirmedLocation || initialLat === undefined || initialLng === undefined || !operationRadiusKm) {
+            if (map.getLayer(fillLayerId)) map.removeLayer(fillLayerId);
+            if (map.getLayer(strokeLayerId)) map.removeLayer(strokeLayerId);
+            if (map.getSource(sourceId)) map.removeSource(sourceId);
+            return;
+        }
+
+        const numLng = Number(initialLng);
+        const numLat = Number(initialLat);
+
+        // Gerar coordenadas do círculo (polígono de 64 pontos)
+        const points = 64;
+        const coords = [];
+        const km = operationRadiusKm;
+        const distanceX = km / (111.32 * Math.cos(numLat * Math.PI / 180));
+        const distanceY = km / 110.574;
+
+        for (let i = 0; i < points; i++) {
+            const theta = (i / points) * (2 * Math.PI);
+            const x = distanceX * Math.cos(theta);
+            const y = distanceY * Math.sin(theta);
+            coords.push([numLng + x, numLat + y]);
+        }
+        coords.push(coords[0]); // fechar o polígono
+
+        const geojson = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+                type: "Polygon",
+                coordinates: [coords],
+            },
+        };
+
+        // Adiciona ou atualiza a fonte
+        const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+        if (source) {
+            source.setData(geojson as any);
+        } else {
+            map.addSource(sourceId, {
+                type: "geojson",
+                data: geojson as any,
+            });
+        }
+
+        // Adiciona a camada de preenchimento (fill)
+        if (!map.getLayer(fillLayerId)) {
+            map.addLayer({
+                id: fillLayerId,
+                type: "fill",
+                source: sourceId,
+                layout: {},
+                paint: {
+                    "fill-color": "#10b981", // verde esmeralda para a área de atuação
+                    "fill-opacity": 0.15,
+                },
+            });
+        }
+
+        // Adiciona a camada de linha/borda (stroke)
+        if (!map.getLayer(strokeLayerId)) {
+            map.addLayer({
+                id: strokeLayerId,
+                type: "line",
+                source: sourceId,
+                layout: {},
+                paint: {
+                    "line-color": "#10b981",
+                    "line-width": 2,
+                    "line-dasharray": [2, 2],
+                },
+            });
+        }
+
+        // Ajusta o zoom do mapa para englobar todo o círculo de atuação
+        const bounds = new mapboxgl.LngLatBounds();
+        coords.forEach((coord) => bounds.extend(coord as [number, number]));
+        map.fitBounds(bounds, {
+            padding: 40,
+            duration: 1200,
+        });
+
+    }, [initialLat, initialLng, isMapLoaded, hasConfirmedLocation, operationRadiusKm, styleLoadTrigger]);
+
+    // Troca Satélite ↔ Mapa sem recriar o componente; 'style.load' reaplica as camadas
+    const switchStyle = (mode: "satellite" | "streets") => {
+        if (mode === styleModeRef.current) return;
+        styleModeRef.current = mode;
+        setStyleMode(mode);
+        mapRef.current?.setStyle(MAP_STYLES[mode]);
+    };
+
     // O useEffect para addressLabel não é mais necessário, pois o label é renderizado diretamente no JSX do marcador central.
     // useEffect(() => {
     //     if (!markerRef.current || !addressLabel) return;
@@ -397,6 +517,26 @@ export function StoreLocationMap({
                 style={{ width: '100%', height: '400px', position: 'relative' }}
                 className="mapbox-wrapper"
             />
+
+            {/* Alternador Satélite ↔ Mapa desenhado */}
+            {isMapLoaded && (
+                <div className="absolute top-3 left-3 flex rounded-full overflow-hidden border border-white/20 bg-black/60 backdrop-blur-md shadow-lg" style={{ zIndex: 20 }}>
+                    <button
+                        type="button"
+                        onClick={() => switchStyle("satellite")}
+                        className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${styleMode === "satellite" ? "bg-emerald-500 text-white" : "text-white/70 hover:text-white"}`}
+                    >
+                        Satélite
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => switchStyle("streets")}
+                        className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors ${styleMode === "streets" ? "bg-emerald-500 text-white" : "text-white/70 hover:text-white"}`}
+                    >
+                        Mapa
+                    </button>
+                </div>
+            )}
 
             {!isMapLoaded && (
                 <div className="absolute inset-0 bg-[#121212] flex flex-col items-center justify-center text-[#09c277]" style={{ zIndex: 10 }}>

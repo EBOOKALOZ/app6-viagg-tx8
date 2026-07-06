@@ -65,10 +65,10 @@ export function DriverPanelHeader({
             </div>
 
             <div className="flex flex-col items-start min-w-0 justify-center gap-0.5">
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/80 bg-black/20 px-1.5 py-0.5 rounded leading-none shrink-0">
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/90 leading-none shrink-0">
                 Painel Motorista
               </span>
-              <span className="text-xs sm:text-sm font-bold text-white truncate max-w-full leading-tight">
+              <span className="text-xs sm:text-sm font-bold text-white max-w-full leading-tight break-words">
                 {userName}
               </span>
               <div className="flex items-center gap-2 max-w-full">

@@ -33,7 +33,14 @@ export function MotoboyLayout() {
         if (motoboyProfile) {
           setCity(motoboyProfile.cidade || 'Cidade');
           setState(motoboyProfile.estado || 'UF');
-          setIsOnline(motoboyProfile.is_online || false);
+          // Sempre online ao entrar no painel
+          if (!motoboyProfile.is_online) {
+            await supabase
+              .from('motoboy_profiles')
+              .update({ is_online: true })
+              .eq('user_id', user.id);
+          }
+          setIsOnline(true);
         }
 
         const { data: userProfile } = await supabase
@@ -66,7 +73,7 @@ export function MotoboyLayout() {
 
       <main className="flex-1 flex flex-col">
         <div className="px-3 pt-2">
-          <OperationalWeatherCard />
+          <OperationalWeatherCard city={city || undefined} state={state || undefined} />
         </div>
         <Outlet />
       </main>

@@ -20,6 +20,10 @@ interface LedgerEntry {
   reference_type: string | null;
   reference_id: string | null;
   batch_id: string;
+  /** Discriminação do serviço (vinda do escrow): valor bruto, comissão e % aplicado */
+  gross_cents?: number;
+  fee_cents?: number;
+  fee_percent?: number;
 }
 
 interface PayoutRequest {
@@ -221,7 +225,38 @@ export function useFinancialTimeline() {
         return [];
       }
 
-      return data || [];
+      const entries: LedgerEntry[] = data || [];
+
+      // Enriquece os créditos de serviço com a discriminação do escrow:
+      // valor bruto pago pelo cliente, comissão da plataforma (definida pelos
+      // grupos ativos no momento) e o % efetivamente aplicado.
+      const serviceIds = entries
+        .filter((e) => e.amount_cents > 0 && e.reference_id)
+        .map((e) => e.reference_id as string);
+
+      if (serviceIds.length > 0) {
+        const { data: escrows, error: escrowError } = await (supabase
+          .from('pay_escrow_holds') as any)
+          .select('service_id, amount_cents, platform_fee_cents, professional_amount_cents')
+          .in('service_id', serviceIds);
+
+        if (!escrowError && escrows) {
+          const byService = new Map<string, any>();
+          for (const esc of escrows) {
+            if (esc.service_id) byService.set(esc.service_id, esc);
+          }
+          for (const entry of entries) {
+            const esc = entry.reference_id ? byService.get(entry.reference_id) : undefined;
+            if (esc && entry.amount_cents > 0 && esc.amount_cents > 0) {
+              entry.gross_cents = esc.amount_cents;
+              entry.fee_cents = esc.platform_fee_cents;
+              entry.fee_percent = Math.round((esc.platform_fee_cents / esc.amount_cents) * 100);
+            }
+          }
+        }
+      }
+
+      return entries;
     },
     enabled: !!account?.id,
     staleTime: 0,
@@ -290,7 +325,7 @@ export function useCommissionData() {
 
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('quantidade_grupos_ativos')
+        .select('quantidade_grupos_ativos, percentual_comissao_atual')
         .eq('id', user.id)
         .single();
 
@@ -299,11 +334,29 @@ export function useCommissionData() {
         return null;
       }
 
-      const activeGroups = profile.quantidade_grupos_ativos ?? 0;
+      // Contagem AO VIVO dos grupos válidos (mesma fonte da tela de Grupos).
+      // Enquanto a migration de sincronização não roda, os campos persistidos
+      // podem estar zerados/NULL — a contagem viva evita mostrar "0 grupos"
+      // para quem já tem grupos válidos.
+      const { count: liveValidCount } = await (supabase
+        .from('whatsapp_groups') as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_user_id', user.id)
+        .eq('valid_for_commission', true);
+
+      const persistedGroups = profile.quantidade_grupos_ativos ?? 0;
+      const activeGroups = Math.max(persistedGroups, liveValidCount ?? 0);
       const { calculateCommissionRate } = await import('@/lib/api');
 
+      // percentual_comissao_atual é o valor REALMENTE usado na cobrança do
+      // despacho — quando persistido, é ele que aparece. Fallback: escada
+      // oficial sobre a contagem de grupos.
+      const persisted = profile.percentual_comissao_atual != null
+        ? Number(profile.percentual_comissao_atual)
+        : null;
+
       return {
-        commissionPercent: calculateCommissionRate(activeGroups),
+        commissionPercent: persisted ?? calculateCommissionRate(activeGroups),
         activeGroups,
       };
     },

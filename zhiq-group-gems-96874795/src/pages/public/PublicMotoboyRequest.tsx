@@ -12,6 +12,7 @@ import motoboyHero from "@/assets/motoboy-hero.png";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { geocodeAddress } from "@/lib/map/GeoLocationService";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 import { viaggAI } from "@/lib/viaggAI";
 import { RideMapPremium } from "@/components/map/RideMapPremium";
@@ -105,6 +106,120 @@ export default function PublicMotoboyRequest() {
     } catch (_) { localStorage.removeItem('public_ride_pending'); }
   }, []);
 
+  // ── Carrega dados do perfil se logado para preencher o formulário ──
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        let hasCoords = false;
+
+        // Buscar dados gerais de profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, telefone, whatsapp, store_address, store_latitude, store_longitude, cidade, estado')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile) {
+          if (profile.name) {
+            setVisitorName(profile.name);
+          }
+          if (profile.whatsapp || profile.telefone) {
+            setVisitorPhone(profile.whatsapp || profile.telefone || "");
+          }
+          if (profile.store_latitude && profile.store_longitude) {
+            setOriginLat(profile.store_latitude);
+            setOriginLng(profile.store_longitude);
+            setOriginAddress(profile.store_address || profile.cidade || `Lat ${profile.store_latitude.toFixed(5)}, Lng ${profile.store_longitude.toFixed(5)}`);
+            setShowOriginMap(true);
+            hasCoords = true;
+          }
+        }
+
+        // Tentar buscar endereço específico de motoboy
+        const { data: motoboy } = await supabase
+          .from('motoboy_profiles')
+          .select('latitude_residencia, longitude_residencia, endereco_residencia, cidade, estado, nome, sobrenome')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (motoboy) {
+          if (motoboy.nome) {
+            setVisitorName(`${motoboy.nome} ${motoboy.sobrenome || ""}`.trim());
+          }
+          if (motoboy.latitude_residencia && motoboy.longitude_residencia) {
+            setOriginLat(motoboy.latitude_residencia);
+            setOriginLng(motoboy.longitude_residencia);
+            setOriginAddress(motoboy.endereco_residencia || motoboy.cidade || `Lat ${motoboy.latitude_residencia.toFixed(5)}, Lng ${motoboy.longitude_residencia.toFixed(5)}`);
+            setShowOriginMap(true);
+            hasCoords = true;
+          }
+        }
+
+        // Tentar buscar endereço específico de motorista
+        const { data: driver } = await supabase
+          .from('driver_profiles')
+          .select('latitude_residencia, longitude_residencia, endereco_residencia, cidade, estado, nome, sobrenome')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (driver) {
+          if (driver.nome) {
+            setVisitorName(`${driver.nome} ${driver.sobrenome || ""}`.trim());
+          }
+          if (driver.latitude_residencia && driver.longitude_residencia) {
+            setOriginLat(driver.latitude_residencia);
+            setOriginLng(driver.longitude_residencia);
+            setOriginAddress(driver.endereco_residencia || driver.cidade || `Lat ${driver.latitude_residencia.toFixed(5)}, Lng ${driver.longitude_residencia.toFixed(5)}`);
+            setShowOriginMap(true);
+            hasCoords = true;
+          }
+        }
+
+        // Se não houver coordenadas exatas, mas há cidade/estado no cadastro, faz geocodificação
+        if (!hasCoords) {
+          const searchCity = motoboy?.cidade || driver?.cidade || profile?.cidade || "";
+          const searchState = motoboy?.estado || driver?.estado || profile?.estado || "";
+          const searchAddr = motoboy?.endereco_residencia || driver?.endereco_residencia || profile?.store_address || "";
+
+          const searchQuery = [searchAddr || searchCity, searchState].filter(Boolean).join(", ");
+          if (searchQuery) {
+            const results = await geocodeAddress(searchQuery);
+            if (results && results.length > 0) {
+              setOriginLat(results[0].latLng.lat);
+              setOriginLng(results[0].latLng.lng);
+              setOriginAddress(results[0].formattedAddress.split(",").slice(0, 2).join(", "));
+              setShowOriginMap(true);
+              hasCoords = true;
+            }
+          }
+        }
+
+        // Fallback 1.5: Se não achou localização do próprio usuário logado, tenta pegar a de algum motoboy cadastrado no sistema
+        if (!hasCoords) {
+          const { data: list } = await supabase
+            .from('motoboy_profiles')
+            .select('latitude_residencia, longitude_residencia, endereco_residencia, cidade')
+            .not('latitude_residencia', 'is', null)
+            .not('longitude_residencia', 'is', null)
+            .limit(1);
+          if (list && list.length > 0) {
+            setOriginLat(list[0].latitude_residencia);
+            setOriginLng(list[0].longitude_residencia);
+            setOriginAddress(list[0].endereco_residencia || list[0].cidade || `Lat ${list[0].latitude_residencia.toFixed(5)}, Lng ${list[0].longitude_residencia.toFixed(5)}`);
+            setShowOriginMap(true);
+          }
+        }
+
+      } catch (err) {
+        console.warn("Erro ao carregar dados do perfil para preencher formulário:", err);
+      }
+    };
+    loadProfileData();
+  }, []);
+
   // ── GPS ──
   const handleGetGPS = () => {
     if (!navigator.geolocation) {
@@ -113,13 +228,33 @@ export default function PublicMotoboyRequest() {
     }
     setGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setOriginLat(pos.coords.latitude);
-        setOriginLng(pos.coords.longitude);
-        setOriginAddress(`Lat ${pos.coords.latitude.toFixed(5)}, Lng ${pos.coords.longitude.toFixed(5)}`);
+      async (pos) => {
+        try {
+          // Validação de localização no Brasil para evitar coordenadas simuladas fora do país em testes
+          const { data } = await supabase.functions.invoke('reverse-geocode', {
+            body: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          });
+          const addrText = data?.results?.[0]?.formatted_address || "";
+          const isBrazil = addrText.includes("Brasil") || addrText.includes("Brazil");
+          
+          if (isBrazil) {
+            setOriginLat(pos.coords.latitude);
+            setOriginLng(pos.coords.longitude);
+            setOriginAddress(addrText.split(",").slice(0, 2).join(", "));
+            setShowOriginMap(true);
+            toast.success("Localização obtida!");
+          } else {
+            toast.error("Geolocalização fora do Brasil ignorada.");
+          }
+        } catch {
+          // Fallback seguro caso a geocodificação falhe
+          setOriginLat(pos.coords.latitude);
+          setOriginLng(pos.coords.longitude);
+          setOriginAddress(`Lat ${pos.coords.latitude.toFixed(5)}, Lng ${pos.coords.longitude.toFixed(5)}`);
+          setShowOriginMap(true);
+          toast.success("Localização obtida!");
+        }
         setGpsLoading(false);
-        setShowOriginMap(true);
-        toast.success("Localização obtida!");
       },
       () => {
         setGpsLoading(false);

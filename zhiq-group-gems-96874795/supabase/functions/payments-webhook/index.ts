@@ -23,6 +23,7 @@ import {
   mpValidateWebhook,
   type MpCreds,
 } from "./mp.ts";
+import { resolveMpGateway } from "../_shared/mp-gateway-resolver.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -61,18 +62,12 @@ Deno.serve(async (req) => {
   const signature = req.headers.get("x-signature");
   const requestId = req.headers.get("x-request-id");
 
-  // Credenciais do gateway ativo.
-  const { data: gw, error: gwErr } = await svc
-    .from("payment_gateways")
-    .select("provider_code, credentials, is_active")
-    .eq("provider_code", "mercadopago")
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-  if (gwErr || !gw) {
+  // Credenciais do gateway ativo (FASE 1: config por ambiente → env → legado).
+  const resolved = await resolveMpGateway(svc);
+  if (!resolved.ok) {
     return json({ error: "gateway mercadopago inativo/inexistente" }, 400);
   }
-  const creds = gw.credentials as MpCreds;
+  const creds = resolved.gw.credentials as MpCreds;
 
   // Valida assinatura.
   const v = await mpValidateWebhook(

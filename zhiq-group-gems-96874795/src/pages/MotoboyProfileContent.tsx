@@ -185,6 +185,31 @@ export default function MotoboyProfileContent() {
     setCoordsInput('');
     setConfirmResidenceCaptchaOpen(true);
   };
+  /** Foto que o usuário enviou no card do perfil (tela Selecionar Perfil).
+   *  Lida sempre do Storage (avatars/{user}/profile-cards) — se ele trocar a foto
+   *  lá, aqui atualiza junto na próxima carga. */
+  const [profileCardPhoto, setProfileCardPhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const dir = `${user.id}/profile-cards`;
+        const key = activeProfile === 'mototaxi' ? 'mototaxi' : 'motoboy';
+        const { data } = await supabase.storage.from('avatars').list(dir);
+        const file = (data || []).find((f) => f.name.replace(/\.[^.]+$/, '') === key);
+        if (file && !cancelled) {
+          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(`${dir}/${file.name}`);
+          setProfileCardPhoto(`${publicUrl}?v=${encodeURIComponent(file.updated_at || file.created_at || '')}`);
+        }
+      } catch {
+        // sem foto — o card fica como está
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, activeProfile]);
+
   const cityGeocodedRef = useRef(false);
   /** Centro da cidade do motoboy — usado APENAS para abrir o mapa numa posição plausível
    *  quando a residência ainda não foi confirmada. NÃO entra em state.latitude_residencia
@@ -614,6 +639,7 @@ export default function MotoboyProfileContent() {
             addressLabel={motoboyData.endereco_residencia || '📍 Minha Localização'}
             markerLabel="📍 Minha Localização"
             readOnly={residenceLocked}
+            operationRadiusKm={residenceLocked ? 5 : undefined}
             onLocationSelect={(lat, lng) => {
               // Apenas guarda a posição enquanto arrasta. Captcha SÓ abre no botão "Confirmar".
               setDraftMapCoords({ lat, lng });
@@ -687,8 +713,20 @@ export default function MotoboyProfileContent() {
       <Card className="bg-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Bike className="h-4 w-4 text-motoboy" />
-            Veículo
+            {/* Foto do card de perfil (Selecionar Perfil) no lugar do ícone; sem foto → ícone padrão */}
+            {profileCardPhoto ? (
+              <img
+                src={profileCardPhoto}
+                alt="Foto do seu card de perfil"
+                loading="lazy"
+                decoding="async"
+                onError={() => setProfileCardPhoto(null)}
+                className="h-8 w-8 rounded-full object-cover border border-orange-200 shadow-sm shrink-0"
+              />
+            ) : (
+              <Bike className="h-4 w-4 text-motoboy" />
+            )}
+            Motocicleta Baú
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">

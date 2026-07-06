@@ -436,32 +436,19 @@ export function useMerchantCredits() {
   }) => {
     if (!storeId) return false;
 
-    const { data: balRow } = await (supabase.from("merchant_credit_balances") as any)
-      .select("available_credits, consumed_credits")
-      .eq("store_id", storeId)
-      .single();
-
-    const currentBalance = balRow?.available_credits ?? 0;
-    if (currentBalance < params.amount) return false;
-
-    const newBalance = currentBalance - params.amount;
-    const newConsumed = (balRow?.consumed_credits ?? 0) + params.amount;
-
-    await (supabase.from("merchant_credit_balances") as any)
-      .update({ available_credits: newBalance, consumed_credits: newConsumed, updated_at: new Date().toISOString() })
-      .eq("store_id", storeId);
-
-    await (supabase.from("merchant_credit_ledger") as any).insert({
-      store_id: storeId,
-      purchase_intention_id: params.purchaseIntentionId || null,
-      entry_type: "debit",
-      amount: params.amount,
-      balance_before: currentBalance,
-      balance_after: newBalance,
-      reason_code: params.reasonCode,
-      description: params.description,
-      metadata: params.metadata || {},
+    // Débito server-side atômico (LOTE B2): valida ownership, trava a linha
+    // (FOR UPDATE) e grava saldo+ledger na mesma transação. Substitui o
+    // UPDATE client-side direto (manipulável e sem lock).
+    const { data, error } = await (supabase.rpc as any)("merchant_debit_credits", {
+      p_store_id: storeId,
+      p_amount: params.amount,
+      p_reason_code: params.reasonCode,
+      p_description: params.description,
+      p_purchase_intention_id: params.purchaseIntentionId || null,
+      p_metadata: params.metadata || {},
     });
+
+    if (error || !data?.ok) return false;
 
     queryClient.invalidateQueries({ queryKey: ["merchant-credits"] });
     return true;

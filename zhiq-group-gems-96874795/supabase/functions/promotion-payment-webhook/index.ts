@@ -7,6 +7,10 @@
  *  3. Envia e-mail de recibo ao anunciante via Resend
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
+import {
+  mpValidateSignatureHeader,
+  resolveMpGateway,
+} from "../_shared/mp-gateway-resolver.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -31,9 +35,10 @@ Deno.serve(async (req) => {
 
   const svc = createClient(SUPABASE_URL, SERVICE);
 
-  // Parse MP webhook
+  // Parse MP webhook (raw primeiro, p/ validação HMAC opcional)
+  const rawBody = await req.text();
   let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return json({ ok: true }); }
+  try { body = JSON.parse(rawBody); } catch { return json({ ok: true }); }
 
   // MP notifica com topic="payment" ou action="payment.updated"
   const topic      = (body.topic ?? body.type) as string | undefined;
@@ -43,17 +48,30 @@ Deno.serve(async (req) => {
     return json({ ok: true }); // ignora outros eventos
   }
 
-  // Carrega credenciais MP
-  const { data: gw } = await svc
-    .from("payment_gateways")
-    .select("credentials, sandbox")
-    .eq("provider", "mercadopago")
-    .eq("is_active", true)
-    .maybeSingle();
+  // Carrega credenciais MP (FASE 1: config por ambiente → env → legado).
+  // Obs.: a query antiga usava colunas legadas provider/sandbox que não
+  // existem no schema atual (provider_code/mode) — o resolver corrige isso.
+  const resolved = await resolveMpGateway(svc);
+  if (!resolved.ok) return json({ ok: false, error: "gateway not found" });
 
-  if (!gw) return json({ ok: false, error: "gateway not found" });
+  const creds = resolved.gw.credentials as { access_token: string };
 
-  const creds = gw.credentials as { access_token: string };
+  // Validação HMAC oportunista: se houver webhook_secret configurado E o MP
+  // mandou x-signature, valida; assinatura inválida → 401 (MP para de
+  // reenviar). Sem secret/assinatura mantém o comportamento anterior — a
+  // autenticidade continua garantida pelo GET /v1/payments abaixo.
+  const signature = req.headers.get("x-signature");
+  if (resolved.gw.credentials.webhook_secret && signature) {
+    const urlDataId = new URL(req.url).searchParams.get("data.id");
+    const v = await mpValidateSignatureHeader(
+      resolved.gw.credentials.webhook_secret,
+      rawBody,
+      signature,
+      req.headers.get("x-request-id"),
+      urlDataId,
+    );
+    if (!v.valid) return json({ ok: false, error: v.error }, 401);
+  }
 
   // Busca status real do pagamento no MP
   const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${resourceId}`, {

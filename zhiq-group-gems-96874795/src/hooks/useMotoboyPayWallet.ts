@@ -262,20 +262,31 @@ export function useMotoboyPayCommission() {
   return useQuery({
     queryKey: ["motoboy-pay-commission", user?.id],
     queryFn: async (): Promise<MotoboyPayCommission> => {
-      if (!user?.id) return { commissionPercent: 15, activeGroups: 0 };
+      if (!user?.id) return { commissionPercent: 25, activeGroups: 0 };
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("quantidade_grupos_ativos")
+        .select("quantidade_grupos_ativos, percentual_comissao_atual")
         .eq("id", user.id)
         .single();
 
-      const activeGroups = profile?.quantidade_grupos_ativos ?? 0;
+      // Contagem ao vivo dos grupos válidos — cobre o período pré-migration
+      const { count: liveValidCount } = await (supabase
+        .from('whatsapp_groups') as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_user_id', user.id)
+        .eq('valid_for_commission', true);
+
+      const activeGroups = Math.max(profile?.quantidade_grupos_ativos ?? 0, liveValidCount ?? 0);
+      // Valor persistido = o que a cobrança do despacho realmente usa
+      const persisted = profile?.percentual_comissao_atual != null
+        ? Number(profile.percentual_comissao_atual)
+        : null;
       try {
         const { calculateCommissionRate } = await import("@/lib/api");
-        return { commissionPercent: calculateCommissionRate(activeGroups), activeGroups };
+        return { commissionPercent: persisted ?? calculateCommissionRate(activeGroups), activeGroups };
       } catch {
-        return { commissionPercent: 15, activeGroups };
+        return { commissionPercent: persisted ?? 25, activeGroups };
       }
     },
     enabled: !!user?.id,

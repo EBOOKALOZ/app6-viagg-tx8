@@ -68,26 +68,6 @@ interface MenuSection {
 
 const menuSections: MenuSection[] = [
   {
-    title: "Central de Eventos",
-    emoji: "⚡",
-    items: [
-      { title: "Console em Tempo Real", url: "/admin/eventos", icon: Radio,  badge: "LIVE" },
-      { title: "Mapa Inteligente",      url: "/admin/mapa",   icon: MapPin, badge: "IA"   },
-    ],
-  },
-  {
-    title: "Central de IA",
-    emoji: "🤖",
-    items: [
-      { title: "Centro de Comando IA", url: "/admin/ai", icon: BrainCircuit },
-      { title: "Análise de Chat IA", url: "/admin/ai-analytics", icon: Bot },
-      { title: "Histórico de Consumo", url: "/admin/ai-historico", icon: History },
-      { title: "Configuração da IA", url: "/admin/ai-config", icon: SlidersHorizontal, badge: "NOVO" },
-      { title: "Pré-Visualização", url: "/admin/pre-visualizacao", icon: Monitor },
-      { title: "Auditoria Operacional", url: "/admin/auditoria-postagens", icon: Shield },
-    ],
-  },
-  {
     title: "Centro de Comando",
     emoji: "🔷",
     items: [
@@ -158,6 +138,15 @@ const menuSections: MenuSection[] = [
     title: "Gestão",
     emoji: "🔶",
     items: [
+      { title: "Comissão Inteligente", url: "/admin/comissao-inteligente", icon: Target },
+      { title: "Console em Tempo Real", url: "/admin/eventos", icon: Radio, badge: "LIVE" },
+      { title: "Mapa Inteligente", url: "/admin/mapa", icon: MapPin, badge: "IA" },
+      { title: "Centro de Comando IA", url: "/admin/ai", icon: BrainCircuit },
+      { title: "Análise de Chat IA", url: "/admin/ai-analytics", icon: Bot },
+      { title: "Histórico de Consumo", url: "/admin/ai-historico", icon: History },
+      { title: "Configuração da IA", url: "/admin/ai-config", icon: SlidersHorizontal, badge: "NOVO" },
+      { title: "Pré-Visualização", url: "/admin/pre-visualizacao", icon: Monitor },
+      { title: "Auditoria Operacional", url: "/admin/auditoria-postagens", icon: Shield },
       { title: "Usuários", url: "/admin/users", icon: Users },
       { title: "Motoboys", url: "/admin/perfis/motoboys", icon: Bike },
       { title: "🧪 Teste Motoboy", url: "/admin/motoboy-test", icon: Bike },
@@ -176,6 +165,7 @@ const menuSections: MenuSection[] = [
       { title: "Produtos Marketplace", url: "/admin/marketplace/products", icon: Package },
       { title: "Imagens Produtos", url: "/admin/moderacao-imagens", icon: Camera },
       { title: "Financeiro", url: "/admin/financeiro", icon: Wallet },
+      { title: "Config. Mercado Pago", url: "/admin/pagamentos/mercadopago", icon: CreditCard, badge: "NOVO" },
     ],
   },
   {

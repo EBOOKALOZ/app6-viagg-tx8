@@ -19,6 +19,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { mpCharge, mpChargeCard, type MpCreds, type MpCardInput } from "./mp.ts";
+import { resolveMpGateway } from "../_shared/mp-gateway-resolver.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -64,12 +65,30 @@ Deno.serve(async (req) => {
     return json({ error: "amount_cents inválido" }, 400);
   }
   const amountBrl = Math.round(amountCents) / 100;
-  const ownerType = String(input.payer_owner_type ?? "merchant_store");
-  const ownerId = (input.payer_owner_id as string) ?? null;
-  const accountType = String(input.account_type ?? "merchant_wallet");
+  let ownerType = String(input.payer_owner_type ?? "merchant_store");
+  let ownerId = (input.payer_owner_id as string) ?? null;
+  let accountType = String(input.account_type ?? "merchant_wallet");
   const idempotencyKey = String(
     input.idempotency_key ?? crypto.randomUUID(),
   );
+
+  // ── DEFESA EM PROFUNDIDADE (P2, Fase 3.2) ──────────────────────────────
+  // Compra de CRÉDITO de módulo SEMPRE credita a tesouraria oficial
+  // (platform_main). O destino é decidido no SERVIDOR pelo grant_kind do
+  // metadata; qualquer account_type/owner enviado pelo cliente é ignorado.
+  // Elimina a possibilidade de desviar a receita para outra carteira.
+  const grantKind = String(
+    (input.metadata as Record<string, unknown> | undefined)?.grant_kind ?? "",
+  );
+  const CREDIT_GRANT_KINDS = new Set([
+    "merchant", "advertiser", "advertiser_credit",
+    "real_estate", "vehicle", "service", "freight", "travel",
+  ]);
+  if (CREDIT_GRANT_KINDS.has(grantKind)) {
+    ownerType = "platform";
+    ownerId = null;
+    accountType = "platform_main";
+  }
 
   try {
     // 1. Conta destino.
@@ -85,26 +104,14 @@ Deno.serve(async (req) => {
     if (acctErr) return json({ ok: false, error: `conta: ${acctErr.message}` });
     const targetAccountId = (acct as { id: string }).id;
 
-    // 2. Gateway ativo + credenciais (service_role).
-    const { data: gw, error: gwErr } = await svc
-      .from("payment_gateways")
-      .select("provider_code, mode, credentials, config, is_active")
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-    if (gwErr || !gw) {
-      return json({ ok: false, error: "nenhum gateway ativo" });
+    // 2. Gateway ativo + credenciais (FASE 1: config por ambiente → env vars
+    //    MP_SANDBOX_*/MP_PROD_* → legado payment_gateways).
+    const resolved = await resolveMpGateway(svc);
+    if (!resolved.ok) {
+      return json({ ok: false, error: resolved.error });
     }
-    if (gw.provider_code !== "mercadopago") {
-      return json({
-        ok: false,
-        error: `gateway ativo é ${gw.provider_code}; esta função só faz mercadopago`,
-      });
-    }
+    const gw = resolved.gw;
     const creds = gw.credentials as MpCreds;
-    if (!creds?.access_token) {
-      return json({ ok: false, error: "gateway sem access_token" });
-    }
 
     // 3. Cria a ordem (pending).
     const { data: order, error: orderErr } = await userClient.rpc(
@@ -130,8 +137,7 @@ Deno.serve(async (req) => {
     const reference = `${input.reference_type ?? "recharge"}:${
       input.reference_id ?? orderRow.id
     }`;
-    const notificationUrl = (gw.config as Record<string, unknown>)
-      ?.webhook_url as string | undefined;
+    const notificationUrl = gw.webhook_url;
 
     // 4a. Cartão tokenizado pelo Payment Brick → cobra direto via /v1/payments.
     //     (caso contrário, mantém o fluxo atual: PIX ou Checkout Pro hospedado.)
@@ -165,7 +171,7 @@ Deno.serve(async (req) => {
         notification_url: notificationUrl,
         // Alguns fluxos mandam back_url no nível raiz, outros dentro de metadata.
         back_url: (input.back_url ?? (input.metadata as Record<string, unknown> | undefined)?.back_url) as string | undefined,
-        sandbox: gw.mode === "sandbox",
+        sandbox: gw.sandbox,
       });
 
     if (!charge.ok || !charge.provider_payment_id) {

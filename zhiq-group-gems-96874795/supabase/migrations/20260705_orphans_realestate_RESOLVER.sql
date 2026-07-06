@@ -1,0 +1,53 @@
+-- ============================================================
+-- RESOLUÇÃO das 2 ordens órfãs real_estate (Fase 3.2, B3=2)
+-- Ordens: 31ad01a5-...116c2 e ee8880e6-...ca0222 (R$90 cada, 18/06)
+-- status=paid, mp_status=pending, sem ledger.
+--
+-- ⚠️ ESCOLHA UM CAMINHO conforme o painel do Mercado Pago.
+--    NUNCA rode os dois. Ambos idempotentes.
+--    provider_payment_id: 461911790-e2664f09-978c-4069-b2d1-ba70645321db
+--                         461911790-25c9da2d-ce02-4654-bf4b-672e2698f69a
+-- ============================================================
+
+-- ╔══════════════════════════════════════════════════════════╗
+-- ║ CAMINHO A — MP confirmou APPROVED (houve dinheiro)         ║
+-- ║ Backfill do ledger em platform_main. Idempotente pela      ║
+-- ║ idempotency_key 'recharge:<order>:in' da pay_create_ledger.║
+-- ╚══════════════════════════════════════════════════════════╝
+-- DO $$
+-- DECLARE o record;
+-- BEGIN
+--   FOR o IN
+--     SELECT id, target_account_id, amount, created_by
+--     FROM public.pay_payment_orders
+--     WHERE id IN ('31ad01a5-5cac-4c30-bb72-1af7881116c2',
+--                  'ee8880e6-bc4c-4b34-8ce4-3e6f79ca0222')
+--       AND status = 'paid'
+--   LOOP
+--     PERFORM public.pay_create_ledger_entry(
+--       o.target_account_id, 'credit', 'payment_in', o.amount,
+--       'payment_order', o.id, 'recharge:'||o.id::text||':in', o.created_by);
+--     -- alinha o mp_status ao real
+--     UPDATE public.pay_payment_orders
+--        SET metadata = jsonb_set(metadata, '{mp_status}', '"approved"')
+--      WHERE id = o.id;
+--     RAISE NOTICE 'Backfill ledger p/ ordem %', o.id;
+--   END LOOP;
+-- END $$;
+-- Obs.: os créditos de imóveis (real_estate_credit_balances) já podem ter
+-- sido concedidos; confira antes com a query da ETAPA 3. Se NÃO tiverem
+-- sido, rode também pay_grant_legacy('<order_id>') para conceder pelo fluxo oficial.
+
+-- ╔══════════════════════════════════════════════════════════╗
+-- ║ CAMINHO B — MP = PENDING/REJECTED/CANCELLED/EXPIRED        ║
+-- ║ NÃO houve dinheiro. Corrige só o status; nenhum lançamento.║
+-- ╚══════════════════════════════════════════════════════════╝
+-- UPDATE public.pay_payment_orders
+--    SET status = 'expired',
+--        metadata = jsonb_set(metadata, '{mp_status}', '"expired"')
+--  WHERE id IN ('31ad01a5-5cac-4c30-bb72-1af7881116c2',
+--               'ee8880e6-bc4c-4b34-8ce4-3e6f79ca0222')
+--    AND status = 'paid';
+-- Se a query da ETAPA 3 mostrar que os créditos de imóveis FORAM concedidos
+-- indevidamente, estorne pelo fluxo oficial (real_estate_credit_ledger com
+-- entry_type de estorno) — me mande a estrutura da tabela que eu escrevo o UPDATE.
