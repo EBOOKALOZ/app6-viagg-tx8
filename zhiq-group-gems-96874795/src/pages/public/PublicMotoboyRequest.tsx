@@ -661,8 +661,23 @@ function FormStep({
     reverseGeocode(destLat, destLng).then(setDestPlace);
   }, [destLat, destLng]);
 
+  // Detecta coordenadas coladas no campo: "lat, lng" / "lat lng" / "-10.9, -53.2"
+  const parseCoords = (text: string): { lat: number; lng: number } | null => {
+    const m = text.trim().match(/^\s*(-?\d{1,3}(?:\.\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
+    if (!m) return null;
+    const lat = parseFloat(m[1]);
+    const lng = parseFloat(m[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { lat, lng };
+    }
+    return null;
+  };
+
   const geocodeAddress = async (address: string) => {
     if (!address.trim()) return null;
+    // Se o usuário colou coordenadas, usa direto (sem chamar geocoder)
+    const coords = parseCoords(address);
+    if (coords) return coords;
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=br`,
       { headers: { "Accept-Language": "pt-BR" } }
@@ -674,11 +689,13 @@ function FormStep({
 
   const handleGeocode = async () => {
     if (!originAddress.trim()) {
-      toast.error("Digite um endereço de coleta para buscar");
+      toast.error("Digite um endereço ou cole as coordenadas de coleta");
       return;
     }
     setGeocoding(true);
     try {
+      const originCoords = parseCoords(originAddress);
+      const destCoords = parseCoords(destinationAddress);
       const [originResult, destResult] = await Promise.all([
         geocodeAddress(originAddress),
         destinationAddress.trim() ? geocodeAddress(destinationAddress) : Promise.resolve(null),
@@ -686,10 +703,17 @@ function FormStep({
       if (originResult) {
         onMapSelect(originResult.lat, originResult.lng);
         setShowMap(true);
-        if (destResult) onDestMapSelect(destResult.lat, destResult.lng);
+        // Se veio de coordenadas coladas, resolve o endereço legível e mostra no campo
+        if (originCoords) {
+          reverseGeocode(originResult.lat, originResult.lng).then((addr) => addr && setOriginAddress(addr));
+        }
+        if (destResult) {
+          onDestMapSelect(destResult.lat, destResult.lng);
+          if (destCoords) reverseGeocode(destResult.lat, destResult.lng).then((addr) => addr && setDestinationAddress(addr));
+        }
         toast.success(destResult ? "Coleta e Entrega localizadas no mapa!" : "Coleta localizada no mapa!");
       } else {
-        toast.error("Endereço de coleta não encontrado. Tente ser mais específico.");
+        toast.error("Endereço/coordenada de coleta não encontrado. Tente ser mais específico.");
       }
     } catch {
       toast.error("Erro ao buscar endereços.");
@@ -700,18 +724,20 @@ function FormStep({
 
   const handleGecodeDest = async () => {
     if (!destinationAddress.trim()) {
-      toast.error("Digite um endereço de entrega para buscar");
+      toast.error("Digite um endereço ou cole as coordenadas de entrega");
       return;
     }
     setGeocoding(true);
     try {
+      const destCoords = parseCoords(destinationAddress);
       const result = await geocodeAddress(destinationAddress);
       if (result) {
         onDestMapSelect(result.lat, result.lng);
         setShowMap(true);
+        if (destCoords) reverseGeocode(result.lat, result.lng).then((addr) => addr && setDestinationAddress(addr));
         toast.success("Pino de entrega marcado no mapa!");
       } else {
-        toast.error("Endereço de entrega não encontrado. Tente ser mais específico.");
+        toast.error("Endereço/coordenada de entrega não encontrado. Tente ser mais específico.");
       }
     } catch {
       toast.error("Erro ao buscar endereço de entrega.");
@@ -758,7 +784,7 @@ function FormStep({
               value={originAddress}
               onChange={(e) => setOriginAddress(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleGeocode(); }}
-              placeholder="Rua, número, bairro, cidade"
+              placeholder="Endereço ou cole coordenadas (-10.9, -53.2)"
               className="rounded-xl border-zinc-200 flex-1"
             />
             <button
@@ -797,12 +823,17 @@ function FormStep({
                 destLat={destLat ?? undefined}
                 destLng={destLng ?? undefined}
                 onOriginChange={(lat, lng) => {
-                  if (lat === 0 && lng === 0) { onMapSelect(0, 0); } // reset
-                  else { onMapSelect(lat, lng); setOriginAddress(`Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`); }
+                  if (lat === 0 && lng === 0) { onMapSelect(0, 0); return; } // reset
+                  onMapSelect(lat, lng);
+                  // Mostra a coordenada na hora e resolve o endereço legível em seguida
+                  setOriginAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+                  reverseGeocode(lat, lng).then((addr) => addr && setOriginAddress(addr));
                 }}
                 onDestChange={(lat, lng) => {
-                  if (lat === 0 && lng === 0) onDestMapSelect(0, 0); // reset
-                  else onDestMapSelect(lat, lng);
+                  if (lat === 0 && lng === 0) { onDestMapSelect(0, 0); return; } // reset
+                  onDestMapSelect(lat, lng);
+                  setDestinationAddress(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+                  reverseGeocode(lat, lng).then((addr) => addr && setDestinationAddress(addr));
                 }}
                 height={300}
                 className="mt-1 w-full"
