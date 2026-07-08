@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { PaymentCountdown } from '@/components/rides/PaymentCountdown';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation, Store, MapPin, Phone,
@@ -9,8 +10,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
-import { useMotoboyCommission } from '@/hooks/useMotoboyCommission';
 
 const RouteMapCanvas = lazy(() => import('@/components/motoboy/RouteMapCanvas'));
 
@@ -45,11 +44,10 @@ export default function MotoboyAwaitingRide() {
   const [sp]        = useSearchParams();
   const offerId     = sp.get('id');
   const { user }    = useAuth();
-  const { completeDelivery } = usePaymentsOrchestrator();
-  const { commissionRate } = useMotoboyCommission(user?.id);
 
   const [offerRow,   setOfferRow]   = useState<any>(null);
   const [orderRow,   setOrderRow]   = useState<any>(null);
+  const [paymentCleared, setPaymentCleared] = useState(false);
   const [storeRow,   setStoreRow]   = useState<any>(null);
   const [phase,      setPhase]      = useState<Phase>('heading_to_store');
   const [mPos,       setMPos]       = useState<{ lat: number; lng: number } | null>(null);
@@ -170,22 +168,21 @@ export default function MotoboyAwaitingRide() {
   }, [pickupCode, orderRow]);
 
   /* Após a RPC complete_delivery_order marcar a entrega concluída, libera
-     o dinheiro reservado: escrow → motoboy (líquido) + plataforma (fee).
-     Comissão calculada a partir do tier atual do motoboy via useMotoboyCommission. */
+     o dinheiro reservado: escrow → profissional (líquido) + plataforma (fee).
+     O líquido/comissão saem do net_value da oferta aceita (server-side). */
   const settleEscrowToMotoboy = useCallback(async () => {
     if (!user?.id || !orderRow?.id || !orderRow?.total_price) {
       console.warn('[settleEscrowToMotoboy] dados ausentes — pulando liberação');
       return;
     }
-    const grossCents = Math.round(Number(orderRow.total_price) * 100);
-    const feeCents = Math.round((grossCents * (commissionRate ?? 25)) / 100);
     try {
-      await completeDelivery({
-        motoboy_owner_id: user.id,
-        credits_cost_cents: grossCents,
-        platform_fee_cents: feeCents,
-        delivery_id: orderRow.id,
+      // Liquidação server-side (pay_release_ride_payment): escrow → carteira
+      // do profissional POR PERFIL (motoboy/mototáxi/carro) + plataforma
+      // (comissão). O líquido vem do net_value da oferta aceita.
+      const { error: relErr } = await (supabase.rpc as any)('pay_release_ride_payment', {
+        p_order_id: orderRow.id,
       });
+      if (relErr) throw new Error(relErr.message);
     } catch (err: any) {
       // Não derruba o UX da finalização — a entrega já foi marcada como
       // concluída. Loga e avisa silencioso para o motoboy.
@@ -194,7 +191,7 @@ export default function MotoboyAwaitingRide() {
         description: 'O suporte vai regularizar. Não tente refinalizar.',
       });
     }
-  }, [user?.id, orderRow, commissionRate, completeDelivery]);
+  }, [user?.id, orderRow]);
 
   // ── Validar código de entrega + finalizar em um único passo ──────────────
   const handleValidateDelivery = useCallback(async () => {
@@ -314,6 +311,26 @@ export default function MotoboyAwaitingRide() {
       </motion.div>
     </div>
   );
+
+  // ── Portão de PAGAMENTO (contador de 3 min) ─────────────────────────────────
+  // Pós-aceite, enquanto o cliente não paga, o profissional AGUARDA. Só ativa
+  // no fluxo novo (driver_status='waiting_payment'); pedidos legados (campo
+  // null) passam direto, sem impacto. Bloqueia iniciar/chegar/finalizar.
+  if (orderRow?.driver_status === 'waiting_payment' && orderRow?.payment_status !== 'paid' && !paymentCleared) {
+    return (
+      <div className="fixed inset-0 bg-[#0a0a0a] flex flex-col items-center justify-center gap-6 p-6">
+        <PaymentCountdown
+          orderId={orderRow.id}
+          role="professional"
+          category="motoboy"
+          onStartNavigation={() => setPaymentCleared(true)}
+          onTimeout={() => { toast.info('O tempo para pagamento expirou.'); setTimeout(() => navigate('/motoboy'), 1800); }}
+          onCancelled={() => { toast.info('O usuário cancelou a solicitação.'); setTimeout(() => navigate('/motoboy'), 1800); }}
+          className="w-full max-w-sm"
+        />
+      </div>
+    );
+  }
 
   // ── Tela principal ─────────────────────────────────────────────────────────
   const isToStore  = phase === 'heading_to_store';

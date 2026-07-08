@@ -65,6 +65,8 @@ export interface DriverMarker {
   plate:         string;
   avatarUrl?:    string;
   isOnline:      boolean;
+  /** Status de presença ao vivo (professional_presence). Default implícito: 'online'. */
+  status?:       "online" | "in_delivery" | "offline";
 }
 
 export interface HeatmapPoint {

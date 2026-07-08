@@ -16,6 +16,7 @@ import { geocodeAddress } from "@/lib/map/GeoLocationService";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 import { viaggAI } from "@/lib/viaggAI";
 import { RideMapPremium } from "@/components/map/RideMapPremium";
+import { parseCoordinates } from "@/lib/coordinateParser";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
@@ -197,21 +198,9 @@ export default function PublicMotoboyRequest() {
           }
         }
 
-        // Fallback 1.5: Se não achou localização do próprio usuário logado, tenta pegar a de algum motoboy cadastrado no sistema
-        if (!hasCoords) {
-          const { data: list } = await supabase
-            .from('motoboy_profiles')
-            .select('latitude_residencia, longitude_residencia, endereco_residencia, cidade')
-            .not('latitude_residencia', 'is', null)
-            .not('longitude_residencia', 'is', null)
-            .limit(1);
-          if (list && list.length > 0) {
-            setOriginLat(list[0].latitude_residencia);
-            setOriginLng(list[0].longitude_residencia);
-            setOriginAddress(list[0].endereco_residencia || list[0].cidade || `Lat ${list[0].latitude_residencia.toFixed(5)}, Lng ${list[0].longitude_residencia.toFixed(5)}`);
-            setShowOriginMap(true);
-          }
-        }
+        // (Removido) NÃO usar um motoboy aleatório do sistema como coleta: a coleta
+        // é a posição de quem chama (GPS ou endereço digitado). Herdar a residência
+        // de outro cadastro fazia a coleta cair na cidade dele (ex.: Santa Catarina).
 
       } catch (err) {
         console.warn("Erro ao carregar dados do perfil para preencher formulário:", err);
@@ -609,6 +598,8 @@ function FormStep({
 }: FormStepProps) {
   const [geocoding, setGeocoding] = useState(false);
   const [locationLocked, setLocationLocked] = useState(false);
+  const [coordColeta, setCoordColeta] = useState("");
+  const [coordDestino, setCoordDestino] = useState("");
   const [originPlace, setOriginPlace] = useState<string | null>(null);
   const [destPlace, setDestPlace] = useState<string | null>(null);
 
@@ -661,14 +652,12 @@ function FormStep({
     reverseGeocode(destLat, destLng).then(setDestPlace);
   }, [destLat, destLng]);
 
-  // Detecta coordenadas coladas no campo: "lat, lng" / "lat lng" / "-10.9, -53.2"
+  // Usa o MESMO parser homologado do fluxo do lojista (CreateDelivery):
+  // aceita coordenadas, link do Google Maps e do WhatsApp.
   const parseCoords = (text: string): { lat: number; lng: number } | null => {
-    const m = text.trim().match(/^\s*(-?\d{1,3}(?:\.\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:\.\d+)?)\s*$/);
-    if (!m) return null;
-    const lat = parseFloat(m[1]);
-    const lng = parseFloat(m[2]);
-    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
-      return { lat, lng };
+    const r = parseCoordinates(text);
+    if (r.success && r.coordinates) {
+      return { lat: r.coordinates.latitude, lng: r.coordinates.longitude };
     }
     return null;
   };
@@ -719,6 +708,27 @@ function FormStep({
       toast.error("Erro ao buscar endereços.");
     } finally {
       setGeocoding(false);
+    }
+  };
+
+  // Aplica coordenadas coladas num dos balões → marca o pino + resolve o endereço
+  const applyCoords = async (text: string, target: "origin" | "dest") => {
+    const c = parseCoords(text);
+    if (!c) {
+      toast.error("Cole coordenadas válidas. Ex: -10.9267, -53.2035");
+      return;
+    }
+    setShowMap(true);
+    if (target === "origin") {
+      onMapSelect(c.lat, c.lng);
+      setOriginAddress(`${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`);
+      reverseGeocode(c.lat, c.lng).then((addr) => addr && setOriginAddress(addr));
+      toast.success("📦 Coleta (quem chama) marcada no mapa!");
+    } else {
+      onDestMapSelect(c.lat, c.lng);
+      setDestinationAddress(`${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`);
+      reverseGeocode(c.lat, c.lng).then((addr) => addr && setDestinationAddress(addr));
+      toast.success("🏁 Destino (para onde vai) marcado no mapa!");
     }
   };
 
@@ -776,6 +786,52 @@ function FormStep({
         />
       </Field>
 
+      {/* ── Balões de coordenadas (colar lat, lng) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {/* Quem chama (coleta) */}
+        <div className="rounded-2xl border-2 border-green-200 bg-green-50/60 p-3">
+          <p className="text-[11px] font-black text-green-700 mb-1.5 flex items-center gap-1">
+            📦 Quem chama (coleta)
+          </p>
+          <div className="flex gap-1.5">
+            <Input
+              value={coordColeta}
+              onChange={(e) => setCoordColeta(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") applyCoords(coordColeta, "origin"); }}
+              placeholder="Coordenadas ou link do Google Maps"
+              className="rounded-xl border-green-200 bg-white flex-1 text-xs h-9"
+            />
+            <button
+              onClick={() => applyCoords(coordColeta, "origin")}
+              className="px-3 h-9 bg-green-500 hover:bg-green-600 text-white text-xs font-black rounded-xl shrink-0"
+            >
+              Marcar
+            </button>
+          </div>
+        </div>
+        {/* Para onde o motoboy vai (destino) */}
+        <div className="rounded-2xl border-2 border-red-200 bg-red-50/60 p-3">
+          <p className="text-[11px] font-black text-red-600 mb-1.5 flex items-center gap-1">
+            🏁 Para onde o motoboy vai (destino)
+          </p>
+          <div className="flex gap-1.5">
+            <Input
+              value={coordDestino}
+              onChange={(e) => setCoordDestino(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") applyCoords(coordDestino, "dest"); }}
+              placeholder="Coordenadas ou link do Google Maps"
+              className="rounded-xl border-red-200 bg-white flex-1 text-xs h-9"
+            />
+            <button
+              onClick={() => applyCoords(coordDestino, "dest")}
+              className="px-3 h-9 bg-red-500 hover:bg-red-600 text-white text-xs font-black rounded-xl shrink-0"
+            >
+              Marcar
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Origem */}
       <Field label="Endereço de coleta" icon={<MapPin className="w-4 h-4 text-green-500" />}>
         <div className="space-y-2">
@@ -784,7 +840,7 @@ function FormStep({
               value={originAddress}
               onChange={(e) => setOriginAddress(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleGeocode(); }}
-              placeholder="Endereço ou cole coordenadas (-10.9, -53.2)"
+              placeholder="Endereço, coordenadas ou link do Google Maps"
               className="rounded-xl border-zinc-200 flex-1"
             />
             <button

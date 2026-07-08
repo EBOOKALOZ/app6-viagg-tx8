@@ -118,14 +118,6 @@ export default function StoreMinhaLojaPage() {
       <div className="mt-12 bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-zinc-200">
         <ProductShowcase storeId={store?.id || null} />
       </div>
-
-      {/* Rodapé — só desktop (no celular já está ok) */}
-      <footer className="hidden md:block mt-12">
-        <div className="bg-blue-600 text-white py-6 px-6 text-center rounded-3xl">
-          <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
-          <p className="text-xs text-blue-100 mt-1">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
-        </div>
-      </footer>
     </div>
   );
 }

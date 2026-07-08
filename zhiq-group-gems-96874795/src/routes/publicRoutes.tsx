@@ -62,6 +62,9 @@ import {
   MotoboyInicio,
   CorridasInicio,
   SolicitarCorrida,
+  MinhaCarteira,
+  MeusDados,
+  ContaViajante,
 } from "./lazyPages";
 
 export const publicRoutes = (
@@ -118,7 +121,11 @@ export const publicRoutes = (
     <Route path="/corridas-inicio" element={<Suspense fallback={<PageFallback />}><CorridasInicio /></Suspense>} />
     <Route path="/corridas"        element={<Suspense fallback={<PageFallback />}><CorridasInicio /></Suspense>} />
     <Route path="/solicitar-corrida" element={<Suspense fallback={<PageFallback />}><SolicitarCorrida /></Suspense>} />
-    <Route path="/chamar-motoboy" element={<Suspense fallback={<PageFallback />}><PublicMotoboyRequest /></Suspense>} />
+    <Route path="/minha-carteira" element={<Suspense fallback={<PageFallback />}><MinhaCarteira /></Suspense>} />
+    <Route path="/meus-dados" element={<Suspense fallback={<PageFallback />}><MeusDados /></Suspense>} />
+    <Route path="/conta" element={<Suspense fallback={<PageFallback />}><ContaViajante /></Suspense>} />
+    {/* Duplicata unificada: /chamar-motoboy reusa o MAPA OFICIAL (não duplicar). */}
+    <Route path="/chamar-motoboy" element={<Navigate to="/solicitar-corrida?service=motoboy" replace />} />
     <Route path="/corrida/:trackingCode" element={<Suspense fallback={<PageFallback />}><PublicRideTracking /></Suspense>} />
     <Route path="/mercado/leiloes" element={<AllAuctionsPage />} />
     <Route path="/mercado/leiloes/:id" element={<AuctionMarketDetailPage />} />

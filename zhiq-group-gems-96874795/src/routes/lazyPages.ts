@@ -134,6 +134,11 @@ export const MotoboyGroupsContent = lazy(() => import("@/pages/MotoboyGroupsCont
 export const MotoboyExpansaoContent = lazy(() => import("@/pages/MotoboyExpansaoContent"));
 export const MotoboyProfileContent = lazy(() => import("@/pages/MotoboyProfileContent"));
 export const VehicleProfileContent = lazy(() => import("@/pages/VehicleProfileContent"));
+export const MeuVeiculo = lazy(() => import("@/pages/MeuVeiculo"));
+export const ProfessionalWizard = lazy(() => import("@/pages/ProfessionalWizard"));
+export const MinhaCarteira = lazy(() => import("@/pages/public/MinhaCarteira"));
+export const MeusDados = lazy(() => import("@/pages/public/MeusDados"));
+export const ContaViajante = lazy(() => import("@/pages/public/MinhaConta"));
 export const MotoboyDashboardPremium = lazy(() => import("@/pages/MotoboyDashboardPremium"));
 export const MotoboyRides = lazy(() => import("@/pages/MotoboyRides"));
 export const MotoboyCentralGrupos = lazy(() => import("@/pages/MotoboyCentralGrupos"));

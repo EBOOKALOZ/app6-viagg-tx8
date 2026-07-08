@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { PaymentCountdown } from '@/components/rides/PaymentCountdown';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +39,30 @@ export default function ActiveRideCard({
   hideMap = false,
 }: ActiveRideCardProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null);
+
+  // ── Gate de pagamento (contador de 3 min) ────────────────────────────────
+  // Moto-táxi vive em service_orders. Lê driver_status/payment_status ao vivo;
+  // enquanto waiting_payment, bloqueia iniciar/finalizar e mostra o contador.
+  // Corridas legadas (driver_status null) passam direto.
+  const [paymentCleared, setPaymentCleared] = useState(false);
+  const [payState, setPayState] = useState<{ driver_status: string | null; payment_status: string | null }>(
+    { driver_status: null, payment_status: null },
+  );
+  useEffect(() => {
+    let alive = true;
+    supabase.from('service_orders').select('driver_status,payment_status').eq('id', ride.id).single()
+      .then(({ data }) => { if (alive && data) setPayState(data as { driver_status: string | null; payment_status: string | null }); });
+    const ch = supabase
+      .channel(`arc-pay-${ride.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'service_orders', filter: `id=eq.${ride.id}` },
+        (p) => setPayState({
+          driver_status: (p.new as { driver_status: string | null }).driver_status,
+          payment_status: (p.new as { payment_status: string | null }).payment_status,
+        }))
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(ch); };
+  }, [ride.id]);
+  const isWaitingPayment = payState.driver_status === 'waiting_payment' && payState.payment_status !== 'paid';
 
   const handleStart = async () => {
     setIsLoading('start');
@@ -283,7 +309,17 @@ export default function ActiveRideCard({
           </p>
         </div>
 
-        {/* Actions */}
+        {/* Actions — bloqueadas enquanto aguarda pagamento (contador 3 min) */}
+        {isWaitingPayment && !paymentCleared ? (
+          <PaymentCountdown
+            orderId={ride.id}
+            role="professional"
+            category="mototaxi"
+            table="service_orders"
+            onStartNavigation={() => setPaymentCleared(true)}
+            className="mt-2"
+          />
+        ) : (
         <div className="flex gap-2 pt-2">
           {(ride.status === 'aceita' || ride.status === 'a_caminho') && (
             <>
@@ -341,6 +377,7 @@ export default function ActiveRideCard({
             </>
           )}
         </div>
+        )}
       </CardContent>
     </Card>
   );

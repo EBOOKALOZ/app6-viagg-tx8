@@ -28,6 +28,8 @@ import {
   MotoboyHistoryContent,
   MotoboyWalletContent,
   VehicleProfileContent,
+  MeuVeiculo,
+  ProfessionalWizard,
   MotoboyCampaignInbox,
   PostadorPremiumPanel,
   PostadorHub,
@@ -47,7 +49,9 @@ export const driverRoutes = (
       <Route path="/driver/groups" element={<MotoboyGroupsContent />} />
       <Route path="/driver/grupos" element={<MotoboyGroupsContent />} />
       <Route path="/driver/history" element={<MotoboyHistoryContent />} />
-      <Route path="/driver/profile" element={<VehicleProfileContent />} />
+      <Route path="/driver/profile" element={<ProfessionalWizard />} />
+      <Route path="/driver/profile-classic" element={<VehicleProfileContent />} />
+      <Route path="/driver/meu-veiculo" element={<MeuVeiculo />} />
       <Route path="/driver/campanhas" element={<MotoboyCampaignInbox />} />
       <Route path="/driver/wallet" element={<Wallet />} />
       <Route path="/driver/comissao" element={<DriverComissao />} />

@@ -6,8 +6,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { broadcastDeliveryAcceptedGlobal } from '@/lib/broadcastDeliveryAccepted';
-import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
-import { resolveMerchantStoreId } from '@/lib/payments/deliveryPay';
 import { calculateDistanceKm, calculateEstimatedTimeMinutes } from '@/lib/deliveryPricing';
 import { DeliveryPreviewCard } from './DeliveryPreviewCard';
 
@@ -47,7 +45,6 @@ interface AvailableDeliveriesProps {
 
 export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesProps = {}) {
   const { user } = useAuth();
-  const { requestDelivery } = usePaymentsOrchestrator();
   const [deliveries, setDeliveries] = useState<AvailableDelivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
@@ -268,57 +265,28 @@ export default function AvailableDeliveries({ onAccept }: AvailableDeliveriesPro
         return;
       }
       
-      // RESERVAR PAGAMENTO DO LOJISTA — sai do merchant_wallet pay_* (R$,
-      // a mesma conta que a recarga "Comprar + Saldo" alimenta), NÃO dos
-      // pontos. Retém no platform_escrow até a entrega ser concluída.
-      const { data: deliveryData } = await supabase
-        .from('service_orders')
-        .select('merchant_id, total_price')
-        .eq('id', deliveryId)
-        .single();
-
-      /* RESERVA ATÔMICA: se a reserva pay_* falhar (típico: saldo do lojista
-         insuficiente), REVERTE o aceite — devolve a entrega pra fila e
-         devolve o card pro motoboy. Princípio: ou aceita e reserva, ou
-         nada acontece. */
+      // PÓS-ACEITE: entra em waiting_payment (contador de 3 min). NÃO move
+      // dinheiro aqui — o cliente paga DEPOIS (webhook Mercado Pago → escrow).
+      // O profissional aguarda a confirmação antes de seguir para o local.
       const revertAcceptance = async (reason: string) => {
         console.warn('[AvailableDeliveries] Revertendo aceite:', reason);
         await supabase
           .from('service_orders')
-          .update({ status: 'pending', motoboy_id: null, professional_id: null, accepted_at: null })
+          .update({ status: 'pending', motoboy_id: null, professional_id: null, accepted_at: null, driver_status: null })
           .eq('id', deliveryId);
         fetchDeliveries();
       };
 
-      if (!deliveryData?.merchant_id || !deliveryData?.total_price) {
-        await revertAcceptance('dados do pedido incompletos');
-        toast.error('Não foi possível aceitar: dados do pedido incompletos.');
-        return;
-      }
-
-      const storeId = await resolveMerchantStoreId(deliveryData.merchant_id);
-      if (!storeId) {
-        await revertAcceptance('merchant_store não resolvido');
-        toast.error('Não foi possível aceitar: lojista sem carteira configurada.');
-        return;
-      }
-
       try {
-        await requestDelivery({
-          merchant_owner_id: storeId,
-          motoboy_owner_id: motoboyId,
-          credits_cost_cents: Math.round(Number(deliveryData.total_price) * 100),
-          delivery_id: deliveryId,
-          description: `Reserva entrega ${deliveryId}`,
+        const { error: wpErr } = await (supabase.rpc as any)('set_ride_waiting_payment', {
+          p_order_id: deliveryId,
+          p_minutes: 3,
         });
-      } catch (payErr: any) {
-        await revertAcceptance(`reserva pay_* falhou: ${payErr?.message}`);
-        const msg = payErr?.message || '';
-        const semSaldo = /saldo|insufficient|insuficiente|funds/i.test(msg);
-        toast.error(semSaldo ? 'Lojista sem saldo' : 'Falha na reserva de pagamento', {
-          description: semSaldo
-            ? 'A carteira do lojista não tem saldo pra cobrir essa entrega. A entrega voltou pra fila.'
-            : (msg || 'Tente novamente. Se persistir, contate o suporte.'),
+        if (wpErr) throw new Error(wpErr.message);
+      } catch (stErr: any) {
+        await revertAcceptance(`waiting_payment falhou: ${stErr?.message}`);
+        toast.error('Falha ao iniciar a espera de pagamento', {
+          description: stErr?.message || 'Tente novamente. Se persistir, contate o suporte.',
           duration: 6000,
         });
         return;

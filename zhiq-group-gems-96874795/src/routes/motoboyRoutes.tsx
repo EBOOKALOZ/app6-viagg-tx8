@@ -27,6 +27,8 @@ import {
   MotoboyExpansaoContent,
   MotoboyProfileContent,
   VehicleProfileContent,
+  MeuVeiculo,
+  ProfessionalWizard,
   MotoboyDashboardPremium,
   MotoboyCentralGrupos,
   DeliveryCalls,
@@ -114,7 +116,9 @@ export const motoboyRoutes = (
       <Route path="/mototaxi" element={<MotoboyPanelContent />} />
       <Route path="/mototaxi/history" element={<MototaxiHistory />} />
       <Route path="/mototaxi/wallet" element={<Wallet />} />
-      <Route path="/mototaxi/profile" element={<VehicleProfileContent />} />
+      <Route path="/mototaxi/profile" element={<ProfessionalWizard />} />
+      <Route path="/mototaxi/profile-classic" element={<VehicleProfileContent />} />
+      <Route path="/mototaxi/meu-veiculo" element={<MeuVeiculo />} />
       <Route path="/mototaxi/groups" element={<MotoboyGroupsContent />} />
       <Route path="/mototaxi/grupos" element={<MotoboyGroupsContent />} />
       <Route path="/mototaxi/campanhas" element={<MotoboyCampaignInbox />} />

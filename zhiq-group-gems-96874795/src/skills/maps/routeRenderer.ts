@@ -179,7 +179,7 @@ export function drawSegmentedRoutes(
 /**
  * Desenha uma geometria de rota Premium (com Neon Glow, Setas e Animações)
  */
-export function drawRoutePremium(map: mapboxgl.Map, coordinates: [number, number][], showRoute: boolean) {
+export function drawRoutePremium(map: mapboxgl.Map, coordinates: [number, number][], showRoute: boolean, color: string = '#1F6F4A') {
     // Remove existing route layers
     ['premium-route-glow-outer', 'premium-route-glow', 'premium-route-casing', 'premium-route-line', 'premium-route-dash', 'premium-route-arrows'].forEach(id => {
         if (map.getLayer(id)) map.removeLayer(id);
@@ -207,7 +207,7 @@ export function drawRoutePremium(map: mapboxgl.Map, coordinates: [number, number
         source: 'premium-route',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-            'line-color': '#1F6F4A',
+            'line-color': color,
             'line-width': 36,
             'line-opacity': 0.08,
             'line-blur': 18,
@@ -221,7 +221,7 @@ export function drawRoutePremium(map: mapboxgl.Map, coordinates: [number, number
         source: 'premium-route',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-            'line-color': '#2ECC71',
+            'line-color': color,
             'line-width': 18,
             'line-opacity': 0.15,
             'line-blur': 8,
@@ -248,7 +248,7 @@ export function drawRoutePremium(map: mapboxgl.Map, coordinates: [number, number
         source: 'premium-route',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-            'line-color': '#1F6F4A', // Green line for store-to-client route
+            'line-color': color, // cor principal da rota (parametrizável)
             'line-width': 6,
             'line-opacity': 1,
         },
@@ -282,7 +282,7 @@ export function drawRoutePremium(map: mapboxgl.Map, coordinates: [number, number
         },
         paint: {
             'text-color': '#FFFFFF',
-            'text-halo-color': '#0080FF',
+            'text-halo-color': color,
             'text-halo-width': 1.5,
             'text-opacity': 0.95,
         }

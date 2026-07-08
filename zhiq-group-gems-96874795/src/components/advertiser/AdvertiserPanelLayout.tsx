@@ -41,7 +41,7 @@ interface AdvertiserPanelLayoutProps {
 }
 
 export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) {
-  const { user, signOut, activeProfile } = useAuth();
+  const { user, signOut, activeProfile, availableProfiles } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -163,7 +163,11 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     sessionStorage.setItem("viagg_panel_context", ctx);
   }, [imoveisMode, veiculosMode, servicosMode, fretesMode, viagensMode, activeProfile]);
 
-  const showMerchantOnlyItems = activeProfile === "merchant";
+  // Lojista é caso EXCEPCIONAL: mostra os itens extras (Chamar Corridas,
+  // Pedidos, Ofertas, Carteira, etc.) sempre que o usuário É lojista —
+  // não só quando o perfil ativo transitório é "merchant".
+  const showMerchantOnlyItems =
+    activeProfile === "merchant" || (availableProfiles?.includes("merchant") ?? false);
 
   const navigation = veiculosMode ? [
     { name: "Painel Geral", href: "/anunciante/veiculos", icon: LayoutDashboard },
@@ -207,7 +211,10 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : [
     { name: "Painel Geral", href: "/anunciante/painel", icon: LayoutDashboard },
-    ...(showMerchantOnlyItems ? [{ name: "Minha Loja", href: "/loja/minha-loja", icon: Store }] : []),
+    ...(showMerchantOnlyItems ? [
+      { name: "Chamar Corridas", href: "/merchant/create-delivery", icon: Truck },
+      { name: "Minha Loja", href: "/loja/minha-loja", icon: Store },
+    ] : []),
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },

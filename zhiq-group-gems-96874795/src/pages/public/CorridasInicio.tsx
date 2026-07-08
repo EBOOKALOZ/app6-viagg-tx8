@@ -196,9 +196,9 @@ function ProfileCardItem({
                 {profile.buttonLabel}
               </button>
 
-              {/* Botão Chamar */}
+              {/* Botão Chamar → passa por "Meus dados" e depois segue pro mapa (?next=) */}
               <button
-                onClick={(e) => { e.stopPropagation(); navigate(profile.callRoute!); }}
+                onClick={(e) => { e.stopPropagation(); navigate("/meus-dados?next=" + encodeURIComponent(profile.callRoute!)); }}
                 className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl shadow-lg font-black text-xs text-white transition-all hover:brightness-110 active:scale-[0.98]"
                 style={{ background: `linear-gradient(90deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
               >
@@ -260,6 +260,7 @@ export default function CorridasInicio() {
       headerChildren={<MarketNavButtons />}
       blueFooter
       blueFooterLabel="🚗 Corridas"
+      myAccountPath="/minha-carteira"
       mainClassName="bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f3460]"
     >
       <div className="min-h-[calc(100vh-160px)] flex flex-col items-center justify-center px-4 py-10">
@@ -326,6 +327,36 @@ export default function CorridasInicio() {
             />
           ))}
         </div>
+
+        {/* Card fixo — Minha Conta (perfis + carteira + dados, sempre visível) */}
+        <button
+          onClick={() => navigate("/conta")}
+          className="w-full max-w-3xl mt-5 group relative overflow-hidden bg-gradient-to-br from-[#0f3460] to-[#16213e] rounded-3xl shadow-xl border border-white/10 p-5 text-left hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-lg text-3xl">
+              👤
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-black text-white tracking-tight">Minha Conta</p>
+              <p className="text-sm text-white/70 leading-snug">Perfis, carteira e seus dados — tudo num lugar</p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-white/70 shrink-0" />
+          </div>
+        </button>
+
+        {/* Banner — saldo mínimo para chamar uma corrida (UI; regra liga com o pagamento) */}
+        <button
+          onClick={() => navigate("/minha-carteira")}
+          className="w-full max-w-3xl mt-3 group flex items-center gap-3 rounded-2xl border border-[#FF6A00]/40 bg-[#FF6A00]/10 px-5 py-3.5 text-left hover:bg-[#FF6A00]/15 active:scale-[0.99] transition-all"
+        >
+          <span className="text-2xl shrink-0">💰</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-white">Adicione R$ 35,00 (mínimo) para chamar uma corrida</p>
+            <p className="text-xs text-orange-100/70">O saldo garante o pagamento ao profissional. Toque para adicionar.</p>
+          </div>
+          <span className="hidden sm:inline-flex shrink-0 rounded-xl bg-[#FF6A00] px-3 py-1.5 text-xs font-black text-white shadow-md">Adicionar saldo</span>
+        </button>
 
         {/* Voltar */}
         <button

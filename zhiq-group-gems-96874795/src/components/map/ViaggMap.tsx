@@ -93,6 +93,25 @@ function FlyToCenter({ center }: { center: LatLng }) {
   return null;
 }
 
+// Enquadra origem + destino (+ rota) para que a linha SEMPRE conecte na tela.
+function FitToRoute({ origin, destination, route }: {
+  origin?: LatLng; destination?: LatLng; route?: RouteOption;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!origin || !destination) return;
+    const pts: [number, number][] = [
+      [origin.lat, origin.lng],
+      [destination.lat, destination.lng],
+      ...((route?.waypoints ?? []).map((p) => [p.lat, p.lng] as [number, number])),
+    ];
+    try {
+      map.fitBounds(pts as any, { padding: [70, 70], maxZoom: 16, animate: true, duration: 0.9 });
+    } catch { /* ignore */ }
+  }, [origin?.lat, origin?.lng, destination?.lat, destination?.lng, route, map]);
+  return null;
+}
+
 // ── Click captura destino ─────────────────────────────────────────────────────
 
 function MapClickHandler({ onMapClick }: { onMapClick?: (ll: LatLng) => void }) {
@@ -153,7 +172,9 @@ export function ViaggMap({
           maxZoom={19}
         />
 
-        <FlyToCenter center={center} />
+        {origin && destination
+          ? <FitToRoute origin={origin} destination={destination} route={route} />
+          : <FlyToCenter center={center} />}
         {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
 
         {/* Rota selecionada */}

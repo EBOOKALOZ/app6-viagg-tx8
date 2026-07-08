@@ -563,6 +563,18 @@ export default function VehicleProfileContent() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Acesso ao gerenciador completo de veículos (múltiplos, fotos, acessibilidade) */}
+          <button
+            type="button"
+            onClick={() => { window.location.href = `/${isMototaxi ? 'mototaxi' : 'driver'}/meu-veiculo`; }}
+            className="w-full flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <VehicleIcon className="h-4 w-4" /> Meu Veículo — fotos, acessibilidade e múltiplos veículos
+            </span>
+            <span aria-hidden>→</span>
+          </button>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs">Placa</Label>

@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FooterNeutral } from "@/components/FooterNeutral";
 import {
     Search,
     MapPin,
@@ -2152,19 +2151,6 @@ const scrollToProducts = () => {
                 onClose={() => { setInquiryOpen(false); setInquiryProduct(null); }}
                 product={inquiryProduct}
             />
-
-            {/* Rodapé simples — só desktop (no celular não mostra; menu inferior cobre) */}
-            <footer className="hidden md:block mt-auto">
-                <div className="bg-blue-600 text-white py-6 px-6 text-center">
-                    <p className="text-base font-black">Viagg-TX8 · Mercado Local</p>
-                    <p className="text-xs text-blue-100 mt-1">© {new Date().getFullYear()} Viagg-TX8 · Todos os direitos reservados · Desenvolvido pela Viagg-TX8</p>
-                </div>
-            </footer>
-
-            {/* Rodapé preto (FooterNeutral) — só no celular (no desktop mostra o azul acima) */}
-            <div className="md:hidden mt-auto">
-                <FooterNeutral />
-            </div>
         </MarketLayout>
     );
 }

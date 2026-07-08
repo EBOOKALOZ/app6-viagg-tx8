@@ -60,11 +60,15 @@ interface MapboxPremiumMapProps {
   className?: string;
   showRoute?: boolean;
   routePolyline?: [number, number][]; // [lat, lng][]
+  /** Cor da linha principal da rota (default verde do lojista) */
+  routeColor?: string;
   /** Trechos independentes com cores distintas — substitui routePolyline quando fornecido */
   routeSegments?: RouteSegment[];
   onReady?: () => void;
   onMarkerDragEnd?: (id: string, lat: number, lng: number) => void;
   onMapClick?: (lat: number, lng: number) => void;
+  /** Clique/toque num marcador → recebe o id (ex.: card de profissional). */
+  onMarkerClick?: (id: string) => void;
   onMapMouseMove?: (lat: number, lng: number) => void;
   isMapSelectMode?: boolean;
   /** Quando true, ativa modo de qualidade máxima: pixel ratio 2x mínimo,
@@ -305,6 +309,34 @@ premiumStyle.textContent = `
     border-radius: 50%;
   }
 
+  /* TOOLTIP DOS PROFISSIONAIS NO MAPA AO VIVO (motoboy/mototaxi/driver) —
+     mesma técnica do store-green-tooltip (fundo transparente, o card colorido
+     do popupHtml é quem desenha o balão), mas cor-agnóstica: a cor vem do
+     nativeColor de cada categoria, não fixa no CSS. */
+  .pro-marker-tooltip .mapboxgl-popup-content {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  .pro-marker-tooltip .mapboxgl-popup-close-button {
+    color: white !important;
+    font-size: 18px !important;
+    right: 6px !important;
+    top: 6px !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease;
+  }
+  .pro-marker-tooltip .mapboxgl-popup-close-button:hover {
+    background-color: rgba(255,255,255,0.2) !important;
+    border-radius: 50%;
+  }
+
   .mapboxgl-ctrl-attrib {
     opacity: 0.4 !important;
     font-size: 10px !important;
@@ -350,10 +382,12 @@ export function MapboxPremiumMap({
   className = '',
   showRoute = false,
   routePolyline,
+  routeColor,
   routeSegments,
   onReady,
   onMarkerDragEnd,
   onMapClick,
+  onMarkerClick,
   onMapMouseMove,
   isMapSelectMode,
   hqMode = false,
@@ -371,6 +405,8 @@ export function MapboxPremiumMap({
   onMarkerDragEndRef.current = onMarkerDragEnd;
   const onMapClickRef = useRef(onMapClick);
   onMapClickRef.current = onMapClick;
+  const onMarkerClickRef = useRef(onMarkerClick);
+  onMarkerClickRef.current = onMarkerClick;
 
   const onMapMouseMoveRef = useRef(onMapMouseMove);
   onMapMouseMoveRef.current = onMapMouseMove;
@@ -386,6 +422,8 @@ export function MapboxPremiumMap({
   showRouteRef.current = showRoute;
   const routePolylineRef = useRef(routePolyline);
   routePolylineRef.current = routePolyline;
+  const routeColorRef = useRef(routeColor);
+  routeColorRef.current = routeColor;
 
   // Setup token directly from env
   useEffect(() => {
@@ -613,6 +651,13 @@ export function MapboxPremiumMap({
           });
         }
 
+        // Clique/toque no marcador → callback (ex.: card de profissional).
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          onMarkerClickRef.current?.(markerData.id);
+        });
+
         // Attach popup permanently if autoPopup is true, otherwise use mapbox's default or hover.
         const popup = createTooltip(markerData);
         popupsRef.current.set(markerData.id, popup);
@@ -687,7 +732,7 @@ export function MapboxPremiumMap({
         drawSegmentedRoutes(map, segs, true);
       } else {
         const coordinates = (poly || []).map(([lat, lng]) => [lng, lat] as [number, number]);
-        drawRoutePremium(map, coordinates, true);
+        drawRoutePremium(map, coordinates, true, routeColorRef.current);
       }
     };
 
@@ -714,7 +759,7 @@ export function MapboxPremiumMap({
           drawSegmentedRoutes(map, routeSegments!, true);
         } else {
           const coordinates = (routePolyline || []).map(([lat, lng]) => [lng, lat] as [number, number]);
-          drawRoutePremium(map, coordinates, true);
+          drawRoutePremium(map, coordinates, true, routeColor);
         }
       } catch (err) {
         console.warn('[MapboxPremiumMap] draw error (style mid-reload?):', err);
@@ -726,7 +771,7 @@ export function MapboxPremiumMap({
     // Re-desenha se o estilo recarregar (ex: troca de tema)
     map.on('style.load', draw);
     return () => { map.off('style.load', draw); };
-  }, [showRoute, routePolyline, routeSegments, mapReady]);
+  }, [showRoute, routePolyline, routeSegments, routeColor, mapReady]);
 
   // Update center smoothly
   const lastCenterRef = useRef('');

@@ -1,15 +1,18 @@
 // ── VIAGG-TX8™ — Solicitar Corrida — Mapa Inteligente com IA ─────────────────
 // Layout: mapa em tela cheia + painel inferior flutuante (estilo Uber/99)
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, ChevronLeft, Locate, BrainCircuit, Car, Bike, Package, Truck,
   Check, Phone, MessageCircle, Share2, Shield, ArrowRight,
   Send, Loader2, X, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { ViaggMap, LocateButton } from "@/components/map/ViaggMap";
-import { getCurrentPosition, reverseGeocode, autocomplete, geocodeAddress } from "@/lib/map/GeoLocationService";
+import { CustomerRideMapSection, type LiveProfessionalMarker } from "@/components/map/CustomerRideMapSection";
+import { AcceptedRideCard } from "@/components/rides/AcceptedRideCard";
+import { getCurrentPosition, reverseGeocode, autocomplete } from "@/lib/map/GeoLocationService";
 import { getRouteOptions, estimatePrice } from "@/lib/map/RouteService";
 import {
   getMockDriversNearby, interpretNaturalLanguageAddress,
@@ -20,6 +23,8 @@ import type { LatLng, MapAddress, RouteOption, PricePrediction, DriverMarker, AI
 import viaggLogo from "@/assets/logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { parseCoordinates } from "@/lib/coordinateParser";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -35,6 +40,24 @@ const SERVICE_TYPES = [
 ] as const;
 
 type Step = "map" | "searching" | "found" | "riding";
+
+// ── Profissionais no mapa ao vivo — categoria/cor/label (só visualização) ──────
+const PRO_CATEGORY: Record<DriverMarker["type"], "motoboy" | "mototaxi" | "driver"> = {
+  motoboy: "motoboy",
+  mototaxi: "mototaxi",
+  motorista: "driver",
+  taxi: "driver",
+};
+const PRO_COLOR: Record<"motoboy" | "mototaxi" | "driver", string> = {
+  motoboy: "#22C55E",
+  mototaxi: "#FF6A00",
+  driver: "#3B82F6",
+};
+const PRO_LABEL: Record<"motoboy" | "mototaxi" | "driver", string> = {
+  motoboy: "Motoboy",
+  mototaxi: "Moto-Táxi",
+  driver: "Motorista",
+};
 
 // ── Debounce ──────────────────────────────────────────────────────────────────
 
@@ -180,10 +203,19 @@ function DriverCard({ driver, selected, onSelect }: {
 
 export default function SolicitarCorrida() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const serviceParam = searchParams.get("service");
   const [step, setStep]           = useState<Step>("map");
   const [panelOpen, setPanelOpen] = useState(true); // painel inferior expandido
+
+  // ── Mini-conta (nome + e-mail → link mágico) + pedido real ──
+  const [showMiniAccount, setShowMiniAccount] = useState(false);
+  const [miniName,  setMiniName]  = useState("");
+  const [miniEmail, setMiniEmail] = useState("");
+  const [sendingLink, setSendingLink] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
 
   // Localização
   const [center,      setCenter]      = useState<LatLng>(DEFAULT_CENTER);
@@ -193,158 +225,58 @@ export default function SolicitarCorrida() {
   const [destText,    setDestText]    = useState("");
   const [locating,    setLocating]    = useState(false);
   const [currentCity, setCurrentCity] = useState("Brasília");
+  const [coordColeta,  setCoordColeta]  = useState("");
+  const [coordDestino, setCoordDestino] = useState("");
 
-  // Inicialização unificada da localização (Cadastro > Primeiro Cadastrado > GPS > Fallback Brasília)
+  // Aplica coordenadas/link (Google Maps ou WhatsApp) colado num balão →
+  // usa o MESMO parser homologado do lojista (parseCoordinates).
+  const applyCoords = async (text: string, target: "origin" | "dest") => {
+    const r = parseCoordinates(text);
+    if (!r.success || !r.coordinates) {
+      toast.error("Cole coordenadas ou um link do Google Maps/WhatsApp válido");
+      return;
+    }
+    const ll = { lat: r.coordinates.latitude, lng: r.coordinates.longitude };
+    setCenter(ll);
+    if (target === "origin") {
+      setOrigin(ll);
+      setOriginText(`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`);
+      try { const a = await reverseGeocode(ll); if (a?.formattedAddress) setOriginText(a.formattedAddress.split(",").slice(0, 2).join(", ")); } catch { /* mantém coords */ }
+      toast.success("📍 Coleta marcada no mapa!");
+    } else {
+      setDestination(ll);
+      setDestText(`${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`);
+      try { const a = await reverseGeocode(ll); if (a?.formattedAddress) setDestText(a.formattedAddress.split(",").slice(0, 2).join(", ")); } catch { /* mantém coords */ }
+      toast.success("🏁 Destino marcado no mapa!");
+    }
+  };
+
+  // Inicialização da localização do CLIENTE que chama o motoboy.
+  // A COLETA é a posição do próprio cliente: vem SÓ de GPS ou do que ele colar/clicar.
+  // Nunca herdamos a residência de um perfil (motoboy/driver/loja) nem de um motoboy
+  // aleatório do sistema — era isso que fazia a coleta "cair" na cidade de outro
+  // cadastro (ex.: um motoboy de Santa Catarina) em vez do endereço informado.
   useEffect(() => {
     const initializeLocation = async () => {
       setLocating(true);
-      let profileLoc: LatLng | null = null;
-      let cityText = "";
-      let stateText = "";
-      const activeService = serviceParam || "mototaxi";
-
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          // 1. Tenta buscar no perfil do motoboy
-          const { data: motoboy } = await supabase
-            .from('motoboy_profiles')
-            .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (motoboy) {
-            if (motoboy.latitude_residencia && motoboy.longitude_residencia) {
-              profileLoc = { lat: motoboy.latitude_residencia, lng: motoboy.longitude_residencia };
-            }
-            if (motoboy.cidade) cityText = motoboy.cidade;
-            if (motoboy.estado) stateText = motoboy.estado;
-            if (motoboy.endereco_residencia) cityText = motoboy.endereco_residencia;
-          }
-
-          if (!profileLoc) {
-            // 2. Tenta buscar no perfil do motorista/driver
-            const { data: driver } = await supabase
-              .from('driver_profiles')
-              .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
-              .eq('user_id', user.id)
-              .maybeSingle();
-
-            if (driver) {
-              if (driver.latitude_residencia && driver.longitude_residencia) {
-                profileLoc = { lat: driver.latitude_residencia, lng: driver.longitude_residencia };
-              }
-              if (driver.cidade) cityText = driver.cidade;
-              if (driver.estado) stateText = driver.estado;
-              if (driver.endereco_residencia) cityText = driver.endereco_residencia;
-            }
-          }
-
-          if (!profileLoc) {
-            // 3. Tenta buscar no perfil geral
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('store_latitude, store_longitude, store_address, cidade, estado')
-              .eq('id', user.id)
-              .maybeSingle();
-
-            if (profile) {
-              if (profile.store_latitude && profile.store_longitude) {
-                profileLoc = { lat: profile.store_latitude, lng: profile.store_longitude };
-              }
-              if (profile.store_address) cityText = profile.store_address;
-              else if (profile.cidade) cityText = profile.cidade;
-              if (profile.estado) stateText = profile.estado;
-            }
-          }
-        }
-      } catch (err) {
-        console.warn("Erro ao buscar localizacao cadastrada do usuario:", err);
-      }
-
-      // Fallback 1.5: Se não achou localização do próprio usuário logado, tenta pegar a de algum motoboy/driver cadastrado no sistema
-      if (!profileLoc) {
-        try {
-          if (activeService === 'motoboy') {
-            const { data: list } = await supabase
-              .from('motoboy_profiles')
-              .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
-              .not('latitude_residencia', 'is', null)
-              .not('longitude_residencia', 'is', null)
-              .limit(1);
-            if (list && list.length > 0) {
-              profileLoc = { lat: list[0].latitude_residencia, lng: list[0].longitude_residencia };
-              if (list[0].endereco_residencia) cityText = list[0].endereco_residencia;
-              else if (list[0].cidade) cityText = list[0].cidade;
-              if (list[0].estado) stateText = list[0].estado;
-            }
-          } else {
-            const { data: list } = await supabase
-              .from('driver_profiles')
-              .select('latitude_residencia, longitude_residencia, cidade, estado, endereco_residencia')
-              .not('latitude_residencia', 'is', null)
-              .not('longitude_residencia', 'is', null)
-              .limit(1);
-            if (list && list.length > 0) {
-              profileLoc = { lat: list[0].latitude_residencia, lng: list[0].longitude_residencia };
-              if (list[0].endereco_residencia) cityText = list[0].endereco_residencia;
-              else if (list[0].cidade) cityText = list[0].cidade;
-              if (list[0].estado) stateText = list[0].estado;
-            }
-          }
-        } catch (err) {
-          console.warn("Erro ao buscar fallback de cadastro no sistema:", err);
-        }
-      }
-
-      if (profileLoc) {
-        setCenter(profileLoc);
-        setOrigin(profileLoc);
-        if (cityText) {
-          setCurrentCity(cityText);
-          setOriginText(cityText);
-        }
-        setLocating(false);
-      } else if (cityText || stateText) {
-        // Se não temos coordenadas exatas mas temos cidade/estado cadastrados
-        try {
-          const searchQuery = [cityText, stateText].filter(Boolean).join(", ");
-          const results = await geocodeAddress(searchQuery);
-          if (results && results.length > 0) {
-            const loc = results[0].latLng;
-            setCenter(loc);
-            setOrigin(loc);
-            setCurrentCity(cityText || results[0].city || "Brasília");
-            setOriginText(results[0].formattedAddress.split(",").slice(0, 2).join(", "));
-          } else {
-            setCenter(DEFAULT_CENTER);
-          }
-        } catch {
+        const pos = await getCurrentPosition();
+        const addr = await reverseGeocode(pos);
+        const isBrazil = addr.country === "Brasil" || addr.country === "Brazil" || addr.formattedAddress.includes("Brasil");
+        if (isBrazil) {
+          setCenter(pos);
+          setOrigin(pos);
+          setOriginText(addr.formattedAddress.split(",").slice(0, 2).join(", "));
+          if (addr.city) setCurrentCity(addr.city);
+        } else {
           setCenter(DEFAULT_CENTER);
         }
-        setLocating(false);
-      } else {
-        // Se não houver cadastro, tenta usar GPS do dispositivo
-        try {
-          const pos = await getCurrentPosition();
-          const addr = await reverseGeocode(pos);
-          const isBrazil = addr.country === "Brasil" || addr.country === "Brazil" || addr.formattedAddress.includes("Brasil");
-          if (isBrazil) {
-            setCenter(pos);
-            setOrigin(pos);
-            setOriginText(addr.formattedAddress.split(",").slice(0, 2).join(", "));
-            if (addr.city) {
-              setCurrentCity(addr.city);
-            }
-          } else {
-            setCenter(DEFAULT_CENTER);
-          }
-        } catch {
-          // GPS negado/indisponível - usa o DEFAULT_CENTER
-          setCenter(DEFAULT_CENTER);
-        }
-        setLocating(false);
+      } catch {
+        // GPS negado/indisponível — mantém o mapa em Brasília e aguarda o cliente
+        // informar a coleta (colar coordenadas do WhatsApp ou clicar no mapa).
+        setCenter(DEFAULT_CENTER);
       }
+      setLocating(false);
     };
 
     initializeLocation();
@@ -365,6 +297,8 @@ export default function SolicitarCorrida() {
   // Motoristas e IA
   const [drivers,        setDrivers]        = useState<DriverMarker[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<DriverMarker | undefined>();
+  // Profissional tocado no marcador do mapa ao vivo → abre o bottom sheet (só visualização)
+  const [selectedProfessional, setSelectedProfessional] = useState<string | null>(null);
   const [insights,       setInsights]       = useState<AIMapInsight[]>([]);
   const [aiSearch,       setAiSearch]       = useState("");
   const [aiSearching,    setAiSearching]    = useState(false);
@@ -404,88 +338,180 @@ export default function SolicitarCorrida() {
   }, [origin, destination, service]);
 
   // ── Motoristas e insights ────────────────────────────────────────────────────
-  useEffect(() => {
-    const fetchRealDrivers = async () => {
-      try {
-        let dbDrivers: any[] = [];
-        if (service === 'motoboy') {
-          const { data, error } = await supabase
-            .from('motoboy_profiles')
-            .select('user_id, nome, sobrenome, latitude_residencia, longitude_residencia, cidade, veiculo_modelo, veiculo_marca, veiculo_placa')
-            .not('latitude_residencia', 'is', null)
-            .not('longitude_residencia', 'is', null);
-          if (!error && data) dbDrivers = data;
-        } else {
-          // 'mototaxi' ou 'motorista'
-          const { data, error } = await supabase
-            .from('driver_profiles')
-            .select('user_id, nome, sobrenome, latitude_residencia, longitude_residencia, cidade, veiculo_modelo, veiculo_marca, veiculo_placa')
-            .not('latitude_residencia', 'is', null)
-            .not('longitude_residencia', 'is', null);
-          if (!error && data) dbDrivers = data;
-        }
+  // Busca só profissionais ONLINE (is_online=true) e, quando existir GPS ao
+  // vivo (motoboy_presence / professional_presence), usa-o no lugar da
+  // residência — isso é o que faz o "profissionais no mapa ao vivo" andar de
+  // verdade em vez de ficar preso no endereço cadastrado. Mock só entra
+  // quando não há NENHUM profissional real (não piora o ambiente de dev).
+  const fetchRealDrivers = useCallback(async () => {
+    try {
+      let dbDrivers: any[] = [];
+      if (service === 'motoboy') {
+        const { data, error } = await supabase
+          .from('motoboy_profiles')
+          .select('user_id, nome, sobrenome, latitude_residencia, longitude_residencia, cidade, veiculo_modelo, veiculo_marca, veiculo_placa')
+          .eq('is_online', true)
+          .not('latitude_residencia', 'is', null)
+          .not('longitude_residencia', 'is', null);
+        if (!error && data) dbDrivers = data;
+      } else {
+        // 'mototaxi' ou 'motorista'
+        const { data, error } = await supabase
+          .from('driver_profiles')
+          .select('user_id, nome, sobrenome, latitude_residencia, longitude_residencia, cidade, veiculo_modelo, veiculo_marca, veiculo_placa')
+          .eq('is_online', true)
+          .not('latitude_residencia', 'is', null)
+          .not('longitude_residencia', 'is', null);
+        if (!error && data) dbDrivers = data;
+      }
 
-        // Map and sort by distance to center
-        const mapped = dbDrivers.map((d, index) => {
-          const latLng = { lat: d.latitude_residencia, lng: d.longitude_residencia };
-          const distance = haversineKm(center, latLng);
+      const userIds: string[] = dbDrivers.map((d) => d.user_id).filter(Boolean);
+
+      // GPS ao vivo: motoboy_presence (motoboy_id, lat, lng) para motoboy,
+      // professional_presence (user_id, status, last_location "POINT(lng lat)")
+      // para mototaxi/motorista. Busca em lote, nunca por linha.
+      const presenceMap: Record<string, { lat: number; lng: number; status?: string }> = {};
+      if (userIds.length > 0) {
+        if (service === 'motoboy') {
+          const { data: presData } = await (supabase as any)
+            .from('motoboy_presence')
+            .select('motoboy_id, lat, lng')
+            .in('motoboy_id', userIds);
+          (presData || []).forEach((p: any) => {
+            if (p.motoboy_id && typeof p.lat === 'number' && typeof p.lng === 'number') {
+              presenceMap[p.motoboy_id] = { lat: p.lat, lng: p.lng, status: 'online' };
+            }
+          });
+        } else {
+          const { data: presData } = await (supabase as any)
+            .from('professional_presence')
+            .select('user_id, status, last_location, updated_at')
+            .in('user_id', userIds);
+          (presData || []).forEach((p: any) => {
+            if (!p.user_id) return;
+            let lat: number | undefined;
+            let lng: number | undefined;
+            if (typeof p.last_location === 'string' && p.last_location.startsWith('POINT(')) {
+              const match = p.last_location.match(/POINT\(([^ ]+) ([^)]+)\)/);
+              if (match) {
+                lng = parseFloat(match[1]);
+                lat = parseFloat(match[2]);
+              }
+            }
+            if (typeof lat === 'number' && typeof lng === 'number' && !Number.isNaN(lat) && !Number.isNaN(lng)) {
+              presenceMap[p.user_id] = { lat, lng, status: p.status };
+            }
+          });
+        }
+      }
+
+      // Foto: profiles.avatar_url é leitura pública (mesmo padrão do AcceptedRideCard)
+      const avatarMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, avatar_url')
+          .in('id', userIds);
+        (profilesData || []).forEach((p: any) => {
+          if (p.id && p.avatar_url) avatarMap[p.id] = p.avatar_url;
+        });
+      }
+
+      // Map and sort by distance to center
+      const mapped = dbDrivers.map((d, index) => {
+        const live = d.user_id ? presenceMap[d.user_id] : undefined;
+        const latLng = live
+          ? { lat: live.lat, lng: live.lng }
+          : { lat: d.latitude_residencia, lng: d.longitude_residencia };
+        const distance = haversineKm(center, latLng);
+        return {
+          id: d.user_id || `driver-${index}`,
+          name: `${d.nome || 'Motoboy'} ${d.sobrenome || ''}`.trim(),
+          type: service as any,
+          latLng,
+          heading: Math.random() * 360,
+          rating: 4.5 + Math.random() * 0.5,
+          trips: 10 + Math.floor(Math.random() * 100),
+          distanceKm: parseFloat(distance.toFixed(2)),
+          etaMin: Math.max(1, Math.round(distance * 2)),
+          vehicle: `${d.veiculo_marca || ''} ${d.veiculo_modelo || ''}`.trim() || (service === 'motoboy' || service === 'mototaxi' ? 'Honda CG 160' : 'VW Gol'),
+          plate: d.veiculo_placa || `ABC${1000 + index}`,
+          avatarUrl: d.user_id ? avatarMap[d.user_id] : undefined,
+          isOnline: true,
+          status: live?.status === 'in_delivery' ? 'in_delivery' : 'online',
+        } as DriverMarker;
+      });
+
+      // Ordena por distância (do centro para fora) e filtra num raio de 15km
+      const sorted = mapped
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+        .filter(d => d.distanceKm <= 15);
+
+      // Se não houver nenhum motoboy real cadastrado nessa região, adiciona mocks próximos (dentro de 2km)
+      if (sorted.length === 0) {
+        const mocks = getMockDriversNearby(center, 3).map(m => {
+          const angle = Math.random() * 2 * Math.PI;
+          const radius = Math.random() * 0.015; // dentro de ~1.8km do centro
+          const lat = center.lat + radius * Math.cos(angle);
+          const lng = center.lng + radius * Math.sin(angle);
           return {
-            id: d.user_id || `driver-${index}`,
-            name: `${d.nome || 'Motoboy'} ${d.sobrenome || ''}`.trim(),
+            ...m,
             type: service as any,
-            latLng,
-            heading: Math.random() * 360,
-            rating: 4.5 + Math.random() * 0.5,
-            trips: 10 + Math.floor(Math.random() * 100),
-            distanceKm: parseFloat(distance.toFixed(2)),
-            etaMin: Math.max(1, Math.round(distance * 2)),
-            vehicle: `${d.veiculo_marca || ''} ${d.veiculo_modelo || ''}`.trim() || (service === 'motoboy' || service === 'mototaxi' ? 'Honda CG 160' : 'VW Gol'),
-            plate: d.veiculo_placa || `ABC${1000 + index}`,
-            isOnline: true,
-          } as DriverMarker;
+            latLng: { lat, lng }
+          };
         });
 
-        // Ordena por distância (do centro para fora) e filtra num raio de 15km
-        const sorted = mapped
-          .sort((a, b) => a.distanceKm - b.distanceKm)
-          .filter(d => d.distanceKm <= 15);
+        const mocksWithDistance = mocks.map(m => {
+          const dist = haversineKm(center, m.latLng);
+          return {
+            ...m,
+            distanceKm: parseFloat(dist.toFixed(2)),
+            etaMin: Math.max(1, Math.round(dist * 2)),
+          };
+        }).sort((a, b) => a.distanceKm - b.distanceKm);
 
-        // Se não houver nenhum motoboy real cadastrado nessa região, adiciona mocks próximos (dentro de 2km)
-        if (sorted.length === 0) {
-          const mocks = getMockDriversNearby(center, 3).map(m => {
-            const angle = Math.random() * 2 * Math.PI;
-            const radius = Math.random() * 0.015; // dentro de ~1.8km do centro
-            const lat = center.lat + radius * Math.cos(angle);
-            const lng = center.lng + radius * Math.sin(angle);
-            return {
-              ...m,
-              type: service as any,
-              latLng: { lat, lng }
-            };
-          });
-          
-          const mocksWithDistance = mocks.map(m => {
-            const dist = haversineKm(center, m.latLng);
-            return {
-              ...m,
-              distanceKm: parseFloat(dist.toFixed(2)),
-              etaMin: Math.max(1, Math.round(dist * 2)),
-            };
-          }).sort((a, b) => a.distanceKm - b.distanceKm);
-
-          setDrivers(mocksWithDistance);
-        } else {
-          setDrivers(sorted);
-        }
-
-      } catch (err) {
-        console.warn("Erro ao buscar motoboys reais:", err);
-        setDrivers(getMockDriversNearby(center, 5));
+        setDrivers(mocksWithDistance);
+      } else {
+        setDrivers(sorted);
       }
+
+    } catch (err) {
+      console.warn("Erro ao buscar motoboys reais:", err);
+      setDrivers(getMockDriversNearby(center, 5));
+    }
+  }, [center, service]);
+
+  useEffect(() => {
+    fetchRealDrivers();
+  }, [fetchRealDrivers]);
+
+  // Realtime: qualquer mudança de presença/perfil (ficou online/offline, GPS
+  // andou) re-executa a busca — sem recarregar a página. Debounce simples
+  // para não disparar uma rajada de fetches quando vários pings chegam juntos.
+  const fetchRealDriversRef = useRef(fetchRealDrivers);
+  fetchRealDriversRef.current = fetchRealDrivers;
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { fetchRealDriversRef.current(); }, 500);
     };
 
-    fetchRealDrivers();
-  }, [center, service]);
+    const channel = (supabase as any)
+      .channel('solicitar-corrida-professionals-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_presence' }, scheduleRefetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'motoboy_presence' }, scheduleRefetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'motoboy_profiles' }, scheduleRefetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'driver_profiles' }, scheduleRefetch)
+      .subscribe();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     generateMapInsights(drivers.length, 6, currentCity).then(setInsights);
   }, [drivers.length, currentCity]);
@@ -501,8 +527,136 @@ export default function SolicitarCorrida() {
   }
 
   // ── Solicitar ────────────────────────────────────────────────────────────────
+  // Cria o pedido REAL no motor do lojista (service_orders → despacho → delivery_offers).
+  // Aceita override (usado no "resume" após o login, quando o estado ainda não assentou).
+  async function createRealOrder(override?: {
+    origin?: LatLng; destination?: LatLng; originText?: string; destText?: string;
+    priceAvg?: number | null; distanceKm?: number | null; name?: string;
+  }) {
+    const o = override?.origin ?? origin;
+    const d = override?.destination ?? destination;
+    if (!o || !d) return;
+    const oText = override?.originText ?? originText;
+    const dText = override?.destText ?? destText;
+    const pAvg  = override?.priceAvg ?? price?.avg ?? null;
+    const distKm = override?.distanceKm ?? selectedRoute?.distanceKm ?? null;
+    const nome = (user?.user_metadata?.name as string) || override?.name || miniName || oText || "Cliente";
+    setCreatingOrder(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("create_customer_delivery_order", {
+        pickup_lat: o.lat, pickup_lng: o.lng,
+        drop_lat: d.lat, drop_lng: d.lng,
+        p_customer_name: nome,
+        p_customer_phone: (user?.user_metadata?.whatsapp as string) || null,
+        p_estimated_value: pAvg ? Number(Number(pAvg).toFixed(2)) : 0,
+        p_distance_km: distKm,
+        p_pickup_address: oText || null,
+        p_destination_address: dText || null,
+      });
+      if (error) throw error;
+      const id = data as string;
+      setOrderId(id);
+      localStorage.setItem("viagg_customer_order", JSON.stringify({ orderId: id }));
+      localStorage.removeItem("viagg_ride_draft");
+      setStep("searching");
+      toast.success("Solicitação enviada! Buscando um motoboy…");
+    } catch (e: any) {
+      toast.error("Erro ao chamar motoboy", { description: e.message });
+    } finally {
+      setCreatingOrder(false);
+    }
+  }
+
+  // Envia o link mágico (cria a mini-conta) e guarda o rascunho da corrida
+  async function sendMiniAccountLink() {
+    if (!miniName.trim() || !miniEmail.trim()) {
+      toast.error("Informe nome e e-mail");
+      return;
+    }
+    setSendingLink(true);
+    try {
+      localStorage.setItem("viagg_ride_draft", JSON.stringify({
+        origin, destination, originText, destText, service,
+        priceAvg: price?.avg ?? null, distanceKm: selectedRoute?.distanceKm ?? null,
+        name: miniName,
+      }));
+      localStorage.setItem("viagg_mini_return_to", `/solicitar-corrida?service=${service}&resume=1`);
+      const { error } = await supabase.auth.signInWithOtp({
+        email: miniEmail.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { name: miniName.trim() },
+        },
+      });
+      if (error) throw error;
+      setShowMiniAccount(false);
+      toast.success("Enviamos um link para seu e-mail", {
+        description: "Abra o link para confirmar e chamar o motoboy.",
+      });
+    } catch (e: any) {
+      toast.error("Não foi possível enviar o link", { description: e.message });
+    } finally {
+      setSendingLink(false);
+    }
+  }
+
+  // Ao voltar do link mágico (?resume=1) autenticado, restaura o rascunho e cria o pedido
+  useEffect(() => {
+    if (searchParams.get("resume") !== "1" || !user) return;
+    const raw = localStorage.getItem("viagg_ride_draft");
+    if (!raw) return;
+    let d: any;
+    try { d = JSON.parse(raw); } catch { return; }
+    if (d.origin) setOrigin(d.origin);
+    if (d.destination) setDestination(d.destination);
+    if (d.originText) setOriginText(d.originText);
+    if (d.destText) setDestText(d.destText);
+    // Cria com os valores do rascunho diretamente (evita closure de estado)
+    createRealOrder({
+      origin: d.origin, destination: d.destination,
+      originText: d.originText, destText: d.destText,
+      priceAvg: d.priceAvg, distanceKm: d.distanceKm, name: d.name,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Enquanto o pedido está "searching", escuta em tempo real: quando um
+  // profissional ACEITA (profissional atribuído / driver_status muda),
+  // transiciona para "found" e mostra o card do aceite (AcceptedRideCard).
+  useEffect(() => {
+    if (!orderId || step !== "searching") return;
+    let alive = true;
+    const check = (row: any) => {
+      if (!row || !alive) return;
+      const assigned = row.motoboy_id || row.courier_id || row.professional_uid;
+      const started = row.driver_status && row.driver_status !== "waiting_accept";
+      if (assigned || started) setStep("found");
+    };
+    (supabase as any)
+      .from("service_orders")
+      .select("motoboy_id,courier_id,professional_uid,driver_status")
+      .eq("id", orderId)
+      .maybeSingle()
+      .then(({ data }: any) => check(data));
+    const ch = supabase
+      .channel(`client-ride-${orderId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "service_orders", filter: `id=eq.${orderId}` },
+        (p: any) => check(p.new),
+      )
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(ch); };
+  }, [orderId, step]);
+
   async function handleSearch() {
     if (!origin || !destination) return;
+    // Precisa de mini-conta (link mágico) para entrar no motor real e pagar depois
+    if (!user) { setShowMiniAccount(true); return; }
+    await createRealOrder();
+    return;
+    // (fluxo antigo de simulação abaixo — mantido desativado)
+    // eslint-disable-next-line no-unreachable
     setStep("searching");
     setSearchProgress(0);
     EventService.ride.requested(`ride-${Date.now()}`, currentCity, { service });
@@ -512,13 +666,6 @@ export default function SolicitarCorrida() {
       setSearchProgress(Math.min(p, 100));
       if (p >= 100) { clearInterval(iv); setTimeout(() => setStep("found"), 600); }
     }, 350);
-  }
-
-  function handleAcceptRide() {
-    const driver = selectedDriver ?? drivers[0];
-    setSelectedDriver(driver);
-    setStep("riding");
-    EventService.ride.driverAssigned(`ride-${Date.now()}`, driver?.id ?? "");
   }
 
   async function handleMapClick(ll: LatLng) {
@@ -533,9 +680,68 @@ export default function SolicitarCorrida() {
 
   const serviceObj = SERVICE_TYPES.find((s) => s.id === service) ?? SERVICE_TYPES[0];
 
+  // Profissionais online → marcadores ao vivo no mapa (só visualização)
+  const professionalsForMap: LiveProfessionalMarker[] = useMemo(() => drivers.map((d) => ({
+    id: d.id,
+    lat: d.latLng.lat,
+    lng: d.latLng.lng,
+    category: PRO_CATEGORY[d.type] ?? "driver",
+    name: d.name,
+    vehicle: d.vehicle,
+    distanceKm: d.distanceKm,
+    etaMin: d.etaMin,
+    rating: d.rating,
+    status: d.status,
+  })), [drivers]);
+
+  const selectedProfessionalData = useMemo(
+    () => drivers.find((d) => d.id === selectedProfessional) ?? null,
+    [drivers, selectedProfessional],
+  );
+
   // ══════════════════════════════════════════════════════════════════════════════
   return (
     <div className="fixed inset-0 bg-[#0D0F12] overflow-hidden">
+
+      {/* ── MINI-CONTA (nome + e-mail → link mágico) ── */}
+      {showMiniAccount && (
+        <div className="absolute inset-0 z-[2000] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full sm:max-w-sm bg-[#151A21] border border-white/10 rounded-3xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-black text-lg">Quase lá! 🛵</h3>
+              <button onClick={() => setShowMiniAccount(false)} className="text-[#A7B0BE] text-sm">✕</button>
+            </div>
+            <p className="text-[#A7B0BE] text-xs leading-relaxed">
+              Para chamar o motoboy e acompanhar sua corrida, crie sua conta em segundos.
+              Enviamos um <b className="text-white">link seguro no seu e-mail</b> — sem senha.
+            </p>
+            <div className="space-y-2">
+              <input
+                type="text" value={miniName} onChange={(e) => setMiniName(e.target.value)}
+                placeholder="Seu nome completo"
+                className="w-full text-sm bg-white border border-white/10 rounded-xl px-3 py-3 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#FF6A00]/40"
+              />
+              <input
+                type="email" value={miniEmail} onChange={(e) => setMiniEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMiniAccountLink()}
+                placeholder="Seu melhor e-mail"
+                className="w-full text-sm bg-white border border-white/10 rounded-xl px-3 py-3 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#FF6A00]/40"
+              />
+            </div>
+            <button
+              onClick={sendMiniAccountLink}
+              disabled={sendingLink || !miniName.trim() || !miniEmail.trim()}
+              className="w-full py-3 rounded-xl text-white font-black text-sm disabled:opacity-50"
+              style={{ background: "linear-gradient(90deg,#FF6A00,#FF4500)" }}
+            >
+              {sendingLink ? "Enviando…" : "Receber link e chamar motoboy"}
+            </button>
+            <p className="text-[10px] text-[#6B7280] text-center">
+              Ao continuar você concorda em receber o link de acesso por e-mail.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── MAPA EM TELA CHEIA (sempre visível) ── */}
       <Suspense fallback={
@@ -549,14 +755,24 @@ export default function SolicitarCorrida() {
           </div>
         </div>
       }>
-        <ViaggMap
-          center={step === "riding" ? (selectedDriver?.latLng ?? center) : center}
-          origin={origin}
-          destination={destination}
-          drivers={step === "riding" && selectedDriver ? [selectedDriver] : step === "map" ? drivers : drivers}
-          route={selectedRoute}
-          onMapClick={step === "map" ? handleMapClick : undefined}
-          showDrivers={step === "map" || step === "found" || step === "riding"}
+        <CustomerRideMapSection
+          center={center}
+          pickup={origin ?? center}
+          destCoords={destination ?? null}
+          routeInfo={selectedRoute ? {
+            distanceKm: selectedRoute.distanceKm,
+            durationMin: selectedRoute.durationMin,
+            polyline: selectedRoute.waypoints.map((p) => [p.lat, p.lng] as [number, number]),
+          } : null}
+          customerName={miniName || (user?.user_metadata?.name as string) || undefined}
+          onMarkerDragEnd={(id, lat, lng) => {
+            if (id === "pickup") {
+              setOrigin({ lat, lng });
+            } else {
+              setDestination({ lat, lng });
+              setCenter({ lat, lng });
+            }
+          }}
           className="absolute inset-0 w-full h-full"
         />
       </Suspense>
@@ -676,24 +892,44 @@ export default function SolicitarCorrida() {
                       : (!origin ? "embarque" : "destino")
                   }
                 </p>
+
+                {/* ── Balões: colar coordenadas / link (Google Maps / WhatsApp) ── */}
+                <div className="grid grid-cols-1 gap-2 pt-1">
+                  <div className="rounded-xl border border-[#FF6A00]/30 bg-[#FF6A00]/5 p-2.5">
+                    <p className="text-[10px] font-bold text-[#FF6A00] mb-1.5">📍 Colar coordenadas da COLETA</p>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={coordColeta}
+                        onChange={(e) => setCoordColeta(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && applyCoords(coordColeta, "origin")}
+                        placeholder="Cole coordenadas ou link aqui"
+                        className="flex-1 min-w-0 text-xs bg-white border border-[#FF6A00]/60 rounded-lg px-3 py-2.5 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#FF6A00]/40"
+                      />
+                      <button onClick={() => applyCoords(coordColeta, "origin")}
+                        className="px-3 rounded-lg bg-[#FF6A00] text-white text-[11px] font-black shrink-0">Marcar</button>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-[#22C55E]/30 bg-[#22C55E]/5 p-2.5">
+                    <p className="text-[10px] font-bold text-[#22C55E] mb-1.5">🏁 Colar coordenadas do DESTINO</p>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={coordDestino}
+                        onChange={(e) => setCoordDestino(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && applyCoords(coordDestino, "dest")}
+                        placeholder="Cole coordenadas ou link aqui"
+                        className="flex-1 min-w-0 text-xs bg-white border border-[#22C55E]/60 rounded-lg px-3 py-2.5 text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/40"
+                      />
+                      <button onClick={() => applyCoords(coordDestino, "dest")}
+                        className="px-3 rounded-lg bg-[#22C55E] text-white text-[11px] font-black shrink-0">Marcar</button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Tipo de serviço */}
-              <div className="grid grid-cols-3 gap-2">
-                {SERVICE_TYPES.map((s) => {
-                  const Icon = s.icon;
-                  const active = service === s.id;
-                  return (
-                    <button key={s.id} onClick={() => setService(s.id)}
-                      className={`flex flex-col items-center gap-1 p-2.5 rounded-2xl border transition-all ${
-                        active ? "border-[#FF6A00]/50 bg-[#FF6A00]/10" : "border-white/10 bg-[#1a1f28] hover:border-white/20"
-                      }`}>
-                      <Icon className="w-4 h-4" style={{ color: active ? s.color : "#A7B0BE" }} />
-                      <span className="text-[10px] font-bold" style={{ color: active ? s.color : "#A7B0BE" }}>{s.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Seletor de serviço removido: o serviço já foi escolhido na
+                  entrada (?service=…) via "Chamar Motoboy/Moto Táxi/Carro". */}
 
               {/* Estimativa de preço */}
               {price && (
@@ -753,17 +989,7 @@ export default function SolicitarCorrida() {
                 </div>
               )}
 
-              {/* Insights IA */}
-              {insights.map((ins, i) => (
-                <div key={i} className={`flex items-start gap-2 p-2.5 rounded-xl border text-xs ${
-                  ins.severity === "alert"   ? "bg-red-500/10 border-red-500/20 text-red-300" :
-                  ins.severity === "warning" ? "bg-amber-500/10 border-amber-500/20 text-amber-300" :
-                  "bg-blue-500/10 border-blue-500/20 text-blue-300"
-                }`}>
-                  <BrainCircuit className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                  <span>{ins.message}</span>
-                </div>
-              ))}
+              {/* (Card de insights de disponibilidade/estimativa removido a pedido) */}
 
               {/* Assistente IA (só aparece quando tem rota calculada) */}
               {price && (
@@ -824,36 +1050,83 @@ export default function SolicitarCorrida() {
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* STEP: FOUND — painel inferior sobre o mapa                           */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
-      {step === "found" && (
-        <div className="absolute bottom-0 left-0 right-0 z-[1002] bg-[#0D0F12]/96 backdrop-blur-xl border-t border-white/10 rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col">
-          <div className="flex items-center gap-2 px-4 pt-4 pb-2 shrink-0">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <h2 className="text-base font-black text-white">Motoristas disponíveis!</h2>
-            <span className="ml-auto text-xs text-[#A7B0BE]">{drivers.slice(0, 5).length} opções</span>
-          </div>
-          <div className="overflow-y-auto flex-1 px-4 pb-2 space-y-2">
-            {drivers.slice(0, 5).map((d) => (
-              <DriverCard key={d.id} driver={d} selected={selectedDriver?.id === d.id} onSelect={() => setSelectedDriver(d)} />
-            ))}
-          </div>
-          {price && (
-            <div className="px-4 pb-6 pt-2 shrink-0 border-t border-white/10">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-[#A7B0BE]">Valor estimado</div>
-                  <div className="text-2xl font-black text-white">R$ {price.avg.toFixed(2)}</div>
-                </div>
-                <button onClick={handleAcceptRide}
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-white text-sm active:scale-95 transition-all"
-                  style={{ background: "linear-gradient(90deg,#FF6A00,#FF4500)" }}>
-                  Aceitar Corrida
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
+      {step === "found" && orderId && (
+        <div className="absolute bottom-0 left-0 right-0 z-[1002] max-h-[88vh] overflow-y-auto">
+          <AcceptedRideCard
+            orderId={orderId}
+            table="service_orders"
+            onCancel={async () => {
+              try { await (supabase.rpc as any)("cancel_ride", { p_order_id: orderId }); } catch { /* ignore */ }
+              setOrderId(null);
+              setSelectedDriver(undefined);
+              setStep("map");
+              toast.info("Corrida cancelada.");
+            }}
+            className="m-3"
+          />
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* BOTTOM SHEET — profissional tocado no mapa ao vivo (só visualização) */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {(step === "map" || step === "found") && selectedProfessionalData && (() => {
+          const sp = selectedProfessionalData;
+          const category = PRO_CATEGORY[sp.type] ?? "driver";
+          const color = PRO_COLOR[category];
+          const label = PRO_LABEL[category];
+          const isBusy = sp.status === "in_delivery";
+          const statusLabel = isBusy ? "Em atendimento" : "Online";
+          return (
+            <motion.div
+              key="professional-sheet"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className="absolute bottom-0 left-0 right-0 z-[1050] bg-[#0D0F12]/97 backdrop-blur-xl border-t border-white/10 rounded-t-3xl shadow-2xl px-4 pt-3 pb-6"
+            >
+              <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3" />
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-14 h-14 rounded-full overflow-hidden shrink-0 flex items-center justify-center font-black text-white text-lg border-2 border-white/20"
+                  style={{ background: color }}
+                >
+                  {sp.avatarUrl
+                    ? <img src={sp.avatarUrl} alt={sp.name} className="w-full h-full object-cover" />
+                    : sp.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-base font-black text-white truncate">{sp.name}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full text-white shrink-0" style={{ background: color }}>
+                      {label}
+                    </span>
+                  </div>
+                  <div className="text-xs text-[#A7B0BE] mt-0.5 truncate">{sp.vehicle}</div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-[#A7B0BE] mt-1.5">
+                    <span>⭐ {sp.rating.toFixed(1)}</span>
+                    <span>🏁 {sp.trips} corridas</span>
+                    <span>📍 {sp.distanceKm.toFixed(1)}km</span>
+                    <span>⏱ {sp.etaMin}min</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: isBusy ? "#F59E0B" : "#22C55E" }} />
+                    <span className="text-[11px] font-semibold text-[#A7B0BE]">{statusLabel}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedProfessional(null)}
+                  className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0"
+                >
+                  <X className="w-4 h-4 text-[#A7B0BE]" />
+                </button>
+              </div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {/* STEP: RIDING — painel inferior sobre o mapa                          */}

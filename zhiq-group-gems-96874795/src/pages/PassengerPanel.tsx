@@ -105,7 +105,7 @@ const PassengerPanel = () => {
       return;
     }
     if (action === "Carteira") {
-      navigate("/wallet");
+      navigate("/minha-carteira");
       return;
     }
     if (action === "Editar Perfil") {
