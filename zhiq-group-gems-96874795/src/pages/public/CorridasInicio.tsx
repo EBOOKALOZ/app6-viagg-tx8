@@ -4,6 +4,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import viaggLogo from "@/assets/logo.png";
 import motoboyHero from "@/assets/motoboy-hero.png";
 // ─── Tipo ─────────────────────────────────────────────────────────────────────
@@ -224,8 +225,8 @@ function ProfileCardItem({
       {onRegister && (
         <button
           onClick={(e) => { e.stopPropagation(); onRegister(); }}
-          className="w-full py-3 rounded-2xl border font-bold text-sm transition-all hover:bg-white/5 active:scale-[0.98]"
-          style={{ borderColor: `${profile.accent}50`, color: profile.accent }}
+          className="w-full py-3 rounded-2xl shadow-lg font-black text-sm transition-all hover:brightness-105 active:scale-[0.98]"
+          style={{ background: "linear-gradient(90deg, #FACC15, #EAB308)", color: "#0F172A" }}
         >
           + {profile.registerLabel}
         </button>
@@ -237,7 +238,10 @@ function ProfileCardItem({
 // ─── Página ───────────────────────────────────────────────────────────────────
 export default function CorridasInicio() {
   const navigate  = useNavigate();
+  const { user, avatarUrl, displayName } = useAuth();
   const [search, setSearch] = useState("");
+
+  const userAvatar = avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
   function handleAccess(profile: ProfileCard) {
     if (profile.id === "ia") {
@@ -334,11 +338,17 @@ export default function CorridasInicio() {
           className="w-full max-w-3xl mt-5 group relative overflow-hidden bg-gradient-to-br from-[#0f3460] to-[#16213e] rounded-3xl shadow-xl border border-white/10 p-5 text-left hover:scale-[1.01] hover:brightness-110 active:scale-[0.99] transition-all"
         >
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-lg text-3xl">
-              👤
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-lg text-3xl overflow-hidden">
+              {userAvatar ? (
+                <img src={userAvatar} alt="Avatar do usuário" className="w-full h-full object-cover" />
+              ) : (
+                "👤"
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-lg font-black text-white tracking-tight">Minha Conta</p>
+              <p className="text-lg font-black text-white tracking-tight truncate">
+                {displayName ? `Minha Conta • ${displayName}` : "Minha Conta"}
+              </p>
               <p className="text-sm text-white/70 leading-snug">Perfis, carteira e seus dados — tudo num lugar</p>
             </div>
             <ArrowRight className="w-5 h-5 text-white/70 shrink-0" />

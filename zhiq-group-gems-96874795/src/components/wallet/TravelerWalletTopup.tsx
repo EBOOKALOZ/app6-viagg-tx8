@@ -56,7 +56,11 @@ interface TopupOrder {
 
 /** Mínimo alinhado ao mínimo para chamar uma corrida. */
 const MIN_REAIS = 35;
-const PRESETS = [35, 50, 100];
+const PRESETS = [
+  { value: 35, km: "~15 km médio" },
+  { value: 50, km: "~25 km médio" },
+  { value: 100, km: "~50 km médio" },
+];
 const RETURN_TO = "/minha-carteira";
 
 const formatBRL = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
@@ -248,15 +252,15 @@ export function TravelerWalletTopup({
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#FFE600] to-[#FFC400] border-amber-400 text-slate-900 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FF6A00]/15 text-[#FF6A00]">
+            <DialogTitle className="flex items-center gap-2 text-slate-900 font-black">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-[#FFE600]">
                 <Plus className="h-5 w-5" />
               </span>
               Adicionar saldo
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-800 font-medium">
               Recarga em R$ via Mercado Pago. O valor entra na sua carteira e é
               usado para chamar suas corridas.
             </DialogDescription>
@@ -266,31 +270,38 @@ export function TravelerWalletTopup({
           {step === "input" && (
             <div className="space-y-4 pt-1">
               <div className="grid grid-cols-3 gap-2">
-                {PRESETS.map((v) => {
-                  const active = previewCents === v * 100;
+                {PRESETS.map((p) => {
+                  const active = previewCents === p.value * 100;
                   return (
                     <button
-                      key={v}
+                      key={p.value}
                       type="button"
-                      onClick={() => setReais(String(v))}
-                      className={`rounded-xl border p-3 text-center text-sm font-bold transition-all ${
+                      onClick={() => setReais(String(p.value))}
+                      className={`rounded-xl border p-2.5 text-center transition-all ${
                         active
-                          ? "border-[#FF6A00] bg-[#FF6A00]/10 text-[#FF4500]"
-                          : "border-zinc-200 bg-white text-zinc-700 hover:border-[#FF6A00]/40"
+                          ? "border-slate-900 bg-slate-900 text-[#FFE600] shadow-md scale-[1.02]"
+                          : "border-slate-800/20 bg-white text-slate-900 hover:border-slate-900 shadow-sm"
                       }`}
                     >
-                      R$ {v}
+                      <div className="text-base font-black">R$ {p.value}</div>
+                      <div
+                        className={`text-[11px] font-bold mt-0.5 ${
+                          active ? "text-amber-300" : "text-slate-600"
+                        }`}
+                      >
+                        {p.km}
+                      </div>
                     </button>
                   );
                 })}
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                <Label className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
                   Ou outro valor (mínimo R$ {MIN_REAIS},00)
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-zinc-400">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500">
                     R$
                   </span>
                   <Input
@@ -298,14 +309,21 @@ export function TravelerWalletTopup({
                     value={reais}
                     onChange={(e) => setReais(e.target.value)}
                     placeholder="0,00"
-                    className="pl-10 text-lg font-bold"
+                    className="pl-10 text-lg font-bold bg-white text-slate-900 border-slate-400 placeholder:text-slate-400 shadow-sm"
                   />
                 </div>
-                <p className="text-xs text-zinc-500">
-                  {previewCents >= MIN_REAIS * 100
-                    ? `Você vai adicionar R$ ${formatBRL(previewCents)} de saldo`
-                    : `Valor mínimo: R$ ${MIN_REAIS},00`}
-                </p>
+                {previewCents >= MIN_REAIS * 100 ? (
+                  <div className="rounded-xl border border-slate-900/15 bg-white/90 p-2.5 text-xs font-bold text-slate-900 shadow-sm flex items-center justify-between">
+                    <span>Saldo: R$ {formatBRL(previewCents)}</span>
+                    <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-black text-[#FFE600] shadow-sm">
+                      🚗 Rende ~{Math.max(1, Math.round((previewCents / 100) * 0.5))} km de corrida
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-xs font-bold text-slate-800">
+                    Valor mínimo: R$ {MIN_REAIS},00
+                  </p>
+                )}
               </div>
 
               <Button

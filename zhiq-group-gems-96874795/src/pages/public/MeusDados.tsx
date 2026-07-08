@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { brazilianStates } from "@/lib/brazilianStates";
+import { goToMiniLogin } from "@/lib/auth/miniReturn";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import viaggLogo from "@/assets/logo.png";
@@ -207,7 +208,10 @@ export default function MeusDados() {
                   Entre com o link enviado ao seu e-mail para editar suas informações pessoais.
                 </p>
               </div>
-              <Button className="w-full" onClick={() => navigate("/auth")}>
+              <Button
+                className="w-full"
+                onClick={() => goToMiniLogin(navigate, "/meus-dados" + window.location.search)}
+              >
                 Fazer login
               </Button>
             </CardContent>

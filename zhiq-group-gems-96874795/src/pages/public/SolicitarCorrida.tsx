@@ -39,6 +39,21 @@ const SERVICE_TYPES = [
   { id: "frete",     label: "Frete",      icon: Truck,   color: "#06B6D4" },
 ] as const;
 
+// Despacho por service_type — cada serviço grava/lê na tabela que o painel
+// profissional correspondente já escuta (ver migration
+// 20260708_dispatch_by_service_type). `serviceType` é o domínio da RPC
+// create_customer_delivery_order; `table` é onde o CLIENTE acompanha a corrida.
+type RideTable = "service_orders" | "moto_taxi_corridas" | "motorista_corridas";
+const SERVICE_DISPATCH: Record<string, { serviceType: string; table: RideTable; label: string }> = {
+  motoboy:   { serviceType: "delivery", table: "service_orders",     label: "motoboy" },
+  entrega:   { serviceType: "delivery", table: "service_orders",     label: "profissional" },
+  frete:     { serviceType: "freight",  table: "service_orders",     label: "profissional" },
+  mototaxi:  { serviceType: "mototaxi", table: "moto_taxi_corridas", label: "moto-táxi" },
+  motorista: { serviceType: "ride",     table: "motorista_corridas", label: "motorista" },
+  taxi:      { serviceType: "ride",     table: "motorista_corridas", label: "motorista" },
+};
+const dispatchFor = (svc: string) => SERVICE_DISPATCH[svc] ?? SERVICE_DISPATCH.mototaxi;
+
 type Step = "map" | "searching" | "found" | "riding";
 
 // ── Profissionais no mapa ao vivo — categoria/cor/label (só visualização) ──────
@@ -216,6 +231,10 @@ export default function SolicitarCorrida() {
   const [sendingLink, setSendingLink] = useState(false);
   const [creatingOrder, setCreatingOrder] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  // Tabela onde a corrida criada vive (depende do service_type) — usada pelo
+  // tracking e pelo AcceptedRideCard. Capturada na criação p/ não seguir
+  // mudanças posteriores do seletor de serviço.
+  const [orderTable, setOrderTable] = useState<RideTable>("service_orders");
 
   // Localização
   const [center,      setCenter]      = useState<LatLng>(DEFAULT_CENTER);
@@ -542,6 +561,7 @@ export default function SolicitarCorrida() {
     const distKm = override?.distanceKm ?? selectedRoute?.distanceKm ?? null;
     const nome = (user?.user_metadata?.name as string) || override?.name || miniName || oText || "Cliente";
     setCreatingOrder(true);
+    const disp = dispatchFor(service);
     try {
       const { data, error } = await (supabase.rpc as any)("create_customer_delivery_order", {
         pickup_lat: o.lat, pickup_lng: o.lng,
@@ -552,16 +572,18 @@ export default function SolicitarCorrida() {
         p_distance_km: distKm,
         p_pickup_address: oText || null,
         p_destination_address: dText || null,
+        p_service_type: disp.serviceType, // roteia p/ a tabela do painel certo
       });
       if (error) throw error;
       const id = data as string;
       setOrderId(id);
-      localStorage.setItem("viagg_customer_order", JSON.stringify({ orderId: id }));
+      setOrderTable(disp.table);
+      localStorage.setItem("viagg_customer_order", JSON.stringify({ orderId: id, table: disp.table }));
       localStorage.removeItem("viagg_ride_draft");
       setStep("searching");
-      toast.success("Solicitação enviada! Buscando um motoboy…");
+      toast.success(`Solicitação enviada! Buscando um ${disp.label}…`);
     } catch (e: any) {
-      toast.error("Erro ao chamar motoboy", { description: e.message });
+      toast.error(`Erro ao chamar ${disp.label}`, { description: e.message });
     } finally {
       setCreatingOrder(false);
     }
@@ -626,15 +648,22 @@ export default function SolicitarCorrida() {
   useEffect(() => {
     if (!orderId || step !== "searching") return;
     let alive = true;
+    // "Aguardando" varia por tabela: service_orders (awaiting_professional/
+    // searching), moto_taxi_corridas ('pesquisando'), motorista_corridas
+    // ('pendente'/'reserva'). Qualquer outra coisa = já foi aceita/andando.
+    const WAITING = ["awaiting_professional", "searching", "pesquisando", "pendente", "reserva"];
     const check = (row: any) => {
       if (!row || !alive) return;
-      const assigned = row.motoboy_id || row.courier_id || row.professional_uid;
-      const started = row.driver_status && row.driver_status !== "waiting_accept";
-      if (assigned || started) setStep("found");
+      const assigned =
+        row.motoboy_id || row.courier_id || row.professional_uid ||
+        row.moto_taxi_id || row.motorista_id;
+      const startedByDriver = row.driver_status && row.driver_status !== "waiting_accept";
+      const startedByStatus = row.status && !WAITING.includes(row.status);
+      if (assigned || startedByDriver || startedByStatus) setStep("found");
     };
     (supabase as any)
-      .from("service_orders")
-      .select("motoboy_id,courier_id,professional_uid,driver_status")
+      .from(orderTable)
+      .select("*")
       .eq("id", orderId)
       .maybeSingle()
       .then(({ data }: any) => check(data));
@@ -642,12 +671,12 @@ export default function SolicitarCorrida() {
       .channel(`client-ride-${orderId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "service_orders", filter: `id=eq.${orderId}` },
+        { event: "UPDATE", schema: "public", table: orderTable, filter: `id=eq.${orderId}` },
         (p: any) => check(p.new),
       )
       .subscribe();
     return () => { alive = false; supabase.removeChannel(ch); };
-  }, [orderId, step]);
+  }, [orderId, orderTable, step]);
 
   async function handleSearch() {
     if (!origin || !destination) return;
@@ -1054,9 +1083,17 @@ export default function SolicitarCorrida() {
         <div className="absolute bottom-0 left-0 right-0 z-[1002] max-h-[88vh] overflow-y-auto">
           <AcceptedRideCard
             orderId={orderId}
-            table="service_orders"
+            table={orderTable}
             onCancel={async () => {
-              try { await (supabase.rpc as any)("cancel_ride", { p_order_id: orderId }); } catch { /* ignore */ }
+              try {
+                if (orderTable === "service_orders") {
+                  await (supabase.rpc as any)("cancel_ride", { p_order_id: orderId });
+                } else {
+                  // moto_taxi_corridas / motorista_corridas: passageiro cancela
+                  // direto (RLS permite auth.uid() = passenger_id).
+                  await (supabase as any).from(orderTable).update({ status: "cancelada" }).eq("id", orderId);
+                }
+              } catch { /* ignore */ }
               setOrderId(null);
               setSelectedDriver(undefined);
               setStep("map");

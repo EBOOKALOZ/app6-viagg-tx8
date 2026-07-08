@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { TravelerWalletTopup } from "@/components/wallet/TravelerWalletTopup";
+import { goToMiniLogin } from "@/lib/auth/miniReturn";
 import viaggLogo from "@/assets/logo.png";
 import {
   Wallet, Package, Bike, Car, Clock,
@@ -372,7 +373,7 @@ export default function MinhaCarteira() {
                   Entre com o link enviado ao seu e-mail para acompanhar saldo e corridas.
                 </p>
               </div>
-              <Button className="w-full" onClick={() => navigate("/auth")}>
+              <Button className="w-full" onClick={() => goToMiniLogin(navigate, "/minha-carteira")}>
                 Fazer login
               </Button>
             </CardContent>

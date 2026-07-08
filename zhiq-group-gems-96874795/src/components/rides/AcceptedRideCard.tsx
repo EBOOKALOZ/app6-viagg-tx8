@@ -36,11 +36,12 @@ import {
 } from "lucide-react";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
-type RideTable = "service_orders" | "motorista_corridas";
+type RideTable = "service_orders" | "moto_taxi_corridas" | "motorista_corridas";
 
 interface AcceptedRideCardProps {
   orderId: string;
-  /** Tabela da corrida. Default 'service_orders' (motoboy / moto-táxi). */
+  /** Tabela da corrida (roteada por service_type): service_orders (motoboy),
+   *  moto_taxi_corridas (moto-táxi) ou motorista_corridas (carro). */
   table?: RideTable;
   onCancel?: () => void;
   className?: string;
@@ -120,7 +121,9 @@ function extractRide(row: any, table: RideTable) {
   const professionalId: string | null =
     table === "motorista_corridas"
       ? row.motorista_id ?? null
-      : row.courier_id ?? row.motoboy_id ?? row.professional_uid ?? null;
+      : table === "moto_taxi_corridas"
+        ? row.moto_taxi_id ?? null
+        : row.courier_id ?? row.motoboy_id ?? row.professional_uid ?? null;
 
   const rawDistance = row.distance_km ?? row.distancia_km ?? row.estimated_km ?? null;
   const rawValue = row.total_price ?? row.estimated_value ?? row.valor ?? row.estimated_price ?? null;

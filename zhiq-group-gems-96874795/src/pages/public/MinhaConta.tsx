@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
+import { goToMiniLogin } from "@/lib/auth/miniReturn";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ interface HubItem {
   desc: string;
   to: string;
   accent: string; // classes tailwind do círculo do ícone
+  showUserAvatar?: boolean;
 }
 
 const ITEMS: HubItem[] = [
@@ -29,31 +31,35 @@ const ITEMS: HubItem[] = [
     title: "Meus dados",
     desc: "Foto, nome, cidade e informações pessoais",
     to: "/meus-dados",
-    accent: "bg-blue-500/15 text-blue-500 border-blue-500/25",
+    accent: "bg-white text-[#2563eb] border-white shadow-md",
+    showUserAvatar: true,
   },
   {
     icon: Wallet,
     title: "Minha Carteira",
     desc: "Saldo, adicionar crédito e histórico de corridas",
     to: "/minha-carteira",
-    accent: "bg-[#FF6A00]/15 text-[#FF6A00] border-[#FF6A00]/25",
+    accent: "bg-[#FFD700] text-[#1e3a8a] border-[#FFD700] shadow-md",
   },
   {
     icon: Users,
     title: "Meus perfis",
-    desc: "Trocar entre passageiro, lojista ou profissional",
+    desc: "Se você trabalha com alguma atividade, veja nossos perfis — troque entre passageiro, lojista ou profissional",
     to: "/select-profile",
-    accent: "bg-emerald-500/15 text-emerald-500 border-emerald-500/25",
+    accent: "bg-[#34d399] text-[#064e3b] border-[#34d399] shadow-md",
+    showUserAvatar: true,
   },
 ];
 
 export default function MinhaConta() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, avatarUrl, displayName: authDisplayName, signOut } = useAuth();
   const [search, setSearch] = useState("");
 
   const displayName =
-    (user?.user_metadata?.name as string) || user?.email?.split("@")[0] || "Viajante";
+    authDisplayName || (user?.user_metadata?.name as string) || user?.email?.split("@")[0] || "Viajante";
+  const userAvatar =
+    avatarUrl || user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null;
 
   return (
     <MarketLayout
@@ -77,8 +83,12 @@ export default function MinhaConta() {
             style={{ background: "linear-gradient(135deg, #1a1f28, #0D0F12)" }}
           >
             <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FF6A00]/30 bg-[#FF6A00]/20 text-2xl font-black text-[#FF6A00]">
-                {displayName.charAt(0).toUpperCase()}
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FF6A00]/30 bg-[#FF6A00]/20 text-2xl font-black text-[#FF6A00] overflow-hidden">
+                {userAvatar ? (
+                  <img src={userAvatar} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  displayName.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-white/50">Minha Conta</p>
@@ -102,16 +112,20 @@ export default function MinhaConta() {
                 onClick={() => navigate(item.to)}
                 className="w-full text-left"
               >
-                <Card className="rounded-2xl border border-border/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <Card className="rounded-2xl border border-white/20 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] shadow-lg transition-all hover:-translate-y-0.5 hover:brightness-105 hover:shadow-xl">
                   <CardContent className="flex items-center gap-4 p-4">
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${item.accent}`}>
-                      <Icon className="h-5 w-5" />
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden ${item.accent}`}>
+                      {item.showUserAvatar && userAvatar ? (
+                        <img src={userAvatar} alt="Perfil" className="h-full w-full object-cover" />
+                      ) : (
+                        <Icon className="h-6 w-6 stroke-[2.2]" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-foreground">{item.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
+                      <p className="text-sm font-black text-white">{item.title}</p>
+                      <p className="mt-0.5 text-xs font-medium text-white/85 leading-relaxed">{item.desc}</p>
                     </div>
-                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    <ChevronRight className="h-5 w-5 shrink-0 text-white/70" />
                   </CardContent>
                 </Card>
               </motion.button>
@@ -135,7 +149,7 @@ export default function MinhaConta() {
               Sair da conta
             </Button>
           ) : (
-            <Button className="w-full gap-2" onClick={() => navigate("/auth")}>
+            <Button className="w-full gap-2" onClick={() => goToMiniLogin(navigate, "/conta")}>
               <LogIn className="h-4 w-4" />
               Entrar / Criar mini-conta
             </Button>

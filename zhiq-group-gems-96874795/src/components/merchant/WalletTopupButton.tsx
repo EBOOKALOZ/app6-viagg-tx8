@@ -245,13 +245,13 @@ export function WalletTopupButton({
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#1B1F24] border-[#2A3038] text-[#F5F7FA]">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-[#FFE600] to-[#FFC400] border-amber-400 text-slate-900 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#F5F7FA]">
-              <Banknote className="h-5 w-5 text-emerald-400" />
+            <DialogTitle className="flex items-center gap-2 text-slate-900 font-black">
+              <Banknote className="h-5 w-5 text-slate-900" />
               Saldo para Motoboy
             </DialogTitle>
-            <DialogDescription className="text-[#A7B0BE]">
+            <DialogDescription className="text-slate-800 font-medium">
               Recarga em R$ via Mercado Pago. O valor entra na sua carteira e é
               usado para pagar o motoboy pela entrega.
             </DialogDescription>
@@ -261,11 +261,11 @@ export function WalletTopupButton({
           {step === "input" && (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
-                <Label className="text-[#A7B0BE] text-xs uppercase tracking-wider font-bold">
+                <Label className="text-slate-800 text-xs uppercase tracking-wider font-extrabold">
                   Valor da recarga (mínimo R$ 5,00)
                 </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A7B0BE] font-bold">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-bold">
                     R$
                   </span>
                   <Input
@@ -273,10 +273,10 @@ export function WalletTopupButton({
                     value={reais}
                     onChange={(e) => setReais(e.target.value)}
                     placeholder="0,00"
-                    className="bg-[#0D0F12] border-[#2A3038] text-white placeholder:text-[#A7B0BE]/40 pl-10 text-lg font-bold"
+                    className="bg-white border-slate-400 text-slate-900 placeholder:text-slate-400 pl-10 text-lg font-bold shadow-sm"
                   />
                 </div>
-                <p className="text-xs text-[#A7B0BE]/70">
+                <p className="text-xs font-bold text-slate-800">
                   {previewCents >= 500
                     ? `Você vai adicionar R$ ${formatBRL(previewCents)} de saldo`
                     : "—"}
