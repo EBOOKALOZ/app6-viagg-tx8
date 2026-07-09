@@ -17,8 +17,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 155 25% 10%;
 
-    /* Verde institucional - mais saturado e profundo */
-    --primary: 158 55% 24%;
+    /* Verde institucional #00a300 */
+    --primary: 120 100% 32%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 150 10% 94%;
@@ -36,19 +36,19 @@
 
     --border: 150 8% 82%;
     --input: 150 8% 82%;
-    --ring: 158 55% 24%;
+    --ring: 120 100% 32%;
 
     --radius: 0.5rem;
 
     /* Cores institucionais Viagg refinadas */
-    --zhiq-teal: 158 55% 24%;
-    --zhiq-green: 152 48% 32%;
+    --zhiq-teal: 120 100% 32%;
+    --zhiq-green: 120 100% 32%;
     --zhiq-gold: 38 92% 50%;
     --zhiq-navy: 155 25% 8%;
     --zhiq-navy-light: 155 18% 15%;
 
     /* Cores funcionais com melhor contraste */
-    --success: 152 60% 36%;
+    --success: 120 100% 32%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 25 30% 12%;
@@ -65,17 +65,17 @@
     --motoboy-dashboard-bg: 148 18% 94%;
     --info-foreground: 0 0% 100%;
 
-    /* Merchant/Lojista Identity - Verde institucional */
-    --merchant: 151 40% 31%;
+    /* Merchant/Lojista Identity - Verde institucional #00a300 */
+    --merchant: 120 100% 32%;
     --merchant-foreground: 0 0% 100%;
-    --merchant-hover: 151 42% 25%;
+    --merchant-hover: 120 100% 26%;
     --merchant-light: 244 40% 93%;
 
     /* Footer institucional (verde - default) */
-    --footer-bg: 156 71% 14%;
+    --footer-bg: 120 100% 25%;
     --footer-foreground: 0 0% 100%;
     --footer-hover: 43 67% 52%;
-    --footer-border: 151 63% 20%;
+    --footer-border: 120 100% 32%;
 
     /* Footer Motoboy (laranja vibrante #FF6A00) */
     --footer-motoboy-bg: 25 100% 50%;
@@ -138,7 +138,7 @@
     --card-foreground: 155 25% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 155 25% 10%;
-    --primary: 158 55% 24%;
+    --primary: 120 100% 32%;
     --primary-foreground: 0 0% 100%;
     --secondary: 150 10% 94%;
     --secondary-foreground: 155 20% 15%;
@@ -161,7 +161,7 @@
     --card-foreground: 145 5% 96%;
     --popover: 155 18% 14%;
     --popover-foreground: 145 5% 96%;
-    --primary: 158 50% 42%;
+    --primary: 120 100% 32%;
     --primary-foreground: 155 25% 6%;
     --secondary: 155 14% 18%;
     --secondary-foreground: 145 5% 92%;
@@ -173,9 +173,9 @@
     --destructive-foreground: 0 0% 100%;
     --border: 155 12% 20%;
     --input: 155 12% 20%;
-    --ring: 158 50% 42%;
-    --chart-1: 158 50% 42%;
-    --chart-2: 152 45% 38%;
+    --ring: 120 100% 32%;
+    --chart-1: 120 100% 32%;
+    --chart-2: 120 100% 32%;
     --chart-3: 38 88% 52%;
     --chart-4: 150 10% 48%;
     --chart-5: 155 15% 32%;
@@ -186,7 +186,7 @@
     --sidebar-accent: 155 14% 16%;
     --sidebar-accent-foreground: 145 5% 92%;
     --sidebar-border: 155 12% 20%;
-    --sidebar-ring: 158 50% 42%;
+    --sidebar-ring: 120 100% 32%;
 
     /* Motoboy Identity - Dark mode #FF6A00 */
     --motoboy: 25 100% 55%;
@@ -197,17 +197,17 @@
     --motoboy-header-foreground: 0 0% 100%;
     --motoboy-surface: 25 25% 12%;
 
-    /* Merchant/Lojista Identity - Dark mode */
-    --merchant: 151 45% 38%;
+    /* Merchant/Lojista Identity - Dark mode #00a300 */
+    --merchant: 120 100% 32%;
     --merchant-foreground: 0 0% 100%;
-    --merchant-hover: 151 42% 30%;
+    --merchant-hover: 120 100% 26%;
     --merchant-light: 151 30% 15%;
 
-    /* Footer institucional - Dark mode (same colors) */
-    --footer-bg: 156 71% 14%;
+    /* Footer institucional - Dark mode #00a300 */
+    --footer-bg: 120 100% 25%;
     --footer-foreground: 0 0% 100%;
     --footer-hover: 43 67% 52%;
-    --footer-border: 151 63% 20%;
+    --footer-border: 120 100% 32%;
 
     /* Footer Motoboy - Dark mode #FF6A00 */
     --footer-motoboy-bg: 25 100% 50%;

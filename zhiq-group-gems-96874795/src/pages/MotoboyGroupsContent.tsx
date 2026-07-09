@@ -330,9 +330,9 @@ export default function MotoboyGroupsContent() {
           <Button
             onClick={() => navigate('/motoboy/impulsionar')}
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-900/20 whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center"
+            className="bg-[#00a300] hover:bg-[#008c00] text-[#F5E62B] font-black shadow-lg shadow-[#00a300]/30 whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center border border-black/15"
           >
-            <Zap className="h-4 w-4 mr-1.5 shrink-0" />
+            <Zap className="h-4 w-4 mr-1.5 shrink-0 text-white" />
             Central de Impulsionamento
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

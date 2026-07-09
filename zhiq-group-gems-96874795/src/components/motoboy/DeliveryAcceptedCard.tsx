@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { geocodeAddress } from '@/skills/maps/geocodeService';
 import { getCityCoordinates } from '@/lib/cityCoordinates';
+import { brazilCoordsOrNull } from '@/lib/map/brazilBounds';
 
 const OfferMiniMap = lazy(() => import('./OfferMiniMap'));
 
@@ -51,14 +52,33 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
   const [motoboyName, setMotoboyName] = useState<string>('');
   const [motoboyAddress, setMotoboyAddress] = useState<string>('');
 
+  // GPS preciso primeiro (onde o motoboy ESTÁ agora). Leitura por IP
+  // (accuracy grosseira) é ignorada — cai no cadastro logo abaixo.
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        // IP/gateway (ex.: Starlink) → precisão ruim OU fora do Brasil → ignora
+        if (accuracy == null || accuracy > 5000) return;
+        if (!brazilCoordsOrNull(lat, lng)) return;
+        setMotoboyPos({ lat, lng });
+      },
+      () => { /* sem GPS → cadastro resolve */ },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 },
+    );
+  }, []);
+
   // Buscar avatar (profiles) + endereço (motoboy_profiles) e geocodar o endereço
-  // para usar como posição do motoboy no mapa (em vez de GPS).
+  // para usar como posição do motoboy no mapa (fallback do GPS).
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     Promise.all([
-      supabase.from('profiles').select('avatar_url, name').eq('id', user.id).maybeSingle(),
-      supabase.from('motoboy_profiles').select('cidade, bairro, estado, nome, sobrenome, latitude_residencia, longitude_residencia').eq('user_id', user.id).maybeSingle(),
+      supabase.from('profiles').select('avatar_url, name, cidade, estado').eq('id', user.id).maybeSingle(),
+      // select('*') defensivo: colunas variam entre cópias do banco; um 400
+      // aqui deixava o card sem posição (mapa caía no centro padrão).
+      (supabase.from('motoboy_profiles') as any).select('*').eq('user_id', user.id).maybeSingle(),
     ]).then(async ([profileRes, motoboyRes]) => {
       if (cancelled) return;
       const profile = profileRes.data as any;
@@ -66,23 +86,31 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
       if (profile?.avatar_url) setMotoboyAvatar(profile.avatar_url);
       const fullName = profile?.name || [mb?.nome, mb?.sobrenome].filter(Boolean).join(' ');
       if (fullName) setMotoboyName(fullName);
-      const addr = [mb?.bairro, mb?.cidade, mb?.estado].filter(Boolean).join(', ');
+      const addr = [mb?.bairro, mb?.cidade, mb?.estado].filter(Boolean).join(', ')
+        || [profile?.cidade, profile?.estado].filter(Boolean).join(', ');
       if (addr) setMotoboyAddress(addr);
 
-      // Obter lat/lng: 1) Residência exata 2) cidade hardcoded BR 3) Mapbox geocoding como fallback
-      if (mb?.latitude_residencia && mb?.longitude_residencia) {
-        if (!cancelled) setMotoboyPos({ lat: mb.latitude_residencia, lng: mb.longitude_residencia });
-      } else if (mb?.cidade) {
-        const cityCoords = getCityCoordinates(mb.cidade);
-        if (cityCoords) {
-          if (!cancelled) setMotoboyPos(cityCoords);
-        } else {
-          const addressQuery = [mb?.bairro, mb?.cidade, mb?.estado].filter(Boolean).join(', ');
-          const geo = await geocodeAddress(addressQuery);
-          if (!cancelled && geo) setMotoboyPos({ lat: geo.lat, lng: geo.lng });
-          else if (!cancelled) setMotoboyPos(getCityCoordinates('blumenau') || null);
-        }
+      // Posição do CADASTRO como fallback do GPS (prev ?? … garante que o
+      // cadastro nunca sobrescreve uma posição GPS já obtida):
+      // residência → bairro/cidade do formulário → cidade do perfil geral.
+      // SEM fallback fixo (nunca inventar cidade).
+      const residencia = brazilCoordsOrNull(mb?.latitude_residencia, mb?.longitude_residencia);
+      if (residencia) {
+        if (!cancelled) setMotoboyPos(prev => prev ?? residencia);
+        return;
       }
+      const cidade = mb?.cidade || profile?.cidade;
+      if (!cidade) return;
+      const cityCoords = brazilCoordsOrNull(
+        getCityCoordinates(cidade)?.lat, getCityCoordinates(cidade)?.lng);
+      if (cityCoords) {
+        if (!cancelled) setMotoboyPos(prev => prev ?? cityCoords);
+        return;
+      }
+      const addressQuery = [mb?.bairro, cidade, mb?.estado || profile?.estado].filter(Boolean).join(', ');
+      const geo = await geocodeAddress(addressQuery);
+      const geoOk = brazilCoordsOrNull(geo?.lat, geo?.lng);
+      if (!cancelled && geoOk) setMotoboyPos(prev => prev ?? geoOk);
     });
     return () => { cancelled = true; };
   }, [user?.id]);
@@ -98,10 +126,10 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
   const hasStoreCoords = offer.pickup_lat != null && offer.pickup_lng != null;
 
   return (
-    <div className="fixed inset-0 z-[10001] bg-[#0a0a0a] overflow-y-auto">
+    <div className="fixed inset-0 z-[10001] bg-gradient-to-b from-[#FF6B00] via-[#ea580c] to-[#9a3412] overflow-y-auto">
       {/* Background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#34C759]/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-[#FF6B00]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#F5E62B]/20 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-black/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center px-5 py-8 min-h-screen">
         {/* ── Animação de Sucesso ── */}
@@ -109,7 +137,7 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', duration: 0.6, delay: 0.1 }}
-          className="w-24 h-24 rounded-full bg-[#34C759]/15 border-4 border-[#34C759]/40 flex items-center justify-center shadow-[0_0_60px_rgba(52,199,89,0.3)]"
+          className="w-24 h-24 rounded-full bg-black/40 border-4 border-white/30 flex items-center justify-center shadow-[0_0_60px_rgba(0,0,0,0.3)]"
         >
           <CheckCircle2 className="h-12 w-12 text-[#34C759]" />
         </motion.div>
@@ -120,10 +148,10 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
           transition={{ delay: 0.3 }}
           className="text-center mt-4 space-y-1"
         >
-          <h1 className="text-2xl font-black text-white uppercase italic tracking-tight">
+          <h1 className="text-2xl font-black text-white uppercase italic tracking-tight drop-shadow-md">
             Corrida Aceita!
           </h1>
-          <p className="text-white/40 text-sm">Vá até a loja para retirar o pedido</p>
+          <p className="text-white/90 font-bold text-sm drop-shadow">Vá até a loja para retirar o pedido</p>
         </motion.div>
 
         {/* ── MAPA: Localização do Motoboy → Loja ── */}
@@ -133,26 +161,26 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
           transition={{ delay: 0.4 }}
           className="w-full max-w-md mt-6"
         >
-          <div className="relative rounded-2xl overflow-hidden border border-white/10">
+          <div className="relative rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black/45 backdrop-blur-md">
             {/* Header do mapa */}
-            <div className="absolute top-3 left-3 z-10 bg-black/70 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center gap-2 border border-white/10">
+            <div className="absolute top-3 left-3 z-10 bg-black/80 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center gap-2 border border-white/15 shadow">
               <Navigation className="h-3.5 w-3.5 text-[#FF6B00]" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Sua rota</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white">Sua rota</span>
             </div>
 
             {/* Botão Google Maps */}
             {hasStoreCoords && (
               <button
                 onClick={() => openGMaps(offer.pickup_lat!, offer.pickup_lng!)}
-                className="absolute top-3 right-3 z-10 bg-black/70 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center gap-2 border border-white/10 active:scale-90 transition-transform"
+                className="absolute top-3 right-3 z-10 bg-black/80 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center gap-2 border border-white/15 active:scale-90 transition-transform shadow"
               >
-                <ExternalLink className="h-3.5 w-3.5 text-white/70" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Navegar</span>
+                <ExternalLink className="h-3.5 w-3.5 text-white" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white">Navegar</span>
               </button>
             )}
 
             <Suspense fallback={
-              <div className="h-[229px] bg-[#111] flex items-center justify-center">
+              <div className="h-[229px] bg-black/60 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 text-[#FF6B00] animate-spin" />
               </div>
             }>
@@ -182,47 +210,47 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
           className="w-full max-w-md mt-4 space-y-3"
         >
           {/* Loja */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+          <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-4 space-y-3 shadow-xl">
             <div className="flex items-start gap-3">
               {(offer as any).loja_logo ? (
-                <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/15">
                   <img
                     src={(offer as any).loja_logo}
                     alt={offer.loja_nome || 'Loja'}
                     className="w-full h-full object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
                   />
-                  <div className="hidden w-full h-full bg-[#FF6B00]/15 flex items-center justify-center">
+                  <div className="hidden w-full h-full bg-[#FF6B00]/20 flex items-center justify-center">
                     <Store className="h-5 w-5 text-[#FF6B00]" />
                   </div>
                 </div>
               ) : (
-                <div className="w-11 h-11 rounded-xl bg-[#FF6B00]/15 flex items-center justify-center shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-[#FF6B00]/20 flex items-center justify-center shrink-0">
                   <Store className="h-5 w-5 text-[#FF6B00]" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">RETIRADA EM</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">RETIRADA EM</p>
                 <h2 className="text-base font-black text-white leading-tight">{offer.loja_nome}</h2>
-                <p className="text-sm text-white/50 mt-0.5 leading-snug">{offer.loja_endereco}</p>
+                <p className="text-sm text-white/70 mt-0.5 leading-snug">{offer.loja_endereco}</p>
               </div>
               {hasStoreCoords && (
                 <button onClick={() => openGMaps(offer.pickup_lat!, offer.pickup_lng!)}
-                  className="w-9 h-9 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center shrink-0 active:scale-90 transition-transform">
-                  <Navigation className="h-4 w-4 text-white/50" />
+                  className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0 active:scale-90 transition-transform">
+                  <Navigation className="h-4 w-4 text-white" />
                 </button>
               )}
             </div>
           </div>
 
           {/* Destino */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+          <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-5 shadow-xl">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#34C759]/15 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-[#34C759]/20 flex items-center justify-center shrink-0">
                 <MapPin className="h-6 w-6 text-[#34C759]" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">ENTREGAR EM</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">ENTREGAR EM</p>
                 <p className="text-sm font-bold text-white leading-tight">{offer.regiao}</p>
               </div>
             </div>
@@ -230,34 +258,34 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
 
           {/* Stats: Distância, Tempo, Ganhos */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-4 text-center shadow-xl">
               <Navigation className="h-5 w-5 mx-auto mb-1.5 text-[#FF6B00]" />
               <p className="text-lg font-black text-white">
                 {distToStore != null ? distToStore.toFixed(1) : offer.distancia_km?.toFixed(1) ?? '—'}
               </p>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">
                 {distToStore != null ? 'km até loja' : 'km total'}
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-4 text-center shadow-xl">
               <Clock className="h-5 w-5 mx-auto mb-1.5 text-[#FFAD00]" />
               <p className="text-lg font-black text-white">{tempoEstimado ?? offer.tempo_estimado_min ?? '—'}</p>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">min</p>
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">min</p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-4 text-center shadow-xl">
               <DollarSign className="h-5 w-5 mx-auto mb-1.5 text-[#34C759]" />
               <p className="text-lg font-black text-[#34C759]">{fmt(offer.valor_liquido)}</p>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider">ganho</p>
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">ganho</p>
             </div>
           </div>
 
           {/* Lembrete — Código de Retirada */}
-          <div className="bg-[#FFAD00]/10 border border-[#FFAD00]/25 rounded-2xl p-4 flex items-start gap-3">
-            <Package className="h-5 w-5 text-[#FFAD00] mt-0.5 shrink-0" />
+          <div className="bg-black/50 backdrop-blur-md border border-[#F5E62B]/40 rounded-2xl p-4 flex items-start gap-3 shadow-xl">
+            <Package className="h-5 w-5 text-[#F5E62B] mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-[#FFAD00]">Código de Retirada</p>
-              <p className="text-xs text-white/50 mt-1 leading-relaxed">
-                Ao chegar na loja, solicite o <strong className="text-white/70">código de retirada</strong> ao lojista e 
+              <p className="text-sm font-bold text-[#F5E62B]">Código de Retirada</p>
+              <p className="text-xs text-white/80 mt-1 leading-relaxed">
+                Ao chegar na loja, solicite o <strong className="text-white font-bold">código de retirada</strong> ao lojista e 
                 digite na tela de corrida para confirmar a retirada do pedido.
               </p>
             </div>
@@ -265,17 +293,17 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
 
           {/* Descrição do pedido (se disponível) */}
           {offer.descricao_pedido && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">Detalhes do Pedido</p>
-              <p className="text-sm text-white/70">{offer.descricao_pedido}</p>
+            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-4 shadow-xl">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Detalhes do Pedido</p>
+              <p className="text-sm text-white/90">{offer.descricao_pedido}</p>
             </div>
           )}
 
           {/* Observação da loja */}
           {offer.loja_observacao && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">Observação da Loja</p>
-              <p className="text-sm text-white/70">{offer.loja_observacao}</p>
+            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-2xl p-4 shadow-xl">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Observação da Loja</p>
+              <p className="text-sm text-white/90">{offer.loja_observacao}</p>
             </div>
           )}
         </motion.div>
@@ -290,10 +318,10 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={onProceed}
-            className="w-full h-16 rounded-2xl font-black text-base uppercase italic flex items-center justify-center gap-3 text-black shadow-2xl"
+            className="w-full h-16 rounded-2xl font-black text-base uppercase italic flex items-center justify-center gap-3 text-white shadow-2xl border border-black/20"
             style={{
-              background: 'linear-gradient(135deg, #FF6B00, #FF8A00)',
-              boxShadow: '0 16px 50px rgba(255,107,0,0.45)',
+              background: 'linear-gradient(135deg, #00a300, #008000)',
+              boxShadow: '0 16px 50px rgba(0,0,0,0.45)',
             }}
           >
             Ir Para a Loja <ArrowRight className="h-5 w-5" />

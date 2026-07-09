@@ -1,3 +1,12 @@
+/**
+ * useUnifiedWallet — carteira unificada do profissional, 100% no motor pay_*.
+ *
+ * REESCRITO (2026-07-10, correção definitiva das comissões): as fontes
+ * legadas financial_accounts/ledger_entries foram DESCONTINUADAS aqui —
+ * o dinheiro real (liquidação pay_release_ride_payment) vive em
+ * pay_financial_accounts/pay_ledger_entries, e o extrato oficial é a view
+ * v_wallet_statement (security_invoker sobre pay_*).
+ */
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,11 +34,21 @@ const PROFILE_LABELS: Record<string, string> = {
   motoboy: "Motoboy",
   merchant: "Lojista",
   driver: "Motorista",
+  mototaxi: "Moto-Táxi",
   passenger: "Passageiro",
   freight: "Freteiro",
 };
 
-// ============= All wallet accounts for user =============
+/** owner_type/account_type pay_* → chave de perfil da UI */
+function payProfileKey(ownerOrAccount: string): string {
+  if (ownerOrAccount.includes("mototaxi")) return "mototaxi";
+  if (ownerOrAccount.includes("driver")) return "driver";
+  if (ownerOrAccount.includes("merchant")) return "merchant";
+  if (ownerOrAccount.includes("customer")) return "passenger";
+  return "motoboy";
+}
+
+// ============= Carteiras pay_* do usuário =============
 export function useUnifiedWalletAccounts() {
   const { user } = useAuth();
 
@@ -38,174 +57,101 @@ export function useUnifiedWalletAccounts() {
     queryFn: async (): Promise<ProfileBalance[]> => {
       if (!user?.id) return [];
 
-      console.log(`[DEBUG useUnifiedWalletAccounts] Auth User ID: ${user.id}`);
-      
-      const { data, error } = await supabase
-        .from("financial_accounts")
-        .select("id, available_balance, profile_type")
-        .eq("owner_user_id", user.id)
-        .eq("account_type", "user_wallet")
-        .eq("is_active", true);
-
-      console.log(`[DEBUG useUnifiedWalletAccounts] Raw Supabase Result for ${user.id}:`, { data, error });
+      const { data, error } = await (supabase as any)
+        .from("pay_financial_accounts")
+        .select("id, account_type, available_balance")
+        .eq("owner_id", user.id)
+        .in("account_type", [
+          "motoboy_wallet", "mototaxi_wallet", "driver_wallet", "merchant_wallet",
+        ]);
 
       if (error) {
-        console.error("Error fetching wallet accounts from financial_accounts:", error);
+        console.error("[useUnifiedWalletAccounts] erro pay_financial_accounts:", error);
         return [];
       }
 
-      const result = (data || []).map((acc) => ({
-        profileType: acc.profile_type,
-        label: PROFILE_LABELS[acc.profile_type] || acc.profile_type,
-        balanceCents: Math.round((acc.available_balance || 0) * 100),
-        accountId: acc.id,
-      }));
-
-      console.log('[DEBUG useUnifiedWalletAccounts] Final Mapped Result:', result);
-      return result;
+      return (data || []).map((acc: any) => {
+        const key = payProfileKey(String(acc.account_type));
+        return {
+          profileType: key,
+          label: PROFILE_LABELS[key] || key,
+          balanceCents: Math.round(Number(acc.available_balance || 0) * 100),
+          accountId: acc.id,
+        };
+      });
     },
     enabled: !!user?.id,
     staleTime: 0,
   });
 }
 
-// ============= Unified balance from ledger =============
+// ============= Saldo unificado (pay_*) =============
 export function useUnifiedBalance() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: accounts } = useUnifiedWalletAccounts();
+  const { data: accounts, isLoading } = useUnifiedWalletAccounts();
 
-  const accountIds = (accounts || []).map((a) => a.accountId);
+  const byProfile = accounts ?? [];
+  const total = byProfile.reduce((s, p) => s + p.balanceCents, 0) / 100;
 
-  const balanceQuery = useQuery({
-    queryKey: ["unified-ledger-balance", user?.id, accountIds],
-    queryFn: async (): Promise<{ total: number; byProfile: ProfileBalance[] }> => {
-      console.log('[DEBUG useUnifiedBalance] Fetching balance for accounts:', accountIds);
-      if (!accountIds.length) return { total: 0, byProfile: [] };
-
-      // Fetch ledger entries for all accounts
-      const { data, error } = await supabase
-        .from("ledger_entries")
-        .select("amount_cents, account_id")
-        .in("account_id", accountIds);
-
-      console.log('[DEBUG useUnifiedBalance] Ledger entries for accounts:', data);
-
-      if (error) {
-        console.error("[DEBUG useUnifiedBalance] Error fetching unified balance:", error);
-        return { total: 0, byProfile: accounts || [] };
-      }
-
-      // Sum per account
-      const sumByAccount: Record<string, number> = {};
-      (data || []).forEach((e) => {
-        sumByAccount[e.account_id] = (sumByAccount[e.account_id] || 0) + e.amount_cents;
-      });
-
-      // Fetch pending payouts for these accounts to subtract from available balance
-      const { data: payoutData, error: payoutError } = await supabase
-        .from("payout_requests")
-        .select("amount_cents, owner_id, owner_type")
-        .eq("status", "pending");
-
-      const reservedByProfile: Record<string, number> = {};
-      if (!payoutError && payoutData) {
-        payoutData.forEach(p => {
-          const profileType = p.owner_type;
-          reservedByProfile[profileType] = (reservedByProfile[profileType] || 0) + p.amount_cents;
-        });
-      }
-
-      console.log('[DEBUG useUnifiedBalance] Payouts reserved by profile:', reservedByProfile);
-
-      const byProfile = (accounts || []).map((acc) => {
-        const ledgerSum = sumByAccount[acc.accountId] || 0;
-        const reserved = reservedByProfile[acc.profileType] || 0;
-        const finalBalance = ledgerSum - reserved;
-        
-        console.log(`[DEBUG useUnifiedBalance] Profile: ${acc.profileType} | Ledger: ${ledgerSum} | Reserved: ${reserved} | Final: ${finalBalance}`);
-        
-        return {
-          ...acc,
-          balanceCents: finalBalance,
-        };
-      });
-
-      const total = byProfile.reduce((s, p) => s + p.balanceCents, 0) / 100;
-      console.log('[DEBUG useUnifiedBalance] Final UI Total (Reais):', total);
-
-      return { total, byProfile };
-    },
-    enabled: accountIds.length > 0,
-    staleTime: 0,
-  });
-
-  // Realtime for all accounts
+  // Realtime: qualquer lançamento pay_* do usuário atualiza os saldos.
   useEffect(() => {
-    if (!accountIds.length) return;
-
+    if (!user?.id) return;
     const channel = supabase
-      .channel(`unified-balance-${user?.id}`)
+      .channel(`unified-pay-balance-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "ledger_entries" },
-        (payload: any) => {
-          if (accountIds.includes(payload.new?.account_id || payload.old?.account_id)) {
-            queryClient.invalidateQueries({ queryKey: ["unified-ledger-balance", user?.id] });
-          }
-        }
+        { event: "*", schema: "public", table: "pay_ledger_entries" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["unified-wallet-accounts", user.id] });
+        },
       )
       .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, queryClient]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [accountIds.join(","), user?.id, queryClient]);
-
-  return {
-    total: balanceQuery.data?.total ?? 0,
-    byProfile: balanceQuery.data?.byProfile ?? [],
-    isLoading: balanceQuery.isLoading,
-  };
+  return { total, byProfile, isLoading };
 }
 
-// ============= Unified timeline =============
+// ============= Extrato unificado (view oficial sobre pay_*) =============
 export function useUnifiedTimeline(filterProfile?: string) {
-  const { data: accounts } = useUnifiedWalletAccounts();
-  const accountIds = (accounts || []).map((a) => a.accountId);
-  const accountToProfile = Object.fromEntries(
-    (accounts || []).map((a) => [a.accountId, a.profileType])
-  );
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["unified-timeline", accountIds, filterProfile],
+    queryKey: ["unified-timeline", user?.id, filterProfile],
     queryFn: async (): Promise<UnifiedLedgerEntry[]> => {
-      if (!accountIds.length) return [];
+      if (!user?.id) return [];
 
-      const targetIds = filterProfile
-        ? accountIds.filter((id) => accountToProfile[id] === filterProfile)
-        : accountIds;
-
-      if (!targetIds.length) return [];
-
-      const { data, error } = await supabase
-        .from("ledger_entries")
-        .select("id, amount_cents, created_at, entry_type, reference_type, reference_id, account_id")
-        .in("account_id", targetIds)
+      const { data, error } = await (supabase as any)
+        .from("v_wallet_statement")
+        .select("*")
+        .eq("owner_user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(50);
 
       if (error) {
-        console.error("Error fetching unified timeline:", error);
+        console.error("[useUnifiedTimeline] erro v_wallet_statement:", error);
         return [];
       }
 
-      return (data || []).map((e) => ({
-        ...e,
-        profile_type: accountToProfile[e.account_id] || "unknown",
-      }));
+      const mapped: UnifiedLedgerEntry[] = (data || []).map((e: any, i: number) => {
+        const cents = Number(e.amount_cents || 0);
+        return {
+          id: `${e.created_at}-${e.source_id ?? i}`,
+          amount_cents: String(e.direction).toLowerCase() === "debit" ? -cents : cents,
+          created_at: e.created_at,
+          entry_type: e.source_type ?? null,
+          reference_type: e.source_type ?? null,
+          reference_id: e.source_id ?? null,
+          profile_type: payProfileKey(String(e.profile_type ?? "motoboy_profile")),
+        };
+      });
+
+      return filterProfile
+        ? mapped.filter((m) => m.profile_type === filterProfile)
+        : mapped;
     },
-    enabled: accountIds.length > 0,
+    enabled: !!user?.id,
     staleTime: 0,
   });
 }

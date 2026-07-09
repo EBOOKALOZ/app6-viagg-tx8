@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getCityCoordinates } from '@/lib/cityCoordinates';
 import { geocodeAddress } from '@/skills/maps/geocodeService';
+import { brazilCoordsOrNull } from '@/lib/map/brazilBounds';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,25 +77,28 @@ export function ActiveDeliveryCard({
         if (fullName) setMotoboyName(fullName);
         setMotoboyLocationLabel([data?.bairro, data?.cidade, data?.estado].filter(Boolean).join(', '));
 
-        // Fallback de posição — só usa se GPS não forneceu nada ainda
+        // Fallback de posição — só usa se GPS não forneceu nada ainda.
+        // Toda coordenada passa pelo filtro do Brasil (sinal trocado no
+        // cadastro jogava o pino na Venezuela e gerava rotas de 2.000 km).
         setPosition(prev => {
           if (prev) return prev; // GPS já definiu posição, não sobrescreve
-          if ((data as any)?.latitude_residencia && (data as any)?.longitude_residencia) {
-            return { lat: (data as any).latitude_residencia, lng: (data as any).longitude_residencia };
-          }
-          return prev;
+          return brazilCoordsOrNull(
+            (data as any)?.latitude_residencia,
+            (data as any)?.longitude_residencia,
+          ) ?? prev;
         });
 
         if (!data?.cidade) return;
         setPosition(prev => {
           if (prev) return prev;
           const coords = getCityCoordinates(data.cidade!);
-          return coords ?? prev;
+          return brazilCoordsOrNull(coords?.lat, coords?.lng) ?? prev;
         });
         if (!position) {
           const addressQuery = [data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
           const geo = await geocodeAddress(addressQuery);
-          if (geo) setPosition(prev => prev ?? geo);
+          const geoOk = brazilCoordsOrNull(geo?.lat, geo?.lng);
+          if (geoOk) setPosition(prev => prev ?? geoOk);
         }
       });
 
@@ -116,7 +120,11 @@ export function ActiveDeliveryCard({
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        // Leitura por IP/gateway (ex.: Starlink) é grosseira ou cai em outro
+        // país mesmo com accuracy "boa" → precisa ser precisa E no Brasil.
+        if (accuracy == null || accuracy > 5000) return;
+        if (!brazilCoordsOrNull(lat, lng)) return;
         setPosition({ lat, lng });
         setMotoboyLocationLabel('Sua posição atual');
 

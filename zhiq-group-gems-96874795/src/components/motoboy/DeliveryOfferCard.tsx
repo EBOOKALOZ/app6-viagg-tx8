@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCityCoordinates } from '@/lib/cityCoordinates';
 import { geocodeAddress } from '@/skills/maps/geocodeService';
+import { brazilCoordsOrNull } from '@/lib/map/brazilBounds';
+import { calculateRoute } from '@/skills/maps/routeService';
 
 const OfferMiniMap = lazy(() => import('./OfferMiniMap'));
 
@@ -87,65 +89,73 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
   const [motoboyAvatar, setMotoboyAvatar] = useState<string | null>(null);
   const [cityCoords, setCityCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Buscar cidade/bairro do cadastro e coordenadas da cidade
+  // POSIÇÃO = ONDE O MOTOBOY ESTÁ AGORA (GPS), com 2 proteções:
+  //  • leitura por IP (ex.: "São Paulo" com o motoboy no MT) chega com
+  //    accuracy de dezenas de km → é DESCARTADA;
+  //  • sem GPS preciso → cai no endereço do CADASTRO (formulário).
+  const { position: gpsPos, requestLocation } = useGeolocation();
+  useEffect(() => { requestLocation(); }, [requestLocation]);
+
+  // Cadastro (fallback): select('*') defensivo — colunas variam entre cópias
+  // do banco e um 400 aqui derrubava tudo pro fallback fixo de Blumenau.
   useEffect(() => {
     if (!user?.id) return;
     Promise.all([
-      supabase
-        .from('motoboy_profiles')
-        .select('cidade, bairro, estado, nome, sobrenome, avatar_url, latitude_residencia, longitude_residencia')
+      (supabase.from('motoboy_profiles') as any)
+        .select('*')
         .eq('user_id', user.id)
         .maybeSingle(),
       supabase
         .from('profiles')
-        .select('avatar_url, name')
+        .select('avatar_url, name, cidade, estado')
         .eq('id', user.id)
         .maybeSingle(),
     ])
       .then(async ([motoboyRes, profileRes]) => {
-        const data = motoboyRes.data;
-        const profile = profileRes.data;
-        if (data) {
-          setMotoboyCity([data.bairro, data.cidade, data.estado].filter(Boolean).join(', ') || 'Localização não cadastrada');
-          setMotoboyName([data.nome, data.sobrenome].filter(Boolean).join(' ') || profile?.name || '');
-          setMotoboyAvatar(profile?.avatar_url || (data as any).avatar_url || null);
-          // Usar coordenadas exatas da residência se existirem
-          if (data.latitude_residencia && data.longitude_residencia) {
-             setCityCoords({ lat: data.latitude_residencia, lng: data.longitude_residencia });
-          } else if (data.cidade) {
-             const coords = getCityCoordinates(data.cidade);
-            if (coords) {
-               setCityCoords(coords);
-            } else {
-               // API de geolocalização se não tiver na lista hardcoded (inclui bairro para maior precisão!)
-               const addressQuery = [data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
-               const geo = await geocodeAddress(addressQuery);
-               if (geo) {
-                 setCityCoords(geo);
-               } else {
-                 setCityCoords(getCityCoordinates('blumenau')); // Absolute fallback
-               }
-            }
-          } else {
-            setCityCoords(getCityCoordinates('blumenau'));
-          }
-        } else {
-          // Utilizar fallback para contas de teste sem perfil de motoboy
-          setMotoboyCity('Centro, Blumenau, SC');
-          setCityCoords(getCityCoordinates('blumenau'));
-          if (profile?.avatar_url) setMotoboyAvatar(profile.avatar_url);
-          if (profile?.name) setMotoboyName(profile.name);
-        }
+        const data: any = motoboyRes.data;
+        const profile: any = profileRes.data;
+        setMotoboyName(
+          [data?.nome, data?.sobrenome].filter(Boolean).join(' ') || profile?.name || '',
+        );
+        setMotoboyAvatar(profile?.avatar_url || data?.avatar_url || null);
+
+        const cityLabel = [data?.bairro, data?.cidade, data?.estado].filter(Boolean).join(', ')
+          || [profile?.cidade, profile?.estado].filter(Boolean).join(', ');
+        setMotoboyCity(cityLabel || 'Localização não cadastrada');
+
+        // Coordenadas do cadastro: residência → cidade (lista/geocode) →
+        // cidade do perfil geral. SEM fallback fixo, e TODA coordenada passa
+        // pelo filtro do Brasil (sinal trocado jogava o pino na Venezuela).
+        const residencia = brazilCoordsOrNull(data?.latitude_residencia, data?.longitude_residencia);
+        if (residencia) { setCityCoords(residencia); return; }
+        const cidade = data?.cidade || profile?.cidade;
+        if (!cidade) return;
+        const hardRaw = getCityCoordinates(cidade);
+        const hard = brazilCoordsOrNull(hardRaw?.lat, hardRaw?.lng);
+        if (hard) { setCityCoords(hard); return; }
+        const addressQuery = [data?.bairro, cidade, data?.estado || profile?.estado]
+          .filter(Boolean).join(', ');
+        const geo = await geocodeAddress(addressQuery);
+        const geoOk = brazilCoordsOrNull(geo?.lat, geo?.lng);
+        if (geoOk) setCityCoords(geoOk);
       })
       .catch((err) => {
         console.error('Error fetching motoboy profile:', err);
-        setMotoboyCity('Blumenau, SC');
-        setCityCoords(getCityCoordinates('blumenau'));
       });
   }, [user?.id]);
 
-  // Posição efetiva: SOMENTE cadastro do perfil (cidade)
-  const effectivePos = cityCoords;
+  // GPS só vale se for PRECISO (≤ 5 km) E dentro do Brasil. Localização por
+  // IP (ex.: gateway da Starlink) pode cair em outro país e até reportar
+  // accuracy "boa" — o filtro geográfico corta esses casos.
+  const gpsIsPrecise =
+    !!gpsPos &&
+    gpsPos.accuracy != null && gpsPos.accuracy <= 5000 &&
+    brazilCoordsOrNull(gpsPos.lat, gpsPos.lng) != null;
+
+  // Posição efetiva: GPS preciso (onde está AGORA) > cadastro do formulário.
+  // Sem nada → null (mapa esconde o pino e centraliza na coleta — nunca
+  // inventa um lugar tipo Blumenau).
+  const effectivePos = gpsIsPrecise ? gpsPos : cityCoords;
 
   // Bloquear rolagem do body enquanto o modal estiver montado
   useEffect(() => {
@@ -184,6 +194,74 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
   const distValid = distToPickup !== null && distToPickup < 100;
   const distPickupToDropoff = offer.distancia_km || offer.distancia_loja_cliente_km || 0;
   const valorLiquido = offer.valor_liquido ?? offer.valor;
+
+  // ── DISTÂNCIAS REAIS POR VIAS (Mapbox Directions — não linha reta) ────────
+  // Perna A (Você → Loja): recalculada a CADA oferta com a posição atual do
+  // motoboy. Perna B (Loja → Cliente): rota real; fallback = distance_km
+  // gravado na criação do pedido (que já veio de rota no mapa do cliente).
+  const [legToStore, setLegToStore] =
+    useState<{ km: number; min: number } | null>(null);
+  const [legStoreToClient, setLegStoreToClient] =
+    useState<{ km: number; min: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (!effectivePos || offer.pickup_lat == null || offer.pickup_lng == null) {
+      setLegToStore(null);
+      return;
+    }
+    calculateRoute(effectivePos, { lat: offer.pickup_lat, lng: offer.pickup_lng })
+      .then((r) => {
+        if (!alive) return;
+        if (r) {
+          setLegToStore({ km: r.distance / 1000, min: Math.max(1, Math.round(r.duration / 60)) });
+        } else {
+          // Sem rota (API indisponível): estimativa por reta + fator urbano.
+          const km = haversine(effectivePos.lat, effectivePos.lng, offer.pickup_lat!, offer.pickup_lng!) * 1.3;
+          setLegToStore({ km, min: Math.max(1, Math.round(km * 3)) });
+        }
+      });
+    return () => { alive = false; };
+  }, [effectivePos?.lat, effectivePos?.lng, offer.pickup_lat, offer.pickup_lng]);
+
+  useEffect(() => {
+    let alive = true;
+    const fallback = () => {
+      if (distPickupToDropoff > 0) {
+        setLegStoreToClient({
+          km: distPickupToDropoff,
+          min: Math.max(1, Math.round(distPickupToDropoff * 3)),
+        });
+      }
+    };
+    if (offer.pickup_lat == null || offer.pickup_lng == null ||
+        offer.dropoff_lat == null || offer.dropoff_lng == null) {
+      fallback();
+      return;
+    }
+    calculateRoute(
+      { lat: offer.pickup_lat, lng: offer.pickup_lng },
+      { lat: offer.dropoff_lat, lng: offer.dropoff_lng },
+    ).then((r) => {
+      if (!alive) return;
+      if (r) {
+        setLegStoreToClient({ km: r.distance / 1000, min: Math.max(1, Math.round(r.duration / 60)) });
+      } else {
+        fallback();
+      }
+    });
+    return () => { alive = false; };
+  }, [offer.pickup_lat, offer.pickup_lng, offer.dropoff_lat, offer.dropoff_lng, distPickupToDropoff]);
+
+  // Total soma as pernas DISPONÍVEIS: sem posição do motoboy (ex.: cadastro
+  // sem coordenadas), o total vale a perna Loja→Cliente — nunca fica preso
+  // em "calculando…".
+  const totalKm = legStoreToClient ? (legToStore?.km ?? 0) + legStoreToClient.km : null;
+  const totalMin = legStoreToClient ? (legToStore?.min ?? 0) + legStoreToClient.min : null;
+  // Rótulo da perna A: '—' quando não há posição conhecida do motoboy.
+  const legAText = legToStore
+    ? `${fmtKm(legToStore.km)} • ${legToStore.min} min`
+    : (effectivePos ? 'calculando…' : '—');
 
   const handleEvaluate = useCallback(() => {
     if (isExpired || isAccepting) return;
@@ -251,17 +329,22 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
 
             {/* Header */}
             <div className="flex items-center gap-3 px-6 pt-4 pb-3">
-              <motion.div
-                animate={!isExpired ? { scale: [1, 1.05, 1] } : {}}
-                transition={{ repeat: Infinity, duration: 1.8 }}
-                className="w-20 h-20 rounded-xl bg-[#0C3B24] flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,184,0,0.5)] overflow-hidden border-2 border-[#ffb800]"
-              >
-                {offer.loja_logo || (offer as any).merchant?.logo_url ? (
-                  <img src={offer.loja_logo || (offer as any).merchant?.logo_url} alt={offer.loja_nome || 'Loja'} className="w-full h-full object-cover" />
-                ) : (
-                  <img src="/assets/store/default-logo.png" alt="Loja" className="w-full h-full object-cover" />
-                )}
-              </motion.div>
+              {/* Foto: logo da loja OU avatar do cliente (chamada de usuário).
+                  Sem imagem (cliente sem foto/loja) → NÃO mostra o logo padrão
+                  de loja — some com o quadro. */}
+              {(offer.loja_logo || (offer as any).merchant?.logo_url) && (
+                <motion.div
+                  animate={!isExpired ? { scale: [1, 1.05, 1] } : {}}
+                  transition={{ repeat: Infinity, duration: 1.8 }}
+                  className="w-20 h-20 rounded-xl bg-[#0C3B24] flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(255,184,0,0.5)] overflow-hidden border-2 border-[#ffb800]"
+                >
+                  <img
+                    src={offer.loja_logo || (offer as any).merchant?.logo_url}
+                    alt={offer.loja_nome || 'Solicitante'}
+                    className="w-full h-full object-cover"
+                  />
+                </motion.div>
+              )}
               <div className="flex-1 min-w-0 flex flex-col items-center text-center">
                 <p className={cn('text-[11px] font-black uppercase tracking-widest flex items-center gap-1', isUrgent ? 'text-red-400' : 'text-[#ffb800]')}>
                   {!isExpired && <span className="w-2 h-2 rounded-full animate-pulse bg-current" />}
@@ -277,31 +360,33 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
               </div>
             </div>
 
-            {/* Info resumida */}
-            <div className="flex items-center gap-3 px-6 pb-5 text-xs text-white/50">
-              <span className="flex items-center gap-1 min-w-0 truncate">
-                <Store className="h-3.5 w-3.5 text-[#ffb800] shrink-0" />
-                <span className="truncate">
-                  {[offer.loja_bairro, offer.loja_cidade, offer.loja_estado].filter(Boolean).join(', ')
-                    || offer.loja_endereco
-                    || offer.loja_nome
-                    || 'Loja Parceira'}
+            {/* Logística completa ANTES do aceite: Você→Loja, Loja→Cliente,
+                Total — distâncias/tempos REAIS por vias (Mapbox Directions) */}
+            <div className="px-6 pb-4 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-white/70">
+                  <Navigation className="h-3.5 w-3.5 text-[#ffb800]" /> Você → Loja
                 </span>
-              </span>
-              <span className="w-1 h-1 bg-white/20 rounded-full" />
-              <span className="flex items-center gap-1">
-                <Navigation className="h-3.5 w-3.5 text-[#34C759]" />
-                {fmtKm(distPickupToDropoff)} de percurso
-              </span>
-              {distValid && distToPickup != null && (
-                <>
-                  <span className="w-1 h-1 bg-white/20 rounded-full" />
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-white/40" />
-                    {fmtKm(distToPickup)} de você
-                  </span>
-                </>
-              )}
+                <span className="font-black text-white">
+                  {legAText}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-white/70">
+                  <Store className="h-3.5 w-3.5 text-[#34C759]" /> Loja → Cliente
+                </span>
+                <span className="font-black text-white">
+                  {legStoreToClient ? `${fmtKm(legStoreToClient.km)} • ${legStoreToClient.min} min` : 'calculando…'}
+                </span>
+              </div>
+              <div className="border-t border-white/10 pt-1.5 flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 font-bold text-[#ffb800]">
+                  <MapPin className="h-3.5 w-3.5" /> Total
+                </span>
+                <span className="font-black text-[#ffb800]">
+                  {totalKm != null ? `${fmtKm(totalKm)} • ${totalMin} min` : '—'}
+                </span>
+              </div>
             </div>
 
             {/* Botões */}
@@ -453,7 +538,9 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
                         <div className="flex-1 min-w-0 leading-tight">
                           <p className="text-[9px] font-bold text-[#ffb800] uppercase tracking-widest">Sua posição</p>
                           <p className="text-xs font-black text-white truncate">
-                            {motoboyCity || 'Obtendo localização…'}
+                            {gpsIsPrecise
+                              ? 'Localização atual (GPS)'
+                              : (motoboyCity || 'Obtendo localização…')}
                           </p>
                         </div>
                       </div>
@@ -484,6 +571,38 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
                           </p>
                           <p className="text-[10px] text-[#00ff00]/70 truncate">{fmtKm(distPickupToDropoff)} da loja</p>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* ── Logística da entrega (rotas reais por vias) ── */}
+                    <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white/70">📍 Você → Loja</span>
+                        <span className="font-black text-white">
+                          {legAText}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white/70">🏪 Loja → Cliente</span>
+                        <span className="font-black text-white">
+                          {legStoreToClient ? `${fmtKm(legStoreToClient.km)} • ${legStoreToClient.min} min` : 'calculando…'}
+                        </span>
+                      </div>
+                      <div className="border-t border-white/10 pt-1.5 flex items-center justify-between text-xs">
+                        <span className="font-bold text-[#ffb800]">📏 Distância Total</span>
+                        <span className="font-black text-[#ffb800]">{totalKm != null ? fmtKm(totalKm) : '—'}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-[#ffb800]">⏱ Tempo Estimado Total</span>
+                        <span className="font-black text-[#ffb800]">{totalMin != null ? `${totalMin} min` : '—'}</span>
+                      </div>
+                      <div className="border-t border-white/10 pt-1.5 flex items-center justify-between text-xs">
+                        <span className="text-white/70">💰 Valor da entrega</span>
+                        <span className="font-black text-white">{fmtCurrency(offer.valor)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-white/70">💵 Seu ganho líquido</span>
+                        <span className="font-black text-[#00ff00]">{fmtCurrency(valorLiquido)}</span>
                       </div>
                     </div>
 

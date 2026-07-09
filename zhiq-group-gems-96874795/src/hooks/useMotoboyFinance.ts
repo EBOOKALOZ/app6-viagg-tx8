@@ -96,33 +96,28 @@ export function useMotoboyBalance() {
   const { data: account } = useMotoboyWalletAccount();
 
   const balanceQuery = useQuery({
-    queryKey: ['motoboy-ledger-balance', account?.id],
+    queryKey: ['motoboy-ledger-balance', user?.id],
     queryFn: async (): Promise<number> => {
-      console.log('[DEBUG useMotoboyBalance] Fetching balance for account:', account?.id);
-      if (!account?.id || !user?.id) return 0;
+      if (!user?.id) return 0;
 
-      const { data, error } = await supabase
-        .from('financial_accounts')
-        .select('available_balance, reserved_balance, pending_balance')
-        .eq('id', account.id)
-        .single();
+      // FONTE OFICIAL: carteira pay_* (motoboy_wallet). A tabela legada
+      // financial_accounts foi descontinuada como fonte de saldo — o dinheiro
+      // real (liquidação pay_release_ride_payment) cai em pay_financial_accounts.
+      const { data, error } = await (supabase as any)
+        .from('pay_financial_accounts')
+        .select('available_balance, current_balance')
+        .eq('owner_type', 'motoboy_profile')
+        .eq('owner_id', user.id)
+        .eq('account_type', 'motoboy_wallet')
+        .maybeSingle();
 
       if (error) {
-        console.error('Error fetching balance from financial_accounts:', error);
+        console.error('[useMotoboyBalance] erro ao buscar saldo pay_*:', error);
         return 0;
       }
-
-      const finalBalance = data?.available_balance || 0;
-
-      console.log('--------------------------------------------------');
-      console.log(`[DEBUG useMotoboyBalance] USER_ID: ${user.id}`);
-      console.log(`[DEBUG useMotoboyBalance] ACCOUNT_ID: ${account.id}`);
-      console.log(`[DEBUG useMotoboyBalance] FINAL AVAILABLE (BRL): ${finalBalance}`);
-      console.log('--------------------------------------------------');
-
-      return finalBalance;
+      return Number(data?.available_balance ?? data?.current_balance ?? 0) || 0;
     },
-    enabled: !!account?.id,
+    enabled: !!user?.id,
     staleTime: 0,
   });
 

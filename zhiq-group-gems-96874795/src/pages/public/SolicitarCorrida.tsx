@@ -250,6 +250,28 @@ export default function SolicitarCorrida() {
   const [coordColeta,  setCoordColeta]  = useState("");
   const [coordDestino, setCoordDestino] = useState("");
 
+  // ── Sincronização MAPA → CAMPOS: mover/clicar o balão preenche os campos
+  //    de coordenadas (formato DMS, o mesmo aceito ao colar). ───────────────
+  const toDMS = (v: number, pos: string, neg: string) => {
+    const hemi = v < 0 ? neg : pos;
+    const abs = Math.abs(v);
+    let d = Math.floor(abs);
+    let m = Math.floor((abs - d) * 60);
+    let s = Math.round(((abs - d) * 60 - m) * 60);
+    if (s === 60) { s = 0; m += 1; }
+    if (m === 60) { m = 0; d += 1; }
+    return `${d}º ${m}' ${String(s).padStart(2, "0")}" ${hemi}`;
+  };
+  const formatCoordsDMS = (ll: LatLng) =>
+    `${toDMS(ll.lat, "N", "S")}  ${toDMS(ll.lng, "E", "W")}`;
+
+  useEffect(() => {
+    if (origin) setCoordColeta(formatCoordsDMS(origin));
+  }, [origin?.lat, origin?.lng]);
+  useEffect(() => {
+    if (destination) setCoordDestino(formatCoordsDMS(destination));
+  }, [destination?.lat, destination?.lng]);
+
   // Aplica coordenadas/link (Google Maps ou WhatsApp) colado num balão →
   // usa o MESMO parser homologado do lojista (parseCoordinates).
   const applyCoords = async (text: string, target: "origin" | "dest") => {
@@ -1011,19 +1033,13 @@ export default function SolicitarCorrida() {
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-2 text-center">
-                    <div className="flex-1 bg-[#FF6A00]/10 border border-[#FF6A00]/20 rounded-xl py-2">
-                      <div className="text-base font-black text-white">R$ {price.avg.toFixed(2)}</div>
-                      <div className="text-[10px] text-[#A7B0BE]">Estimado</div>
-                    </div>
-                    <div className="flex-1 bg-[#1B1F24] rounded-xl py-2">
-                      <div className="text-sm font-bold text-green-400">R$ {price.min.toFixed(2)}</div>
-                      <div className="text-[10px] text-[#A7B0BE]">Mínimo</div>
-                    </div>
-                    <div className="flex-1 bg-[#1B1F24] rounded-xl py-2">
-                      <div className="text-sm font-bold text-red-400">R$ {price.max.toFixed(2)}</div>
-                      <div className="text-[10px] text-[#A7B0BE]">Máximo</div>
-                    </div>
+                  {/* FONTE ÚNICA: um valor só — o oficial (é exatamente o que
+                      vira total_price da corrida e base da comissão). A faixa
+                      mín/máx (±15% cosmético do RouteService) foi removida por
+                      gerar leituras erradas de comissão. */}
+                  <div className="rounded-xl border border-[#FF6A00]/20 bg-[#FF6A00]/10 py-3 text-center">
+                    <div className="text-2xl font-black text-white">R$ {price.avg.toFixed(2)}</div>
+                    <div className="text-[10px] text-[#A7B0BE]">Valor da corrida</div>
                   </div>
                   <div className="flex gap-3 text-[11px] text-[#A7B0BE] mt-2 pt-2 border-t border-white/5">
                     <span>📍 {price.estimatedKm.toFixed(1)}km</span>
@@ -1084,20 +1100,23 @@ export default function SolicitarCorrida() {
       {/* STEP: SEARCHING                                                       */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       {step === "searching" && (
-        <div className="absolute inset-0 z-[1003] flex flex-col items-center justify-center bg-[#0D0F12]/80 backdrop-blur-sm px-6">
+        <div
+          className="absolute inset-0 z-[1003] flex flex-col items-center justify-center backdrop-blur-sm px-6"
+          style={{ background: "linear-gradient(160deg, rgba(255,106,0,0.96), rgba(255,69,0,0.96))" }}
+        >
           <div className="relative mb-6">
-            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "#FF6A00", opacity: 0.2, transform: "scale(1.6)" }} />
-            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "#FF6A00", opacity: 0.1, transform: "scale(2.2)", animationDelay: "0.3s" }} />
-            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-[#FF6A00] shadow-2xl relative z-10">
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "#fff", opacity: 0.25, transform: "scale(1.6)" }} />
+            <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "#fff", opacity: 0.12, transform: "scale(2.2)", animationDelay: "0.3s" }} />
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-2xl relative z-10">
               <img src={viaggLogo} alt="VIAGG" className="w-full h-full object-cover" />
             </div>
           </div>
           <h2 className="text-xl font-black text-white mb-1">Procurando {serviceObj.label}</h2>
-          <p className="text-[#A7B0BE] text-sm mb-6 text-center">IA VIAGG analisando {drivers.length} motoristas…</p>
+          <p className="text-white/80 text-sm mb-6 text-center">IA VIAGG analisando {drivers.length} motoristas…</p>
           <div className="w-full max-w-xs mb-5">
-            <div className="flex justify-between text-xs text-[#A7B0BE] mb-1.5"><span>Buscando</span><span>{searchProgress.toFixed(0)}%</span></div>
-            <div className="h-2 bg-[#2A3038] rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-300" style={{ width: `${searchProgress}%`, background: "linear-gradient(90deg,#FF6A00,#FF4500)" }} />
+            <div className="flex justify-between text-xs text-white/80 mb-1.5"><span>Buscando</span><span>{searchProgress.toFixed(0)}%</span></div>
+            <div className="h-2 bg-white/25 rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-white transition-all duration-300" style={{ width: `${searchProgress}%` }} />
             </div>
           </div>
           {[
@@ -1107,10 +1126,10 @@ export default function SolicitarCorrida() {
             { label: "Confirmando disponibilidade", done: searchProgress > 90 },
           ].map((c, i) => (
             <div key={i} className="w-full max-w-xs flex items-center gap-3 py-1">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${c.done ? "bg-green-500" : "bg-[#2A3038]"}`}>
-                {c.done ? <Check className="w-3 h-3 text-white" /> : <div className="w-1.5 h-1.5 rounded-full bg-[#A7B0BE]/30" />}
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${c.done ? "bg-green-500" : "bg-white/25"}`}>
+                {c.done ? <Check className="w-3 h-3 text-white" /> : <div className="w-1.5 h-1.5 rounded-full bg-white/60" />}
               </div>
-              <span className={`text-sm ${c.done ? "text-white" : "text-[#A7B0BE]"}`}>{c.label}</span>
+              <span className={`text-sm ${c.done ? "text-white font-bold" : "text-white/80"}`}>{c.label}</span>
             </div>
           ))}
 
@@ -1119,7 +1138,7 @@ export default function SolicitarCorrida() {
           <button
             onClick={() => setCancelDialogOpen(true)}
             disabled={cancelling}
-            className="mt-6 flex items-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-2.5 text-sm font-bold text-red-400 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50"
+            className="mt-6 flex items-center gap-2 rounded-2xl border border-white/50 bg-black/25 px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-black/40 active:scale-95 disabled:opacity-50"
           >
             <X className="h-4 w-4" />
             Cancelar Chamada

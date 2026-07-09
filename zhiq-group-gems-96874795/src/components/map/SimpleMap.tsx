@@ -175,6 +175,13 @@ function createCustomIcon(type: MapMarker['type'], label?: string, avatarUrl?: s
   // ═══ MEGA MOTO icon for motoboy type ═══
   if (type === 'motoboy') {
     const nameEl = (label || 'Motoboy').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // FOTO do motoboy quando existir (avatar do perfil); emoji 🏍️ é só fallback
+    const safeAvatar = avatarUrl ? avatarUrl.replace(/"/g, '&quot;') : '';
+    const innerContent = safeAvatar
+      ? `<img src="${safeAvatar}" alt="${nameEl}"
+             style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+             onerror="this.outerHTML='🏍️';" />`
+      : '🏍️';
     const wrapper = document.createElement('div');
     wrapper.className = 'marker-container marker-pulse';
     wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
@@ -187,7 +194,8 @@ function createCustomIcon(type: MapMarker['type'], label?: string, avatarUrl?: s
         box-shadow:0 0 0 4px rgba(249,115,22,0.3),0 12px 24px -4px rgba(249,115,22,0.5);
         display:flex;align-items:center;justify-content:center;
         font-size:32px;line-height:1;
-      ">🏍️</div>
+        overflow:hidden;
+      ">${innerContent}</div>
       <div style="
         width:0;height:0;margin-top:-4px;
         border-left:9px solid transparent;border-right:9px solid transparent;

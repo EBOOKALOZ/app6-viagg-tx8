@@ -357,8 +357,10 @@ export default function MotoboyRidesContent() {
         const deliveryKm = order.distance_km != null ? Number(order.distance_km) : null;
         const deliveryMin = order.estimated_minutes != null ? Number(order.estimated_minutes) : null;
         const preco = Number(order.total_price) || 0;
-        const comissao = offer.commission_percent ?? 0;
-        const ganhoLiquido = offer.net_value ? Number(offer.net_value) : preco * (1 - comissao / 100);
+        // FONTE ÚNICA: o líquido vem da OFERTA (net_value, calculado no motor
+        // pela tabela oficial). Nunca recalcular percentual no front.
+        const comissao = offer.commission_percent != null ? Number(offer.commission_percent) : null;
+        const ganhoLiquido = offer.net_value != null ? Number(offer.net_value) : preco;
         // DELIVERY METRICS — strictly from distance_km / estimated_minutes (NEVER pickup_*)
         const laranjaTexto = deliveryKm != null && deliveryMin != null
           ? `${deliveryKm.toFixed(1)} km • ${deliveryMin} min`
@@ -419,7 +421,7 @@ export default function MotoboyRidesContent() {
                 background: '#FFF3E6', color: '#FF6A00', padding: '5px 10px',
                 borderRadius: 10, fontSize: 11, fontWeight: 700, flexShrink: 0, marginLeft: 8,
               }}>
-                {comissao}%
+                {comissao != null ? `${comissao}%` : '—'}
               </div>
             </div>
 

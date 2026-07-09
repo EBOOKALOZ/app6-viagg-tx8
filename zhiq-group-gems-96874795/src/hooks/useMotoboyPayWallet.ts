@@ -307,7 +307,8 @@ export function useMotoboyPayWallet() {
     earnings: earnings ?? { todayCents: 0, weekCents: 0, todayCount: 0, weekCount: 0 },
     history: history ?? [],
     payouts: payouts ?? [],
-    commission: commission ?? { commissionPercent: 15, activeGroups: 0 },
+    // Default alinhado à tabela oficial (0 grupos = 25%) — nunca outro número.
+    commission: commission ?? { commissionPercent: 25, activeGroups: 0 },
     isLoading: isLoadingBalance || isLoadingEarnings || isLoadingHistory,
     isLoadingPayouts,
     isLoadingCommission,

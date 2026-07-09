@@ -67,6 +67,34 @@ export default {
   				navy: 'hsl(var(--zhiq-navy))',
   				'navy-light': 'hsl(var(--zhiq-navy-light))'
   			},
+			green: {
+				DEFAULT: '#00a300',
+				50: '#e6f6e6',
+				100: '#cceecc',
+				200: '#99dd99',
+				300: '#66cc66',
+				400: '#1fc81f',
+				500: '#00a300',
+				600: '#008f00',
+				700: '#007a00',
+				800: '#006100',
+				900: '#004a00',
+				950: '#003300'
+			},
+			emerald: {
+				DEFAULT: '#00a300',
+				50: '#e6f6e6',
+				100: '#cceecc',
+				200: '#99dd99',
+				300: '#66cc66',
+				400: '#1fc81f',
+				500: '#00a300',
+				600: '#008f00',
+				700: '#007a00',
+				800: '#006100',
+				900: '#004a00',
+				950: '#003300'
+			},
 			success: {
 				DEFAULT: 'hsl(var(--success))',
 				foreground: 'hsl(var(--success-foreground))'

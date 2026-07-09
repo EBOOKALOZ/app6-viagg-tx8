@@ -99,6 +99,22 @@ function parseLeadingMinutes(text?: string | null): number | null {
   return m ? parseInt(m[0], 10) : null;
 }
 
+/** Código de ENTREGA determinístico (4 dígitos) — MESMA fórmula usada em
+ *  MotoboyAwaitingRide/MerchantDeliveryView. Na chamada de CLIENTE, quem
+ *  informa os códigos ao motoboy é o próprio cliente. */
+function deriveDeliveryCode(orderId: string, pickupCode?: string | null): string {
+  let hash = 0;
+  for (let i = 0; i < orderId.length; i++) {
+    hash = ((hash << 5) - hash) + orderId.charCodeAt(i);
+    hash |= 0;
+  }
+  let code = (Math.abs(hash) % 9000 + 1000).toString();
+  if (pickupCode && code === pickupCode) {
+    code = ((Math.abs(hash) + 1) % 9000 + 1000).toString();
+  }
+  return code;
+}
+
 function toWhatsAppLink(phone: string, text: string): string {
   let digits = onlyDigits(phone);
   if (digits && digits.length <= 11) digits = `55${digits}`;
@@ -341,7 +357,8 @@ export function AcceptedRideCard({
     return null;
   }, [ride.etaMinutes, ride.distanceKm]);
 
-  // ── 3) Perfil do profissional: profiles (público) + best-effort
+  // ── 3) Perfil do profissional: get_public_profile (RPC segura — profiles
+  //      NÃO é legível entre usuários por RLS) + best-effort
   //      motoboy_profiles/driver_profiles (owner-only hoje — fallback gracioso). ──
   useEffect(() => {
     const professionalId = ride.professionalId;
@@ -350,14 +367,15 @@ export function AcceptedRideCard({
     setLoadingProfessional(true);
     (async () => {
       try {
-        const [profileRes, motoboyRes, driverRes] = await Promise.all([
-          supabase.from("profiles").select("name, avatar_url").eq("id", professionalId).maybeSingle(),
+        const [publicRes, motoboyRes, driverRes] = await Promise.all([
+          (supabase.rpc as any)("get_public_profile", { p_user: professionalId }),
           (supabase as any).from("motoboy_profiles").select("*").eq("user_id", professionalId).maybeSingle(),
           (supabase as any).from("driver_profiles").select("*").eq("user_id", professionalId).maybeSingle(),
         ]);
         if (!alive) return;
 
-        const profile = (profileRes as any)?.data ?? null;
+        const pubRows: any = (publicRes as any)?.data;
+        const profile = Array.isArray(pubRows) ? (pubRows[0] ?? null) : (pubRows ?? null);
         const op: any = (motoboyRes as any)?.data ?? (driverRes as any)?.data ?? null;
 
         const opName = op?.nome ? `${op.nome} ${op?.sobrenome || ""}`.trim() : null;
@@ -530,6 +548,36 @@ export function AcceptedRideCard({
         </div>
 
         <CardContent className="space-y-4 p-4">
+
+          {/* B0) CÓDIGOS DA CORRIDA — chamada de CLIENTE (service_orders):
+              sem lojista no fluxo, é o CLIENTE quem informa os códigos ao
+              motoboy (retirada na coleta, entrega no destino). O código de
+              retirada nasce no pedido (trigger auto_pickup_code). */}
+          {table === "service_orders" && rideRow?.pickup_code && !isTerminal && (
+            <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 dark:border-amber-700/50 dark:bg-amber-950/30">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                🔑 Seus códigos — informe ao motoboy
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-white p-2 text-center shadow-sm dark:bg-black/30">
+                  <p className="text-[10px] font-bold text-muted-foreground">NA COLETA</p>
+                  <p className="text-2xl font-black tracking-[0.2em] text-amber-600">
+                    {rideRow.pickup_code}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-white p-2 text-center shadow-sm dark:bg-black/30">
+                  <p className="text-[10px] font-bold text-muted-foreground">NA ENTREGA</p>
+                  <p className="text-2xl font-black tracking-[0.2em] text-emerald-600">
+                    {deriveDeliveryCode(orderId, rideRow.pickup_code)}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] leading-snug text-amber-700/80 dark:text-amber-300/70">
+                O motoboy digita o 1º código ao retirar e o 2º ao entregar — é a
+                sua garantia de que a corrida foi feita por quem aceitou.
+              </p>
+            </div>
+          )}
 
           {/* B) Card do profissional */}
           <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/40 p-3">

@@ -151,8 +151,10 @@ export function useDeliveryOfferListener() {
     if (!row?.id) return null;
 
     const rawValue = Number(row.gross_value ?? row.total_price ?? row.estimated_price_snapshot ?? 0);
-    const commRate = Number(row.commission_percent ?? 20);
-    const netValue = Number(row.net_value ?? rawValue * (1 - commRate / 100));
+    // FONTE ÚNICA: comissão/líquido NASCEM na oferta (create_delivery_offers_
+    // for_order). O front só CONSOME — nunca recalcula percentual aqui.
+    const commRate = row.commission_percent != null ? Number(row.commission_percent) : undefined;
+    const netValue = row.net_value != null ? Number(row.net_value) : undefined;
     const distKm = Number(row.distance_km_snapshot ?? 0);
     const tempoMin = distKm > 0 ? Math.ceil(distKm * 3) : 15;
 
@@ -178,42 +180,122 @@ export function useDeliveryOfferListener() {
     }
 
     let lojaNome: string = row.store_name_snapshot || '';
-    let lojaLogo: string | null = null;
+    // Imagem do solicitante CARIMBADA na oferta (definer) — fonte primária,
+    // imune à RLS de profiles. Fallbacks abaixo cobrem ofertas antigas.
+    let lojaLogo: string | null = row.requester_avatar_snapshot || null;
     let lojaBairro = '';
     let lojaCidade = '';
     let lojaEstado = '';
+
+    // Coordenadas REAIS de coleta/entrega: preferir os snapshots da oferta;
+    // quando ausentes (criador de ofertas atual não grava lat/lng), buscar
+    // direto da service_orders — são os pontos exatos marcados no mapa pelo
+    // cliente. É o que alimenta o mini-mapa do "Avaliar Corrida".
+    let pickupLat: number | null = row.pickup_lat_snapshot ?? null;
+    let pickupLng: number | null = row.pickup_lng_snapshot ?? null;
+    let dropLat: number | null = row.dropoff_lat_snapshot ?? null;
+    let dropLng: number | null = row.dropoff_lng_snapshot ?? null;
 
     if (row.delivery_order_id) {
       try {
         const { data: so } = await supabase
           .from('service_orders')
-          .select('store_name, merchant_id')
+          .select('store_name, merchant_id, payer_uid, pickup_lat, pickup_lng, destination_lat, destination_lng')
           .eq('id', row.delivery_order_id)
           .maybeSingle();
+
+        if (so) {
+          pickupLat = pickupLat ?? (so as any).pickup_lat ?? null;
+          pickupLng = pickupLng ?? (so as any).pickup_lng ?? null;
+          dropLat   = dropLat   ?? (so as any).destination_lat ?? null;
+          dropLng   = dropLng   ?? (so as any).destination_lng ?? null;
+        }
 
         if (so?.store_name) {
           lojaNome = so.store_name;
         }
 
         if (so?.merchant_id) {
-          const { data: ms } = await (supabase
-            .from('merchant_stores') as any)
-            .select('nome_loja, logo_url, bairro, cidade, estado')
-            .eq('user_id', so.merchant_id)
-            .maybeSingle();
+          // CHAMADA DE CLIENTE (fluxo "chamar motoboy"): payer_uid = merchant_id.
+          // Mesmo que o usuário TENHA loja cadastrada, a corrida NÃO é da loja —
+          // não usar nome/logo/endereço da loja; usar o perfil do cliente e o
+          // endereço REAL de coleta da corrida (pickup_address_snapshot).
+          const isCustomerCall = (so as any).payer_uid && (so as any).payer_uid === so.merchant_id;
 
-          if (ms) {
-            if (!lojaNome && ms.nome_loja) lojaNome = ms.nome_loja;
-            if (ms.logo_url) lojaLogo = ms.logo_url;
-            lojaBairro = ms.bairro || '';
-            lojaCidade = ms.cidade || '';
-            lojaEstado = ms.estado || '';
+          if (isCustomerCall) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('name, avatar_url')
+              .eq('id', so.merchant_id)
+              .maybeSingle();
+            if (prof) {
+              if (prof.name) lojaNome = prof.name;
+              if (prof.avatar_url) lojaLogo = prof.avatar_url;
+            }
+            // bairro/cidade/estado ficam vazios de propósito → o card exibe o
+            // endereço real da corrida (loja_endereco) no lugar.
+          } else {
+            const { data: ms } = await (supabase
+              .from('merchant_stores') as any)
+              .select('nome_loja, logo_url, bairro, cidade, estado')
+              .eq('user_id', so.merchant_id)
+              .maybeSingle();
+
+            if (ms) {
+              if (!lojaNome && ms.nome_loja) lojaNome = ms.nome_loja;
+              if (ms.logo_url) lojaLogo = ms.logo_url;
+              lojaBairro = ms.bairro || '';
+              lojaCidade = ms.cidade || '';
+              lojaEstado = ms.estado || '';
+            } else {
+              // Sem loja: cai no perfil do usuário (foto/nome públicos).
+              const { data: prof } = await supabase
+                .from('profiles')
+                .select('name, avatar_url')
+                .eq('id', so.merchant_id)
+                .maybeSingle();
+              if (prof) {
+                if (prof.name) lojaNome = lojaNome || prof.name;
+                if (prof.avatar_url) lojaLogo = prof.avatar_url;
+              }
+            }
           }
         }
       } catch {
         // fallback
       }
     }
+
+    // ── FALLBACK SEM DEPENDER DA CORRIDA (RLS-proof): a própria oferta traz
+    //    store_id = quem solicitou. Se o snapshot do nome bate com o nome da
+    //    LOJA dele → pedido de loja (logo); senão → chamada de CLIENTE (foto
+    //    do perfil). Cobre o caso em que service_orders não é legível. ──────
+    if (!lojaLogo && row.store_id) {
+      try {
+        const [msRes, profRes] = await Promise.all([
+          (supabase.from('merchant_stores') as any)
+            .select('nome_loja, logo_url')
+            .eq('user_id', row.store_id)
+            .maybeSingle(),
+          supabase
+            .from('profiles')
+            .select('name, avatar_url')
+            .eq('id', row.store_id)
+            .maybeSingle(),
+        ]);
+        const ms: any = msRes.data;
+        const prof: any = profRes.data;
+        const isStoreCall = !!ms?.nome_loja && !!row.store_name_snapshot
+          && ms.nome_loja === row.store_name_snapshot;
+        if (isStoreCall) {
+          if (ms.logo_url) lojaLogo = ms.logo_url;
+        } else if (prof) {
+          if (prof.avatar_url) lojaLogo = prof.avatar_url;
+          if (!lojaNome && prof.name) lojaNome = prof.name;
+        }
+      } catch { /* ignore */ }
+    }
+
     lojaNome = lojaNome || 'Loja Parceira';
 
     return {
@@ -224,7 +306,7 @@ export function useDeliveryOfferListener() {
       valor: rawValue,
       comissao_percent: commRate,
       valor_liquido: netValue,
-      comissao_plataforma: rawValue - netValue,
+      comissao_plataforma: netValue != null ? rawValue - netValue : undefined,
       loja_nome: lojaNome,
       loja_logo: lojaLogo,
       loja_endereco: lojaEndereco,
@@ -233,10 +315,11 @@ export function useDeliveryOfferListener() {
       loja_estado: lojaEstado,
       timer_seconds: 120,
       expires_at: row.expires_at || undefined,
-      pickup_lat: row.pickup_lat_snapshot ?? null,
-      pickup_lng: row.pickup_lng_snapshot ?? null,
-      dropoff_lat: row.dropoff_lat_snapshot ?? null,
-      dropoff_lng: row.dropoff_lng_snapshot ?? null,
+      // Coordenadas reais (snapshot da oferta OU service_orders — ver acima)
+      pickup_lat: pickupLat,
+      pickup_lng: pickupLng,
+      dropoff_lat: dropLat,
+      dropoff_lng: dropLng,
       descricao_pedido: row.customer_name_snapshot ? `Cliente: ${row.customer_name_snapshot}` : undefined,
       loja_observacao: row.notes_snapshot || undefined,
     } satisfies DeliveryOffer;
