@@ -27,6 +27,10 @@ interface MarketPropertyCardProps {
     bedrooms?: number;
     bathrooms?: number;
     public_location: string;
+    public_address_label?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
     thumbnail_url?: string;
   };
   variant?: 'default' | 'featured';
@@ -36,6 +40,27 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
   const isFeatured = variant === 'featured';
   const navigate = useNavigate();
   const [favorited, setFavorited] = useState(false);
+
+  const completeAddress = (() => {
+    if (property.public_address_label && property.public_address_label.trim()) {
+      return property.public_address_label.trim();
+    }
+    const parts: string[] = [];
+    if (property.neighborhood && property.neighborhood.trim()) {
+      parts.push(property.neighborhood.trim());
+    }
+    if (property.city && property.state) {
+      parts.push(`${property.city.trim()}/${property.state.trim()}`);
+    } else if (property.city) {
+      parts.push(property.city.trim());
+    } else if (property.state) {
+      parts.push(property.state.trim());
+    }
+    if (parts.length > 0) {
+      return parts.join(', ');
+    }
+    return property.public_location || 'Localização sob consulta';
+  })();
 
   const getPropertyTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -152,10 +177,10 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
 
         {/* Location pill (bottom-left over image) */}
         <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md shadow-md">
-            <MapPin className="w-3 h-3 text-emerald-600" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-800">
-              {property.public_location}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md shadow-md max-w-[90%]">
+            <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-800 truncate">
+              {completeAddress}
             </span>
           </div>
         </div>
@@ -228,6 +253,21 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
             </p>
           </div>
         )}
+
+        {/* Endereço Mais Completo */}
+        <div className="flex items-start gap-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 p-3 transition-colors group-hover:border-emerald-200/80 group-hover:bg-emerald-50/30">
+          <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+            <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+          </div>
+          <div className="flex flex-col leading-snug min-w-0 flex-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+              Endereço / Localização
+            </span>
+            <span className="text-xs font-bold text-zinc-800 line-clamp-2">
+              {completeAddress}
+            </span>
+          </div>
+        </div>
 
         {/* Specs row */}
         <div className="flex items-center gap-2 pt-3 border-t border-zinc-100">

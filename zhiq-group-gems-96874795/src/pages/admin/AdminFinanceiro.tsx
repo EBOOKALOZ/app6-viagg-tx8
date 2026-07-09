@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AdminFinancialStats } from "@/components/admin/financial/AdminFinancialStats";
 import { AdminFinancialCharts } from "@/components/admin/financial/AdminFinancialCharts";
 import { AdminPromotionModuleStats } from "@/components/admin/financial/AdminPromotionModuleStats";
+import { PlatformWithdrawButton, PlatformWithdrawHistory } from "@/components/admin/pay/PlatformWithdraw";
 
 const fmtBRL = (v: number) =>
   Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -158,6 +159,9 @@ function GlobalLedger() {
             <p className={`text-xl font-black ${totals.liquido >= 0 ? "text-blue-700" : "text-red-700"}`}>
               {fmtBRL(totals.liquido)}
             </p>
+            {/* Saque p/ conta MP — habilita conforme o saldo da tesouraria
+                (platform_main), validado de novo na RPC. */}
+            <PlatformWithdrawButton />
           </div>
         </div>
 
@@ -285,6 +289,7 @@ const AdminFinanceiro = () => {
       <AdminPromotionModuleStats />
       <CategoryStrip />
       <GlobalLedger />
+      <PlatformWithdrawHistory />
       <div className="pt-2">
         <AdminFinancialCharts />
       </div>

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { requestPayout as requestProfessionalPayout } from "@/lib/payments/payoutService";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 import { format, startOfDay, subDays } from "date-fns";
@@ -394,38 +395,28 @@ export function usePayoutRequests() {
 }
 
 // ============= Request Payout Mutation =============
+// REFATORADO (2026-07-08): fluxo legado ELIMINADO. Antes: INSERT direto do
+// navegador em payout_requests (bloqueado por RLS e fora do motor). Agora:
+// RPC SECURITY DEFINER professional_request_payout via payoutService —
+// identifica perfil/carteira no servidor, valida saldo, cria
+// pay_payout_requests e reserva no ledger (payout_reserve). Atende os 3
+// perfis (motoboy/moto-táxi/motorista) com a mesma arquitetura.
 export function useRequestPayout() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Assinatura preservada (centavos) p/ compatibilidade com os callers.
     mutationFn: async (amountCents: number) => {
       if (!user?.id) throw new Error('Usuário não autenticado');
-
-      const idempotencyKey = crypto.randomUUID();
-
-      const { data, error } = await supabase
-        .from('payout_requests')
-        .insert({
-          owner_type: 'motoboy_profile',
-          owner_id: user.id,
-          amount_cents: amountCents,
-          status: 'pending',
-          idempotency_key: idempotencyKey,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating payout request:', error);
-        throw new Error('Erro ao solicitar saque. Tente novamente.');
-      }
-
-      return data;
+      return requestProfessionalPayout({ amountBrl: amountCents / 100 });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['motoboy-payout-requests'] });
       queryClient.invalidateQueries({ queryKey: ['motoboy-ledger-balance'] });
+      // Saldos pay_* (reserva muda available/reserved na hora).
+      queryClient.invalidateQueries({ queryKey: ['motoboy-pay-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['motoboy-pay-payouts'] });
     },
   });
 }

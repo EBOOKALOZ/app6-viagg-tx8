@@ -43,6 +43,8 @@ import {
   ExternalLink,
   AlertCircle,
   Clock,
+  QrCode,
+  CreditCard,
 } from "lucide-react";
 
 type Step = "input" | "card" | "awaiting" | "confirmed" | "failed";
@@ -79,6 +81,7 @@ export function TravelerWalletTopup({
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("input");
+  const [method, setMethod] = useState<"pix" | "card">("pix"); // PIX padrão (sandbox)
   const [reais, setReais] = useState("");
   const [processing, setProcessing] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -111,8 +114,8 @@ export function TravelerWalletTopup({
       toast.error("Entre na sua conta para adicionar saldo.");
       return;
     }
-    // Modo embutido (Payment Brick): coleta o cartão na própria tela.
-    if (isEmbeddedCardCheckout() && mercadoPagoPublicKey()) {
+    // Cartão embutido (Payment Brick) só quando o método escolhido é cartão.
+    if (method === "card" && isEmbeddedCardCheckout() && mercadoPagoPublicKey()) {
       setStep("card");
       return;
     }
@@ -125,7 +128,9 @@ export function TravelerWalletTopup({
         account_type: "customer_wallet",
         package_price_cents: priceCents,
         package_name: `Recarga de Saldo — R$ ${formatBRL(priceCents)}`,
-        method: "credit_card", // → Checkout Pro (cartão + PIX na página do MP)
+        // PIX → /v1/payments (QR inline). Cartão → Checkout Pro (cartão + PIX
+        // na página hospedada do MP).
+        method: method === "pix" ? "pix" : "credit_card",
         payer_email: user.email ?? undefined,
         metadata: { kind: "wallet_topup", back_url: getCheckoutBackUrl() },
       });
@@ -326,6 +331,32 @@ export function TravelerWalletTopup({
                 )}
               </div>
 
+              {/* Método de pagamento */}
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "pix", label: "PIX", icon: QrCode },
+                  { id: "card", label: "Cartão", icon: CreditCard },
+                ] as const).map((m) => {
+                  const active = method === m.id;
+                  const Icon = m.icon;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMethod(m.id)}
+                      className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-sm font-black transition-all ${
+                        active
+                          ? "border-slate-900 bg-slate-900 text-[#FFE600] shadow-md"
+                          : "border-slate-800/20 bg-white text-slate-900 hover:border-slate-900 shadow-sm"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               <Button
                 onClick={handleConfirm}
                 disabled={processing}
@@ -335,6 +366,11 @@ export function TravelerWalletTopup({
               >
                 {processing ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
+                ) : method === "pix" ? (
+                  <>
+                    <QrCode className="mr-2 h-5 w-5" />
+                    Gerar PIX
+                  </>
                 ) : (
                   "Continuar para o pagamento"
                 )}
@@ -388,9 +424,9 @@ export function TravelerWalletTopup({
               <div className="flex items-start gap-2 rounded-lg border border-amber-300/50 bg-amber-50 p-3 text-amber-700">
                 <Clock className="mt-0.5 h-4 w-4 shrink-0" />
                 <p className="text-xs font-medium">
-                  Abrimos o pagamento do Mercado Pago (PIX, cartão ou boleto). Após
-                  pagar, o saldo entra automaticamente — pode deixar esta janela
-                  aberta.
+                  {order.pix_qr || order.pix_code
+                    ? "Escaneie o QR ou copie o código PIX para pagar. Após o pagamento, o saldo entra automaticamente — pode deixar esta janela aberta."
+                    : "Abrimos o pagamento do Mercado Pago. Após pagar, o saldo entra automaticamente — pode deixar esta janela aberta."}
                 </p>
               </div>
 

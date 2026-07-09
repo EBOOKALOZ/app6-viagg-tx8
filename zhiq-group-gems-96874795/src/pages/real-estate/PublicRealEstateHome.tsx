@@ -4,6 +4,7 @@ import { SellRealEstateCTA } from '@/components/real-estate/SellRealEstateCTA';
 import { ShieldCheck, Zap, Users, Trees, Tractor, MapPin, Wheat, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CategoryFilterBar } from '@/components/ui/CategoryFilterBar';
+import { HorizontalCarousel } from '@/components/ui/HorizontalCarousel';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
@@ -247,10 +248,22 @@ export const PublicRealEstateHome = () => {
             ) : (
               <div className="relative w-screen left-1/2 -translate-x-1/2">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-amber-50/40 -z-10" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 md:px-8 py-6 md:py-10">
-                  {propertyListings.map((prop) => (
-                    <MarketPropertyCard key={prop.id} property={prop} />
-                  ))}
+                <div className="px-4 md:px-8 py-6 md:py-10">
+                  {propertyTypeFilter !== "all" ? (
+                    /* Categoria selecionada → um card abaixo do outro (posição fixa). */
+                    <div className="flex flex-col gap-4 w-[80vw] sm:w-80 mx-auto">
+                      {propertyListings.map((prop) => (
+                        <MarketPropertyCard key={prop.id} property={prop} />
+                      ))}
+                    </div>
+                  ) : (
+                    /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
+                    <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                      {propertyListings.map((prop) => (
+                        <MarketPropertyCard key={prop.id} property={prop} />
+                      ))}
+                    </HorizontalCarousel>
+                  )}
                 </div>
               </div>
             )}

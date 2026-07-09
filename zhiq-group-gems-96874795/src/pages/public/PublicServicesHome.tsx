@@ -9,6 +9,7 @@ import { SellServiceCTA } from "@/components/services/SellServiceCTA";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { Wrench, Loader2 } from "lucide-react";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { resolveServiceTypeIcon, resolveServiceTypeLabel } from "@/lib/services/serviceCategories";
 
 export default function PublicServicesHome() {
@@ -165,11 +166,21 @@ export default function PublicServicesHome() {
             </div>
           ) : (
             <div className="px-4 lg:px-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredServices.map((s) => (
-                  <MarketServiceCard key={s.id} service={s} />
-                ))}
-              </div>
+              {categoryFilter !== "all" ? (
+                /* Categoria selecionada → um card abaixo do outro (posição fixa). */
+                <div className="flex flex-col gap-4 w-[80vw] sm:w-80 mx-auto">
+                  {filteredServices.map((s) => (
+                    <MarketServiceCard key={s.id} service={s} />
+                  ))}
+                </div>
+              ) : (
+                /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
+                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                  {filteredServices.map((s) => (
+                    <MarketServiceCard key={s.id} service={s} />
+                  ))}
+                </HorizontalCarousel>
+              )}
             </div>
           )}
         </div>

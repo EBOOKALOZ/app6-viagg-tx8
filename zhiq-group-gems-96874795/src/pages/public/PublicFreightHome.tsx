@@ -11,6 +11,7 @@ import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafe
 import { Truck, Loader2 } from "lucide-react";
 import { FREIGHT_VEHICLE_TYPES } from "@/lib/freight/vehicleTypes";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 
 export default function PublicFreightHome() {
   const navigate = useNavigate();
@@ -170,11 +171,21 @@ export default function PublicFreightHome() {
             </div>
           ) : (
             <div className="px-4 lg:px-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredFreight.map((s) => (
-                  <MarketFreightCard key={s.id} freight={s} />
-                ))}
-              </div>
+              {vehicleFilter !== "all" ? (
+                /* Categoria selecionada → um card abaixo do outro (posição fixa). */
+                <div className="flex flex-col gap-4 w-[80vw] sm:w-80 mx-auto">
+                  {filteredFreight.map((s) => (
+                    <MarketFreightCard key={s.id} freight={s} />
+                  ))}
+                </div>
+              ) : (
+                /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
+                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                  {filteredFreight.map((s) => (
+                    <MarketFreightCard key={s.id} freight={s} />
+                  ))}
+                </HorizontalCarousel>
+              )}
             </div>
           )}
         </div>

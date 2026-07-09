@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
 import { Plane, Loader2 } from "lucide-react";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
@@ -148,11 +149,23 @@ export default function PublicTravelHome() {
             </div>
           ) : (
             <div className="px-4 lg:px-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filtered.map((tr: any) => (
-                  <MarketTravelCard key={tr.id} travel={tr} />
-                ))}
-              </div>
+              {categoryFilter !== "all" ? (
+                /* Categoria selecionada → cards um abaixo do outro (lista
+                   vertical centrada — posição idêntica em qualquer chip). */
+                <div className="flex flex-col gap-4 w-[80vw] sm:w-80 mx-auto">
+                  {filtered.map((tr: any) => (
+                    <MarketTravelCard key={tr.id} travel={tr} />
+                  ))}
+                </div>
+              ) : (
+                /* Visão geral (Todas) → rolagem HORIZONTAL (mesmo carrossel
+                   do /mercado), deslizando. */
+                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                  {filtered.map((tr: any) => (
+                    <MarketTravelCard key={tr.id} travel={tr} />
+                  ))}
+                </HorizontalCarousel>
+              )}
             </div>
           )}
         </div>

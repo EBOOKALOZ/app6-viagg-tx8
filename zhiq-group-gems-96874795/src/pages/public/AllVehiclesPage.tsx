@@ -8,6 +8,7 @@ import { MarketVehicleCard } from "@/components/advertiser/MarketVehicleCard";
 import { Button } from "@/components/ui/button";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { SlidersHorizontal, Car, Loader2 } from "lucide-react";
 import {
   Sheet,
@@ -290,11 +291,21 @@ export default function AllVehiclesPage() {
             </div>
           ) : (
             <div className="px-4 lg:px-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {sortedVehicles.map(v => (
-                  <MarketVehicleCard key={v.id} vehicle={v} />
-                ))}
-              </div>
+              {brandFilter !== "all" ? (
+                /* Marca selecionada → um card abaixo do outro (posição fixa). */
+                <div className="flex flex-col gap-4 w-[80vw] sm:w-80 mx-auto">
+                  {sortedVehicles.map(v => (
+                    <MarketVehicleCard key={v.id} vehicle={v} />
+                  ))}
+                </div>
+              ) : (
+                /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
+                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                  {sortedVehicles.map(v => (
+                    <MarketVehicleCard key={v.id} vehicle={v} />
+                  ))}
+                </HorizontalCarousel>
+              )}
             </div>
           )}
         </div>

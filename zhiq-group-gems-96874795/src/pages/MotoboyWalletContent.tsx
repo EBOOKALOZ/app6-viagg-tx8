@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Wallet,
   HandCoins,
@@ -75,12 +78,48 @@ const getReferenceLabel = (ref: string | null) => {
 };
 
 export default function MotoboyWalletContent() {
-  const { total, byProfile, isLoading } = useUnifiedBalance();
+  // total (ledger legado) não é mais usado p/ saque — ver withdrawableTotal.
+  const { byProfile, isLoading } = useUnifiedBalance();
   const [filterProfile, setFilterProfile] = useState<string | undefined>();
   const { data: timeline, isLoading: isLoadingTimeline } = useUnifiedTimeline(filterProfile);
 
   const requestPayoutMutation = useRequestPayout();
   const { balance: payBalance, earnings: payEarnings, commission, payouts: payPayouts } = useMotoboyPayWallet();
+
+  // ── SALDO DISPONÍVEL PARA SAQUE = SALDO CONTÁBIL (pay_*) ──────────────────
+  // Esta página atende os 3 perfis (/motoboy, /mototaxi, /driver) → lê a
+  // carteira profissional do usuário no motor pay_* com a MESMA regra de
+  // seleção da RPC professional_request_payout: entre motoboy_wallet /
+  // mototaxi_wallet / driver_wallet (owner = auth.uid), usa a de MAIOR saldo
+  // disponível. Enquanto não existir retenção, available == current; quando
+  // houver, os baldes (available/reserved/pending) refletem automaticamente.
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: proWallet } = useQuery({
+    queryKey: ["professional-wallet-balance", user?.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("pay_financial_accounts")
+        .select("account_type, available_balance, reserved_balance, pending_balance, current_balance")
+        .eq("owner_id", user!.id)
+        .in("account_type", ["motoboy_wallet", "mototaxi_wallet", "driver_wallet"]);
+      if (error) throw error;
+      const rows = (data ?? []) as any[];
+      if (!rows.length) return null;
+      rows.sort((a, b) => Number(b.available_balance || 0) - Number(a.available_balance || 0));
+      const w = rows[0];
+      return {
+        availableCents: Math.round(Number(w.available_balance || 0) * 100),
+        reservedCents: Math.round(Number(w.reserved_balance || 0) * 100),
+        pendingCents: Math.round(Number(w.pending_balance || 0) * 100),
+        totalCents: Math.round(Number(w.current_balance || 0) * 100),
+      };
+    },
+    enabled: !!user?.id,
+    staleTime: 0,
+  });
+  const walletBuckets = proWallet ?? payBalance;
+  const withdrawableTotal = walletBuckets.availableCents / 100;
   const { bankData, isLoading: isBankLoading, refetch: refetchBankData, hasPixData, hasBankAccountData } = useBankData();
 
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
@@ -96,17 +135,33 @@ export default function MotoboyWalletContent() {
       toast.error("Valor inválido");
       return;
     }
-    if (amountValue > total) {
+    if (amountValue > withdrawableTotal) {
       toast.error("Saldo insuficiente");
       return;
     }
     try {
-      await requestPayoutMutation.mutateAsync(Math.round(amountValue * 100));
-      toast.success("Solicitação de saque enviada!");
+      const result = await requestPayoutMutation.mutateAsync(Math.round(amountValue * 100));
+      if (result?.environment === "sandbox") {
+        toast.success("Saque registrado em ambiente Sandbox.", {
+          description: "Nenhuma transferência real foi executada.",
+          duration: 7000,
+        });
+      } else {
+        toast.success("Solicitação de saque enviada!", {
+          description: `Reserva de ${formatCurrency(result?.amount ?? amountValue)} registrada — aguardando processamento.`,
+        });
+      }
       setPayoutModalOpen(false);
       setPayoutAmount("");
-    } catch {
-      toast.error("Erro ao solicitar saque");
+      // Reserva muda available/reserved na hora → atualiza os cards.
+      queryClient.invalidateQueries({ queryKey: ["professional-wallet-balance"] });
+    } catch (err: any) {
+      // Diagnóstico: exibe a CAUSA REAL (RLS/constraint/permissão/rede) —
+      // nunca só "Erro ao solicitar saque". Detalhe completo no console.
+      toast.error("Não foi possível solicitar o saque", {
+        description: err?.message || String(err),
+        duration: 10000,
+      });
     }
   };
 
@@ -132,7 +187,7 @@ export default function MotoboyWalletContent() {
             </div>
           ) : (
             <p className="text-4xl font-extrabold tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
-              {formatCurrency(total)}
+              {formatCurrency(withdrawableTotal)}
             </p>
           )}
 
@@ -140,7 +195,7 @@ export default function MotoboyWalletContent() {
             size="lg"
             className="bg-white text-motoboy hover:bg-white/90 font-semibold shadow-md transition-transform active:scale-95"
             onClick={() => setPayoutModalOpen(true)}
-            disabled={total <= 0}
+            disabled={withdrawableTotal <= 0}
           >
             <HandCoins className="h-5 w-5 mr-2" />
             Sacar agora
@@ -151,10 +206,10 @@ export default function MotoboyWalletContent() {
       {/* ==================== PAY BALANCE BREAKDOWN (4 baldes contábeis) ==================== */}
       <BalanceCard
         title="Saldo da carteira (contábil)"
-        availableCents={payBalance.availableCents}
-        reservedCents={payBalance.reservedCents}
-        pendingCents={payBalance.pendingCents}
-        currentCents={payBalance.totalCents}
+        availableCents={walletBuckets.availableCents}
+        reservedCents={walletBuckets.reservedCents}
+        pendingCents={walletBuckets.pendingCents}
+        currentCents={walletBuckets.totalCents}
         isLoading={isLoading}
       />
 
@@ -408,7 +463,7 @@ export default function MotoboyWalletContent() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Solicitar Saque</DialogTitle>
-            <DialogDescription>Saldo disponível: {formatCurrency(total)}</DialogDescription>
+            <DialogDescription>Saldo disponível: {formatCurrency(withdrawableTotal)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -422,7 +477,7 @@ export default function MotoboyWalletContent() {
                 onChange={(e) => setPayoutAmount(e.target.value.replace(/[^0-9,\.]/g, ""))}
               />
             </div>
-            {parseFloat(payoutAmount.replace(",", ".")) > total && (
+            {parseFloat(payoutAmount.replace(",", ".")) > withdrawableTotal && (
               <p className="text-sm text-destructive">Saldo insuficiente</p>
             )}
           </div>
@@ -435,7 +490,7 @@ export default function MotoboyWalletContent() {
               disabled={
                 requestPayoutMutation.isPending ||
                 !payoutAmount ||
-                parseFloat(payoutAmount.replace(",", ".")) > total ||
+                parseFloat(payoutAmount.replace(",", ".")) > withdrawableTotal ||
                 parseFloat(payoutAmount.replace(",", ".")) <= 0
               }
               className="bg-motoboy hover:bg-motoboy-hover"

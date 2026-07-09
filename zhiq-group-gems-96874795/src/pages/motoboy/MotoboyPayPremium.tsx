@@ -4,6 +4,8 @@
  * Consumes 3 motoboy views + existing payout flow
  */
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { requestPayout as requestProfessionalPayout } from "@/lib/payments/payoutService";
 import {
   Wallet, TrendingUp, Clock, Loader2, Banknote,
   ArrowUpRight, ArrowDownRight, Info, Landmark, AlertCircle,
@@ -94,18 +96,44 @@ export default function MotoboyPayPremium() {
 
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [amount, setAmount] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const queryClient = useQueryClient();
 
   const isLoading = isLoadingW;
 
-  const handleRequestPayout = () => {
-    // Placeholder — uses existing payout flow in the background
+  // Saque REAL via arquitetura padrão do motor: RPC professional_request_payout
+  // (reserva payout_reserve no ledger; perfil/carteira resolvidos no servidor).
+  const handleRequestPayout = async () => {
     const val = parseFloat(amount.replace(",", "."));
-    console.log('[DEBUG MotoboyPayPremium] Requesting payout of', val, 'Current available:', wallet?.available_balance);
     if (isNaN(val) || val <= 0) { toast.error("Valor inválido"); return; }
     if (val > (wallet?.available_balance ?? 0)) { toast.error("Saldo insuficiente"); return; }
-    toast.info("Funcionalidade de saque será integrada na próxima fase.");
-    setWithdrawModal(false);
-    setAmount("");
+    setRequesting(true);
+    try {
+      const result = await requestProfessionalPayout({ amountBrl: val });
+      if (result.environment === "sandbox") {
+        toast.success("Saque registrado em ambiente Sandbox.", {
+          description: "Nenhuma transferência real foi executada.",
+          duration: 7000,
+        });
+      } else {
+        toast.success("Solicitação de saque enviada!", {
+          description: "Reserva registrada — aguardando processamento.",
+        });
+      }
+      setWithdrawModal(false);
+      setAmount("");
+      queryClient.invalidateQueries({ queryKey: ["motoboy-wallet-overview"] });
+      queryClient.invalidateQueries({ queryKey: ["motoboy-payouts-detailed"] });
+      queryClient.invalidateQueries({ queryKey: ["motoboy-pay-balance"] });
+    } catch (err: any) {
+      // Nunca ocultar a causa real (padrão de auditoria do módulo de saque).
+      toast.error("Não foi possível solicitar o saque", {
+        description: err?.message || String(err),
+        duration: 10000,
+      });
+    } finally {
+      setRequesting(false);
+    }
   };
 
   return (
@@ -304,8 +332,9 @@ export default function MotoboyPayPremium() {
             <Button
               className="bg-orange-500 hover:bg-orange-600 text-white"
               onClick={handleRequestPayout}
+              disabled={requesting}
             >
-              Confirmar Saque
+              {requesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar Saque"}
             </Button>
           </DialogFooter>
         </DialogContent>

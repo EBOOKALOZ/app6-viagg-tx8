@@ -104,7 +104,7 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
 
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <div className="text-sky-600 font-black text-lg tracking-tighter truncate">
+              <div className="text-sky-600 font-black text-lg tracking-tighter break-words">
                 {priceDisplay}
               </div>
               {!!travel.duration_days && (
@@ -114,13 +114,13 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
               )}
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-zinc-900 leading-snug line-clamp-2 break-words group-hover:text-sky-600 transition-colors">
+              <h3 className="font-bold text-zinc-900 leading-snug break-words group-hover:text-sky-600 transition-colors">
                 {travel.title}
               </h3>
               {(travel.destination || travel.city) && (
-                <div className="flex items-center gap-1.5 text-zinc-700 font-bold text-[10px] uppercase tracking-wider">
-                  <MapPin className="w-3 h-3 text-sky-600 shrink-0" />
-                  <span className="truncate">
+                <div className="flex items-start gap-1.5 text-zinc-700 font-bold text-[10px] uppercase tracking-wider">
+                  <MapPin className="w-3 h-3 text-sky-600 shrink-0 mt-[1px]" />
+                  <span className="break-words leading-snug">
                     {travel.destination ? `${travel.destination}` : ''}
                     {travel.city ? ` · ${travel.city}` : ''}
                     {travel.state ? `, ${travel.state}` : ''}
@@ -136,18 +136,20 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
             </div>
             <div className="flex items-center gap-2 pt-2 border-t border-yellow-300">
               <span className="text-lg shrink-0">{emoji}</span>
-              <span className="text-xs font-bold text-zinc-700 truncate">{travel.category}</span>
+              <span className="text-xs font-bold text-zinc-700 break-words">{travel.category}</span>
             </div>
           </CardContent>
 
           <CardFooter className="px-5 pb-6 pt-0">
+            {/* Mobile-safe: sem nowrap/padding largo — o texto "TENHO INTERESSE"
+                aparece inteiro mesmo em card estreito (grid 2 col no celular). */}
             <Button
               onClick={handleInterest}
-              className="w-full bg-sky-400 hover:bg-sky-500 text-white rounded-2xl font-black text-sm h-12 group/btn shadow-lg"
+              className="w-full bg-sky-400 hover:bg-sky-500 text-white rounded-2xl font-black text-xs sm:text-sm h-12 px-2 gap-1.5 group/btn shadow-lg"
             >
-              <Plane className="w-4 h-4 mr-2" />
-              TENHO INTERESSE
-              <ChevronRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+              <Plane className="hidden sm:block w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">TENHO INTERESSE</span>
+              <ChevronRight className="hidden sm:block w-4 h-4 shrink-0 group-hover/btn:translate-x-1 transition-transform" />
             </Button>
           </CardFooter>
         </Card>

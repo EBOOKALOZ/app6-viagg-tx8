@@ -235,6 +235,9 @@ export default function SolicitarCorrida() {
   // tracking e pelo AcceptedRideCard. Capturada na criação p/ não seguir
   // mudanças posteriores do seletor de serviço.
   const [orderTable, setOrderTable] = useState<RideTable>("service_orders");
+  // Cancelar chamada durante a busca (confirmação + envio)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // Localização
   const [center,      setCenter]      = useState<LatLng>(DEFAULT_CENTER);
@@ -678,6 +681,43 @@ export default function SolicitarCorrida() {
     return () => { alive = false; supabase.removeChannel(ch); };
   }, [orderId, orderTable, step]);
 
+  // ── Cancelar chamada DURANTE a busca ──────────────────────────────────────
+  // A RPC cancel_ride_search é o árbitro atômico cancelar×aceitar: só cancela
+  // se nenhum profissional aceitou (UPDATE condicional no servidor). Ao sair
+  // do step "searching", o cleanup do useEffect acima encerra a subscription
+  // realtime — nada segue rodando em segundo plano.
+  async function handleCancelSearch() {
+    if (!orderId || cancelling) return;
+    setCancelling(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("cancel_ride_search", {
+        p_order_id: orderId,
+        p_service: dispatchFor(service).serviceType,
+      });
+      if (error) throw new Error(error.message);
+      if (data?.cancelled) {
+        localStorage.removeItem("viagg_customer_order");
+        setCancelDialogOpen(false);
+        setOrderId(null);
+        setSelectedDriver(undefined);
+        setStep("map");
+        toast.success("Chamada cancelada com sucesso.");
+      } else if (data?.reason === "accepted") {
+        // O aceite venceu a corrida — segue para o card do profissional.
+        setCancelDialogOpen(false);
+        setStep("found");
+        toast.info("Um profissional acabou de aceitar sua chamada!");
+      } else {
+        setCancelDialogOpen(false);
+        toast.info("Esta chamada não está mais em busca.");
+      }
+    } catch (e: any) {
+      toast.error("Não foi possível cancelar", { description: e?.message });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   async function handleSearch() {
     if (!origin || !destination) return;
     // Precisa de mini-conta (link mágico) para entrar no motor real e pagar depois
@@ -1073,6 +1113,43 @@ export default function SolicitarCorrida() {
               <span className={`text-sm ${c.done ? "text-white" : "text-[#A7B0BE]"}`}>{c.label}</span>
             </div>
           ))}
+
+          {/* Cancelar chamada — só existe enquanto está em busca; ao aceitar,
+              o step muda e o botão some junto com esta tela. */}
+          <button
+            onClick={() => setCancelDialogOpen(true)}
+            disabled={cancelling}
+            className="mt-6 flex items-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 px-5 py-2.5 text-sm font-bold text-red-400 transition-all hover:bg-red-500/20 active:scale-95 disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+            Cancelar Chamada
+          </button>
+
+          {/* Confirmação do cancelamento */}
+          {cancelDialogOpen && (
+            <div className="absolute inset-0 z-[1004] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#151A21] p-5 space-y-4">
+                <h3 className="text-lg font-black text-white">Cancelar chamada?</h3>
+                <p className="text-sm text-[#A7B0BE]">A busca será interrompida imediatamente.</p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setCancelDialogOpen(false)}
+                    disabled={cancelling}
+                    className="flex-1 rounded-2xl border border-white/15 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-white/5 disabled:opacity-50"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    onClick={handleCancelSearch}
+                    disabled={cancelling}
+                    className="flex-1 rounded-2xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-red-600 active:scale-95 disabled:opacity-60"
+                  >
+                    {cancelling ? "Cancelando…" : "Cancelar Chamada"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
