@@ -225,8 +225,8 @@ export default function MotoboyGroupsContent() {
     }
     const confirmMsg =
       inactiveGroups.length === 1
-        ? 'Excluir o grupo inativo? Esta ação remove o grupo do seu inventário permanentemente.'
-        : `Excluir os ${inactiveGroups.length} grupos inativos? Esta ação remove os grupos do seu inventário permanentemente.`;
+        ? 'Excluir definitivamente o grupo inativo? Esta ação remove o grupo permanentemente do sistema.'
+        : `Excluir definitivamente os ${inactiveGroups.length} grupos inativos? Esta ação remove os grupos permanentemente do sistema.`;
     if (!confirm(confirmMsg)) return;
 
     try {
@@ -234,16 +234,16 @@ export default function MotoboyGroupsContent() {
       const { error } = await (supabase
         .from('whatsapp_groups') as any)
         .delete()
-        .in('id', ids)
-        .eq('owner_user_id', user.id); // safety: só os do próprio motoboy
+        .in('id', ids);
 
       if (error) throw error;
-      toast.success(`${ids.length} grupo${ids.length > 1 ? 's' : ''} inativo${ids.length > 1 ? 's' : ''} removido${ids.length > 1 ? 's' : ''}.`);
+      setGroups(prev => prev.filter(g => !ids.includes(g.id)));
+      toast.success(`${ids.length} grupo${ids.length > 1 ? 's' : ''} inativo${ids.length > 1 ? 's' : ''} excluído${ids.length > 1 ? 's' : ''} definitivamente.`);
       fetchGroups();
       queryClient.invalidateQueries({ queryKey: ['motoboy-commission', user.id] });
     } catch (err: any) {
       console.error('[clearInactive] error:', err);
-      toast.error(`Erro ao limpar inativos: ${err?.message || 'erro desconhecido'}`);
+      toast.error(`Erro ao excluir inativos: ${err?.message || 'erro desconhecido'}`);
     }
   };
 
@@ -253,14 +253,11 @@ export default function MotoboyGroupsContent() {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
+    // Membros é INFORMATIVO (alimenta o score do RADAR IA) — quem decide
+    // se o grupo vale para a comissão é a IA, não a contagem declarada.
     const membros = parseInt(newGroupMembros, 10);
-    if (!Number.isFinite(membros) || membros < 90) {
-      // RECUSA com motivo VISÍVEL no formulário (caixa vermelha), não só toast
-      setLinkDuplicateError(
-        `❌ Grupo recusado: ${Number.isFinite(membros) ? membros : 0} membros informados — o mínimo é 90. ` +
-        'Grupos pequenos não geram alcance de divulgação e não reduzem sua comissão. ' +
-        'Faça o grupo crescer até 90+ membros e vincule de novo.',
-      );
+    if (!Number.isFinite(membros) || membros < 1) {
+      toast.error('Informe o número aproximado de membros do grupo');
       return;
     }
     setIsSubmitting(true);
@@ -303,6 +300,7 @@ export default function MotoboyGroupsContent() {
         .from('whatsapp_groups') as any)
         .insert({
           owner_user_id: user.id,
+          user_id: user.id,
           group_link: newGroupLink.trim(),
           city_name: newGroupCidade,
           group_name: newGroupCidade, // use city as default name
@@ -407,7 +405,7 @@ export default function MotoboyGroupsContent() {
                   </p>
                 </div>
                 <div>
-                  <Label>Nº de membros do grupo * (mínimo 90)</Label>
+                  <Label>Nº aproximado de membros *</Label>
                   <Input
                     inputMode="numeric"
                     value={newGroupMembros}
@@ -416,7 +414,7 @@ export default function MotoboyGroupsContent() {
                     className="mt-1"
                   />
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Só grupos com <strong>90+ membros</strong> podem ser vinculados — e cada um reduz sua comissão (auditado pelo RADAR IA).
+                    Informativo — o <strong>RADAR IA audita</strong> a qualidade do grupo. Grupo vinculado já conta na sua comissão; a IA remove só o que averiguar como problema (link quebrado, duplicado, abandonado, suspeito).
                   </p>
                 </div>
                 <div>
@@ -630,13 +628,26 @@ export default function MotoboyGroupsContent() {
                           {/* ACÇÕES RÁPIDAS */}
                           <div className="flex gap-2">
                             <a href={group.link} target="_blank" rel="noopener noreferrer" className="p-2 border rounded-md hover:bg-muted text-muted-foreground"><ExternalLink className="h-3 w-3" /></a>
-                            <button onClick={async () => {
-                              if (!confirm('Ocultar este grupo? Ele perderá efeito.')) return;
-                              await (supabase.from('whatsapp_groups') as any).update({ validation_status: 'inactive', is_active: false, is_valid: false, valid_for_commission: false }).eq('id', group.id);
-                              fetchGroups();
-                              // Force commission recalculation immediately
-                              queryClient.invalidateQueries({ queryKey: ['motoboy-commission', user?.id] });
-                            }} className="p-2 border border-red-200 bg-red-50 text-red-500 rounded-md hover:bg-red-100 dark:border-red-900 dark:bg-red-950">
+                            <button
+                              title="Excluir grupo definitivamente"
+                              onClick={async () => {
+                                if (!confirm(`Excluir definitivamente o grupo "${group.cidade}"? Esta ação removerá o grupo em definitivo do seu inventário.`)) return;
+                                try {
+                                  const { error } = await (supabase.from('whatsapp_groups') as any)
+                                    .delete()
+                                    .eq('id', group.id);
+                                  if (error) throw error;
+                                  toast.success('Grupo excluído definitivamente.');
+                                  setGroups(prev => prev.filter(g => g.id !== group.id));
+                                  fetchGroups();
+                                  queryClient.invalidateQueries({ queryKey: ['motoboy-commission', user?.id] });
+                                } catch (err: any) {
+                                  console.error('[Delete Group] error:', err);
+                                  toast.error(`Erro ao excluir grupo: ${err?.message || 'erro desconhecido'}`);
+                                }
+                              }}
+                              className="p-2 border border-red-200 bg-red-50 text-red-500 rounded-md hover:bg-red-100 dark:border-red-900 dark:bg-red-950"
+                            >
                               <Trash2 className="h-3 w-3" />
                             </button>
                           </div>
