@@ -128,7 +128,13 @@ export async function mpCharge(
           currency_id: "BRL",
         }],
         external_reference: input.reference,
-        ...(input.payer_email ? { payer: { email: input.payer_email } } : {}),
+        // Sandbox: NÃO pinar o payer — se o e-mail for o dono da conta MP,
+        // a API recusa com 403 "At least one policy returned UNAUTHORIZED"
+        // (ninguém paga a si mesmo). O comprador de TESTE se identifica na
+        // própria página hospedada. Em produção o payer segue pinado.
+        ...(input.payer_email && !input.sandbox
+          ? { payer: { email: input.payer_email } }
+          : {}),
         ...(input.notification_url
           ? { notification_url: input.notification_url }
           : {}),

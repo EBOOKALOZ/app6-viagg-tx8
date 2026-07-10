@@ -12,7 +12,13 @@
  * VITE_MERCADOPAGO_PUBLIC_KEY configurada.
  */
 export function isEmbeddedCardCheckout(): boolean {
-  return import.meta.env.VITE_MP_EMBEDDED_CHECKOUT === "true";
+  // DESATIVADO em 2026-07-11: o Payment Brick embutido travava em
+  // "Carregando…" no navegador do usuário (funciona em Chrome limpo —
+  // diagnóstico via /teste-brick), então o cartão volta ao Checkout Pro
+  // hospedado do MP, que é o fluxo original e estável. Para reativar o
+  // embutido, volte a retornar a condição da env abaixo.
+  return false;
+  // return import.meta.env.VITE_MP_EMBEDDED_CHECKOUT === "true";
 }
 
 /** Chave pública do Mercado Pago (tokenização client-side). */
