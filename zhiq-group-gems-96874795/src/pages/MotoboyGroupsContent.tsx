@@ -254,8 +254,10 @@ export default function MotoboyGroupsContent() {
       return;
     }
     const membros = parseInt(newGroupMembros, 10);
-    if (!Number.isFinite(membros) || membros < 1) {
-      toast.error('Informe o número de membros do grupo');
+    if (!Number.isFinite(membros) || membros < 90) {
+      toast.error('O grupo precisa ter no mínimo 90 membros', {
+        description: 'Grupos menores não podem ser vinculados (regra da plataforma, auditada pelo RADAR IA).',
+      });
       return;
     }
     setIsSubmitting(true);
@@ -402,7 +404,7 @@ export default function MotoboyGroupsContent() {
                   </p>
                 </div>
                 <div>
-                  <Label>Nº de membros do grupo *</Label>
+                  <Label>Nº de membros do grupo * (mínimo 90)</Label>
                   <Input
                     inputMode="numeric"
                     value={newGroupMembros}
@@ -411,7 +413,7 @@ export default function MotoboyGroupsContent() {
                     className="mt-1"
                   />
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Grupos com <strong>90+ membros</strong> contam para reduzir sua comissão (auditado).
+                    Só grupos com <strong>90+ membros</strong> podem ser vinculados — e cada um reduz sua comissão (auditado pelo RADAR IA).
                   </p>
                 </div>
                 <div>
