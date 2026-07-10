@@ -494,37 +494,12 @@ export default function SolicitarCorrida() {
         .sort((a, b) => a.distanceKm - b.distanceKm)
         .filter(d => d.distanceKm <= 15);
 
-      // Se não houver nenhum motoboy real cadastrado nessa região, adiciona mocks próximos (dentro de 2km)
-      if (sorted.length === 0) {
-        const mocks = getMockDriversNearby(center, 3).map(m => {
-          const angle = Math.random() * 2 * Math.PI;
-          const radius = Math.random() * 0.015; // dentro de ~1.8km do centro
-          const lat = center.lat + radius * Math.cos(angle);
-          const lng = center.lng + radius * Math.sin(angle);
-          return {
-            ...m,
-            type: service as any,
-            latLng: { lat, lng }
-          };
-        });
-
-        const mocksWithDistance = mocks.map(m => {
-          const dist = haversineKm(center, m.latLng);
-          return {
-            ...m,
-            distanceKm: parseFloat(dist.toFixed(2)),
-            etaMin: Math.max(1, Math.round(dist * 2)),
-          };
-        }).sort((a, b) => a.distanceKm - b.distanceKm);
-
-        setDrivers(mocksWithDistance);
-      } else {
-        setDrivers(sorted);
-      }
+      // Exibe apenas autônomos reais cadastrados
+      setDrivers(sorted);
 
     } catch (err) {
-      console.warn("Erro ao buscar motoboys reais:", err);
-      setDrivers(getMockDriversNearby(center, 5));
+      console.warn("Erro ao buscar profissionais reais:", err);
+      setDrivers([]);
     }
   }, [center, service]);
 

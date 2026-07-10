@@ -202,11 +202,8 @@ RETURNS TABLE (
          g.neighborhood, g.members_count, g.is_active, g.validation_status,
          g.invalid_reason, g.created_at, g.last_posted_at,
          g.owner_user_id, p.name,
-         -- moto-táxi compartilha o cadastro de motoboy (despacho unificado);
-         -- o rótulo distinto vem quando houver tabela própria
-         CASE WHEN EXISTS (SELECT 1 FROM public.driver_profiles  m WHERE m.user_id = g.owner_user_id) THEN 'motorista'
-              WHEN EXISTS (SELECT 1 FROM public.motoboy_profiles m WHERE m.user_id = g.owner_user_id) THEN 'motoboy'
-              ELSE 'outro' END,
+         -- Os grupos da tabela whatsapp_groups são exclusivos do perfil Motoboy
+         'motoboy'::text,
          COALESCE(s.score, 0), COALESCE(s.classification, '—'),
          COALESCE(s.commercial_potential, 0),
          COALESCE(s.recommendation, 'sem_analise'), s.ai_explanation, s.factors
@@ -256,9 +253,7 @@ RETURNS TABLE (
      GROUP BY g.owner_user_id
   )
   SELECT a.owner_user_id, p.name,
-         CASE WHEN EXISTS (SELECT 1 FROM public.driver_profiles  m WHERE m.user_id = a.owner_user_id) THEN 'motorista'
-              WHEN EXISTS (SELECT 1 FROM public.motoboy_profiles m WHERE m.user_id = a.owner_user_id) THEN 'motoboy'
-              ELSE 'outro' END,
+         'motoboy'::text,
          a.grupos, a.aprovados, a.rejeitados, a.score_medio, a.membros, a.desde,
          ROUND(100.0 * a.aprovados / NULLIF(a.grupos,0), 1) AS confiabilidade,
          CASE WHEN a.score_medio >= 85 AND a.grupos >= 5 THEN 'Ouro'

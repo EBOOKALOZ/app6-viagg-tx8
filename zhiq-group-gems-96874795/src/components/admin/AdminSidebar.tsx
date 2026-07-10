@@ -46,6 +46,7 @@ import {
   Radio,
   MapPin,
   Radar,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -141,6 +142,7 @@ const menuSections: MenuSection[] = [
     items: [
       { title: "Comissão Inteligente", url: "/admin/comissao-inteligente", icon: Target },
       { title: "RADAR IA", url: "/admin/radar-ia", icon: Radar, badge: "IA" },
+      { title: "Moderação IA", url: "/admin/moderacao-ia", icon: ShieldCheck, badge: "IA" },
       { title: "Hub de Profissionais", url: "/admin/profissionais-hub", icon: Users, badge: "HUB" },
       { title: "Finanças Motoboy", url: "/admin/motoboy-financeiro", icon: Bike, badge: "MOTO" },
       { title: "Finanças Moto Táxi", url: "/admin/moto-taxi-financeiro", icon: Zap, badge: "TÁXI" },

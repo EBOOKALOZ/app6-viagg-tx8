@@ -93,6 +93,7 @@ import {
   AdminPostingQueuePage,
   AdminCommissionIntelligence,
   AdminRadarIA,
+  AdminModeracaoIA,
   AdminProfessionalsHub,
   AdminProfessionalIndividualPage,
   AdminMotoboyFinanceiro,
@@ -151,6 +152,7 @@ export const adminRoutes = (
       <Route path="/admin/creditos" element={<AdminCreditsModule />} />
       <Route path="/admin/comissao-inteligente" element={<AdminCommissionIntelligence />} />
       <Route path="/admin/radar-ia" element={<AdminRadarIA />} />
+      <Route path="/admin/moderacao-ia" element={<AdminModeracaoIA />} />
       <Route path="/admin/motoboy-financeiro" element={<AdminMotoboyFinanceiro />} />
       <Route path="/admin/moto-taxi-financeiro" element={<AdminMotoTaxiFinanceiro />} />
       <Route path="/admin/motorista-financeiro" element={<AdminMotoristaFinanceiro />} />

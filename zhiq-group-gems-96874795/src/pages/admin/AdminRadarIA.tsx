@@ -129,7 +129,10 @@ export default function AdminRadarIA() {
     queryFn: async (): Promise<GroupRow[]> => {
       const { data, error } = await rpc("radar_list_groups", { p_limit: 500 });
       if (error) throw new Error(error.message);
-      return (data ?? []) as GroupRow[];
+      return ((data ?? []) as GroupRow[]).map((g) => ({
+        ...g,
+        profile_kind: "motoboy",
+      }));
     },
     refetchInterval: 30_000,
   });
@@ -149,7 +152,10 @@ export default function AdminRadarIA() {
     queryFn: async (): Promise<RankingRow[]> => {
       const { data, error } = await rpc("radar_ranking");
       if (error) throw new Error(error.message);
-      return (data ?? []) as RankingRow[];
+      return ((data ?? []) as RankingRow[]).map((r) => ({
+        ...r,
+        profile_kind: "motoboy",
+      }));
     },
     refetchInterval: 60_000,
   });
@@ -437,8 +443,8 @@ export default function AdminRadarIA() {
           {["motoboy", "motorista", "outro"].map((kind) => {
             const rows = (rankingQ.data ?? []).filter((r) => r.profile_kind === kind);
             if (rows.length === 0) return null;
-            const titulo = kind === "motoboy" ? "🏍️ Motoboys / Moto-Táxis"
-              : kind === "motorista" ? "🚗 Motoristas" : "Outros perfis";
+            const titulo = kind === "motoboy" ? "🏍️ Motoboy"
+              : kind === "motorista" ? "🚗 Motorista" : "Outros perfis";
             return (
               <Card key={kind}>
                 <CardHeader className="pb-2">

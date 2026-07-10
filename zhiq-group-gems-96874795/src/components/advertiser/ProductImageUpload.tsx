@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -562,33 +563,49 @@ export const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
           }
         }
 
-        const { error: uploadError } = await supabase.storage
-          .from('marketing-materials')
-          .upload(filePath, uploadBlob, {
-            contentType: 'image/jpeg',
-            upsert: false,
+        // ── IA DE MODERAÇÃO: porta ÚNICA de upload. A imagem só toca o
+        // storage DEPOIS do veredito (bloqueada = nunca armazenada;
+        // dúvida = quarentena privada até o admin decidir).
+        const mod = await moderatedUpload(uploadBlob, {
+          fileName,
+          mime: 'image/jpeg',
+          listingId,
+        });
+
+        if (mod.status === 'blocked') {
+          toast.error(`Imagem "${file.name}" bloqueada pela moderação`, {
+            description: mod.reason || 'Conteúdo viola as políticas da plataforma.',
+            duration: 8000,
           });
+          setProgress(Math.round(((i + 1) / fileArray.length) * 100));
+          continue; // as demais imagens do lote seguem normalmente
+        }
 
-        if (uploadError) throw uploadError;
+        if (mod.status === 'manual_review') {
+          toast.warning(`Imagem "${file.name}" retida para revisão`, {
+            description: 'A moderação vai analisar e liberar em breve — ela não aparece no anúncio até lá.',
+            duration: 8000,
+          });
+          setProgress(Math.round(((i + 1) / fileArray.length) * 100));
+          continue;
+        }
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('marketing-materials')
-          .getPublicUrl(filePath);
-
+        // approved → já está no bucket público; registra a mídia
+        const publicUrl = mod.publicUrl!;
         const { data: mediaData, error: mediaError } = await supabase
           .from('advertiser_listing_media')
           .insert({
             listing_id: listingId,
             media_url: publicUrl,
-            storage_path: filePath,
-            moderation_status: 'approved'  // TEMPORÁRIO: auto-approve para testes
+            storage_path: mod.storagePath ?? filePath,
+            moderation_status: 'approved', // aprovado PELA IA (moderate-image)
           })
           .select()
           .single();
 
         if (mediaError) throw mediaError;
 
-        const newImage = { id: mediaData.id, path: publicUrl, storage_path: filePath };
+        const newImage = { id: mediaData.id, path: publicUrl, storage_path: mod.storagePath ?? filePath };
         // Garante que a capa aponte para uma mídia válida (corrige capas quebradas/órfãs)
         await syncListingCover(listingId);
         setUploadedImages(prev => [...prev, newImage]);

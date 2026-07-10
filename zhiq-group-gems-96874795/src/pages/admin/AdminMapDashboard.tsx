@@ -2,8 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { ViaggMap } from "@/components/map/ViaggMap";
-import { getMockDriversNearby } from "@/lib/map/AIMapService";
-import { generateMapInsights } from "@/lib/map/AIMapService";
+import { getRealDriversNearby, generateMapInsights } from "@/lib/map/AIMapService";
 import { Loader2, Activity, Car, Bike, Package, Radio, BrainCircuit } from "lucide-react";
 import type { LatLng, DriverMarker, AIMapInsight } from "@/lib/map/types";
 
@@ -21,29 +20,28 @@ export default function AdminMapDashboard() {
   const [drivers, setDrivers] = useState<DriverMarker[]>([]);
   const [insights, setInsights] = useState<AIMapInsight[]>([]);
   const [filter, setFilter]   = useState<string>("todos");
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const fetchRealData = async () => {
+    try {
+      const all = await getRealDriversNearby(center);
+      setDrivers(all);
+      const ins = await generateMapInsights(all.length, 12, "Brasília");
+      setInsights(ins);
+    } catch (err) {
+      console.error("Erro ao carregar motoristas reais no mapa:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const all = getMockDriversNearby(center, 24);
-    setDrivers(all);
-    generateMapInsights(all.length, 12, "Brasília").then(setInsights);
-  }, []);
-
-  // Simula atualização de posições a cada 4s
-  useEffect(() => {
+    fetchRealData();
     const iv = setInterval(() => {
-      setDrivers((prev) =>
-        prev.map((d) => ({
-          ...d,
-          latLng: {
-            lat: d.latLng.lat + (Math.random() - 0.5) * 0.002,
-            lng: d.latLng.lng + (Math.random() - 0.5) * 0.002,
-          },
-          heading: (d.heading + (Math.random() * 20 - 10) + 360) % 360,
-        }))
-      );
-    }, 4000);
+      fetchRealData();
+    }, 15000);
     return () => clearInterval(iv);
-  }, []);
+  }, [center]);
 
   const filteredDrivers = filter === "todos" ? drivers : drivers.filter((d) => d.type === filter);
 
@@ -63,7 +61,11 @@ export default function AdminMapDashboard() {
         </div>
         <div>
           <h1 className="text-sm font-black text-white">Mapa em Tempo Real — VIAGG-TX8™</h1>
-          <p className="text-[11px] text-[#A7B0BE]">{drivers.length} veículos monitorados · atualizando a cada 4s</p>
+          <p className="text-[11px] text-[#A7B0BE]">
+            {loading
+              ? "Carregando autônomos reais do banco de dados..."
+              : `${drivers.length} autônomos reais monitorados no banco de dados · tempo real`}
+          </p>
         </div>
         <div className="ml-auto flex items-center gap-1.5 bg-green-500/15 border border-green-500/30 rounded-full px-3 py-1">
           <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
@@ -147,21 +149,40 @@ export default function AdminMapDashboard() {
               </div>
             ))}
 
-            {/* Lista de motoristas */}
+            {/* Lista de autônomos reais */}
             <div className="space-y-1.5">
-              <p className="text-[10px] font-bold text-[#A7B0BE] uppercase">Motoristas ({filteredDrivers.length})</p>
-              {filteredDrivers.slice(0, 12).map((d) => {
+              <p className="text-[10px] font-bold text-[#A7B0BE] uppercase">
+                Autônomos Reais ({filteredDrivers.length})
+              </p>
+              {loading && (
+                <div className="p-3 text-center text-xs text-[#A7B0BE] flex items-center justify-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FF6A00]" />
+                  Carregando dados...
+                </div>
+              )}
+              {!loading && filteredDrivers.length === 0 && (
+                <div className="p-3 bg-[#1B1F24] rounded-xl border border-white/5 text-center text-[11px] text-[#A7B0BE]">
+                  Nenhum profissional autônomo encontrado no banco de dados.
+                </div>
+              )}
+              {filteredDrivers.slice(0, 15).map((d) => {
                 const color = TYPE_COLORS[d.type] ?? "#6B7280";
                 return (
-                  <div key={d.id} className="flex items-center gap-2 p-2 bg-[#1B1F24] rounded-xl border border-white/5">
-                    <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                    <span className="text-xs text-white flex-1 truncate">{d.name}</span>
-                    <span className="text-[10px] text-[#A7B0BE]">{d.distanceKm.toFixed(1)}km</span>
+                  <div key={d.id} className="flex flex-col gap-0.5 p-2 bg-[#1B1F24] rounded-xl border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                      <span className="text-xs text-white font-medium flex-1 truncate">{d.name}</span>
+                      <span className="text-[10px] text-[#A7B0BE]">{d.distanceKm.toFixed(1)}km</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-[#A7B0BE] pl-4">
+                      <span className="truncate">{d.vehicle}</span>
+                      <span className="font-mono text-[9px] bg-white/5 px-1.5 py-0.5 rounded text-white/80">{d.plate}</span>
+                    </div>
                   </div>
                 );
               })}
-              {filteredDrivers.length > 12 && (
-                <p className="text-[10px] text-[#A7B0BE] text-center">+{filteredDrivers.length - 12} mais…</p>
+              {filteredDrivers.length > 15 && (
+                <p className="text-[10px] text-[#A7B0BE] text-center">+{filteredDrivers.length - 15} mais…</p>
               )}
             </div>
           </div>
