@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -109,6 +109,9 @@ export function AdminProfessionalIndividualPage() {
           icon: Car,
         };
 
+  const location = useLocation();
+  const stateProf = location.state?.prof;
+
   // ── Consulta do Cadastro do Profissional e Veículo ──
   const { data: profileData, isLoading, refetch } = useQuery({
     queryKey: ["admin-professional-profile-detail", id],
@@ -152,28 +155,55 @@ export function AdminProfessionalIndividualPage() {
         // Mantém veículo retornado
       }
 
-      const realName = prof?.name && prof?.name.trim() !== "" ? prof.name : `Profissional #${id.slice(0, 8)}`;
-      const realPhone = prof?.phone || "Não informado";
-      const realEmail = prof?.email || "Não informado";
-      const realCidade = prof?.cidade || "Não informada";
-      const realEstado = prof?.estado || "BR";
-      const realCpf = prof?.cpf || "Não informado";
-      const realAvatar = prof?.avatar_url || DEFAULT_AVATARS[profileType];
+      const realName =
+        prof?.name && prof?.name.trim() !== ""
+          ? prof.name
+          : stateProf?.name && stateProf?.name.trim() !== ""
+          ? stateProf.name
+          : `Profissional #${id.slice(0, 8)}`;
+      const realPhone = prof?.phone || stateProf?.phone || "Não informado";
+      const realEmail = prof?.email || stateProf?.email || "Não informado";
+      const realCidade = prof?.cidade || stateProf?.cidade || "Não informada";
+      const realEstado = prof?.estado || stateProf?.estado || "BR";
+      const realCpf = prof?.cpf || stateProf?.cpf || "Não informado";
+      const realAvatar = prof?.avatar_url || stateProf?.avatar_url || DEFAULT_AVATARS[profileType];
 
       return {
-        id: prof?.id || id,
+        id: prof?.id || stateProf?.id || id,
         name: realName,
         email: realEmail,
         cidade: realCidade,
         estado: realEstado,
         cpf: realCpf,
         avatar_url: realAvatar,
-        created_at: prof?.created_at || new Date().toISOString(),
+        created_at: prof?.created_at || stateProf?.created_at || new Date().toISOString(),
         phone: realPhone,
         vehicle: vehicleInfo,
       };
     },
     enabled: !!id,
+    initialData: stateProf
+      ? {
+          id: stateProf.id || id,
+          name: stateProf.name || `Profissional #${(id || "").slice(0, 8)}`,
+          email: stateProf.email || "Não informado",
+          cidade: stateProf.cidade || "Não informada",
+          estado: stateProf.estado || "BR",
+          cpf: stateProf.cpf || "Não informado",
+          avatar_url: stateProf.avatar_url || DEFAULT_AVATARS[profileType],
+          created_at: stateProf.created_at || new Date().toISOString(),
+          phone: stateProf.phone || "Não informado",
+          vehicle: {
+            model:
+              profileType === "mototaxi" || profileType === "delivery"
+                ? "Veículo Padrão (Moto)"
+                : "Veículo Padrão (Carro)",
+            plate: "Não informada",
+            color: "Não informada",
+            year: "2024",
+          },
+        }
+      : undefined,
   });
 
   const openEditModal = () => {

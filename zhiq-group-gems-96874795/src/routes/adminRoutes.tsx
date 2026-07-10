@@ -155,6 +155,7 @@ export const adminRoutes = (
       <Route path="/admin/profissionais-hub" element={<AdminProfessionalsHub />} />
       <Route path="/admin/profissionais" element={<AdminProfessionalsHub />} />
       <Route path="/admin/profissionais/:profileSlug/:id" element={<AdminProfessionalIndividualPage />} />
+      <Route path="/admin/profissionais/:id" element={<AdminProfessionalIndividualPage />} />
       <Route path="/admin/pay" element={<AdminPayDashboard />} />
       <Route path="/admin/pay/wallets" element={<AdminPayWallets />} />
       <Route path="/admin/pay/ledger" element={<AdminPayLedger />} />

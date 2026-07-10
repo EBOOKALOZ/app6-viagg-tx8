@@ -15,6 +15,8 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { loadMercadoPagoSdk } from "@/lib/payments/mercadopagoSdk";
 
 const BRICK_CONTAINER_ID = "mp-payment-brick-container";
+// Sequencial p/ gerar um container novo a cada montagem do Brick.
+let brickInstanceSeq = 0;
 
 export interface MercadoPagoBrickCheckoutProps {
   /** Chave pública do MP (TEST-... em sandbox | APP_USR-... em produção). */
@@ -59,13 +61,17 @@ export function MercadoPagoBrickCheckout({
         const MercadoPago = await loadMercadoPagoSdk();
         if (cancelled || !hostRef.current) return;
 
+        // Id ÚNICO por montagem: em dev o React monta o efeito 2x
+        // (StrictMode) e, com id fixo, a montagem atrasada agarrava o
+        // container da nova → guerra de removeChild entre os dois Bricks.
+        const containerId = `${BRICK_CONTAINER_ID}-${++brickInstanceSeq}`;
         inner = document.createElement("div");
-        inner.id = BRICK_CONTAINER_ID;
+        inner.id = containerId;
         hostRef.current.appendChild(inner);
 
         const mp = new MercadoPago(publicKey, { locale: "pt-BR" });
         const bricks = mp.bricks();
-        controller = await bricks.create("payment", BRICK_CONTAINER_ID, {
+        controller = await bricks.create("payment", containerId, {
           initialization: {
             amount,
             ...(payerEmail ? { payer: { email: payerEmail } } : {}),
