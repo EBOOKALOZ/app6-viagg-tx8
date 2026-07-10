@@ -117,9 +117,9 @@ export function AdminProfessionalIndividualPage() {
       const { data: prof, error } = await (supabase.from("profiles") as any)
         .select("id, name, email, cidade, estado, cpf, avatar_url, created_at, phone, available_profiles")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         console.warn("Erro buscando perfil do profissional:", error);
       }
 
@@ -127,10 +127,10 @@ export function AdminProfessionalIndividualPage() {
       let vehicleInfo = {
         model:
           profileType === "mototaxi" || profileType === "delivery"
-            ? "Honda CG 160 Titan EX"
-            : "Toyota Corolla 2.0 Hybrid",
-        plate: "ABC-1234",
-        color: "Prata",
+            ? "Veículo Padrão (Moto)"
+            : "Veículo Padrão (Carro)",
+        plate: "Não informada",
+        color: "Não informada",
         year: "2024",
       };
 
@@ -149,25 +149,27 @@ export function AdminProfessionalIndividualPage() {
           };
         }
       } catch {
-        // Fallback mantém veículo padrão do perfil
+        // Mantém veículo retornado
       }
 
-      const rawName = prof?.name && prof.name !== "Profissional Autônomo" ? prof.name : "Carlos Eduardo Souza";
-      const rawPhone = prof?.phone && prof.phone !== "(11) 99999-9999" ? prof.phone : "(11) 98472-1934";
-      const rawEmail =
-        prof?.email && prof.email !== "contato@profissional.com" ? prof.email : "carlos.eduardo@viagg.com.br";
-      const rawAvatar = prof?.avatar_url || DEFAULT_AVATARS[profileType];
+      const realName = prof?.name && prof?.name.trim() !== "" ? prof.name : `Profissional #${id.slice(0, 8)}`;
+      const realPhone = prof?.phone || "Não informado";
+      const realEmail = prof?.email || "Não informado";
+      const realCidade = prof?.cidade || "Não informada";
+      const realEstado = prof?.estado || "BR";
+      const realCpf = prof?.cpf || "Não informado";
+      const realAvatar = prof?.avatar_url || DEFAULT_AVATARS[profileType];
 
       return {
         id: prof?.id || id,
-        name: rawName,
-        email: rawEmail,
-        cidade: prof?.cidade || "São Paulo",
-        estado: prof?.estado || "SP",
-        cpf: prof?.cpf || "394.812.948-10",
-        avatar_url: rawAvatar,
+        name: realName,
+        email: realEmail,
+        cidade: realCidade,
+        estado: realEstado,
+        cpf: realCpf,
+        avatar_url: realAvatar,
         created_at: prof?.created_at || new Date().toISOString(),
-        phone: rawPhone,
+        phone: realPhone,
         vehicle: vehicleInfo,
       };
     },
@@ -402,7 +404,7 @@ export function AdminProfessionalIndividualPage() {
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="Ex.: Carlos Eduardo Souza"
+                placeholder="Nome do profissional"
                 className="text-xs font-medium"
               />
             </div>
@@ -414,7 +416,7 @@ export function AdminProfessionalIndividualPage() {
                 <Input
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  placeholder="(11) 98472-1934"
+                  placeholder="(11) 99999-9999"
                   className="text-xs font-mono"
                 />
               </div>
@@ -423,7 +425,7 @@ export function AdminProfessionalIndividualPage() {
                 <Input
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  placeholder="carlos@exemplo.com"
+                  placeholder="email@profissional.com"
                   className="text-xs font-mono"
                 />
               </div>

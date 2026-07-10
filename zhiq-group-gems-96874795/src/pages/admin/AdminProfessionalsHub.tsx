@@ -155,11 +155,11 @@ export function AdminProfessionalsHub() {
 
         return {
           id: p.id,
-          name: p.name || "Profissional Autônomo",
+          name: (p.name && p.name.trim() !== "" && p.name !== "Profissional Autônomo") ? p.name : `Profissional #${p.id.slice(0, 8)}`,
           email: p.email || "",
           cidade: p.cidade || "Não informada",
-          estado: p.estado || "SP",
-          cpf: p.cpf || "•••.•••.•••-••",
+          estado: p.estado || "BR",
+          cpf: p.cpf || "Não informado",
           avatar_url: p.avatar_url || undefined,
           created_at: p.created_at || new Date().toISOString(),
           profileType,
@@ -268,7 +268,7 @@ export function AdminProfessionalsHub() {
         : prof.profileType === "mototaxi"
         ? "moto-taxi"
         : "motorista";
-    navigate(`/admin/profissionais/${slug}/${prof.id}`);
+    navigate(`/admin/profissionais/${slug}/${prof.id}`, { state: { prof } });
   };
 
   const getProfileBadge = (type: ProfessionalRow["profileType"]) => {
@@ -644,8 +644,13 @@ export function AdminProfessionalsHub() {
                         {/* Ação */}
                         <td className="py-3 px-6 text-right">
                           <Button
+                            type="button"
                             size="sm"
                             variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectProfessional(prof);
+                            }}
                             className="h-8 px-3 text-xs font-bold text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all"
                           >
                             <Eye className="w-3.5 h-3.5 mr-1.5" />

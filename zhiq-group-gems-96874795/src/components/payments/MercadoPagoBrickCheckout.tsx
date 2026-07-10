@@ -38,6 +38,7 @@ export function MercadoPagoBrickCheckout({
 }: MercadoPagoBrickCheckoutProps) {
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
+  const hostRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,13 +46,22 @@ export function MercadoPagoBrickCheckout({
     let cancelled = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let controller: any = null;
+    // O Brick injeta iframes no container. Se o React for o dono desse nó,
+    // qualquer re-render/desmonte dá "removeChild: o nó não é filho" (o MP
+    // trocou os filhos por baixo). Solução: criar o container NA MÃO dentro
+    // de um host estável e removê-lo nós mesmos no cleanup.
+    let inner: HTMLDivElement | null = null;
 
     (async () => {
       try {
         setLoading(true);
         setError(null);
         const MercadoPago = await loadMercadoPagoSdk();
-        if (cancelled) return;
+        if (cancelled || !hostRef.current) return;
+
+        inner = document.createElement("div");
+        inner.id = BRICK_CONTAINER_ID;
+        hostRef.current.appendChild(inner);
 
         const mp = new MercadoPago(publicKey, { locale: "pt-BR" });
         const bricks = mp.bricks();
@@ -96,6 +106,10 @@ export function MercadoPagoBrickCheckout({
             },
           },
         });
+        // create() resolveu depois do desmonte → desfaz na hora.
+        if (cancelled) {
+          try { controller?.unmount?.(); } catch { /* noop */ }
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Falha ao iniciar o checkout.");
@@ -108,6 +122,12 @@ export function MercadoPagoBrickCheckout({
       cancelled = true;
       try {
         controller?.unmount?.();
+      } catch {
+        /* noop */
+      }
+      // Remove o container do Brick fora do React (é DOM nosso, não dele).
+      try {
+        inner?.parentNode?.removeChild(inner);
       } catch {
         /* noop */
       }
@@ -130,8 +150,9 @@ export function MercadoPagoBrickCheckout({
         </div>
       )}
 
-      {/* O Brick é injetado aqui pelo SDK do Mercado Pago */}
-      <div id={BRICK_CONTAINER_ID} />
+      {/* Host estável: o container do Brick é criado/removido manualmente
+          dentro dele (nunca pelo React) — evita o erro de removeChild. */}
+      <div ref={hostRef} />
     </div>
   );
 }
