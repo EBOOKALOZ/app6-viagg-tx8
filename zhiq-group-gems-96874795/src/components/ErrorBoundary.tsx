@@ -9,6 +9,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  componentStack: string | null;
 }
 
 /**
@@ -19,9 +20,10 @@ class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    componentStack: null,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
@@ -43,6 +45,9 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Guarda o rastro de componentes p/ aparecer em "Detalhes técnicos" —
+    // sem isso a tela não diz QUEM quebrou e o diagnóstico vira adivinhação.
+    this.setState({ componentStack: errorInfo?.componentStack ?? null });
 
     if (this.isChunkLoadError(error)) {
       const RELOAD_KEY = 'viagg_chunk_reload_at';
@@ -99,8 +104,15 @@ class ErrorBoundary extends Component<Props, State> {
             {!isSupabaseError && this.state.error && (
               <details className="mt-4 text-left">
                 <summary className="text-xs text-gray-500 cursor-pointer">Detalhes técnicos</summary>
-                <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 overflow-auto max-h-32">
+                <pre className="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 overflow-auto max-h-48 whitespace-pre-wrap">
                   {this.state.error.message}
+                  {this.state.componentStack
+                    ? `\n\n— Componentes (do mais interno ao mais externo):${this.state.componentStack
+                        .split('\n')
+                        .filter(Boolean)
+                        .slice(0, 12)
+                        .join('\n')}`
+                    : ''}
                 </pre>
               </details>
             )}
