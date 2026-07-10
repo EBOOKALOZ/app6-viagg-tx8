@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { parseCoordinates } from "@/lib/coordinateParser";
 import { useAuth } from "@/contexts/AuthContext";
+import { TravelerWalletTopup } from "@/components/wallet/TravelerWalletTopup";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -1127,13 +1128,18 @@ export default function SolicitarCorrida() {
               >
                 Voltar
               </button>
-              <button
-                onClick={() => navigate("/minha-carteira")}
-                className="flex-1 rounded-2xl px-4 py-2.5 text-sm font-black text-white active:scale-95 transition-all"
-                style={{ background: "linear-gradient(90deg,#FF6A00,#FF4500)" }}
-              >
-                Adicionar saldo
-              </button>
+              {/* Formulário de pagamento abre AQUI MESMO (não navega): o
+                  componente traz o próprio diálogo de recarga (PIX/cartão). */}
+              <TravelerWalletTopup
+                label="Adicionar saldo"
+                className="flex-1 rounded-2xl px-4 py-2.5 text-sm font-black text-white active:scale-95 transition-all bg-gradient-to-r from-[#FF6A00] to-[#FF4500] hover:from-[#FF7A10] hover:to-[#FF5510]"
+                onSuccess={() => {
+                  setSaldoDialogOpen(false);
+                  toast.success("Saldo adicionado!", {
+                    description: "Toque em Pagar e Chamar novamente para confirmar a corrida.",
+                  });
+                }}
+              />
             </div>
           </div>
         </div>
