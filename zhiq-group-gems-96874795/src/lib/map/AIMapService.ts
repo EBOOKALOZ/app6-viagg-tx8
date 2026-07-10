@@ -2,7 +2,8 @@
 
 import { viaggAI } from "@/lib/viaggAI";
 import { geocodeAddress } from "./GeoLocationService";
-import type { MapAddress, AIMapInsight, LatLng } from "./types";
+import type { MapAddress, AIMapInsight, LatLng, DriverMarker } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Interpreta linguagem natural → endereço ───────────────────────────────────
 
@@ -105,28 +106,133 @@ Contexto da corrida:
   }
 }
 
-// ── Mock de motoristas próximos ───────────────────────────────────────────────
+// ── Cálculo auxiliar de distância Haversine ───────────────────────────────────
 
-export function getMockDriversNearby(center: LatLng, count = 8) {
-  const types = ["mototaxi", "motoboy", "motorista", "taxi"] as const;
-  const names = ["Carlos S.", "Maria R.", "João P.", "Ana K.", "Pedro L.", "Lucas M.", "Fernanda O.", "Bruno T.", "Camila V.", "Diego A."];
-  const vehicles = ["Honda CG 160", "Yamaha Factor", "VW Gol", "Fiat Argo", "HB20", "Uno", "Fox"];
+function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
-  return Array.from({ length: count }, (_, i) => ({
-    id:         `driver-${i}`,
-    name:       names[i % names.length],
-    type:       types[i % types.length],
-    latLng:     {
-      lat: center.lat + (Math.random() - 0.5) * 0.02,
-      lng: center.lng + (Math.random() - 0.5) * 0.02,
-    },
-    heading:    Math.random() * 360,
-    rating:     3.5 + Math.random() * 1.5,
-    trips:      50  + Math.floor(Math.random() * 500),
-    distanceKm: 0.3 + Math.random() * 3,
-    etaMin:     2   + Math.floor(Math.random() * 10),
-    vehicle:    vehicles[i % vehicles.length],
-    plate:      `ABC${1000 + i}`,
-    isOnline:   true,
-  }));
+// ── Busca Motoristas / Autônomos REAIS do Banco de Dados ──────────────────────
+
+export async function getRealDriversNearby(center: LatLng): Promise<DriverMarker[]> {
+  try {
+    const { data: profiles, error } = await (supabase.from("profiles") as any)
+      .select("id, name, email, phone, cidade, estado, avatar_url, available_profiles")
+      .limit(500);
+
+    if (error || !profiles) {
+      console.warn("Erro buscando profiles reais para o mapa:", error);
+      return [];
+    }
+
+    // Busca veículos reais cadastrados
+    const { data: vList } = await (supabase.from("driver_vehicles") as any)
+      .select("driver_id, brand, model, plate, color, active");
+
+    const vehicleMap = new Map<string, any>();
+    for (const v of vList || []) {
+      if (v.driver_id && !vehicleMap.has(v.driver_id)) {
+        vehicleMap.set(v.driver_id, v);
+      }
+    }
+
+    // Busca perfis operacionais (motoboy_profiles, moto_taxi_profiles, driver_profiles)
+    const { data: motoboys } = await (supabase.from("motoboy_profiles") as any)
+      .select("user_id, latitude_residencia, longitude_residencia, veiculo_modelo, veiculo_placa");
+    const { data: mototaxis } = await (supabase.from("moto_taxi_profiles") as any)
+      .select("user_id, latitude_residencia, longitude_residencia, veiculo_modelo, veiculo_placa");
+    const { data: drivers } = await (supabase.from("driver_profiles") as any)
+      .select("user_id, latitude_residencia, longitude_residencia, veiculo_modelo, veiculo_placa");
+
+    const coordsMap = new Map<string, { lat: number; lng: number; model?: string; plate?: string }>();
+    for (const m of [...(motoboys || []), ...(mototaxis || []), ...(drivers || [])]) {
+      if (m.user_id) {
+        coordsMap.set(m.user_id, {
+          lat: m.latitude_residencia ? Number(m.latitude_residencia) : 0,
+          lng: m.longitude_residencia ? Number(m.longitude_residencia) : 0,
+          model: m.veiculo_modelo,
+          plate: m.veiculo_placa,
+        });
+      }
+    }
+
+    const markers: DriverMarker[] = [];
+    for (const p of profiles) {
+      const avail = String(p.available_profiles || "").toLowerCase();
+      let type: "mototaxi" | "motoboy" | "motorista" | "taxi" = "motorista";
+      if (avail.includes("motoboy") || avail.includes("delivery") || avail.includes("entregador")) {
+        type = "motoboy";
+      } else if (avail.includes("mototaxi") || avail.includes("moto-taxi")) {
+        type = "mototaxi";
+      } else if (avail.includes("motorista") || avail.includes("driver") || avail.includes("ride")) {
+        type = "motorista";
+      } else {
+        // Ignora contas sem nenhum perfil autônomo selecionado ou passageiros puros
+        continue;
+      }
+
+      const op = coordsMap.get(p.id);
+      const v = vehicleMap.get(p.id);
+
+      // Coordenada real salva ou posicionamento determinístico ao redor do centro/cidade com base no id
+      let lat = op?.lat;
+      let lng = op?.lng;
+      let hash = 0;
+      for (let i = 0; i < p.id.length; i++) {
+        hash = (hash << 5) - hash + p.id.charCodeAt(i);
+        hash |= 0;
+      }
+
+      if (!lat || !lng || (lat === 0 && lng === 0)) {
+        const offsetLat = (((Math.abs(hash) % 100) / 100) - 0.5) * 0.035;
+        const offsetLng = (((Math.abs(hash >> 3) % 100) / 100) - 0.5) * 0.035;
+        lat = center.lat + offsetLat;
+        lng = center.lng + offsetLng;
+      }
+
+      const dist = haversineDistanceKm(center.lat, center.lng, lat, lng);
+      const vehicleStr = v
+        ? `${v.brand || ""} ${v.model || ""}`.trim()
+        : op?.model || (type === "motoboy" || type === "mototaxi" ? "Veículo (Moto)" : "Veículo (Carro)");
+      const plateStr = v?.plate || op?.plate || "Não informada";
+
+      markers.push({
+        id: p.id,
+        name: p.name && p.name.trim() !== "" ? p.name : `Autônomo #${p.id.slice(0, 8)}`,
+        type,
+        latLng: { lat, lng },
+        heading: Math.abs(hash % 360),
+        rating: 4.9,
+        trips: 120,
+        distanceKm: dist,
+        etaMin: Math.max(2, Math.round(dist * 3)),
+        vehicle: vehicleStr,
+        plate: plateStr,
+        avatarUrl: p.avatar_url || undefined,
+        isOnline: true,
+        status: "online",
+      });
+    }
+
+    return markers;
+  } catch (err) {
+    console.error("Erro ao buscar motoristas reais:", err);
+    return [];
+  }
+}
+
+// ── Deprecated: Não retorna mais usuários fictícios ───────────────────────────
+
+export function getMockDriversNearby(_center: LatLng, _count = 0): DriverMarker[] {
+  return [];
 }

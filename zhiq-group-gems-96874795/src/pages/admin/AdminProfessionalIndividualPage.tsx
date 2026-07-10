@@ -66,7 +66,7 @@ export function AdminProfessionalIndividualPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Modal de edição do contato & avatar
+  // Modal de edição de todos os dados do autônomo (contato, endereço, avatar, veículo)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -74,6 +74,9 @@ export function AdminProfessionalIndividualPage() {
   const [editAvatarUrl, setEditAvatarUrl] = useState("");
   const [editCidade, setEditCidade] = useState("");
   const [editEstado, setEditEstado] = useState("");
+  const [editVehicleModel, setEditVehicleModel] = useState("");
+  const [editVehiclePlate, setEditVehiclePlate] = useState("");
+  const [editVehicleColor, setEditVehicleColor] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   const location = useLocation();
@@ -121,7 +124,7 @@ export function AdminProfessionalIndividualPage() {
           icon: Car,
         };
 
-  // ── Consulta do Cadastro do Profissional e Veículo ──
+  // ── Consulta completa do Cadastro do Autônomo e Veículo ──
   const { data: profileData, isLoading, refetch } = useQuery({
     queryKey: ["admin-professional-profile-detail", id],
     queryFn: async () => {
@@ -132,10 +135,46 @@ export function AdminProfessionalIndividualPage() {
         .maybeSingle();
 
       if (error) {
-        console.warn("Erro buscando perfil do profissional:", error);
+        console.warn("Erro buscando perfil do autônomo:", error);
       }
 
-      // Busca dados de veículo se cadastrado em vehicles ou fallback inteligente
+      // Busca veículo em driver_vehicles
+      let vData: any = null;
+      try {
+        const { data: dvList } = await (supabase.from("driver_vehicles") as any)
+          .select("brand, model, plate, color, manufacture_year, active")
+          .eq("driver_id", id)
+          .order("active", { ascending: false })
+          .limit(1);
+        if (dvList && dvList.length > 0) {
+          vData = dvList[0];
+        }
+      } catch {
+        // Ignora erro
+      }
+
+      // Busca nos perfis operacionais (motoboy_profiles, moto_taxi_profiles, driver_profiles)
+      let opData: any = null;
+      try {
+        if (profileType === "delivery") {
+          const { data } = await (supabase.from("motoboy_profiles") as any).select("*").eq("user_id", id).maybeSingle();
+          opData = data;
+        } else if (profileType === "mototaxi") {
+          const { data } = await (supabase.from("moto_taxi_profiles") as any).select("*").eq("user_id", id).maybeSingle();
+          if (!data) {
+            const { data: fallbackMoto } = await (supabase.from("motoboy_profiles") as any).select("*").eq("user_id", id).maybeSingle();
+            opData = fallbackMoto;
+          } else {
+            opData = data;
+          }
+        } else {
+          const { data } = await (supabase.from("driver_profiles") as any).select("*").eq("user_id", id).maybeSingle();
+          opData = data;
+        }
+      } catch {
+        // Ignora erro
+      }
+
       let vehicleInfo = {
         model:
           profileType === "mototaxi" || profileType === "delivery"
@@ -146,36 +185,36 @@ export function AdminProfessionalIndividualPage() {
         year: "2024",
       };
 
-      try {
-        const { data: vData } = await (supabase.from("vehicles") as any)
-          .select("brand, model, license_plate, color, year")
-          .eq("driver_id", id)
-          .limit(1);
-
-        if (vData && vData.length > 0) {
-          vehicleInfo = {
-            model: `${vData[0].brand || ""} ${vData[0].model || ""}`.trim() || vehicleInfo.model,
-            plate: vData[0].license_plate || vehicleInfo.plate,
-            color: vData[0].color || vehicleInfo.color,
-            year: String(vData[0].year || vehicleInfo.year),
-          };
-        }
-      } catch {
-        // Mantém veículo retornado
+      if (vData) {
+        vehicleInfo = {
+          model: `${vData.brand || ""} ${vData.model || ""}`.trim() || vehicleInfo.model,
+          plate: vData.plate || vehicleInfo.plate,
+          color: vData.color || vehicleInfo.color,
+          year: String(vData.manufacture_year || vehicleInfo.year),
+        };
+      } else if (opData && (opData.veiculo_modelo || opData.veiculo_placa || opData.modelo || opData.placa)) {
+        vehicleInfo = {
+          model: opData.veiculo_modelo || opData.modelo || vehicleInfo.model,
+          plate: opData.veiculo_placa || opData.placa || vehicleInfo.plate,
+          color: opData.veiculo_cor || opData.cor || vehicleInfo.color,
+          year: String(opData.veiculo_ano || opData.ano || vehicleInfo.year),
+        };
       }
 
       const realName =
         prof?.name && prof?.name.trim() !== ""
           ? prof.name
+          : opData?.nome
+          ? `${opData.nome} ${opData.sobrenome || ""}`.trim()
           : stateProf?.name && stateProf?.name.trim() !== ""
           ? stateProf.name
           : `Profissional #${id.slice(0, 8)}`;
-      const realPhone = prof?.phone || stateProf?.phone || "Não informado";
-      const realEmail = prof?.email || stateProf?.email || "Não informado";
-      const realCidade = prof?.cidade || stateProf?.cidade || "Não informada";
-      const realEstado = prof?.estado || stateProf?.estado || "BR";
-      const realCpf = prof?.cpf || stateProf?.cpf || "Não informado";
-      const realAvatar = prof?.avatar_url || stateProf?.avatar_url || DEFAULT_AVATARS[profileType];
+      const realPhone = prof?.phone || opData?.whatsapp || opData?.telefone || stateProf?.phone || "Não informado";
+      const realEmail = prof?.email || opData?.email || stateProf?.email || "Não informado";
+      const realCidade = prof?.cidade || opData?.cidade || stateProf?.cidade || "Não informada";
+      const realEstado = prof?.estado || opData?.estado || stateProf?.estado || "BR";
+      const realCpf = prof?.cpf || opData?.cpf || opData?.cpf_cnpj || stateProf?.cpf || "Não informado";
+      const realAvatar = prof?.avatar_url || opData?.foto || opData?.foto_url || stateProf?.avatar_url || DEFAULT_AVATARS[profileType];
 
       return {
         id: prof?.id || stateProf?.id || id,
@@ -224,6 +263,9 @@ export function AdminProfessionalIndividualPage() {
     setEditAvatarUrl(profileData.avatar_url);
     setEditCidade(profileData.cidade);
     setEditEstado(profileData.estado);
+    setEditVehicleModel(profileData.vehicle?.model || "");
+    setEditVehiclePlate(profileData.vehicle?.plate || "");
+    setEditVehicleColor(profileData.vehicle?.color || "");
     setIsEditModalOpen(true);
   };
 
@@ -231,7 +273,7 @@ export function AdminProfessionalIndividualPage() {
     if (!id) return;
     setIsSaving(true);
     try {
-      const { error } = await (supabase.from("profiles") as any)
+      await (supabase.from("profiles") as any)
         .update({
           name: editName,
           phone: editPhone,
@@ -242,13 +284,61 @@ export function AdminProfessionalIndividualPage() {
         })
         .eq("id", id);
 
-      if (error) {
-        console.error("Erro ao salvar cadastro do profissional:", error);
+      const opPayload = {
+        whatsapp: editPhone,
+        telefone: editPhone,
+        email: editEmail,
+        cidade: editCidade,
+        estado: editEstado,
+        foto: editAvatarUrl,
+        foto_url: editAvatarUrl,
+        veiculo_modelo: editVehicleModel,
+        veiculo_placa: editVehiclePlate,
+        veiculo_cor: editVehicleColor,
+      };
+
+      if (profileType === "delivery") {
+        await (supabase.from("motoboy_profiles") as any).update(opPayload).eq("user_id", id);
+      } else if (profileType === "mototaxi") {
+        await (supabase.from("moto_taxi_profiles") as any).update(opPayload).eq("user_id", id);
+        await (supabase.from("motoboy_profiles") as any).update(opPayload).eq("user_id", id);
+      } else {
+        await (supabase.from("driver_profiles") as any).update(opPayload).eq("user_id", id);
+      }
+
+      try {
+        const { data: existingV } = await (supabase.from("driver_vehicles") as any)
+          .select("id")
+          .eq("driver_id", id)
+          .limit(1);
+
+        if (existingV && existingV.length > 0) {
+          await (supabase.from("driver_vehicles") as any)
+            .update({
+              model: editVehicleModel,
+              plate: editVehiclePlate,
+              color: editVehicleColor,
+            })
+            .eq("id", existingV[0].id);
+        } else if (editVehicleModel || editVehiclePlate) {
+          await (supabase.from("driver_vehicles") as any)
+            .insert([{
+              driver_id: id,
+              brand: "",
+              model: editVehicleModel,
+              plate: editVehiclePlate,
+              color: editVehicleColor,
+              active: true,
+              vehicle_type: profileType === "ride" ? "car" : "motorcycle",
+            }]);
+        }
+      } catch (errV) {
+        console.warn("Aviso ao atualizar driver_vehicles:", errV);
       }
 
       toast({
         title: "Dados atualizados com sucesso!",
-        description: "O contato e a foto do profissional foram salvos e aplicados em tempo real.",
+        description: "Os dados do autônomo (contato, endereço, avatar e veículo) foram aplicados em tempo real.",
       });
 
       setIsEditModalOpen(false);
@@ -291,7 +381,7 @@ export function AdminProfessionalIndividualPage() {
               className="h-9 px-3.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20"
             >
               <Edit2 className="w-3.5 h-3.5 mr-1.5" />
-              Editar Contato e Avatar
+              Atualizar Dados do Autônomo
             </Button>
           )}
 
@@ -334,6 +424,15 @@ export function AdminProfessionalIndividualPage() {
                     <IconComp className="w-3.5 h-3.5 mr-1" />
                     {config.label}
                   </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openEditModal}
+                    className="h-7 px-2.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/10 ml-1"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 mr-1" />
+                    Editar Dados
+                  </Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground mt-1.5">
                   <span className="flex items-center gap-1">
@@ -354,8 +453,19 @@ export function AdminProfessionalIndividualPage() {
 
             {/* Dados do Veículo + Avaliação */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 border-t lg:border-t-0 pt-4 lg:pt-0">
-              <div className="p-3 rounded-xl bg-muted/50 border border-border/60">
-                <div className="text-[10px] uppercase font-bold text-muted-foreground">Veículo</div>
+              <div className="p-3 rounded-xl bg-muted/50 border border-border/60 relative group">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Veículo</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={openEditModal}
+                    className="h-5 w-5 text-emerald-600 hover:text-emerald-700"
+                    title="Atualizar veículo"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </Button>
+                </div>
                 <div className="text-xs font-black text-slate-900 dark:text-white truncate mt-0.5">
                   {profileData.vehicle.model}
                 </div>
@@ -393,16 +503,16 @@ export function AdminProfessionalIndividualPage() {
         </Card>
       ) : null}
 
-      {/* ── Modal Interativo para Atualizar Contato e Avatar ── */}
+      {/* ── Modal Interativo para Atualizar Todos os Dados do Autônomo ── */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-md bg-card border border-border shadow-xl">
+        <DialogContent className="max-w-md bg-card border border-border shadow-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
               <Edit2 className="w-5 h-5 text-primary" />
-              Atualizar Contato e Avatar
+              Atualizar Dados do Autônomo
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Altere o telefone, e-mail e a foto de perfil do profissional para refletirem no painel e na plataforma.
+              Altere os dados pessoais, contato, endereço e veículo do autônomo. As mudanças refletem em tempo real no painel e na plataforma.
             </DialogDescription>
           </DialogHeader>
 
@@ -491,6 +601,40 @@ export function AdminProfessionalIndividualPage() {
                   maxLength={2}
                   className="text-xs uppercase font-mono"
                 />
+              </div>
+            </div>
+
+            {/* Veículo (Modelo, Placa e Cor) */}
+            <div className="space-y-2 pt-2 border-t border-border/60">
+              <Label className="text-xs font-bold text-slate-900 dark:text-white">Veículo (Modelo, Placa e Cor)</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground">Modelo</span>
+                  <Input
+                    value={editVehicleModel}
+                    onChange={(e) => setEditVehicleModel(e.target.value)}
+                    placeholder="Ex.: Honda CG 160"
+                    className="text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground">Placa</span>
+                  <Input
+                    value={editVehiclePlate}
+                    onChange={(e) => setEditVehiclePlate(e.target.value.toUpperCase())}
+                    placeholder="Ex.: ABC1D23"
+                    className="text-xs font-mono uppercase"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground">Cor</span>
+                  <Input
+                    value={editVehicleColor}
+                    onChange={(e) => setEditVehicleColor(e.target.value)}
+                    placeholder="Ex.: Vermelha"
+                    className="text-xs"
+                  />
+                </div>
               </div>
             </div>
           </div>

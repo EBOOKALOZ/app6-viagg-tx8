@@ -295,6 +295,9 @@ export const AdminPostingQueuePage        = lazy(() => import("@/pages/admin/Adm
 /* ── Comissão Inteligente (auditoria admin) ── */
 export const AdminCommissionIntelligence = lazy(() => import("@/pages/admin/AdminCommissionIntelligence"));
 
+/* ── RADAR IA (centro de inteligência de grupos) ── */
+export const AdminRadarIA = lazy(() => import("@/pages/admin/AdminRadarIA"));
+
 /* ── Análises Financeiras por Perfil Operacional ── */
 export const AdminMotoboyFinanceiro = lazy(() => import("@/pages/admin/AdminMotoboyFinanceiro"));
 export const AdminMotoTaxiFinanceiro = lazy(() => import("@/pages/admin/AdminMotoTaxiFinanceiro"));

@@ -92,6 +92,7 @@ import {
   AdminMapDashboard,
   AdminPostingQueuePage,
   AdminCommissionIntelligence,
+  AdminRadarIA,
   AdminProfessionalsHub,
   AdminProfessionalIndividualPage,
   AdminMotoboyFinanceiro,
@@ -149,6 +150,7 @@ export const adminRoutes = (
       <Route path="/admin/war-room" element={<AdminWarRoom />} />
       <Route path="/admin/creditos" element={<AdminCreditsModule />} />
       <Route path="/admin/comissao-inteligente" element={<AdminCommissionIntelligence />} />
+      <Route path="/admin/radar-ia" element={<AdminRadarIA />} />
       <Route path="/admin/motoboy-financeiro" element={<AdminMotoboyFinanceiro />} />
       <Route path="/admin/moto-taxi-financeiro" element={<AdminMotoTaxiFinanceiro />} />
       <Route path="/admin/motorista-financeiro" element={<AdminMotoristaFinanceiro />} />

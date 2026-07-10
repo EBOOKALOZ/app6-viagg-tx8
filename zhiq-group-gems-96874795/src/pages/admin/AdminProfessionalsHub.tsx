@@ -38,6 +38,7 @@ export interface ProfessionalRow {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   cidade: string;
   estado: string;
   cpf: string;
@@ -83,7 +84,7 @@ export function AdminProfessionalsHub() {
     queryFn: async () => {
       // 1. Busca todos os perfis com informações básicas
       const { data: profilesData, error: profError } = await (supabase.from("profiles") as any)
-        .select("id, name, email, cidade, estado, cpf, avatar_url, created_at, available_profiles")
+        .select("id, name, email, phone, cidade, estado, cpf, avatar_url, created_at, available_profiles")
         .order("created_at", { ascending: false })
         .limit(3000);
 
@@ -166,6 +167,7 @@ export function AdminProfessionalsHub() {
           id: p.id,
           name: (p.name && p.name.trim() !== "" && p.name !== "Profissional Autônomo") ? p.name : `Profissional #${p.id.slice(0, 8)}`,
           email: p.email || "",
+          phone: p.phone || undefined,
           cidade: p.cidade || "Não informada",
           estado: p.estado || "BR",
           cpf: p.cpf || "Não informado",
