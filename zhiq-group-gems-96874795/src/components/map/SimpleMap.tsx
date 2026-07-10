@@ -357,7 +357,39 @@ export function SimpleMap({
   const [mapReady, setMapReady] = useState(false);
   const lastBoundsRef = useRef<string>('');
 
-  // Fetch real route from OSRM (free, no API key needed)
+  // ── Rota REAL por vias: Mapbox Directions PRIMEIRO (token do projeto,
+  // confiável) e OSRM público como reserva. Linha reta é o ÚLTIMO recurso,
+  // só quando os dois serviços falham.
+  const fetchRoadRoute = async (pts: [number, number][]): Promise<[number, number][] | null> => {
+    const wp = pts.map(([lat, lng]) => `${lng},${lat}`).join(';');
+    const mapboxToken =
+      (import.meta as any).env?.VITE_MAPBOX_TOKEN ||
+      (import.meta as any).env?.VITE_MAPBOX_PUBLIC_TOKEN;
+    const parse = (data: any): [number, number][] | null => {
+      const coords = data?.routes?.[0]?.geometry?.coordinates;
+      return coords && coords.length >= 2
+        ? coords.map((c: [number, number]) => [c[1], c[0]] as [number, number])
+        : null;
+    };
+    if (mapboxToken) {
+      try {
+        const data = await fetch(
+          `https://api.mapbox.com/directions/v5/mapbox/driving/${wp}?geometries=geojson&overview=full&access_token=${mapboxToken}`,
+        ).then(r => r.json());
+        const coords = parse(data);
+        if (coords) return coords;
+      } catch { /* cai no OSRM */ }
+    }
+    try {
+      const data = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${wp}?overview=full&geometries=geojson`,
+      ).then(r => r.json());
+      return parse(data);
+    } catch {
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (preCalculatedPolyline && preCalculatedPolyline.length > 0) {
       console.log('[SimpleMap] Polyline recebida:', preCalculatedPolyline.length, 'pontos');
@@ -366,53 +398,27 @@ export function SimpleMap({
       // separados para preservar as cores distintas por segmento.
       if (preCalculatedPolyline.length === 3) {
         const [p0, p1, p2] = preCalculatedPolyline;
-        const url1 = `https://router.project-osrm.org/route/v1/driving/${p0[1]},${p0[0]};${p1[1]},${p1[0]}?overview=full&geometries=geojson`;
-        const url2 = `https://router.project-osrm.org/route/v1/driving/${p1[1]},${p1[0]};${p2[1]},${p2[0]}?overview=full&geometries=geojson`;
-
-        Promise.all([
-          fetch(url1).then(r => r.json()).catch(() => null),
-          fetch(url2).then(r => r.json()).catch(() => null),
-        ]).then(([d1, d2]) => {
-          const coords1: [number, number][] = d1?.routes?.[0]?.geometry?.coordinates?.map(
-            (c: [number, number]) => [c[1], c[0]] as [number, number]
-          ) || [p0, p1];
-          const coords2: [number, number][] = d2?.routes?.[0]?.geometry?.coordinates?.map(
-            (c: [number, number]) => [c[1], c[0]] as [number, number]
-          ) || [p1, p2];
-          console.log('[SimpleMap] ✅ Rotas duplas OSRM:', coords1.length, '+', coords2.length, 'pontos');
+        Promise.all([fetchRoadRoute([p0, p1]), fetchRoadRoute([p1, p2])]).then(([r1, r2]) => {
+          const coords1 = r1 || [p0, p1];
+          const coords2 = r2 || [p1, p2];
+          console.log('[SimpleMap] ✅ Rotas duplas por vias:', coords1.length, '+', coords2.length, 'pontos');
           setRouteCoordinates({ coords1, coords2 } as any);
         });
         return;
       }
 
-      // Se a polyline tem poucos pontos (waypoints, não rota detalhada), buscar rota real via OSRM
+      // Poucos pontos = waypoints (não rota detalhada) → resolver por vias
       if (preCalculatedPolyline.length <= 10) {
-        // Montar waypoints no formato OSRM: lng,lat;lng,lat;...
-        const waypoints = preCalculatedPolyline
-          .map(([lat, lng]) => `${lng},${lat}`)
-          .join(';');
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
-
-        console.log('[SimpleMap] 🛣️ Buscando rota OSRM com', preCalculatedPolyline.length, 'waypoints...');
-
-        fetch(osrmUrl)
-          .then(res => res.json())
-          .then(data => {
-            if (data.routes?.[0]?.geometry?.coordinates) {
-              const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
-                (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
-              );
-              console.log('[SimpleMap] ✅ Rota OSRM obtida:', coords.length, 'pontos (seguindo ruas)');
-              setRouteCoordinates(coords);
-            } else {
-              console.log('[SimpleMap] ⚠️ OSRM sem rota, usando linha reta');
-              setRouteCoordinates(preCalculatedPolyline);
-            }
-          })
-          .catch((err) => {
-            console.log('[SimpleMap] ⚠️ OSRM falhou:', err?.message, '- usando linha reta');
+        console.log('[SimpleMap] 🛣️ Buscando rota por vias com', preCalculatedPolyline.length, 'waypoints...');
+        fetchRoadRoute(preCalculatedPolyline).then((coords) => {
+          if (coords) {
+            console.log('[SimpleMap] ✅ Rota por vias obtida:', coords.length, 'pontos');
+            setRouteCoordinates(coords);
+          } else {
+            console.log('[SimpleMap] ⚠️ Mapbox e OSRM falharam — último recurso: linha reta');
             setRouteCoordinates(preCalculatedPolyline);
-          });
+          }
+        });
       } else {
         // Polyline com 10+ pontos já é uma rota detalhada
         console.log('[SimpleMap] ✅ Polyline detalhada, usando diretamente');
@@ -453,16 +459,13 @@ export function SimpleMap({
           destination = { lat: destMarker.lat, lng: destMarker.lng };
         }
 
-        // Usar OSRM público (gratuito, sem chave de API)
-        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
-        const response = await fetch(osrmUrl);
-        const data = await response.json();
-
-        if (data.routes?.[0]?.geometry?.coordinates) {
-          const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
-            (coord: [number, number]) => [coord[1], coord[0]] as [number, number]
-          );
-          console.log('[SimpleMap] ✅ Rota OSRM real:', coords.length, 'pontos');
+        // Mapbox Directions primeiro; OSRM de reserva (fetchRoadRoute)
+        const coords = await fetchRoadRoute([
+          [origin.lat, origin.lng],
+          [destination.lat, destination.lng],
+        ]);
+        if (coords) {
+          console.log('[SimpleMap] ✅ Rota real por vias:', coords.length, 'pontos');
           setRouteCoordinates(coords);
         }
       } catch (err) {

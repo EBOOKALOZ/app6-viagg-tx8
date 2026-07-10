@@ -386,10 +386,6 @@ export function AcceptedRideCard({
 
   const [vehicle, setVehicle] = useState<ActiveVehicle | null>(null);
   const [loadingVehicle, setLoadingVehicle] = useState(false);
-
-  const [confirmingCancel, setConfirmingCancel] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   // ── 1) Fetch inicial do pedido ──────────────────────────────────────────
@@ -543,24 +539,6 @@ export function AcceptedRideCard({
   const handleViewLocation = useCallback(() => {
     toast.info("Acompanhamento por mapa em tempo real chegando em breve.");
   }, []);
-
-  const handleCancel = useCallback(async () => {
-    setCancelling(true);
-    try {
-      if (onCancel) {
-        onCancel();
-      } else {
-        const { error } = await supabase.rpc("cancel_ride" as any, { p_order_id: orderId });
-        if (error) throw error;
-        toast.success("Corrida cancelada.");
-      }
-    } catch (err: any) {
-      toast.error(`Não foi possível cancelar: ${err?.message || "erro desconhecido"}`);
-    } finally {
-      setCancelling(false);
-      setConfirmingCancel(false);
-    }
-  }, [onCancel, orderId]);
 
   const ToneIcon = status.tone === "wait" ? Loader2
     : status.tone === "progress" ? Navigation
@@ -763,42 +741,6 @@ export function AcceptedRideCard({
             <ActionButton icon={Share2} label="Compartilhar" onClick={handleShare} />
             <ActionButton icon={MapPin} label="Localização" onClick={handleViewLocation} />
           </div>
-
-          {!isTerminal && (
-            confirmingCancel ? (
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="flex-1"
-                  onClick={handleCancel}
-                  disabled={cancelling}
-                >
-                  {cancelling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Confirmar cancelamento
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setConfirmingCancel(false)}
-                  disabled={cancelling}
-                >
-                  Voltar
-                </Button>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-destructive/30 text-destructive hover:bg-destructive/10"
-                onClick={() => setConfirmingCancel(true)}
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                Cancelar corrida
-              </Button>
-            )
-          )}
         </CardContent>
       </Card>
 

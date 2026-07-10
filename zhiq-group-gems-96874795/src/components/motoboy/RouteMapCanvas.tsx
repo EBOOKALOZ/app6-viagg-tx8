@@ -70,17 +70,35 @@ export default function RouteMapCanvas({
     }
     if (!hasOrigin || !hasDest) return;
     let cancelled = false;
-    const url = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destinationLng},${destinationLat}?overview=full&geometries=geojson`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        if (cancelled) return;
-        const coords = data.routes?.[0]?.geometry?.coordinates;
-        if (coords && coords.length >= 2) {
-          setDynamicRouteCoords(coords);
-        }
-      })
-      .catch(err => console.warn('[RouteMapCanvas] OSRM fetch erro:', err));
+
+    // ROTA REAL POR VIAS: Mapbox Directions (mesmo token do mapa) com OSRM
+    // público de reserva. NUNCA ficar na linha reta quando há rota.
+    const mapboxToken =
+      (import.meta as any).env?.VITE_MAPBOX_TOKEN ||
+      (import.meta as any).env?.VITE_MAPBOX_PUBLIC_TOKEN;
+
+    const tryMapbox = async (): Promise<[number, number][] | null> => {
+      if (!mapboxToken) return null;
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${originLng},${originLat};${destinationLng},${destinationLat}?geometries=geojson&overview=full&access_token=${mapboxToken}`;
+      const data = await fetch(url).then(r => r.json());
+      const coords = data.routes?.[0]?.geometry?.coordinates;
+      return coords && coords.length >= 2 ? coords : null;
+    };
+    const tryOsrm = async (): Promise<[number, number][] | null> => {
+      const url = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destinationLng},${destinationLat}?overview=full&geometries=geojson`;
+      const data = await fetch(url).then(r => r.json());
+      const coords = data.routes?.[0]?.geometry?.coordinates;
+      return coords && coords.length >= 2 ? coords : null;
+    };
+
+    (async () => {
+      try {
+        const coords = (await tryMapbox().catch(() => null)) ?? (await tryOsrm());
+        if (!cancelled && coords) setDynamicRouteCoords(coords);
+      } catch (err) {
+        console.warn('[RouteMapCanvas] rota real indisponível:', err);
+      }
+    })();
     return () => { cancelled = true; };
   }, [hasOrigin, hasDest, originLat, originLng, destinationLat, destinationLng, routeCoords]);
 
@@ -127,6 +145,10 @@ export default function RouteMapCanvas({
       }
     };
 
+    const activeRouteCoords = (routeCoords && routeCoords.length >= 2)
+      ? routeCoords
+      : (dynamicRouteCoords && dynamicRouteCoords.length >= 2 ? dynamicRouteCoords : null);
+
     const fitToRoute = (map: mapboxgl.Map) => {
       // Um ponto só → centraliza nele (fitBounds de 1 ponto estoura o zoom)
       if (!(hasOrigin && hasDest)) {
@@ -137,18 +159,14 @@ export default function RouteMapCanvas({
         return;
       }
       const bounds = new mapboxgl.LngLatBounds();
-      if (routeCoords && routeCoords.length >= 2) {
-        routeCoords.forEach(c => bounds.extend(c));
+      if (activeRouteCoords && activeRouteCoords.length >= 2) {
+        activeRouteCoords.forEach(c => bounds.extend(c as [number, number]));
       } else {
         bounds.extend([originLng!, originLat!]);
         bounds.extend([destinationLng!, destinationLat!]);
       }
       map.fitBounds(bounds, { padding: 40, duration: 400 });
     };
-
-    const activeRouteCoords = (routeCoords && routeCoords.length >= 2)
-      ? routeCoords
-      : (dynamicRouteCoords && dynamicRouteCoords.length >= 2 ? dynamicRouteCoords : null);
 
     const isFallback = !activeRouteCoords || activeRouteCoords.length < 2;
     const finalRouteCoords = isFallback
@@ -241,7 +259,9 @@ export default function RouteMapCanvas({
     } catch {
       setError(true);
     }
-  }, [token, error, hasAny, hasOrigin, hasDest, originLat, originLng, destinationLat, destinationLng, routeCoords, instanceId, interactive, routeColor, outlineColor, originMarkerColor, destinationMarkerColor]);
+    // dynamicRouteCoords NAS DEPS é essencial: sem ele, a rota real chegava
+    // e o mapa ficava na linha reta de fallback pra sempre (bug original).
+  }, [token, error, hasAny, hasOrigin, hasDest, originLat, originLng, destinationLat, destinationLng, routeCoords, dynamicRouteCoords, instanceId, interactive, routeColor, outlineColor, originMarkerColor, destinationMarkerColor]);
 
   if (!hasAny || error) {
     return (

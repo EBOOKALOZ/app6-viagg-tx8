@@ -56,19 +56,19 @@ export function useMotoboyWalletAccount() {
       if (!user?.id) return null;
       console.log(`[DEBUG useMotoboyWalletAccount] Auth User ID: ${user.id}`);
 
-      const { data, error } = await supabase
-        .from('financial_accounts')
-        .select('id, available_balance, profile_type, account_type')
-        .eq('owner_user_id', user.id)
-        .eq('profile_type', 'motoboy')
-        .eq('account_type', 'user_wallet')
-        .eq('is_active', true)
+      // FONTE OFICIAL: conta pay_* (motoboy_wallet). A tabela legada
+      // financial_accounts não recebe mais nada — usar o id dela deixava
+      // Resumo Hoje/timeline/gráfico eternamente zerados.
+      const { data, error } = await (supabase as any)
+        .from('pay_financial_accounts')
+        .select('id, available_balance')
+        .eq('owner_type', 'motoboy_profile')
+        .eq('owner_id', user.id)
+        .eq('account_type', 'motoboy_wallet')
         .maybeSingle();
 
-      console.log(`[DEBUG useMotoboyWalletAccount] Raw Supabase Result for ${user.id}:`, { data, error });
-
       if (error) {
-        console.error('Error fetching wallet account from financial_accounts:', error);
+        console.error('Error fetching wallet account from pay_financial_accounts:', error);
         return null;
       }
 
@@ -76,9 +76,9 @@ export function useMotoboyWalletAccount() {
 
       const mapped = {
         id: data.id,
-        balance_cents: Math.round((data.available_balance || 0) * 100),
+        balance_cents: Math.round((Number(data.available_balance) || 0) * 100),
         profile_type: 'motoboy',
-        account_type: 'user_wallet'
+        account_type: 'motoboy_wallet'
       };
       
       console.log('[DEBUG useMotoboyWalletAccount] Final Mapped Result:', mapped);
@@ -132,7 +132,7 @@ export function useMotoboyBalance() {
         {
           event: '*',
           schema: 'public',
-          table: 'ledger_entries',
+          table: 'pay_ledger_entries',
           filter: `account_id=eq.${account.id}`,
         },
         () => {
@@ -155,21 +155,24 @@ export function useMotoboyBalance() {
 
 // ============= Today Summary Hook =============
 export function useTodaySummary() {
-  const { data: account } = useMotoboyWalletAccount();
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['motoboy-today-summary', account?.id],
+    queryKey: ['motoboy-today-summary', user?.id],
     queryFn: async (): Promise<DailySummary> => {
-      if (!account?.id) {
+      if (!user?.id) {
         return { totalReceived: 0, totalWithdrawn: 0, transactionCount: 0 };
       }
 
       const today = startOfDay(new Date()).toISOString();
 
-      const { data, error } = await supabase
-        .from('ledger_entries')
-        .select('amount_cents, entry_type')
-        .eq('account_id', account.id)
+      // Extrato OFICIAL do motor pay_* (v_wallet_statement) — a tabela
+      // legada ledger_entries não recebe mais lançamentos.
+      const { data, error } = await (supabase as any)
+        .from('v_wallet_statement')
+        .select('amount_cents, direction, created_at')
+        .eq('owner_user_id', user.id)
+        .eq('profile_type', 'motoboy_profile')
         .gte('created_at', today);
 
       if (error) {
@@ -177,17 +180,15 @@ export function useTodaySummary() {
         return { totalReceived: 0, totalWithdrawn: 0, transactionCount: 0 };
       }
 
-      const entries = data || [];
-      
-      const totalReceived = entries
-        .filter(e => e.amount_cents > 0)
-        .reduce((sum, e) => sum + e.amount_cents, 0) / 100;
+      const entries = (data || []) as { amount_cents: number; direction: string }[];
 
-      const totalWithdrawn = Math.abs(
-        entries
-          .filter(e => e.amount_cents < 0)
-          .reduce((sum, e) => sum + e.amount_cents, 0)
-      ) / 100;
+      const totalReceived = entries
+        .filter(e => e.direction === 'credit')
+        .reduce((sum, e) => sum + Number(e.amount_cents || 0), 0) / 100;
+
+      const totalWithdrawn = entries
+        .filter(e => e.direction === 'debit')
+        .reduce((sum, e) => sum + Number(e.amount_cents || 0), 0) / 100;
 
       return {
         totalReceived,
@@ -195,24 +196,27 @@ export function useTodaySummary() {
         transactionCount: entries.length,
       };
     },
-    enabled: !!account?.id,
+    enabled: !!user?.id,
     staleTime: 30000,
   });
 }
 
 // ============= Financial Timeline Hook =============
 export function useFinancialTimeline() {
-  const { data: account } = useMotoboyWalletAccount();
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['motoboy-financial-timeline', account?.id],
+    queryKey: ['motoboy-financial-timeline', user?.id],
     queryFn: async (): Promise<LedgerEntry[]> => {
-      if (!account?.id) return [];
+      if (!user?.id) return [];
 
-      const { data, error } = await supabase
-        .from('ledger_entries')
-        .select('id, amount_cents, created_at, entry_type, reference_type, reference_id, batch_id')
-        .eq('account_id', account.id)
+      // Extrato OFICIAL pay_* (v_wallet_statement) — débitos chegam com
+      // direction='debit' e viram cents negativos p/ manter o shape antigo.
+      const { data, error } = await (supabase as any)
+        .from('v_wallet_statement')
+        .select('amount_cents, direction, created_at, source_type, source_id')
+        .eq('owner_user_id', user.id)
+        .eq('profile_type', 'motoboy_profile')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -221,7 +225,17 @@ export function useFinancialTimeline() {
         return [];
       }
 
-      const entries: LedgerEntry[] = data || [];
+      const entries: LedgerEntry[] = ((data || []) as any[]).map((r, i) => ({
+        id: `${r.source_id ?? 'mov'}-${r.created_at}-${i}`,
+        amount_cents: r.direction === 'debit'
+          ? -Number(r.amount_cents || 0)
+          : Number(r.amount_cents || 0),
+        created_at: r.created_at,
+        entry_type: r.source_type,
+        reference_type: null,
+        reference_id: r.source_id ?? null,
+        batch_id: null,
+      }));
 
       // Enriquece os créditos de serviço com a discriminação do escrow:
       // valor bruto pago pelo cliente, comissão da plataforma (definida pelos
@@ -254,28 +268,31 @@ export function useFinancialTimeline() {
 
       return entries;
     },
-    enabled: !!account?.id,
+    enabled: !!user?.id,
     staleTime: 0,
   });
 }
 
 // ============= 7-Day Chart Hook =============
 export function useEarningsChart() {
-  const { data: account } = useMotoboyWalletAccount();
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['motoboy-earnings-chart', account?.id],
+    queryKey: ['motoboy-earnings-chart', user?.id],
     queryFn: async (): Promise<ChartDataPoint[]> => {
-      if (!account?.id) return [];
+      if (!user?.id) return [];
 
       const sevenDaysAgo = subDays(new Date(), 7).toISOString();
 
-      const { data, error } = await supabase
-        .from('ledger_entries')
-        .select('amount_cents, created_at')
-        .eq('account_id', account.id)
-        .gt('amount_cents', 0) // Only credits
+      // Créditos do extrato oficial pay_* dos últimos 7 dias
+      const { data: rows, error } = await (supabase as any)
+        .from('v_wallet_statement')
+        .select('amount_cents, created_at, direction')
+        .eq('owner_user_id', user.id)
+        .eq('profile_type', 'motoboy_profile')
+        .eq('direction', 'credit')
         .gte('created_at', sevenDaysAgo);
+      const data = rows as { amount_cents: number; created_at: string }[] | null;
 
       if (error) {
         console.error('Error fetching chart data:', error);
@@ -305,7 +322,7 @@ export function useEarningsChart() {
         amount: Number(amount.toFixed(2)),
       }));
     },
-    enabled: !!account?.id,
+    enabled: !!user?.id,
     staleTime: 60000,
   });
 }

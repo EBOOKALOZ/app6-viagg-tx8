@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { MapPin, Navigation, User, Loader2, X, Play, CheckCircle, Clock, Route, Star, Phone } from 'lucide-react';
+import { MapPin, Navigation, User, Loader2, Play, CheckCircle, Clock, Route, Star, Phone } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { SimpleMap, MapMarker } from '@/components/map';
@@ -18,7 +18,7 @@ interface ActiveRideCardProps {
   isLoadingPassenger?: boolean;
   onStart: () => Promise<boolean>;
   onComplete: () => Promise<boolean>;
-  onCancel: () => Promise<boolean>;
+  onCancel?: () => Promise<boolean>;
   routeData?: RideRouteData | null;
   isCalculatingRoute?: boolean;
   motoboyPosition?: { lat: number; lng: number } | null;
@@ -73,12 +73,6 @@ export default function ActiveRideCard({
   const handleComplete = async () => {
     setIsLoading('complete');
     await onComplete();
-    setIsLoading(null);
-  };
-
-  const handleCancel = async () => {
-    setIsLoading('cancel');
-    await onCancel();
     setIsLoading(null);
   };
 
@@ -335,17 +329,6 @@ export default function ActiveRideCard({
                 )}
                 Iniciar Corrida
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleCancel}
-                disabled={isLoading !== null}
-              >
-                {isLoading === 'cancel' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
-              </Button>
             </>
           )}
 
@@ -362,17 +345,6 @@ export default function ActiveRideCard({
                   <CheckCircle className="h-4 w-4 mr-2" />
                 )}
                 Finalizar Corrida
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleCancel}
-                disabled={isLoading !== null}
-              >
-                {isLoading === 'cancel' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
               </Button>
             </>
           )}
