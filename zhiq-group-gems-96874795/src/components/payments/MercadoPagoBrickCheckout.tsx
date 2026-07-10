@@ -98,10 +98,26 @@ function MercadoPagoBrickCheckoutInner({
     // de um host estável e removê-lo nós mesmos no cleanup.
     let inner: HTMLDivElement | null = null;
 
+    // Vigia: se o Brick não ficar pronto em 15s, mostra erro em vez de
+    // "Carregando…" eterno (SDK do MP trava se uma init anterior abortou).
+    const watchdog = setTimeout(() => {
+      if (!cancelled) {
+        setLoading(false);
+        setError(
+          "O Mercado Pago demorou para responder. Feche e abra o pagamento novamente.",
+        );
+      }
+    }, 15000);
+
     (async () => {
       try {
         setLoading(true);
         setError(null);
+        // Respiro anti-dupla-montagem: em dev o React monta o efeito 2x
+        // seguidas (StrictMode). Sem isso, a 1ª init abortada trava o lock
+        // interno do SDK e a 2ª espera pra sempre ("Carregando…" eterno).
+        await new Promise((r) => setTimeout(r, 80));
+        if (cancelled) return;
         const MercadoPago = await loadMercadoPagoSdk();
         if (cancelled || !hostRef.current) return;
 
@@ -143,9 +159,11 @@ function MercadoPagoBrickCheckoutInner({
           },
           callbacks: {
             onReady: () => {
+              clearTimeout(watchdog);
               if (!cancelled) setLoading(false);
             },
             onError: (err: { message?: string }) => {
+              clearTimeout(watchdog);
               if (!cancelled) {
                 setError(err?.message || "Erro no formulário de pagamento.");
                 setLoading(false);
@@ -161,6 +179,7 @@ function MercadoPagoBrickCheckoutInner({
           try { controller?.unmount?.(); } catch { /* noop */ }
         }
       } catch (e) {
+        clearTimeout(watchdog);
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Falha ao iniciar o checkout.");
           setLoading(false);
@@ -170,6 +189,7 @@ function MercadoPagoBrickCheckoutInner({
 
     return () => {
       cancelled = true;
+      clearTimeout(watchdog);
       try {
         controller?.unmount?.();
       } catch {
