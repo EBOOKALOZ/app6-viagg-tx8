@@ -99,22 +99,19 @@ export function useMotoboyCommission(userId: string | undefined) {
 
       const totalGroups = allGroups.length;
 
-      // Count from DB flag
-      const dbValidCount = allGroups.filter(g => g.valid_for_commission).length;
-      // Fallback: derive from approval + active + valid (resilient to missing triggers)
-      const derivedValidCount = allGroups.filter(g =>
-        g.validation_status === 'approved' && g.is_active && g.is_valid
-      ).length;
-      // Use whichever is higher — respects trigger when it runs, falls back when it doesn't
-      const validForCommission = Math.max(dbValidCount, derivedValidCount);
+      // FONTE ÚNICA: o flag valid_for_commission do banco. O trigger aplica
+      // as regras oficiais (90+ membros, postagem 30d, localização, raio
+      // 100km) — o antigo fallback "approved+active" ignorava essas regras
+      // e fazia o painel PROMETER uma faixa que o motor não cobra
+      // (mostrava 16% com 2 grupos ativos quando só 1 valia → 20%).
+      const validForCommission = allGroups.filter(g => g.valid_for_commission).length;
 
       const activeGroups = allGroups.filter(g => g.validation_status === 'approved' && g.is_active).length;
       const pendingGroups = allGroups.filter(g => g.validation_status === 'pending').length;
       const expiredGroups = allGroups.filter(g => !g.is_active || (!g.is_valid && g.validation_status !== 'pending')).length;
 
-      // Mark derived validity on each group for downstream use
-      const isGroupEffectivelyValid = (g: GroupDetail) =>
-        g.valid_for_commission || (g.validation_status === 'approved' && g.is_active && g.is_valid);
+      // Validade efetiva = SÓ o flag oficial do banco (mesma régua do motor)
+      const isGroupEffectivelyValid = (g: GroupDetail) => g.valid_for_commission;
 
       const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
       const atRiskGroups = allGroups.filter(g =>
