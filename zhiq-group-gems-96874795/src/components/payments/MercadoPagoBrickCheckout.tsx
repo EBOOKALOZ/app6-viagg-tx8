@@ -10,7 +10,7 @@
  * de fato, esse `formData` precisa ser enviado a um endpoint que chame
  * POST /v1/payments no Mercado Pago. Aqui apenas expomos o callback.
  */
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { loadMercadoPagoSdk } from "@/lib/payments/mercadopagoSdk";
 
@@ -32,7 +32,51 @@ export interface MercadoPagoBrickCheckoutProps {
   onSubmit?: (formData: Record<string, unknown>) => Promise<void> | void;
 }
 
-export function MercadoPagoBrickCheckout({
+// ── Escudo local: se o Brick derrubar a renderização (removeChild/
+// insertBefore de DOM que o SDK mexeu), o erro fica CONTIDO aqui —
+// nunca mais derruba o app inteiro na tela "Algo deu errado".
+class BrickBoundary extends Component<
+  { children: ReactNode; onRetry: () => void },
+  { broken: boolean }
+> {
+  state = { broken: false };
+  static getDerivedStateFromError() {
+    return { broken: true };
+  }
+  componentDidCatch(error: Error) {
+    console.error("Payment Brick quebrou a renderização:", error);
+  }
+  render() {
+    if (this.state.broken) {
+      return (
+        <div className="w-full max-w-md mx-auto space-y-3 rounded-xl border border-amber-300/60 bg-amber-50 p-4 text-center">
+          <p className="text-sm font-semibold text-amber-800">
+            O formulário de pagamento travou.
+          </p>
+          <button
+            type="button"
+            onClick={this.props.onRetry}
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700"
+          >
+            Recarregar formulário
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export function MercadoPagoBrickCheckout(props: MercadoPagoBrickCheckoutProps) {
+  const [epoch, setEpoch] = useState(0);
+  return (
+    <BrickBoundary key={epoch} onRetry={() => setEpoch((e) => e + 1)}>
+      <MercadoPagoBrickCheckoutInner {...props} />
+    </BrickBoundary>
+  );
+}
+
+function MercadoPagoBrickCheckoutInner({
   publicKey,
   amount,
   payerEmail,
@@ -141,23 +185,29 @@ export function MercadoPagoBrickCheckout({
   }, [publicKey, amount, payerEmail]);
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {loading && (
-        <div className="flex flex-col items-center justify-center gap-2 py-10 text-zinc-400">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span className="text-xs font-medium">Carregando pagamento seguro…</span>
-        </div>
-      )}
+    // translate="no": tradutor automático do navegador embrulha textos em
+    // <font> e quebra o React (insertBefore/removeChild em nó órfão).
+    <div className="w-full max-w-md mx-auto" translate="no">
+      {/* Zona SÓ do React: aparece/some sem tocar nos irmãos do Brick.
+          O React nunca insere/remove nada relativo à zona do MP abaixo. */}
+      <div>
+        {loading && (
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-zinc-400">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="text-xs font-medium">Carregando pagamento seguro…</span>
+          </div>
+        )}
 
-      {error && (
-        <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-red-600">
-          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          <p className="text-xs font-medium leading-relaxed">{error}</p>
-        </div>
-      )}
+        {error && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-red-600">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <p className="text-xs font-medium leading-relaxed">{error}</p>
+          </div>
+        )}
+      </div>
 
-      {/* Host estável: o container do Brick é criado/removido manualmente
-          dentro dele (nunca pelo React) — evita o erro de removeChild. */}
+      {/* Zona SÓ do MP: o container do Brick é criado/removido manualmente
+          dentro do host (nunca pelo React) — evita removeChild/insertBefore. */}
       <div ref={hostRef} />
     </div>
   );
