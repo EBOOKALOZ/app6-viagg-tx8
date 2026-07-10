@@ -400,9 +400,9 @@ export function WalletTopupButton({
 
               {order.checkout_url && (
                 <Button
-                  variant="outline"
                   onClick={() => openCheckoutUrl(order.checkout_url)}
-                  className="w-full border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/10 hover:text-emerald-100 font-bold"
+                  className="w-full bg-[#00a300] hover:bg-[#008f00] text-white font-bold"
+                  style={{ backgroundColor: "#00a300" }}
                 >
                   <ExternalLink className="h-4 w-4 mr-1.5" />
                   Abrir pagamento no Mercado Pago

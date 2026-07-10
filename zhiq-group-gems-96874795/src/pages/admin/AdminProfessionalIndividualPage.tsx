@@ -76,19 +76,31 @@ export function AdminProfessionalIndividualPage() {
   const [editEstado, setEditEstado] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // Mapeia slug da URL para OperationalProfileType
-  const profileType: OperationalProfileType =
-    profileSlug === "moto-taxi" || profileSlug === "mototaxi"
-      ? "mototaxi"
-      : profileSlug === "motorista" || profileSlug === "ride"
-      ? "ride"
-      : "delivery";
+  const location = useLocation();
+  const stateProf = location.state?.prof;
+
+  // Determinação rigorosa da categoria operacional do profissional
+  const resolveProfileType = (): OperationalProfileType => {
+    if (stateProf?.profileType === "delivery" || stateProf?.profileType === "mototaxi" || stateProf?.profileType === "ride") {
+      return stateProf.profileType;
+    }
+    const avail = String(stateProf?.available_profiles || "").toLowerCase();
+    if (avail.includes("motoboy") || avail.includes("delivery") || avail.includes("entregador")) return "delivery";
+    if (avail.includes("mototaxi") || avail.includes("moto-taxi")) return "mototaxi";
+    if (avail.includes("motorista") || avail.includes("driver") || avail.includes("ride")) return "ride";
+
+    if (profileSlug === "moto-taxi" || profileSlug === "mototaxi") return "mototaxi";
+    if (profileSlug === "motorista" || profileSlug === "ride") return "ride";
+    return "delivery";
+  };
+
+  const profileType: OperationalProfileType = resolveProfileType();
 
   const config =
     profileType === "delivery"
       ? {
           title: "Análise Financeira — Motoboy (Entregas)",
-          subtitle: "Auditoria individual de ganhos, comissões retidas e histórico de entregas do profissional.",
+          subtitle: "Auditoria individual de ganhos, comissões retidas e histórico de entregas do motoboy.",
           accentColor: "#f59e0b",
           label: "Motoboy",
           icon: Bike,
@@ -96,7 +108,7 @@ export function AdminProfessionalIndividualPage() {
       : profileType === "mototaxi"
       ? {
           title: "Análise Financeira — Moto Táxi",
-          subtitle: "Auditoria individual de corridas de passageiro, repasses e taxas da plataforma.",
+          subtitle: "Auditoria individual de corridas de passageiro, repasses e taxas da vertical Moto Táxi.",
           accentColor: "#3b82f6",
           label: "Moto Táxi",
           icon: Bike,
@@ -108,9 +120,6 @@ export function AdminProfessionalIndividualPage() {
           label: "Motorista",
           icon: Car,
         };
-
-  const location = useLocation();
-  const stateProf = location.state?.prof;
 
   // ── Consulta do Cadastro do Profissional e Veículo ──
   const { data: profileData, isLoading, refetch } = useQuery({
@@ -178,6 +187,7 @@ export function AdminProfessionalIndividualPage() {
         avatar_url: realAvatar,
         created_at: prof?.created_at || stateProf?.created_at || new Date().toISOString(),
         phone: realPhone,
+        available_profiles: prof?.available_profiles || stateProf?.available_profiles,
         vehicle: vehicleInfo,
       };
     },

@@ -478,9 +478,9 @@ export function TravelerWalletTopup({
 
               {order.checkout_url && (
                 <Button
-                  variant="outline"
                   onClick={() => openCheckoutUrl(order.checkout_url, order.id, RETURN_TO)}
-                  className="w-full font-bold"
+                  className="w-full font-bold text-white bg-[#00a300] hover:bg-[#008f00]"
+                  style={{ backgroundColor: "#00a300" }}
                 >
                   <ExternalLink className="mr-1.5 h-4 w-4" />
                   Abrir pagamento no Mercado Pago

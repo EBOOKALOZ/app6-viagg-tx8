@@ -93,10 +93,9 @@ export function ProfileFinancialDashboard({
       let queryBuilder = (supabase.from("pay_escrow_holds") as any)
         .select("id, created_at, released_at, service_type, service_id, status, professional_user_id, amount_cents, platform_fee_cents, professional_amount_cents, metadata");
       
+      queryBuilder = queryBuilder.eq("service_type", profileType);
       if (professionalId) {
         queryBuilder = queryBuilder.eq("professional_user_id", professionalId);
-      } else {
-        queryBuilder = queryBuilder.eq("service_type", profileType);
       }
 
       const { data: escrowData, error: escrowError } = await queryBuilder
@@ -159,9 +158,11 @@ export function ProfileFinancialDashboard({
       // 4. Também busca contagem de corridas na tabela operacional (concluídas vs canceladas vs em andamento)
       let opStats = { completed: 0, cancelled: 0, inProgress: 0 };
       try {
-        const { data: statusRows } = await (supabase.from(opTable) as any)
-          .select("driver_status")
-          .limit(1000);
+        let opQuery = (supabase.from(opTable) as any).select("driver_status");
+        if (professionalId) {
+          opQuery = opQuery.eq("driver_id", professionalId);
+        }
+        const { data: statusRows } = await opQuery.limit(1000);
 
         for (const row of statusRows || []) {
           const st = row.driver_status || "";

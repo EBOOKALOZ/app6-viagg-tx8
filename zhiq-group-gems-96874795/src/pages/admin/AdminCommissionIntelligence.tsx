@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CommissionFinancePanel } from "@/components/admin/CommissionFinancePanel";
+import { PaymentsEnvironmentPanel } from "@/components/admin/PaymentsEnvironmentPanel";
 
 const OFFICIAL_TIERS = [
   { pct: 25, groupsMin: 0, name: "Inicial" },
@@ -288,6 +289,9 @@ export default function AdminCommissionIntelligence() {
 
       {/* ── Resumo Financeiro da Plataforma ── */}
       <CommissionFinancePanel />
+
+      {/* ── Pagamentos MP: Produção × Sandbox (etiqueta por ambiente) ── */}
+      <PaymentsEnvironmentPanel />
 
       {/* ── Tabela por usuário ── */}
       <Card className="bg-white">

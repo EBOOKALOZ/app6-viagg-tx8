@@ -127,7 +127,12 @@ Deno.serve(async (req) => {
         p_product_id: input.product_id ?? null,
         p_product_snapshot: input.product_snapshot ?? {},
         p_expires_at: null,
-        p_metadata: input.metadata ?? {},
+        // Carimbo de ambiente: o painel financeiro admin separa produção ×
+        // sandbox por esta etiqueta (backfill 20260711 marcou o histórico).
+        p_metadata: {
+          ...((input.metadata ?? {}) as Record<string, unknown>),
+          environment: gw.environment,
+        },
       },
     );
     if (orderErr) return json({ ok: false, error: `ordem: ${orderErr.message}` });

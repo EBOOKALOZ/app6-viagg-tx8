@@ -135,18 +135,27 @@ export function AdminProfessionalsHub() {
           serviceTypes: {},
         };
 
-        // Determina tipo de perfil predominante
+        // Determina tipo de perfil predominante com rigor técnico e isolamento por categoria
         let profileType: "delivery" | "mototaxi" | "ride" = "delivery";
         const avail = String(p.available_profiles || "").toLowerCase();
-        if (stats.serviceTypes["mototaxi"] || avail.includes("mototaxi") || avail.includes("moto-taxi")) {
-          profileType = "mototaxi";
-        } else if (stats.serviceTypes["ride"] || avail.includes("motorista") || avail.includes("ride")) {
-          profileType = "ride";
-        } else if (stats.serviceTypes["delivery"] || avail.includes("motoboy") || avail.includes("delivery")) {
+
+        const deliveryCount = stats.serviceTypes["delivery"] || 0;
+        const mototaxiCount = stats.serviceTypes["mototaxi"] || 0;
+        const rideCount = (stats.serviceTypes["ride"] || 0) + (stats.serviceTypes["motorista"] || 0);
+        const maxCount = Math.max(deliveryCount, mototaxiCount, rideCount);
+
+        if (avail.includes("motoboy") || avail.includes("delivery") || avail.includes("entregador")) {
           profileType = "delivery";
+        } else if (avail.includes("mototaxi") || avail.includes("moto-taxi")) {
+          profileType = "mototaxi";
+        } else if (avail.includes("motorista") || avail.includes("driver") || avail.includes("ride")) {
+          profileType = "ride";
+        } else if (maxCount > 0) {
+          if (deliveryCount === maxCount) profileType = "delivery";
+          else if (mototaxiCount === maxCount) profileType = "mototaxi";
+          else profileType = "ride";
         } else {
-          // Distribuição balanceada no hub de demonstração/operacional se sem transações
-          profileType = index % 3 === 0 ? "delivery" : index % 3 === 1 ? "mototaxi" : "ride";
+          profileType = "delivery";
         }
 
         // Simula ou determina status em tempo real com base no status/atividade do usuário

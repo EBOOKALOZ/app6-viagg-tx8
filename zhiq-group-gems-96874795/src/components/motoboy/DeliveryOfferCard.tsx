@@ -147,10 +147,14 @@ export default function DeliveryOfferCard({ offer, onAccept, onDismiss }: Delive
   // GPS só vale se for PRECISO (≤ 5 km) E dentro do Brasil. Localização por
   // IP (ex.: gateway da Starlink) pode cair em outro país e até reportar
   // accuracy "boa" — o filtro geográfico corta esses casos.
+  // Plausibilidade: mesmo "preciso" e no Brasil, a +150km da coleta não é
+  // onde o motoboy está (Starlink já entregou São Paulo assim) → cadastro.
   const gpsIsPrecise =
     !!gpsPos &&
     gpsPos.accuracy != null && gpsPos.accuracy <= 5000 &&
-    brazilCoordsOrNull(gpsPos.lat, gpsPos.lng) != null;
+    brazilCoordsOrNull(gpsPos.lat, gpsPos.lng) != null &&
+    !(offer.pickup_lat != null && offer.pickup_lng != null &&
+      haversine(gpsPos.lat, gpsPos.lng, offer.pickup_lat, offer.pickup_lng) > 150);
 
   // Posição efetiva: GPS preciso (onde está AGORA) > cadastro do formulário.
   // Sem nada → null (mapa esconde o pino e centraliza na coleta — nunca

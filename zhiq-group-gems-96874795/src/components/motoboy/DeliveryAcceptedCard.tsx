@@ -62,12 +62,18 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
         // IP/gateway (ex.: Starlink) → precisão ruim OU fora do Brasil → ignora
         if (accuracy == null || accuracy > 5000) return;
         if (!brazilCoordsOrNull(lat, lng)) return;
+        // Plausibilidade: Starlink às vezes entrega SP "com boa precisão".
+        // A +150km da coleta não é onde o motoboy está → cadastro resolve.
+        if (
+          offer.pickup_lat != null && offer.pickup_lng != null &&
+          haversineKm(lat, lng, offer.pickup_lat, offer.pickup_lng) > 150
+        ) return;
         setMotoboyPos({ lat, lng });
       },
       () => { /* sem GPS → cadastro resolve */ },
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 },
     );
-  }, []);
+  }, [offer.pickup_lat, offer.pickup_lng]);
 
   // Buscar avatar (profiles) + endereço (motoboy_profiles) e geocodar o endereço
   // para usar como posição do motoboy no mapa (fallback do GPS).
