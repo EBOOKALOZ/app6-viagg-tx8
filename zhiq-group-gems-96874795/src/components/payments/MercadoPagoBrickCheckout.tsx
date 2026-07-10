@@ -15,8 +15,6 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { loadMercadoPagoSdk } from "@/lib/payments/mercadopagoSdk";
 
 const BRICK_CONTAINER_ID = "mp-payment-brick-container";
-// Sequencial p/ gerar um container novo a cada montagem do Brick.
-let brickInstanceSeq = 0;
 
 export interface MercadoPagoBrickCheckoutProps {
   /** Chave pública do MP (TEST-... em sandbox | APP_USR-... em produção). */
@@ -84,7 +82,6 @@ function MercadoPagoBrickCheckoutInner({
 }: MercadoPagoBrickCheckoutProps) {
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
-  const hostRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,11 +89,6 @@ function MercadoPagoBrickCheckoutInner({
     let cancelled = false;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let controller: any = null;
-    // O Brick injeta iframes no container. Se o React for o dono desse nó,
-    // qualquer re-render/desmonte dá "removeChild: o nó não é filho" (o MP
-    // trocou os filhos por baixo). Solução: criar o container NA MÃO dentro
-    // de um host estável e removê-lo nós mesmos no cleanup.
-    let inner: HTMLDivElement | null = null;
 
     // Vigia: se o Brick não ficar pronto em 15s, mostra erro em vez de
     // "Carregando…" eterno (SDK do MP trava se uma init anterior abortou).
@@ -119,19 +111,11 @@ function MercadoPagoBrickCheckoutInner({
         await new Promise((r) => setTimeout(r, 80));
         if (cancelled) return;
         const MercadoPago = await loadMercadoPagoSdk();
-        if (cancelled || !hostRef.current) return;
-
-        // Id ÚNICO por montagem: em dev o React monta o efeito 2x
-        // (StrictMode) e, com id fixo, a montagem atrasada agarrava o
-        // container da nova → guerra de removeChild entre os dois Bricks.
-        const containerId = `${BRICK_CONTAINER_ID}-${++brickInstanceSeq}`;
-        inner = document.createElement("div");
-        inner.id = containerId;
-        hostRef.current.appendChild(inner);
+        if (cancelled) return;
 
         const mp = new MercadoPago(publicKey, { locale: "pt-BR" });
         const bricks = mp.bricks();
-        controller = await bricks.create("payment", containerId, {
+        controller = await bricks.create("payment", BRICK_CONTAINER_ID, {
           initialization: {
             amount,
             ...(payerEmail ? { payer: { email: payerEmail } } : {}),
@@ -195,12 +179,6 @@ function MercadoPagoBrickCheckoutInner({
       } catch {
         /* noop */
       }
-      // Remove o container do Brick fora do React (é DOM nosso, não dele).
-      try {
-        inner?.parentNode?.removeChild(inner);
-      } catch {
-        /* noop */
-      }
     };
   }, [publicKey, amount, payerEmail]);
 
@@ -226,9 +204,9 @@ function MercadoPagoBrickCheckoutInner({
         )}
       </div>
 
-      {/* Zona SÓ do MP: o container do Brick é criado/removido manualmente
-          dentro do host (nunca pelo React) — evita removeChild/insertBefore. */}
-      <div ref={hostRef} />
+      {/* O Brick é injetado aqui pelo SDK do Mercado Pago. Se o desmonte
+          quebrar (o MP mexe nesse DOM), o BrickBoundary contém o erro. */}
+      <div id={BRICK_CONTAINER_ID} />
     </div>
   );
 }

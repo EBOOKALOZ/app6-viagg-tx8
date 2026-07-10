@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste isolado — Payment Brick MP</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 24px auto; padding: 0 16px; background: #FFE600; }
+    h1 { font-size: 16px; }
+    #log { background: #111; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; border-radius: 8px; white-space: pre-wrap; margin-bottom: 16px; min-height: 90px; }
+    #brick { background: #fff; border-radius: 12px; padding: 8px; min-height: 200px; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Teste isolado do formulário de cartão (sem React)</h1>
+  <div id="log">iniciando…\n</div>
+  <div id="brick"></div>
+
+  <script>
+    const log = (m) => { document.getElementById("log").textContent += m + "\n"; };
+    const PUBLIC_KEY = "TEST-a91b47a2-acc1-41f0-be6c-8c4f8d6d1dc9";
+
+    log("1) carregando SDK https://sdk.mercadopago.com/js/v2 …");
+    const s = document.createElement("script");
+    s.src = "https://sdk.mercadopago.com/js/v2";
+    s.onload = async () => {
+      log("2) SDK carregado ✓  — criando Payment Brick (public key " + PUBLIC_KEY.slice(0, 14) + "…)");
+      try {
+        const mp = new MercadoPago(PUBLIC_KEY, { locale: "pt-BR" });
+        const bricks = mp.bricks();
+        const t0 = Date.now();
+        setTimeout(() => {
+          if (!window.__brickReady) log("⏱ 15s e o Brick NÃO ficou pronto — problema é a public key/app no MP (não é o nosso app).");
+        }, 15000);
+        await bricks.create("payment", "brick", {
+          initialization: { amount: 35 },
+          customization: { paymentMethods: { creditCard: "all", debitCard: "all" } },
+          callbacks: {
+            onReady: () => { window.__brickReady = true; log("3) onReady ✓ em " + (Date.now() - t0) + "ms — FORMULÁRIO OK. O problema está no nosso app/refresh."); },
+            onError: (e) => { log("3) onError ✗ → " + JSON.stringify(e)); },
+            onSubmit: async ({ formData }) => { log("submit (ignorado no teste): " + JSON.stringify(formData).slice(0, 120)); },
+          },
+        });
+      } catch (e) {
+        log("ERRO no create: " + (e && e.message ? e.message : JSON.stringify(e)));
+      }
+    };
+    s.onerror = () => log("ERRO: SDK não carregou (rede/bloqueador?)");
+    document.head.appendChild(s);
+  </script>
+</body>
+</html>
