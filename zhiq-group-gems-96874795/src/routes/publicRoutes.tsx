@@ -1,8 +1,11 @@
 /**
  * publicRoutes — rotas públicas, autenticação, legal e páginas abertas.
  */
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Route, Navigate } from "react-router-dom";
+
+// Rota de diagnóstico do Payment Brick (teste técnico, sem link no app).
+const TesteBrick = lazy(() => import("@/pages/dev/TesteBrick"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
@@ -124,6 +127,7 @@ export const publicRoutes = (
     <Route path="/minha-carteira" element={<Suspense fallback={<PageFallback />}><MinhaCarteira /></Suspense>} />
     <Route path="/meus-dados" element={<Suspense fallback={<PageFallback />}><MeusDados /></Suspense>} />
     <Route path="/conta" element={<Suspense fallback={<PageFallback />}><ContaViajante /></Suspense>} />
+    <Route path="/teste-brick" element={<Suspense fallback={<PageFallback />}><TesteBrick /></Suspense>} />
     {/* Duplicata unificada: /chamar-motoboy reusa o MAPA OFICIAL (não duplicar). */}
     <Route path="/chamar-motoboy" element={<Navigate to="/solicitar-corrida?service=motoboy" replace />} />
     <Route path="/corrida/:trackingCode" element={<Suspense fallback={<PageFallback />}><PublicRideTracking /></Suspense>} />
