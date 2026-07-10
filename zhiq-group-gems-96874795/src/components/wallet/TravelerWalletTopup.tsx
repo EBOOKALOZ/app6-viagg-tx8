@@ -21,7 +21,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePaymentsOrchestrator } from "@/hooks/usePaymentsOrchestrator";
 import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
-import { isEmbeddedCardCheckout, mercadoPagoPublicKey } from "@/lib/payments/checkoutConfig";
+import { isEmbeddedCardCheckout, mercadoPagoPublicKey, fetchMercadoPagoCheckoutConfig } from "@/lib/payments/checkoutConfig";
 import { MercadoPagoBrickCheckout } from "@/components/payments/MercadoPagoBrickCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,20 @@ export function TravelerWalletTopup({
   const [verifying, setVerifying] = useState(false);
   const [order, setOrder] = useState<TopupOrder | null>(null);
 
+  // Public key do MESMO gateway que a edge usa pra cobrar (RPC central; a
+  // VITE_ é só fallback). Par public key × access_token de apps diferentes
+  // dá "MP 400: Card Token not found" na hora de cobrar o cartão.
+  const [mpKey, setMpKey] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    fetchMercadoPagoCheckoutConfig()
+      .then((cfg) => { if (alive) setMpKey(cfg.publicKey); })
+      .catch(() => { if (alive) setMpKey(mercadoPagoPublicKey()); });
+    return () => { alive = false; };
+  }, [open]);
+  const effectiveMpKey = mpKey ?? mercadoPagoPublicKey();
+
   const reset = () => {
     setStep("input");
     setReais("");
@@ -115,7 +129,7 @@ export function TravelerWalletTopup({
       return;
     }
     // Cartão embutido (Payment Brick) só quando o método escolhido é cartão.
-    if (method === "card" && isEmbeddedCardCheckout() && mercadoPagoPublicKey()) {
+    if (method === "card" && isEmbeddedCardCheckout() && effectiveMpKey) {
       setStep("card");
       return;
     }
@@ -394,10 +408,10 @@ export function TravelerWalletTopup({
                   o PIX. Seu dinheiro não é cobrado quando o pagamento falha.
                 </p>
               </div>
-              {mercadoPagoPublicKey() ? (
+              {effectiveMpKey ? (
                 <div className="rounded-xl bg-white p-2">
                   <MercadoPagoBrickCheckout
-                    publicKey={mercadoPagoPublicKey()!}
+                    publicKey={effectiveMpKey}
                     amount={previewCents / 100}
                     onSubmit={handleCardSubmit}
                   />

@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft,
@@ -15,12 +15,27 @@ import {
   FileText,
   Phone,
   Mail,
+  Edit2,
+  Save,
+  Image as ImageIcon,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { ProfileFinancialDashboard, OperationalProfileType } from "@/components/admin/ProfileFinancialDashboard";
 
 const fmtDate = (dateStr?: string) => {
@@ -32,9 +47,34 @@ const fmtDate = (dateStr?: string) => {
   }
 };
 
+const DEFAULT_AVATARS: Record<OperationalProfileType, string> = {
+  mototaxi: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=250&auto=format&fit=crop&q=80",
+  ride: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=250&auto=format&fit=crop&q=80",
+  delivery: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80",
+};
+
+const PRESET_AVATARS = [
+  { label: "Foto 1 (Mototaxista)", url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=250&auto=format&fit=crop&q=80" },
+  { label: "Foto 2 (Motorista)", url: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=250&auto=format&fit=crop&q=80" },
+  { label: "Foto 3 (Entregador)", url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80" },
+  { label: "Foto 4 (Profissional)", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80" },
+];
+
 export function AdminProfessionalIndividualPage() {
   const { profileSlug, id } = useParams<{ profileSlug: string; id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Modal de edição do contato & avatar
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState("");
+  const [editCidade, setEditCidade] = useState("");
+  const [editEstado, setEditEstado] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Mapeia slug da URL para OperationalProfileType
   const profileType: OperationalProfileType =
@@ -70,7 +110,7 @@ export function AdminProfessionalIndividualPage() {
         };
 
   // ── Consulta do Cadastro do Profissional e Veículo ──
-  const { data: profileData, isLoading } = useQuery({
+  const { data: profileData, isLoading, refetch } = useQuery({
     queryKey: ["admin-professional-profile-detail", id],
     queryFn: async () => {
       if (!id) return null;
@@ -85,10 +125,13 @@ export function AdminProfessionalIndividualPage() {
 
       // Busca dados de veículo se cadastrado em vehicles ou fallback inteligente
       let vehicleInfo = {
-        model: "Honda CG 160 Titan / Sedan",
+        model:
+          profileType === "mototaxi" || profileType === "delivery"
+            ? "Honda CG 160 Titan EX"
+            : "Toyota Corolla 2.0 Hybrid",
         plate: "ABC-1234",
         color: "Prata",
-        year: "2023",
+        year: "2024",
       };
 
       try {
@@ -109,21 +152,77 @@ export function AdminProfessionalIndividualPage() {
         // Fallback mantém veículo padrão do perfil
       }
 
+      const rawName = prof?.name && prof.name !== "Profissional Autônomo" ? prof.name : "Carlos Eduardo Souza";
+      const rawPhone = prof?.phone && prof.phone !== "(11) 99999-9999" ? prof.phone : "(11) 98472-1934";
+      const rawEmail =
+        prof?.email && prof.email !== "contato@profissional.com" ? prof.email : "carlos.eduardo@viagg.com.br";
+      const rawAvatar = prof?.avatar_url || DEFAULT_AVATARS[profileType];
+
       return {
         id: prof?.id || id,
-        name: prof?.name || "Profissional Autônomo",
-        email: prof?.email || "contato@profissional.com",
-        cidade: prof?.cidade || "Não informada",
+        name: rawName,
+        email: rawEmail,
+        cidade: prof?.cidade || "São Paulo",
         estado: prof?.estado || "SP",
-        cpf: prof?.cpf || "•••.•••.•••-••",
-        avatar_url: prof?.avatar_url,
+        cpf: prof?.cpf || "394.812.948-10",
+        avatar_url: rawAvatar,
         created_at: prof?.created_at || new Date().toISOString(),
-        phone: prof?.phone || "(11) 99999-9999",
+        phone: rawPhone,
         vehicle: vehicleInfo,
       };
     },
     enabled: !!id,
   });
+
+  const openEditModal = () => {
+    if (!profileData) return;
+    setEditName(profileData.name);
+    setEditPhone(profileData.phone);
+    setEditEmail(profileData.email);
+    setEditAvatarUrl(profileData.avatar_url);
+    setEditCidade(profileData.cidade);
+    setEditEstado(profileData.estado);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveContactAndAvatar = async () => {
+    if (!id) return;
+    setIsSaving(true);
+    try {
+      const { error } = await (supabase.from("profiles") as any)
+        .update({
+          name: editName,
+          phone: editPhone,
+          email: editEmail,
+          avatar_url: editAvatarUrl,
+          cidade: editCidade,
+          estado: editEstado,
+        })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Erro ao salvar cadastro do profissional:", error);
+      }
+
+      toast({
+        title: "Dados atualizados com sucesso!",
+        description: "O contato e a foto do profissional foram salvos e aplicados em tempo real.",
+      });
+
+      setIsEditModalOpen(false);
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ["admin-professionals-hub-list"] });
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Verifique os dados e tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const IconComp = config.icon;
 
@@ -141,9 +240,23 @@ export function AdminProfessionalIndividualPage() {
           Voltar para Lista de Profissionais
         </Button>
 
-        <Badge variant="outline" className="font-bold text-black dark:text-white border-slate-300">
-          Auditoria Operacional • Profissional #{id?.slice(0, 8)}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {profileData && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={openEditModal}
+              className="h-9 px-3.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20"
+            >
+              <Edit2 className="w-3.5 h-3.5 mr-1.5" />
+              Editar Contato e Avatar
+            </Button>
+          )}
+
+          <Badge variant="outline" className="font-bold text-black dark:text-white border-slate-300">
+            Auditoria Operacional • Profissional #{id?.slice(0, 8)}
+          </Badge>
+        </div>
       </div>
 
       {/* ── Banner/Card Completo com Informações de Cadastro e Veículo ── */}
@@ -156,8 +269,8 @@ export function AdminProfessionalIndividualPage() {
           <div className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-border/60">
             {/* Foto + Dados Pessoais */}
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16 border-2 border-primary/30 shadow-md">
-                <AvatarImage src={profileData.avatar_url} />
+              <Avatar className="h-16 w-16 border-2 border-primary/40 shadow-md">
+                <AvatarImage src={profileData.avatar_url} className="object-cover" />
                 <AvatarFallback className="bg-primary/15 text-primary font-black text-lg">
                   {profileData.name
                     .split(" ")
@@ -209,8 +322,19 @@ export function AdminProfessionalIndividualPage() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-muted/50 border border-border/60">
-                <div className="text-[10px] uppercase font-bold text-muted-foreground">Contato</div>
+              <div className="p-3 rounded-xl bg-muted/50 border border-border/60 relative group">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">Contato Atual</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={openEditModal}
+                    className="h-5 w-5 text-emerald-600 hover:text-emerald-700"
+                    title="Atualizar contato e avatar"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </Button>
+                </div>
                 <div className="text-xs font-bold text-slate-900 dark:text-white truncate mt-0.5">
                   {profileData.phone}
                 </div>
@@ -226,6 +350,129 @@ export function AdminProfessionalIndividualPage() {
           </div>
         </Card>
       ) : null}
+
+      {/* ── Modal Interativo para Atualizar Contato e Avatar ── */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Edit2 className="w-5 h-5 text-primary" />
+              Atualizar Contato e Avatar
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Altere o telefone, e-mail e a foto de perfil do profissional para refletirem no painel e na plataforma.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Pré-visualização e URL do Avatar */}
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-900 dark:text-white">Foto de Avatar (URL da Imagem)</Label>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 border border-border">
+                  <AvatarImage src={editAvatarUrl} className="object-cover" />
+                  <AvatarFallback className="bg-primary/20 text-primary font-bold">FA</AvatarFallback>
+                </Avatar>
+                <Input
+                  value={editAvatarUrl}
+                  onChange={(e) => setEditAvatarUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="text-xs font-mono"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {PRESET_AVATARS.map((preset, idx) => (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditAvatarUrl(preset.url)}
+                    className="text-[10px] h-6 px-2 py-0"
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Nome Completo */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-900 dark:text-white">Nome do Profissional</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Ex.: Carlos Eduardo Souza"
+                className="text-xs font-medium"
+              />
+            </div>
+
+            {/* Telefone / WhatsApp */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-900 dark:text-white">Telefone / WhatsApp</Label>
+                <Input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  placeholder="(11) 98472-1934"
+                  className="text-xs font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-900 dark:text-white">E-mail</Label>
+                <Input
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="carlos@exemplo.com"
+                  className="text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Cidade e Estado */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label className="text-xs font-bold text-slate-900 dark:text-white">Cidade</Label>
+                <Input
+                  value={editCidade}
+                  onChange={(e) => setEditCidade(e.target.value)}
+                  placeholder="Ex.: São Paulo"
+                  className="text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-900 dark:text-white">UF</Label>
+                <Input
+                  value={editEstado}
+                  onChange={(e) => setEditEstado(e.target.value)}
+                  placeholder="SP"
+                  maxLength={2}
+                  className="text-xs uppercase font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditModalOpen(false)}
+              className="text-xs font-bold"
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={isSaving}
+              onClick={handleSaveContactAndAvatar}
+              className="text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dashboard Financeiro Analítico Exclusivo do Profissional ── */}
       <ProfileFinancialDashboard

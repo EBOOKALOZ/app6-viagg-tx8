@@ -13,7 +13,7 @@ import { useState, useEffect } from "react";
 import { useMerchantCredits } from "@/hooks/useMerchantCredits";
 import { usePaymentsOrchestrator } from "@/hooks/usePaymentsOrchestrator";
 import { openCheckoutUrl, getCheckoutBackUrl } from "@/lib/payments/openCheckout";
-import { isEmbeddedCardCheckout, mercadoPagoPublicKey } from "@/lib/payments/checkoutConfig";
+import { isEmbeddedCardCheckout, mercadoPagoPublicKey, fetchMercadoPagoCheckoutConfig } from "@/lib/payments/checkoutConfig";
 import { MercadoPagoBrickCheckout } from "@/components/payments/MercadoPagoBrickCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,19 @@ export function WalletTopupButton({
   const [verifying, setVerifying] = useState(false);
   const [order, setOrder] = useState<TopupOrder | null>(null);
 
+  // Public key do MESMO gateway que a edge usa (par trocado = MP 400
+  // "Card Token not found"); VITE_ é só fallback.
+  const [mpKey, setMpKey] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    fetchMercadoPagoCheckoutConfig()
+      .then((cfg) => { if (alive) setMpKey(cfg.publicKey); })
+      .catch(() => { if (alive) setMpKey(mercadoPagoPublicKey()); });
+    return () => { alive = false; };
+  }, [open]);
+  const effectiveMpKey = mpKey ?? mercadoPagoPublicKey();
+
   const reset = () => {
     setStep("input");
     setReais("");
@@ -90,7 +103,7 @@ export function WalletTopupButton({
       toast.error("Loja não encontrada");
       return;
     }
-    if (isEmbeddedCardCheckout() && mercadoPagoPublicKey()) {
+    if (isEmbeddedCardCheckout() && effectiveMpKey) {
       setStep("card");
       return;
     }

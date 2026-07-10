@@ -524,39 +524,6 @@ export default function MinhaCarteira() {
           )}
         </motion.div>
 
-        {/* 🧪 Ambiente de teste (Sandbox) — dados enviados para testar a recarga */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, delay: 0.15, ease: "easeOut" }}
-        >
-          <Card className="rounded-2xl border border-amber-400/30 bg-amber-50 dark:bg-amber-950/30">
-            <CardContent className="space-y-3 p-4">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🧪</span>
-                <h2 className="text-sm font-black text-amber-700 dark:text-amber-300">Ambiente de teste (Sandbox)</h2>
-              </div>
-              <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
-                Dinheiro fictício. Use estes dados no checkout do Mercado Pago para testar a recarga.
-              </p>
-              <div className="grid gap-2 text-xs">
-                <div className="rounded-lg bg-white/70 p-2.5 dark:bg-black/20">
-                  <p className="font-bold text-amber-800 dark:text-amber-200">Comprador de teste</p>
-                  <p className="text-amber-700/90 dark:text-amber-300/90">
-                    Usuário: <span className="font-mono">TESTUSER5867…</span> · Senha: <span className="font-mono">hrOrfYgN41</span>
-                  </p>
-                </div>
-                <div className="rounded-lg bg-white/70 p-2.5 dark:bg-black/20">
-                  <p className="font-bold text-amber-800 dark:text-amber-200">Cartão aprovado (APRO)</p>
-                  <p className="font-mono text-amber-700/90 dark:text-amber-300/90">5031 4332 1540 6351 · 11/30 · CVV 123</p>
-                  <p className="text-amber-700/90 dark:text-amber-300/90">
-                    Titular: <span className="font-mono">APRO</span> · CPF: <span className="font-mono">12345678909</span>
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </main>
     </MarketLayout>
   );
