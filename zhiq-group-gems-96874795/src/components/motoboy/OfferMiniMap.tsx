@@ -193,36 +193,36 @@ export default function OfferMiniMap({
 
       {/* 3 pontos */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-          <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+        <div className="bg-[#0C3B24] border border-[#34C759]/30 rounded-lg px-2 py-1.5">
+          <p className="text-[9px] text-emerald-200/80 font-medium uppercase tracking-wider flex items-center gap-1">
             <Bike className="h-2.5 w-2.5 text-[#ffb800]" /> Motoboy
           </p>
           {hasMotoboy ? (
-            <p className="text-[10px] font-bold text-foreground/80 truncate">
+            <p className="text-[10px] font-bold text-white truncate">
               {motoboyCity || 'Localização'}
             </p>
           ) : (
             <Skeleton className="h-3 w-full mt-0.5" />
           )}
         </div>
-        <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-          <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+        <div className="bg-[#0C3B24] border border-[#34C759]/30 rounded-lg px-2 py-1.5">
+          <p className="text-[9px] text-emerald-200/80 font-medium uppercase tracking-wider flex items-center gap-1">
             <Store className="h-2.5 w-2.5 text-[#1F6F4A]" /> Loja
           </p>
           {hasStore ? (
-            <p className="text-[10px] font-bold text-foreground/80 truncate">
+            <p className="text-[10px] font-bold text-white truncate">
               {storeName || 'Loja'}
             </p>
           ) : (
             <Skeleton className="h-3 w-full mt-0.5" />
           )}
         </div>
-        <div className="bg-muted/30 rounded-lg px-2 py-1.5">
-          <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-wider flex items-center gap-1">
+        <div className="bg-[#0C3B24] border border-[#34C759]/30 rounded-lg px-2 py-1.5">
+          <p className="text-[9px] text-emerald-200/80 font-medium uppercase tracking-wider flex items-center gap-1">
             <MapPin className="h-2.5 w-2.5 text-[#FF6A00]" /> Cliente
           </p>
           {hasClient ? (
-            <p className="text-[10px] font-bold text-foreground/80 truncate">
+            <p className="text-[10px] font-bold text-white truncate">
               📍 Destino
             </p>
           ) : (
@@ -233,32 +233,32 @@ export default function OfferMiniMap({
 
       {/* Distâncias */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-muted/30 rounded-lg p-2 text-center">
+        <div className="bg-[#0C3B24] border border-[#34C759]/30 rounded-lg p-2 text-center">
           <Route className="h-3 w-3 mx-auto text-[#ffb800] mb-0.5" />
           {distMotoboyToStore != null ? (
-            <p className="text-xs font-bold">{fmtKm(distMotoboyToStore)}</p>
+            <p className="text-xs font-bold text-white">{fmtKm(distMotoboyToStore)}</p>
           ) : (
             <Skeleton className="h-3.5 w-10 mx-auto" />
           )}
-          <p className="text-[9px] text-muted-foreground">até a loja</p>
+          <p className="text-[9px] text-emerald-200/70">até a loja</p>
         </div>
-        <div className="bg-muted/30 rounded-lg p-2 text-center">
+        <div className="bg-[#0C3B24] border border-[#34C759]/30 rounded-lg p-2 text-center">
           <Route className="h-3 w-3 mx-auto text-[#1F6F4A] mb-0.5" />
           {distStoreToClient != null ? (
-            <p className="text-xs font-bold">{fmtKm(distStoreToClient)}</p>
+            <p className="text-xs font-bold text-white">{fmtKm(distStoreToClient)}</p>
           ) : (
             <Skeleton className="h-3.5 w-10 mx-auto" />
           )}
-          <p className="text-[9px] text-muted-foreground">loja → cliente</p>
+          <p className="text-[9px] text-emerald-200/70">loja → cliente</p>
         </div>
-        <div className="bg-muted/30 rounded-lg p-2 text-center">
+        <div className="bg-[#0C3B24] border border-[#34C759]/30 rounded-lg p-2 text-center">
           <Clock className="h-3 w-3 mx-auto text-muted-foreground mb-0.5" />
           {tempoEstimadoMin != null && tempoEstimadoMin > 0 ? (
-            <p className="text-xs font-bold">{tempoEstimadoMin} min</p>
+            <p className="text-xs font-bold text-white">{tempoEstimadoMin} min</p>
           ) : (
             <Skeleton className="h-3.5 w-10 mx-auto" />
           )}
-          <p className="text-[9px] text-muted-foreground">tempo est.</p>
+          <p className="text-[9px] text-emerald-200/70">tempo est.</p>
         </div>
       </div>
     </div>

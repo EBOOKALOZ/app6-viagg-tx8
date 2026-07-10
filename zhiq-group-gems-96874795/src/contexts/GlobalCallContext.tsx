@@ -329,10 +329,12 @@ export function GlobalCallProvider({ children }: GlobalCallProviderProps) {
         )}
       </div>
 
-      {/* 🚚 Overlay de Entrega (Motoboy) */}
+      {/* 🚚 Overlay de Entrega (Motoboy) — SEMPRE na frente de QUALQUER tela
+          (mesmo teto de z-index do modal de corridas moto-táxi/motorista) */}
       {currentOffer && deliveryPhase === 'ringing' && (
-        <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        <div
+          className="fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          style={{ zIndex: 2147483646 }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-md animate-in fade-in zoom-in duration-300">

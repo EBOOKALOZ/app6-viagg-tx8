@@ -176,6 +176,83 @@ const TONE_STYLES: Record<StatusTone, string> = {
   cancel: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800",
 };
 
+// ── Etapas da corrida (o que o motoboy faz, na ordem) ────────────────────────
+// Índice da etapa ATUAL a partir de driver_status + status da tabela:
+//   0 aceitou · 1 a caminho da coleta · 2 retirou (em entrega) · 3 entregue
+function resolveStepIndex(driverStatus: string | null, tableStatus: string | null): number {
+  const s = (tableStatus ?? "").toLowerCase();
+  if (driverStatus === "completed" || s === "delivered" || s === "concluida" || s === "finalizada") return 3;
+  if (driverStatus === "in_progress" || s === "in_progress") return 2;
+  if (driverStatus === "arrived" || driverStatus === "driver_on_the_way") return 1;
+  return 0; // aceitou a chamada
+}
+
+function RideSteps({
+  current, isDelivery, done,
+}: { current: number; isDelivery: boolean; done: boolean }) {
+  const steps = isDelivery
+    ? [
+        { icon: CheckCircle2, label: "Aceitou a chamada" },
+        { icon: Bike, label: "A caminho da coleta" },
+        { icon: Navigation, label: "Retirou — em entrega" },
+        { icon: MapPin, label: "Entregue" },
+      ]
+    : [
+        { icon: CheckCircle2, label: "Aceitou a chamada" },
+        { icon: Bike, label: "A caminho de você" },
+        { icon: Navigation, label: "Em viagem" },
+        { icon: MapPin, label: "Chegou ao destino" },
+      ];
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-muted/30 p-3">
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        Etapas da corrida
+      </p>
+      <div className="space-y-0">
+        {steps.map((st, i) => {
+          const isDone = done || i < current;
+          const isCurrent = !done && i === current;
+          const Icon = st.icon;
+          return (
+            <div key={st.label} className="flex items-stretch gap-2.5">
+              {/* coluna do marcador + linha vertical */}
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                    isDone
+                      ? "border-emerald-500 bg-emerald-500 text-white"
+                      : isCurrent
+                        ? "border-[#FF6A00] bg-[#FF6A00]/10 text-[#FF6A00]"
+                        : "border-border bg-muted text-muted-foreground/50",
+                  )}
+                >
+                  <Icon className={cn("h-3.5 w-3.5", isCurrent && "animate-pulse")} />
+                </div>
+                {i < steps.length - 1 && (
+                  <div className={cn("w-0.5 flex-1 min-h-3", i < current || done ? "bg-emerald-500" : "bg-border")} />
+                )}
+              </div>
+              <p
+                className={cn(
+                  "pb-3 pt-0.5 text-xs font-semibold leading-tight",
+                  isDone ? "text-emerald-600 dark:text-emerald-400"
+                    : isCurrent ? "text-foreground"
+                      : "text-muted-foreground/60",
+                )}
+              >
+                {st.label}
+                {isCurrent && <span className="ml-1.5 text-[10px] font-bold text-[#FF6A00]">● agora</span>}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Botão de ação (grade 2x2 / 4 colunas) ────────────────────────────────────
 function ActionButton({
   icon: Icon, label, onClick, disabled, hint,
@@ -189,14 +266,13 @@ function ActionButton({
   return (
     <Button
       type="button"
-      variant="outline"
       onClick={onClick}
       disabled={disabled}
       title={hint}
-      className="flex h-auto flex-col items-center gap-1.5 rounded-xl py-3 text-xs font-semibold disabled:opacity-40"
+      className="flex h-auto flex-col items-center gap-1.5 rounded-xl bg-[#00a300] hover:bg-[#008f00] text-white py-3 text-xs font-semibold shadow-sm transition-colors disabled:opacity-40 disabled:bg-[#00a300] disabled:text-white"
     >
-      <Icon className="h-5 w-5" />
-      {label}
+      <Icon className="h-5 w-5 text-white" />
+      <span className="text-white">{label}</span>
     </Button>
   );
 }
@@ -579,6 +655,15 @@ export function AcceptedRideCard({
             </div>
           )}
 
+          {/* B0.5) ETAPAS DA CORRIDA — timeline do que o profissional faz */}
+          {ride.driverStatus !== "cancelled" && ride.driverStatus !== "payment_timeout" && (
+            <RideSteps
+              current={resolveStepIndex(ride.driverStatus, rideRow?.status ?? null)}
+              isDelivery={table === "service_orders"}
+              done={ride.driverStatus === "completed" || String(rideRow?.status ?? "").toLowerCase() === "delivered"}
+            />
+          )}
+
           {/* B) Card do profissional */}
           <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/40 p-3">
             <Avatar className="h-14 w-14 shrink-0 border-2 border-primary/20 shadow-md">
@@ -674,21 +759,7 @@ export function AcceptedRideCard({
           )}
 
           {/* E) Ações */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <ActionButton
-              icon={MessageCircle}
-              label="Conversar"
-              onClick={handleChat}
-              disabled={!canContact}
-              hint={!canContact ? "Contato indisponível no momento" : undefined}
-            />
-            <ActionButton
-              icon={Phone}
-              label="Ligar"
-              onClick={handleCall}
-              disabled={!canContact}
-              hint={!canContact ? "Contato indisponível no momento" : undefined}
-            />
+          <div className="grid grid-cols-2 gap-2">
             <ActionButton icon={Share2} label="Compartilhar" onClick={handleShare} />
             <ActionButton icon={MapPin} label="Localização" onClick={handleViewLocation} />
           </div>

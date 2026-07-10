@@ -48,6 +48,9 @@ export default function RouteMapCanvas({
 
   const hasOrigin = originLat != null && originLng != null;
   const hasDest = destinationLat != null && destinationLng != null;
+  // Mostra o mapa com QUALQUER ponto disponível (loja/solicitante) — a rota
+  // completa só desenha quando os dois existem, mas a localização nunca some.
+  const hasAny = hasOrigin || hasDest;
 
   const routeCoords: [number, number][] | null = (() => {
     if (!encodedPolyline) return null;
@@ -65,6 +68,12 @@ export default function RouteMapCanvas({
   }, [encodedPolyline, instanceId]);
 
   useEffect(() => {
+    // Token: env local primeiro (mesma env do routeService — funciona em dev
+    // sem depender de edge function); edge get-mapbox-token como fallback.
+    const envToken =
+      (import.meta as any).env?.VITE_MAPBOX_TOKEN ||
+      (import.meta as any).env?.VITE_MAPBOX_PUBLIC_TOKEN;
+    if (envToken) { setToken(envToken); return; }
     supabase.functions.invoke('get-mapbox-token').then(({ data }) => {
       if (data?.token) setToken(data.token);
       else setError(true);
@@ -73,7 +82,7 @@ export default function RouteMapCanvas({
 
   useEffect(() => {
     if (!token || error || !containerRef.current) return;
-    if (!hasOrigin || !hasDest) return;
+    if (!hasAny) return; // com UM ponto já renderiza (loja/solicitante)
     const el = containerRef.current;
     if (el.clientWidth === 0 || el.clientHeight === 0) return;
 
@@ -83,15 +92,28 @@ export default function RouteMapCanvas({
 
     const placeMarkers = (map: mapboxgl.Map) => {
       markersRef.current.forEach(m => m.remove());
-      markersRef.current = [
-        new mapboxgl.Marker({ color: originMarkerColor, scale: 0.7 })
-          .setLngLat([originLng!, originLat!]).addTo(map),
-        new mapboxgl.Marker({ color: destinationMarkerColor, scale: 0.7 })
-          .setLngLat([destinationLng!, destinationLat!]).addTo(map),
-      ];
+      markersRef.current = [];
+      if (hasOrigin) {
+        markersRef.current.push(
+          new mapboxgl.Marker({ color: originMarkerColor, scale: 0.7 })
+            .setLngLat([originLng!, originLat!]).addTo(map));
+      }
+      if (hasDest) {
+        markersRef.current.push(
+          new mapboxgl.Marker({ color: destinationMarkerColor, scale: 0.7 })
+            .setLngLat([destinationLng!, destinationLat!]).addTo(map));
+      }
     };
 
     const fitToRoute = (map: mapboxgl.Map) => {
+      // Um ponto só → centraliza nele (fitBounds de 1 ponto estoura o zoom)
+      if (!(hasOrigin && hasDest)) {
+        const center: [number, number] = hasDest
+          ? [destinationLng!, destinationLat!]
+          : [originLng!, originLat!];
+        map.jumpTo({ center, zoom: 15 });
+        return;
+      }
       const bounds = new mapboxgl.LngLatBounds();
       if (routeCoords && routeCoords.length >= 2) {
         routeCoords.forEach(c => bounds.extend(c));
@@ -103,16 +125,19 @@ export default function RouteMapCanvas({
     };
 
     const isFallback = !routeCoords || routeCoords.length < 2;
-    const finalRouteCoords = isFallback 
-      ? [[originLng!, originLat!], [destinationLng!, destinationLat!]]
+    // Rota (mesmo em linha reta) só com os DOIS pontos; senão, sem features.
+    const finalRouteCoords = isFallback
+      ? (hasOrigin && hasDest
+          ? [[originLng!, originLat!], [destinationLng!, destinationLat!]]
+          : null)
       : routeCoords!;
 
     const routeGeoJSON: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
-      features: [{
+      features: finalRouteCoords ? [{
         type: 'Feature', properties: {},
         geometry: { type: 'LineString', coordinates: finalRouteCoords },
-      }],
+      }] : [],
     };
 
     // Update existing map
@@ -191,9 +216,9 @@ export default function RouteMapCanvas({
     } catch {
       setError(true);
     }
-  }, [token, error, hasOrigin, hasDest, originLat, originLng, destinationLat, destinationLng, routeCoords, instanceId, interactive, routeColor, outlineColor, originMarkerColor, destinationMarkerColor]);
+  }, [token, error, hasAny, hasOrigin, hasDest, originLat, originLng, destinationLat, destinationLng, routeCoords, instanceId, interactive, routeColor, outlineColor, originMarkerColor, destinationMarkerColor]);
 
-  if (!hasOrigin || !hasDest || error) {
+  if (!hasAny || error) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-1">

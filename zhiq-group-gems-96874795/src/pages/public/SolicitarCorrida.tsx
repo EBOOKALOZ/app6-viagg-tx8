@@ -238,6 +238,8 @@ export default function SolicitarCorrida() {
   // Cancelar chamada durante a busca (confirmação + envio)
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // PRÉ-PAGO: diálogo de saldo insuficiente → recarga
+  const [saldoDialogOpen, setSaldoDialogOpen] = useState(false);
 
   // Localização
   const [center,      setCenter]      = useState<LatLng>(DEFAULT_CENTER);
@@ -608,7 +610,12 @@ export default function SolicitarCorrida() {
       setStep("searching");
       toast.success(`Solicitação enviada! Buscando um ${disp.label}…`);
     } catch (e: any) {
-      toast.error(`Erro ao chamar ${disp.label}`, { description: e.message });
+      // PRÉ-PAGO: sem saldo, o banco nega e nada é criado → orienta a recarga.
+      if (/negativo|saldo/i.test(e.message || "")) {
+        setSaldoDialogOpen(true);
+      } else {
+        toast.error(`Erro ao chamar ${disp.label}`, { description: e.message });
+      }
     } finally {
       setCreatingOrder(false);
     }
@@ -1089,7 +1096,43 @@ export default function SolicitarCorrida() {
               <button onClick={handleSearch} disabled={!origin || !destination}
                 className="w-full py-4 rounded-2xl font-black text-white text-base shadow-xl disabled:opacity-40 active:scale-[0.98] transition-all"
                 style={{ background: origin && destination ? "linear-gradient(90deg,#FF6A00,#FF4500)" : "#2A3038" }}>
-                🔎 Procurar {serviceObj.label}
+                {/* PRÉ-PAGO: o valor sai da carteira NA CHAMADA */}
+                {price
+                  ? `💳 Pagar e Chamar ${serviceObj.label} — R$ ${price.avg.toFixed(2)}`
+                  : `🔎 Procurar ${serviceObj.label}`}
+              </button>
+              <p className="text-[10px] text-[#A7B0BE] text-center mt-1.5">
+                O valor é debitado da sua carteira ao chamar e fica em garantia
+                até a entrega. Sem saldo? Recarregue em "Minha Carteira".
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PRÉ-PAGO: saldo insuficiente → recarga ── */}
+      {saldoDialogOpen && (
+        <div className="absolute inset-0 z-[2001] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#151A21] p-5 space-y-4 text-center">
+            <div className="text-4xl">💳</div>
+            <h3 className="text-lg font-black text-white">Saldo insuficiente</h3>
+            <p className="text-sm text-[#A7B0BE]">
+              A corrida é paga na hora da chamada{price ? ` (R$ ${price.avg.toFixed(2)})` : ""} e o
+              valor fica em garantia até a entrega. Adicione saldo à sua carteira para continuar.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setSaldoDialogOpen(false)}
+                className="flex-1 rounded-2xl border border-white/15 px-4 py-2.5 text-sm font-bold text-white hover:bg-white/5"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={() => navigate("/minha-carteira")}
+                className="flex-1 rounded-2xl px-4 py-2.5 text-sm font-black text-white active:scale-95 transition-all"
+                style={{ background: "linear-gradient(90deg,#FF6A00,#FF4500)" }}
+              >
+                Adicionar saldo
               </button>
             </div>
           </div>

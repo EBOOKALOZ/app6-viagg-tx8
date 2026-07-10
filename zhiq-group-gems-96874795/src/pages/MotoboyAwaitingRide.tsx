@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { brazilCoordsOrNull } from '@/lib/map/brazilBounds';
 
 const RouteMapCanvas = lazy(() => import('@/components/motoboy/RouteMapCanvas'));
 
@@ -70,16 +71,24 @@ export default function MotoboyAwaitingRide() {
   const watchRef = useRef<number | null>(null);
 
   // ── GPS (não bloqueia loading) ─────────────────────────────────────────────
+  // Aceita só leitura PRECISA (≤5km) e DENTRO do Brasil — IP/gateway
+  // (ex.: Starlink em SP/Venezuela) é descartado; fica o fallback do cadastro.
+  const gpsOk = (p: GeolocationPosition) => {
+    const acc = p.coords.accuracy;
+    if (acc == null || acc > 5000) return false;
+    return !!brazilCoordsOrNull(p.coords.latitude, p.coords.longitude);
+  };
+
   useEffect(() => {
     if (!navigator.geolocation) return;
     // enableHighAccuracy: true em AMBAS as chamadas — evita localização por IP/WiFi
     navigator.geolocation.getCurrentPosition(
-      (p) => setMPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (p) => { if (gpsOk(p)) setMPos({ lat: p.coords.latitude, lng: p.coords.longitude }); },
       (e) => console.warn('[GPS]', e.message),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 15000 }
     );
     watchRef.current = navigator.geolocation.watchPosition(
-      (p) => setMPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (p) => { if (gpsOk(p)) setMPos({ lat: p.coords.latitude, lng: p.coords.longitude }); },
       (e) => console.warn('[GPS watch]', e.message),
       { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
     );
@@ -99,7 +108,10 @@ export default function MotoboyAwaitingRide() {
         if (user) {
           const { data: pres } = await supabase
             .from('motoboy_presence').select('lat,lng').eq('motoboy_id', user.id).maybeSingle();
-          if (pres?.lat && !mPos) setMPos({ lat: Number(pres.lat), lng: Number(pres.lng) });
+          // Fallback do banco também passa pelo filtro do Brasil (presença
+          // gravada por leitura de IP jogava o pino em outra cidade/país).
+          const presOk = brazilCoordsOrNull(Number(pres?.lat), Number(pres?.lng));
+          if (presOk) setMPos(prev => prev ?? presOk);
         }
 
         // Oferta
@@ -263,15 +275,29 @@ export default function MotoboyAwaitingRide() {
   const dropLat   = orderRow?.destination_lat != null ? Number(orderRow.destination_lat) : null;
   const dropLng   = orderRow?.destination_lng != null ? Number(orderRow.destination_lng) : null;
 
-  // Nome e endereço da loja (dinâmico por oferta)
-  const storeName = storeRow?.nome_loja || offerRow?.store_name_snapshot || 'Loja Parceira';
+  // SANIDADE da posição do motoboy: numa corrida ativa ele não pode estar a
+  // centenas de km da coleta. Posição implausível (presença gravada por IP,
+  // gateway Starlink etc.) é DESCARTADA → o mapa centraliza na LOJA.
+  const kmEntre = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+    const R = 6371, dLat = (bLat - aLat) * Math.PI / 180, dLng = (bLng - aLng) * Math.PI / 180;
+    const s = Math.sin(dLat / 2) ** 2 +
+      Math.cos(aLat * Math.PI / 180) * Math.cos(bLat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+  };
+  const mPosPlausivel = (mPos && pickupLat != null && pickupLng != null
+    && kmEntre(mPos.lat, mPos.lng, pickupLat, pickupLng) <= 150)
+    ? mPos : null;
+
+  // Nome/endereço/imagem da RETIRADA — a OFERTA manda (snapshot carimbado no
+  // despacho): chamada de cliente mostra o NOME/FOTO do solicitante e o
+  // endereço real da corrida; pedido de loja mostra a loja normalmente.
+  const storeName = offerRow?.store_name_snapshot || storeRow?.nome_loja || 'Solicitante';
   const storePhone= storeRow?.whatsapp || storeRow?.phone || null;
-  const storeAddrParts = storeRow
-    ? [storeRow.rua, storeRow.numero, storeRow.bairro, storeRow.cidade].filter(Boolean)
-    : [];
-  const storeAddr = storeAddrParts.length > 0
-    ? storeAddrParts.join(', ')
-    : (orderRow?.pickup_location || offerRow?.pickup_address_snapshot || 'Endereço da loja');
+  const retiradaImg = offerRow?.requester_avatar_snapshot || storeRow?.logo_url || null;
+  const storeAddr = orderRow?.pickup_location
+    || offerRow?.pickup_address_snapshot
+    || (storeRow ? [storeRow.rua, storeRow.numero, storeRow.bairro, storeRow.cidade].filter(Boolean).join(', ') : '')
+    || 'Endereço de coleta';
   const customerAddr = orderRow?.destination || offerRow?.dropoff_address_snapshot || 'Endereço do cliente';
 
   // ── Loading ────────────────────────────────────────────────────────────────
@@ -338,14 +364,20 @@ export default function MotoboyAwaitingRide() {
   const isToClient = phase === 'heading_to_customer';
   const accent     = isToStore ? '#FF6B00' : isAtStore ? '#FFAD00' : '#34C759';
 
-  // Configuração do mapa por fase
-  const mapOriginLat = isToStore ? mPos?.lat ?? null : pickupLat;
-  const mapOriginLng = isToStore ? mPos?.lng ?? null : pickupLng;
-  const mapDestLat   = isToStore ? pickupLat : dropLat;
-  const mapDestLng   = isToStore ? pickupLng : dropLng;
+  // Configuração do mapa por fase (posição do motoboy só se PLAUSÍVEL).
+  // Sem posição válida (desktop/IP filtrado), a fase "a caminho da loja"
+  // mostra a ROTA LOJA → CLIENTE (dois pontos reais da corrida) — sempre
+  // há rota e a loja sempre aparece.
+  const mapOriginLat = isToStore ? (mPosPlausivel?.lat ?? pickupLat) : pickupLat;
+  const mapOriginLng = isToStore ? (mPosPlausivel?.lng ?? pickupLng) : pickupLng;
+  const mapDestLat   = isToStore ? (mPosPlausivel ? pickupLat : dropLat) : dropLat;
+  const mapDestLng   = isToStore ? (mPosPlausivel ? pickupLng : dropLng) : dropLng;
   const mapPolyline  = isToStore ? (offerRow?.pickup_polyline ?? null) : null;
   const gmpDest      = mapDestLat != null ? { lat: mapDestLat, lng: mapDestLng! } : null;
-  const hasMap       = mapOriginLat != null && mapDestLat != null;
+  // Com UM ponto já mostra o mapa (a loja/solicitante nunca some); a rota
+  // completa aparece quando a posição do motoboy também existir.
+  const hasMap       = (mapOriginLat != null && mapOriginLng != null)
+                    || (mapDestLat != null && mapDestLng != null);
 
   return (
     <div className="fixed inset-0 bg-[#0a0a0a] overflow-hidden">
@@ -356,8 +388,8 @@ export default function MotoboyAwaitingRide() {
           <Suspense fallback={<div className="w-full h-full flex items-center justify-center bg-[#111]"><Loader2 className="h-8 w-8 text-[#FF6B00] animate-spin" /></div>}>
             <RouteMapCanvas
               instanceId={`await-${offerId}-${phase}`}
-              originLat={mapOriginLat!} originLng={mapOriginLng!}
-              destinationLat={mapDestLat!} destinationLng={mapDestLng!}
+              originLat={mapOriginLat} originLng={mapOriginLng}
+              destinationLat={mapDestLat} destinationLng={mapDestLng}
               encodedPolyline={mapPolyline}
               routeColor={accent} outlineColor={accent}
               originMarkerColor={accent} destinationMarkerColor="#fff"
@@ -417,9 +449,9 @@ export default function MotoboyAwaitingRide() {
 
               {/* ── Info da loja (sempre visível) ── */}
               <div className="flex items-start gap-3 bg-white/5 rounded-2xl p-4">
-                {storeRow?.logo_url ? (
+                {retiradaImg ? (
                   <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-white/10">
-                    <img src={storeRow.logo_url} alt={storeName} className="w-full h-full object-cover"
+                    <img src={retiradaImg} alt={storeName} className="w-full h-full object-cover"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.classList.add('flex','items-center','justify-center'); (e.target as HTMLImageElement).parentElement!.style.background = `${accent}18`; (e.target as HTMLImageElement).insertAdjacentHTML('afterend', `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/></svg>`); }}
                     />
                   </div>

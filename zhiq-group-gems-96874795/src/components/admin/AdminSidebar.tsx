@@ -139,6 +139,10 @@ const menuSections: MenuSection[] = [
     emoji: "🔶",
     items: [
       { title: "Comissão Inteligente", url: "/admin/comissao-inteligente", icon: Target },
+      { title: "Hub de Profissionais", url: "/admin/profissionais-hub", icon: Users, badge: "HUB" },
+      { title: "Finanças Motoboy", url: "/admin/motoboy-financeiro", icon: Bike, badge: "MOTO" },
+      { title: "Finanças Moto Táxi", url: "/admin/moto-taxi-financeiro", icon: Zap, badge: "TÁXI" },
+      { title: "Finanças Motorista", url: "/admin/motorista-financeiro", icon: Car, badge: "CAR" },
       { title: "Console em Tempo Real", url: "/admin/eventos", icon: Radio, badge: "LIVE" },
       { title: "Mapa Inteligente", url: "/admin/mapa", icon: MapPin, badge: "IA" },
       { title: "Centro de Comando IA", url: "/admin/ai", icon: BrainCircuit },

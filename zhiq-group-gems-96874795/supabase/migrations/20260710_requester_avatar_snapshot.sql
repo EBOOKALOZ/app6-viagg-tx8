@@ -67,9 +67,14 @@ BEGIN
                     WHERE user_id = v_order.merchant_id LIMIT 1) END);
 
     -- Imagem do solicitante (o definer lê livremente):
-    --   cliente → avatar do perfil · loja → logo (fallback avatar do dono)
+    --   cliente → avatar do perfil (fallback: logo da loja dele, se tiver)
+    --   loja    → logo (fallback avatar do dono)
     IF v_is_customer THEN
       SELECT avatar_url INTO v_avatar FROM public.profiles WHERE id = v_order.merchant_id;
+      IF v_avatar IS NULL THEN
+        SELECT logo_url INTO v_avatar FROM public.merchant_stores
+         WHERE user_id = v_order.merchant_id LIMIT 1;
+      END IF;
     ELSE
       SELECT logo_url INTO v_avatar FROM public.merchant_stores
        WHERE user_id = v_order.merchant_id LIMIT 1;

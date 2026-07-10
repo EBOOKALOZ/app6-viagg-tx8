@@ -92,6 +92,11 @@ import {
   AdminMapDashboard,
   AdminPostingQueuePage,
   AdminCommissionIntelligence,
+  AdminProfessionalsHub,
+  AdminProfessionalIndividualPage,
+  AdminMotoboyFinanceiro,
+  AdminMotoTaxiFinanceiro,
+  AdminMotoristaFinanceiro,
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -144,6 +149,12 @@ export const adminRoutes = (
       <Route path="/admin/war-room" element={<AdminWarRoom />} />
       <Route path="/admin/creditos" element={<AdminCreditsModule />} />
       <Route path="/admin/comissao-inteligente" element={<AdminCommissionIntelligence />} />
+      <Route path="/admin/motoboy-financeiro" element={<AdminMotoboyFinanceiro />} />
+      <Route path="/admin/moto-taxi-financeiro" element={<AdminMotoTaxiFinanceiro />} />
+      <Route path="/admin/motorista-financeiro" element={<AdminMotoristaFinanceiro />} />
+      <Route path="/admin/profissionais-hub" element={<AdminProfessionalsHub />} />
+      <Route path="/admin/profissionais" element={<AdminProfessionalsHub />} />
+      <Route path="/admin/profissionais/:profileSlug/:id" element={<AdminProfessionalIndividualPage />} />
       <Route path="/admin/pay" element={<AdminPayDashboard />} />
       <Route path="/admin/pay/wallets" element={<AdminPayWallets />} />
       <Route path="/admin/pay/ledger" element={<AdminPayLedger />} />

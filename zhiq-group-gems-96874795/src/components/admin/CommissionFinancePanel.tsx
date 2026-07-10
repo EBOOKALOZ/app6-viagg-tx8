@@ -15,12 +15,16 @@
  *   · Comissões PENDENTES = fee de escrows held
  *   · Repasses PAGOS aos parceiros = professional de escrows released
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Landmark, Wallet, HandCoins, TrendingUp, AlertTriangle,
   Bike, Zap, Car, Truck, Package,
@@ -118,6 +122,67 @@ export function CommissionFinancePanel() {
   const rows = financeQuery.data?.rows || [];
   const fallbackMode = financeQuery.data?.fallback ?? false;
   const missingTable = financeQuery.data?.missingTable ?? false;
+
+  // ── OPERAÇÕES CONCLUÍDAS (composição por corrida/entrega) ─────────────────
+  // Fonte OFICIAL: pay_escrow_holds — cada linha é cópia exata da liquidação
+  // (Total = Ganho + Comissão, por construção). Aqui só FORMATAMOS.
+  const [opDays, setOpDays] = useState("30");
+  const [opStatus, setOpStatus] = useState("all");
+  const [opCat, setOpCat] = useState("all");
+  const [opProf, setOpProf] = useState("");
+
+  const opsQuery = useQuery({
+    queryKey: ["admin-commission-ops"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("pay_escrow_holds") as any)
+        .select("id, created_at, released_at, service_type, service_id, status, professional_user_id, amount_cents, platform_fee_cents, professional_amount_cents, metadata")
+        .order("created_at", { ascending: false })
+        .limit(400);
+      if (error) throw error;
+      const ops: any[] = data || [];
+      // Nomes dos profissionais em UMA consulta (admin lê profiles)
+      const ids = Array.from(new Set(ops.map((o) => o.professional_user_id).filter(Boolean)));
+      let names: Record<string, string> = {};
+      if (ids.length) {
+        const { data: profs } = await (supabase.from("profiles") as any)
+          .select("id, name").in("id", ids);
+        for (const p of profs || []) names[p.id] = p.name;
+      }
+      return { ops, names };
+    },
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+    retry: 1,
+  });
+
+  const opsFiltered = useMemo(() => {
+    const ops = opsQuery.data?.ops || [];
+    const names = opsQuery.data?.names || {};
+    const cutoff = opDays === "all" ? null
+      : new Date(Date.now() - Number(opDays) * 86400_000).toISOString();
+    return ops
+      .filter((o) => !cutoff || o.created_at >= cutoff)
+      .filter((o) => opStatus === "all" || o.status === opStatus)
+      .filter((o) => opCat === "all" || o.service_type === opCat)
+      .filter((o) => {
+        if (!opProf.trim()) return true;
+        const q = opProf.trim().toLowerCase();
+        const nome = (names[o.professional_user_id] || "").toLowerCase();
+        return nome.includes(q) || String(o.professional_user_id || "").startsWith(q);
+      })
+      .map((o) => ({
+        ...o,
+        profName: names[o.professional_user_id]
+          || (o.professional_user_id ? String(o.professional_user_id).slice(0, 8) : "—"),
+        // % oficial: gravado no metadata pela liquidação; senão derivado dos
+        // MESMOS centavos oficiais (formatação, não recálculo).
+        pct: o.metadata?.commission_percent
+          ?? (o.amount_cents > 0
+              ? Math.round((o.platform_fee_cents / o.amount_cents) * 1000) / 10
+              : null),
+        pagamento: o.metadata?.payment_method || "—",
+      }));
+  }, [opsQuery.data, opDays, opStatus, opCat, opProf]);
   const loading = financeQuery.isLoading;
 
   const m = useMemo(() => {
@@ -281,7 +346,8 @@ export function CommissionFinancePanel() {
       </div>
 
       {/* ── Volume ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <StatCard label="Operações (total)" value={loading ? null : String(m.txTotal)} small />
         <StatCard label="Ticket médio" value={loading ? null : fmtBRL(m.avgTicket)} small />
         <StatCard label="Corridas (Motorista)" value={loading ? null : String(m.countRides)} small />
         <StatCard label="Corridas (Moto-Táxi)" value={loading ? null : String(m.countMototaxi)} small />
@@ -372,6 +438,108 @@ export function CommissionFinancePanel() {
           </ResponsiveContainer>
         </ChartCard>
       </div>
+
+      {/* ── Operações concluídas: composição financeira POR CORRIDA ──
+          Fonte oficial (pay_escrow_holds = cópia exata da liquidação).
+          Total = Ganho + Comissão por construção — aqui só formata. */}
+      <Card className="bg-white">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <HandCoins className="h-4 w-4 text-motoboy" />
+            Operações concluídas — composição por corrida
+            <Badge variant="outline" className="ml-1 text-[10px]">{opsFiltered.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Filtros */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            <Select value={opDays} onValueChange={setOpDays}>
+              <SelectTrigger className="h-9 text-xs text-white font-medium bg-slate-900 border-slate-700 hover:bg-slate-800"><SelectValue placeholder="Período" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 90 dias</SelectItem>
+                <SelectItem value="all">Tudo</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={opStatus} onValueChange={setOpStatus}>
+              <SelectTrigger className="h-9 text-xs text-white font-medium bg-slate-900 border-slate-700 hover:bg-slate-800"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="released">Liberado (pago)</SelectItem>
+                <SelectItem value="held">Em escrow</SelectItem>
+                <SelectItem value="refunded">Estornado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={opCat} onValueChange={setOpCat}>
+              <SelectTrigger className="h-9 text-xs text-white font-medium bg-slate-900 border-slate-700 hover:bg-slate-800"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                <SelectItem value="delivery">Motoboy</SelectItem>
+                <SelectItem value="mototaxi">Moto-Táxi</SelectItem>
+                <SelectItem value="ride">Motorista</SelectItem>
+                <SelectItem value="freight">Frete</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              value={opProf}
+              onChange={(e) => setOpProf(e.target.value)}
+              placeholder="Profissional (nome ou id)"
+              className="h-9 text-xs text-white font-medium bg-slate-900 border-slate-700 placeholder:text-slate-300"
+            />
+          </div>
+
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  <TableHead className="text-xs">Data/Hora</TableHead>
+                  <TableHead className="text-xs">Categoria</TableHead>
+                  <TableHead className="text-xs">Profissional</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Pgto</TableHead>
+                  <TableHead className="text-xs text-right">Valor Total</TableHead>
+                  <TableHead className="text-xs text-right">Ganho Prof.</TableHead>
+                  <TableHead className="text-xs text-right">Comissão</TableHead>
+                  <TableHead className="text-xs text-right">%</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {opsQuery.isLoading && (
+                  <TableRow><TableCell colSpan={9} className="py-6 text-center text-xs text-muted-foreground">Carregando operações…</TableCell></TableRow>
+                )}
+                {!opsQuery.isLoading && opsFiltered.length === 0 && (
+                  <TableRow><TableCell colSpan={9} className="py-6 text-center text-xs text-muted-foreground">Nenhuma operação no filtro atual.</TableCell></TableRow>
+                )}
+                {opsFiltered.slice(0, 100).map((o: any) => (
+                  <TableRow key={o.id}>
+                    <TableCell className="whitespace-nowrap text-[11px] text-muted-foreground">
+                      {new Date(o.created_at).toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">{catLabel(o.service_type)}</Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[140px] truncate text-xs font-medium">{o.profName}</TableCell>
+                    <TableCell>
+                      <Badge className={cn("text-[10px]",
+                        o.status === "released" ? "bg-emerald-100 text-emerald-700"
+                        : o.status === "held" ? "bg-amber-100 text-amber-700"
+                        : "bg-zinc-100 text-zinc-600")}>
+                        {o.status === "released" ? "Pago" : o.status === "held" ? "Escrow" : o.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-[11px] text-muted-foreground">{o.pagamento}</TableCell>
+                    <TableCell className="text-right font-mono text-xs font-bold">{fmtBRL(o.amount_cents)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs font-bold text-emerald-600">{fmtBRL(o.professional_amount_cents)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs font-bold text-motoboy">{fmtBRL(o.platform_fee_cents)}</TableCell>
+                    <TableCell className="text-right font-mono text-xs">{o.pct != null ? `${o.pct}%` : "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

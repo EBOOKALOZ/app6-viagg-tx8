@@ -205,7 +205,7 @@ export default function AdminCommissionIntelligence() {
     v == null ? "—" : `${Number(v)}%`;
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className="w-full px-4 md:px-6 py-4 space-y-4">
       <PageHeader />
 
       {/* ── Aviso: rodando em modo leitura direta (migration pendente) ── */}

@@ -24,6 +24,8 @@ export const AdminGLMAnalytics     = AdminAIAnalytics;
 export const AdminGLMCommandCenter = AdminAICommandCenter;
 export const AdminGLMHistoryPage   = AdminAIHistoryPage;
 export const AdminPostingAuditPage = lazy(() => import("@/pages/admin/AdminPostingAuditPage"));
+export const AdminProfessionalsHub = lazy(() => import("@/pages/admin/AdminProfessionalsHub").then(m => ({ default: m.AdminProfessionalsHub })));
+export const AdminProfessionalIndividualPage = lazy(() => import("@/pages/admin/AdminProfessionalIndividualPage").then(m => ({ default: m.AdminProfessionalIndividualPage })));
 export const AdminMotoboyPricing = lazy(() => import("@/pages/admin/AdminMotoboyPricing"));
 export const AdminPostPreviewCenter = lazy(() => import("@/pages/admin/AdminPostPreviewCenter"));
 export const MerchantLayout = lazy(() => import("@/components/merchant/MerchantLayout").then(m => ({ default: m.MerchantLayout })));
@@ -292,3 +294,9 @@ export const AdminPostingQueuePage        = lazy(() => import("@/pages/admin/Adm
 
 /* ── Comissão Inteligente (auditoria admin) ── */
 export const AdminCommissionIntelligence = lazy(() => import("@/pages/admin/AdminCommissionIntelligence"));
+
+/* ── Análises Financeiras por Perfil Operacional ── */
+export const AdminMotoboyFinanceiro = lazy(() => import("@/pages/admin/AdminMotoboyFinanceiro"));
+export const AdminMotoTaxiFinanceiro = lazy(() => import("@/pages/admin/AdminMotoTaxiFinanceiro"));
+export const AdminMotoristaFinanceiro = lazy(() => import("@/pages/admin/AdminMotoristaFinanceiro"));
+
