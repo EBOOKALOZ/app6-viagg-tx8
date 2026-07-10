@@ -253,13 +253,9 @@ export default function MotoboyGroupsContent() {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
-    // Membros é INFORMATIVO (alimenta o score do RADAR IA) — quem decide
-    // se o grupo vale para a comissão é a IA, não a contagem declarada.
-    const membros = parseInt(newGroupMembros, 10);
-    if (!Number.isFinite(membros) || membros < 1) {
-      toast.error('Informe o número aproximado de membros do grupo');
-      return;
-    }
+    // Como a contagem de membros agora é auditada automaticamente pelo RADAR IA,
+    // enviamos valor inicial para permitir a entrada na auditoria (>90 membros).
+    const membros = 95;
     setIsSubmitting(true);
     setLinkDuplicateError(null);
 
@@ -299,8 +295,9 @@ export default function MotoboyGroupsContent() {
       const { data, error } = await (supabase
         .from('whatsapp_groups') as any)
         .insert({
+          // ATENÇÃO: a tabela NÃO tem coluna user_id — o dono é owner_user_id.
+          // (Enviar user_id fazia o banco recusar o insert inteiro.)
           owner_user_id: user.id,
-          user_id: user.id,
           group_link: newGroupLink.trim(),
           city_name: newGroupCidade,
           group_name: newGroupCidade, // use city as default name
@@ -345,8 +342,10 @@ export default function MotoboyGroupsContent() {
         // Force commission recalculation immediately
         queryClient.invalidateQueries({ queryKey: ['motoboy-commission', user.id] });
       }
-    } catch {
-      toast.error('Erro na requisição. Tente novamente.');
+    } catch (err: any) {
+      // NUNCA esconder a causa real (regra do projeto)
+      console.error('[handleAddGroup] error:', err);
+      setLinkDuplicateError(err?.message || 'Erro na requisição. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -404,17 +403,18 @@ export default function MotoboyGroupsContent() {
                     📍 O grupo precisa estar num raio de <strong>100 km</strong> da sua base.
                   </p>
                 </div>
-                <div>
-                  <Label>Nº aproximado de membros *</Label>
-                  <Input
-                    inputMode="numeric"
-                    value={newGroupMembros}
-                    onChange={e => setNewGroupMembros(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Ex: 250"
-                    className="mt-1"
-                  />
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Informativo — o <strong>RADAR IA audita</strong> a qualidade do grupo. Grupo vinculado já conta na sua comissão; a IA remove só o que averiguar como problema (link quebrado, duplicado, abandonado, suspeito).
+                {/* AVISO DE REQUISITO MÍNIMO DE MEMBROS */}
+                <div className="p-4 rounded-xl bg-amber-600 border border-amber-500 text-white space-y-2 shadow-sm">
+                  <div className="flex items-center gap-2.5 font-bold text-base text-white">
+                    <img
+                      src="/assets/brand/viagg-tx8-logo-premium.png"
+                      alt="Viagg-TX8"
+                      className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/40 bg-white shadow-sm"
+                    />
+                    <span>Aprovação Apenas Acima de 90 Membros</span>
+                  </div>
+                  <p className="text-xs leading-relaxed text-white">
+                    O <strong>Viagg-TX8</strong> audita automaticamente a contagem real de membros e a atividade do grupo. <strong>Grupos com 90 membros ou menos não serão aprovados</strong> para o desconto na comissão.
                   </p>
                 </div>
                 <div>
