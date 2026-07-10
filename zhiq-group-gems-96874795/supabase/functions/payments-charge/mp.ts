@@ -162,9 +162,10 @@ export async function mpCharge(
       ok: true,
       provider_payment_id: String(b.id ?? ""),
       status: "pending",
-      checkout_url: input.sandbox
-        ? (b.sandbox_init_point as string) ?? (b.init_point as string)
-        : (b.init_point as string),
+      // SEMPRE init_point: o sandbox_init_point foi descontinuado pelo MP e
+      // hoje abre "Ops, ocorreu um erro". Em sandbox, o teste é feito no
+      // init_point normal logado com o COMPRADOR DE TESTE.
+      checkout_url: b.init_point as string,
     };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
