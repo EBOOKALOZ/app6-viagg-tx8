@@ -97,11 +97,12 @@ export async function mpCharge(
             ? { notification_url: input.notification_url }
             : {}),
           payer: {
-            // Sandbox: e-mail NEUTRO de comprador de teste. Se for o e-mail
-            // do dono da conta MP (caso do usuário logado nos testes), a API
-            // recusa com 403 "policy UNAUTHORIZED" — pagador = recebedor.
+            // Sandbox: e-mail neutro fixo. @testuser.com genérico o MP
+            // recusa ("Payer email forbidden") e o e-mail do dono da conta
+            // também ("payer=collector"); este neutro é o que sempre gerou
+            // QR no histórico do projeto.
             email: input.sandbox
-              ? "test_user_viagg@testuser.com"
+              ? "no-reply@viagg.com.br"
               : (input.payer_email || "no-reply@viagg.com.br"),
             first_name: "Cliente",
           },
