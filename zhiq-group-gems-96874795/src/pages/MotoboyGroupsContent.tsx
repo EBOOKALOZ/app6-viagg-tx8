@@ -255,9 +255,12 @@ export default function MotoboyGroupsContent() {
     }
     const membros = parseInt(newGroupMembros, 10);
     if (!Number.isFinite(membros) || membros < 90) {
-      toast.error('O grupo precisa ter no mínimo 90 membros', {
-        description: 'Grupos menores não podem ser vinculados (regra da plataforma, auditada pelo RADAR IA).',
-      });
+      // RECUSA com motivo VISÍVEL no formulário (caixa vermelha), não só toast
+      setLinkDuplicateError(
+        `❌ Grupo recusado: ${Number.isFinite(membros) ? membros : 0} membros informados — o mínimo é 90. ` +
+        'Grupos pequenos não geram alcance de divulgação e não reduzem sua comissão. ' +
+        'Faça o grupo crescer até 90+ membros e vincule de novo.',
+      );
       return;
     }
     setIsSubmitting(true);
@@ -322,9 +325,9 @@ export default function MotoboyGroupsContent() {
         setIsSubmitting(false);
         return;
       }
-      // Regras do banco (raio 100 km / exclusividade) chegam como RAISE:
-      // mostra a mensagem REAL, nunca um erro genérico.
-      if (error && /fora da sua área|já está ativo/i.test(error.message || '')) {
+      // Regras do banco (raio 100 km / exclusividade / mínimo de membros)
+      // chegam como RAISE: mostra a mensagem REAL, nunca um erro genérico.
+      if (error && /fora da sua área|já está ativo|90 membros|mínimo/i.test(error.message || '')) {
         setLinkDuplicateError(error.message);
         setIsSubmitting(false);
         return;
