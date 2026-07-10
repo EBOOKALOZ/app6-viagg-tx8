@@ -45,6 +45,7 @@ export default function RouteMapCanvas({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [dynamicRouteCoords, setDynamicRouteCoords] = useState<[number, number][] | null>(null);
 
   const hasOrigin = originLat != null && originLng != null;
   const hasDest = destinationLat != null && destinationLng != null;
@@ -61,6 +62,27 @@ export default function RouteMapCanvas({
       return null;
     }
   })();
+
+  useEffect(() => {
+    if (routeCoords && routeCoords.length >= 2) {
+      setDynamicRouteCoords(null);
+      return;
+    }
+    if (!hasOrigin || !hasDest) return;
+    let cancelled = false;
+    const url = `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destinationLng},${destinationLat}?overview=full&geometries=geojson`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        const coords = data.routes?.[0]?.geometry?.coordinates;
+        if (coords && coords.length >= 2) {
+          setDynamicRouteCoords(coords);
+        }
+      })
+      .catch(err => console.warn('[RouteMapCanvas] OSRM fetch erro:', err));
+    return () => { cancelled = true; };
+  }, [hasOrigin, hasDest, originLat, originLng, destinationLat, destinationLng, routeCoords]);
 
   // Log for debugging
   useEffect(() => {
@@ -124,13 +146,16 @@ export default function RouteMapCanvas({
       map.fitBounds(bounds, { padding: 40, duration: 400 });
     };
 
-    const isFallback = !routeCoords || routeCoords.length < 2;
-    // Rota (mesmo em linha reta) só com os DOIS pontos; senão, sem features.
+    const activeRouteCoords = (routeCoords && routeCoords.length >= 2)
+      ? routeCoords
+      : (dynamicRouteCoords && dynamicRouteCoords.length >= 2 ? dynamicRouteCoords : null);
+
+    const isFallback = !activeRouteCoords || activeRouteCoords.length < 2;
     const finalRouteCoords = isFallback
       ? (hasOrigin && hasDest
           ? [[originLng!, originLat!], [destinationLng!, destinationLat!]]
           : null)
-      : routeCoords!;
+      : activeRouteCoords!;
 
     const routeGeoJSON: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',

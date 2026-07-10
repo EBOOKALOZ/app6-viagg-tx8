@@ -17,7 +17,8 @@ export const DELIVERY_PRICING = {
 };
 
 /**
- * Calcula a distância em km entre dois pontos usando fórmula de Haversine
+ * @deprecated Fórmula de Haversine - usada apenas para buscas de proximidade ou aproximação inicial.
+ * NUNCA utilizar como distância final para cobrança.
  */
 export function calculateDistanceKm(
   lat1: number,
@@ -37,11 +38,56 @@ export function calculateDistanceKm(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
 
-  return Math.round(distance * 10) / 10; // Arredonda para 1 casa decimal
+  return Math.round(distance * 10) / 10;
 }
 
 function toRad(deg: number): number {
   return deg * (Math.PI / 180);
+}
+
+/**
+ * Calcula distância real (km), tempo real (min) e valor oficial usando malha viária real (ruas e rodovias) via OSRM
+ */
+export async function calculateRoadDeliveryMetrics(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+  serviceLevel: 'standard' | 'express' = 'standard'
+): Promise<{
+  distanceKm: number;
+  durationMin: number;
+  price: number;
+  polylineCoords?: [number, number][];
+}> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const route = data.routes?.[0];
+      if (route) {
+        const distanceKm = Math.round((route.distance / 1000) * 10) / 10;
+        const durationMin = Math.ceil(route.duration / 60);
+        return {
+          distanceKm,
+          durationMin,
+          price: calculateDeliveryValue(distanceKm, serviceLevel),
+          polylineCoords: route.geometry.coordinates,
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('[calculateRoadDeliveryMetrics] OSRM network erro:', e);
+  }
+
+  // Apenas em caso de falha de rede: aproximação viária prudente
+  const approxKm = Math.round(calculateDistanceKm(lat1, lng1, lat2, lng2) * 1.35 * 10) / 10;
+  return {
+    distanceKm: approxKm,
+    durationMin: calculateEstimatedTimeMinutes(approxKm),
+    price: calculateDeliveryValue(approxKm, serviceLevel),
+  };
 }
 
 /**

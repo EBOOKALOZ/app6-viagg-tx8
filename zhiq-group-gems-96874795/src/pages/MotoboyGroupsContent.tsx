@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useMotoboyCommission } from '@/hooks/useMotoboyCommission';
 import { supabase } from '@/integrations/supabase/client';
 import { deriveVisualStatus } from '@/lib/groupStatusUtils';
+import { geocodeAddress } from '@/lib/map/GeoLocationService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,6 +102,7 @@ export default function MotoboyGroupsContent() {
   const [newGroupLink, setNewGroupLink] = useState('');
   const [newGroupCidade, setNewGroupCidade] = useState('');
   const [newGroupTipo, setNewGroupTipo] = useState('Geral');
+  const [newGroupMembros, setNewGroupMembros] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [linkDuplicateError, setLinkDuplicateError] = useState<string | null>(null);
 
@@ -251,19 +253,43 @@ export default function MotoboyGroupsContent() {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
+    const membros = parseInt(newGroupMembros, 10);
+    if (!Number.isFinite(membros) || membros < 1) {
+      toast.error('Informe o número de membros do grupo');
+      return;
+    }
     setIsSubmitting(true);
     setLinkDuplicateError(null);
 
     try {
-      // Insert directly using real column names since the RPC uses old schema
+      // Exclusividade: só bloqueia se o link estiver ATIVO com alguém.
+      // Grupo desativado (o dono saiu) fica LIVRE para outro vincular.
       const { data: existing } = await (supabase
         .from('whatsapp_groups') as any)
-        .select('id')
+        .select('id, owner_user_id')
         .eq('group_link', newGroupLink.trim())
+        .eq('is_active', true)
         .maybeSingle();
 
       if (existing) {
-        setLinkDuplicateError('Este link já existe na base.');
+        setLinkDuplicateError(
+          existing.owner_user_id === user.id
+            ? 'Você já tem este grupo ativo.'
+            : 'Este grupo já está ativo com outro profissional. Ele só fica disponível se o profissional atual sair (desativar o grupo).',
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Raio de 100 km: geocodifica a cidade/bairro do grupo — o banco
+      // recusa vínculos fora da área de atuação e a localização é
+      // requisito para o grupo CONTAR na comissão.
+      const geo = await geocodeAddress(newGroupCidade).catch(() => []);
+      const loc = geo?.[0]?.latLng;
+      if (!loc) {
+        setLinkDuplicateError(
+          'Não encontrei essa cidade/bairro no mapa. Confira o nome (ex.: "Centro, Cuiabá - MT").',
+        );
         setIsSubmitting(false);
         return;
       }
@@ -275,6 +301,9 @@ export default function MotoboyGroupsContent() {
           group_link: newGroupLink.trim(),
           city_name: newGroupCidade,
           group_name: newGroupCidade, // use city as default name
+          members_count: membros,
+          latitude: loc.lat,
+          longitude: loc.lng,
           validation_status: 'approved',
           is_active: true,
           // is_valid and valid_for_commission are computed by the
@@ -287,7 +316,14 @@ export default function MotoboyGroupsContent() {
       // Trata violação de UNIQUE (código 23505) — defesa contra corrida concorrente
       // que passou pela checagem JS acima.
       if (error?.code === '23505' || /duplicate key|unique/i.test(error?.message || '')) {
-        setLinkDuplicateError('Este link já está cadastrado por outro motoboy. Cada grupo só pode ser vinculado uma vez.');
+        setLinkDuplicateError('Este grupo já está ativo com outro profissional. Ele só fica disponível se o profissional atual sair (desativar o grupo).');
+        setIsSubmitting(false);
+        return;
+      }
+      // Regras do banco (raio 100 km / exclusividade) chegam como RAISE:
+      // mostra a mensagem REAL, nunca um erro genérico.
+      if (error && /fora da sua área|já está ativo/i.test(error.message || '')) {
+        setLinkDuplicateError(error.message);
         setIsSubmitting(false);
         return;
       }
@@ -301,6 +337,7 @@ export default function MotoboyGroupsContent() {
         setIsAddDialogOpen(false);
         setNewGroupLink('');
         setNewGroupCidade('');
+        setNewGroupMembros('');
         fetchGroups();
         // Force commission recalculation immediately
         queryClient.invalidateQueries({ queryKey: ['motoboy-commission', user.id] });
@@ -359,7 +396,23 @@ export default function MotoboyGroupsContent() {
                 </div>
                 <div>
                   <Label>Bairro ou Cidade *</Label>
-                  <Input value={newGroupCidade} onChange={e => setNewGroupCidade(e.target.value)} placeholder="Ex: Centro, Bairro Alto..." className="mt-1" />
+                  <Input value={newGroupCidade} onChange={e => setNewGroupCidade(e.target.value)} placeholder="Ex: Centro, Cuiabá - MT" className="mt-1" />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    📍 O grupo precisa estar num raio de <strong>100 km</strong> da sua base.
+                  </p>
+                </div>
+                <div>
+                  <Label>Nº de membros do grupo *</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={newGroupMembros}
+                    onChange={e => setNewGroupMembros(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Ex: 250"
+                    className="mt-1"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Grupos com <strong>90+ membros</strong> contam para reduzir sua comissão (auditado).
+                  </p>
                 </div>
                 <div>
                   <Label>Categoria</Label>

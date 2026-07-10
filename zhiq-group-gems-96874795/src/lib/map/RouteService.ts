@@ -15,7 +15,7 @@ interface OSRMRoute {
 async function fetchOSRMRoute(
   origin: LatLng,
   dest: LatLng,
-  profile: "car" | "bike"
+  profile: "driving" | "bike"
 ): Promise<OSRMRoute | null> {
   try {
     const url = `${OSRM_BASE}/${profile}/${origin.lng},${origin.lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
@@ -26,6 +26,27 @@ async function fetchOSRMRoute(
   } catch {
     return null;
   }
+}
+
+/**
+ * Consulta a rota real pelas ruas via OSRM (malha viária real, sentidos e rodovias)
+ */
+export async function fetchRoadRoute(
+  origin: LatLng,
+  dest: LatLng,
+  profile: "driving" | "bike" = "driving"
+): Promise<{
+  distanceKm: number;
+  durationMin: number;
+  coordinates: [number, number][]; // [lng, lat]
+} | null> {
+  const osrm = await fetchOSRMRoute(origin, dest, profile);
+  if (!osrm) return null;
+  return {
+    distanceKm: Math.round((osrm.distance / 1000) * 10) / 10,
+    durationMin: Math.ceil(osrm.duration / 60),
+    coordinates: osrm.geometry.coordinates,
+  };
 }
 
 // Converte coordenadas GeoJSON → LatLng[]
@@ -40,7 +61,7 @@ export async function getRouteOptions(
   destination: LatLng
 ): Promise<RouteOption[]> {
   const [carRoute, bikeRoute] = await Promise.all([
-    fetchOSRMRoute(origin, destination, "car"),
+    fetchOSRMRoute(origin, destination, "driving"),
     fetchOSRMRoute(origin, destination, "bike"),
   ]);
 
