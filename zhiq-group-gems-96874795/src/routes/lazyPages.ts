@@ -297,6 +297,7 @@ export const AdminCommissionIntelligence = lazy(() => import("@/pages/admin/Admi
 
 /* ── RADAR IA (centro de inteligência de grupos) ── */
 export const AdminRadarIA = lazy(() => import("@/pages/admin/AdminRadarIA"));
+export const AdminGruposAprovados = lazy(() => import("@/pages/admin/AdminGruposAprovados"));
 
 /* ── Moderação IA de Imagens do Marketplace ── */
 export const AdminModeracaoIA = lazy(() => import("@/pages/admin/AdminModeracaoIA"));
