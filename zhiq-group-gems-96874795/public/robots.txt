@@ -1,14 +1,16 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# Viagg-TX8 — robots
 User-agent: *
 Allow: /
+Allow: /institucional/
+Disallow: /admin
+Disallow: /merchant
+Disallow: /motoboy
+Disallow: /driver
+Disallow: /select-profile
+Disallow: /auth
+Disallow: /teste-brick
+Disallow: /mp-brick-teste.html
+Disallow: /debug
+Disallow: /sandbox
+
+Sitemap: https://www.viagg-tx8.com.br/sitemap.xml

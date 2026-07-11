@@ -1,0 +1,33 @@
+# Viagg-TX8
+
+> A Viagg-TX8 é uma plataforma brasileira que une mobilidade urbana (motoboy, moto-táxi, motorista e fretes), marketplace local (produtos, serviços, veículos, imóveis e viagens), carteira digital com PIX e Mercado Pago, e módulos de inteligência artificial para auditoria, moderação e divulgação.
+
+Idioma: pt-BR · País: BR
+Categorias: mobilidade urbana, delivery, marketplace, pagamentos, inteligência artificial
+
+## Módulos da plataforma
+
+- [Corridas de Motoboy (Entregas)](https://www.viagg-tx8.com.br/institucional/corridas-motoboy.html): Sistema de chamadas de motoboy para entregas locais: o cliente marca coleta e destino no mapa, vê o preço oficial calculado por rotas reais e paga antes da corrida, direto da carteira digital.
+- [Moto-Táxi](https://www.viagg-tx8.com.br/institucional/moto-taxi.html): Transporte rápido de passageiros por moto, com despacho em tempo real para os profissionais online da região.
+- [Motorista (Carro)](https://www.viagg-tx8.com.br/institucional/motorista.html): Corridas de carro com motoristas parceiros, incluindo cadastro do veículo com fotos, capacidade e acessibilidade.
+- [Fretes e Transportes](https://www.viagg-tx8.com.br/institucional/fretes.html): Módulo de fretes para cargas maiores: mudanças, entregas volumosas e transportes agendados com transportadores parceiros.
+- [Marketplace Local](https://www.viagg-tx8.com.br/institucional/marketplace.html): Vitrine de produtos, serviços, veículos, imóveis e viagens de lojistas e anunciantes locais, com categorias navegáveis e contato direto.
+- [Carteira Digital](https://www.viagg-tx8.com.br/institucional/carteira-digital.html): Carteira digital integrada com recarga via PIX e cartão (Mercado Pago), usada para pagar corridas, entregas e serviços dentro da plataforma.
+- [Painel do Motoboy](https://www.viagg-tx8.com.br/institucional/painel-motoboy.html): Central do profissional motoboy: ofertas de corrida em tempo real, ganhos, extrato, saques e o programa de redução de comissão por grupos de WhatsApp.
+- [RADAR IA — Inteligência de Grupos](https://www.viagg-tx8.com.br/institucional/radar-ia.html): Centro de inteligência que audita, pontua (0-100), classifica e monitora os grupos de WhatsApp vinculados pelos profissionais, com verificação real dos links de convite.
+- [Comissão Inteligente](https://www.viagg-tx8.com.br/institucional/comissao-inteligente.html): Sistema de comissão com fonte única de verdade: a taxa nasce na oferta, é consumida na liquidação e auditada de ponta a ponta — sem recálculos divergentes.
+- [Moderação IA de Imagens](https://www.viagg-tx8.com.br/institucional/moderacao-ia.html): IA de visão computacional que analisa 100% das imagens do marketplace antes de qualquer publicação, bloqueando conteúdo impróprio automaticamente.
+- [Postador Inteligente (GLM)](https://www.viagg-tx8.com.br/institucional/postador-inteligente.html): Motor de divulgação que enfileira anúncios e os distribui de forma inteligente pela rede de grupos de WhatsApp auditados pelo RADAR IA.
+- [Painel Administrativo](https://www.viagg-tx8.com.br/institucional/painel-admin.html): Centro de comando da plataforma: usuários, profissionais, lojistas, financeiro, comissões, moderação, RADAR IA, relatórios e configurações.
+- [Painel Financeiro](https://www.viagg-tx8.com.br/institucional/painel-financeiro.html): Consolidação financeira da plataforma: receita bruta, repasses a profissionais, comissões, ticket médio e composição por operação, com separação clara entre produção e sandbox.
+- [Gestão de Grupos WhatsApp](https://www.viagg-tx8.com.br/institucional/grupos-whatsapp.html): Programa em que profissionais vinculam grupos de WhatsApp reais da sua região para ampliar a rede de divulgação da plataforma e reduzir a própria comissão.
+- [Pagamentos PIX e Mercado Pago](https://www.viagg-tx8.com.br/institucional/pagamentos-pix-mercadopago.html): Infraestrutura de pagamentos com PIX instantâneo e checkout oficial do Mercado Pago (cartão, boleto e saldo), com confirmação automática via webhook.
+- [Painel do Lojista](https://www.viagg-tx8.com.br/institucional/painel-lojista.html): Central do lojista: catálogo de produtos com imagens moderadas por IA, pedidos, chamadas de entrega por motoboy e carteira própria da loja.
+- [Relatórios e Analytics](https://www.viagg-tx8.com.br/institucional/relatorios-analytics.html): Camada de relatórios executivos: crescimento, cobertura territorial, desempenho de profissionais, saúde financeira e evolução dos módulos de IA.
+
+## Recursos para máquinas
+
+- Feed de IA (JSON): https://www.viagg-tx8.com.br/ai-feed.json
+- API de metadados dos módulos: https://www.viagg-tx8.com.br/api/modules.json
+- Knowledge Graph: https://www.viagg-tx8.com.br/knowledge-graph.json
+- Sitemap: https://www.viagg-tx8.com.br/sitemap.xml

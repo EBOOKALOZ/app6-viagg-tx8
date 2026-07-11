@@ -1,0 +1,273 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.viagg-tx8.com.br/#org",
+      "name": "Viagg-TX8",
+      "url": "https://www.viagg-tx8.com.br",
+      "slogan": "Mobilidade urbana, marketplace local e pagamentos em uma plataforma só",
+      "description": "A Viagg-TX8 é uma plataforma brasileira que une mobilidade urbana (motoboy, moto-táxi, motorista e fretes), marketplace local (produtos, serviços, veículos, imóveis e viagens), carteira digital com PIX e Mercado Pago, e módulos de inteligência artificial para auditoria, moderação e divulgação.",
+      "areaServed": "BR",
+      "knowsLanguage": "pt-BR"
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://www.viagg-tx8.com.br/#app",
+      "name": "Viagg-TX8",
+      "url": "https://www.viagg-tx8.com.br",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "pt-BR",
+      "publisher": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "BRL",
+        "description": "Uso gratuito; serviços pagos por corrida/entrega."
+      },
+      "featureList": [
+        "Corridas de Motoboy (Entregas)",
+        "Moto-Táxi",
+        "Motorista (Carro)",
+        "Fretes e Transportes",
+        "Marketplace Local",
+        "Carteira Digital",
+        "Painel do Motoboy",
+        "RADAR IA — Inteligência de Grupos",
+        "Comissão Inteligente",
+        "Moderação IA de Imagens",
+        "Postador Inteligente (GLM)",
+        "Painel Administrativo",
+        "Painel Financeiro",
+        "Gestão de Grupos WhatsApp",
+        "Pagamentos PIX e Mercado Pago",
+        "Painel do Lojista",
+        "Relatórios e Analytics"
+      ]
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/corridas-motoboy.html#service",
+      "name": "Corridas de Motoboy (Entregas)",
+      "serviceType": "Mobilidade",
+      "description": "Sistema de chamadas de motoboy para entregas locais: o cliente marca coleta e destino no mapa, vê o preço oficial calculado por rotas reais e paga antes da corrida, direto da carteira digital.",
+      "url": "https://www.viagg-tx8.com.br/institucional/corridas-motoboy.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "motoboy, entrega rápida, delivery, corrida pré-paga, código de coleta"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/moto-taxi.html#service",
+      "name": "Moto-Táxi",
+      "serviceType": "Mobilidade",
+      "description": "Transporte rápido de passageiros por moto, com despacho em tempo real para os profissionais online da região.",
+      "url": "https://www.viagg-tx8.com.br/institucional/moto-taxi.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "moto táxi, transporte de passageiro, corrida de moto"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/motorista.html#service",
+      "name": "Motorista (Carro)",
+      "serviceType": "Mobilidade",
+      "description": "Corridas de carro com motoristas parceiros, incluindo cadastro do veículo com fotos, capacidade e acessibilidade.",
+      "url": "https://www.viagg-tx8.com.br/institucional/motorista.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "motorista particular, corrida de carro, transporte urbano"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/fretes.html#service",
+      "name": "Fretes e Transportes",
+      "serviceType": "Mobilidade",
+      "description": "Módulo de fretes para cargas maiores: mudanças, entregas volumosas e transportes agendados com transportadores parceiros.",
+      "url": "https://www.viagg-tx8.com.br/institucional/fretes.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "frete, mudança, carreto, transporte de carga"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/marketplace.html#service",
+      "name": "Marketplace Local",
+      "serviceType": "Comércio",
+      "description": "Vitrine de produtos, serviços, veículos, imóveis e viagens de lojistas e anunciantes locais, com categorias navegáveis e contato direto.",
+      "url": "https://www.viagg-tx8.com.br/institucional/marketplace.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "marketplace, produtos locais, lojas, compras online, comércio local"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/carteira-digital.html#service",
+      "name": "Carteira Digital",
+      "serviceType": "Pagamentos",
+      "description": "Carteira digital integrada com recarga via PIX e cartão (Mercado Pago), usada para pagar corridas, entregas e serviços dentro da plataforma.",
+      "url": "https://www.viagg-tx8.com.br/institucional/carteira-digital.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "carteira digital, PIX, Mercado Pago, saldo, recarga"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/painel-motoboy.html#service",
+      "name": "Painel do Motoboy",
+      "serviceType": "Painéis Profissionais",
+      "description": "Central do profissional motoboy: ofertas de corrida em tempo real, ganhos, extrato, saques e o programa de redução de comissão por grupos de WhatsApp.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-motoboy.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "painel motoboy, ganhos, corridas, comissão, grupos whatsapp"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/radar-ia.html#service",
+      "name": "RADAR IA — Inteligência de Grupos",
+      "serviceType": "Inteligência Artificial",
+      "description": "Centro de inteligência que audita, pontua (0-100), classifica e monitora os grupos de WhatsApp vinculados pelos profissionais, com verificação real dos links de convite.",
+      "url": "https://www.viagg-tx8.com.br/institucional/radar-ia.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "radar ia, auditoria de grupos, whatsapp, score, inteligência artificial"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/comissao-inteligente.html#service",
+      "name": "Comissão Inteligente",
+      "serviceType": "Financeiro",
+      "description": "Sistema de comissão com fonte única de verdade: a taxa nasce na oferta, é consumida na liquidação e auditada de ponta a ponta — sem recálculos divergentes.",
+      "url": "https://www.viagg-tx8.com.br/institucional/comissao-inteligente.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "comissão, taxa, escada de comissão, financeiro"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/moderacao-ia.html#service",
+      "name": "Moderação IA de Imagens",
+      "serviceType": "Inteligência Artificial",
+      "description": "IA de visão computacional que analisa 100% das imagens do marketplace antes de qualquer publicação, bloqueando conteúdo impróprio automaticamente.",
+      "url": "https://www.viagg-tx8.com.br/institucional/moderacao-ia.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "moderação de imagens, ia de visão, segurança de conteúdo, marketplace seguro"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/postador-inteligente.html#service",
+      "name": "Postador Inteligente (GLM)",
+      "serviceType": "Inteligência Artificial",
+      "description": "Motor de divulgação que enfileira anúncios e os distribui de forma inteligente pela rede de grupos de WhatsApp auditados pelo RADAR IA.",
+      "url": "https://www.viagg-tx8.com.br/institucional/postador-inteligente.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "postador automático, divulgação, grupos whatsapp, ia comercial"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/painel-admin.html#service",
+      "name": "Painel Administrativo",
+      "serviceType": "Gestão",
+      "description": "Centro de comando da plataforma: usuários, profissionais, lojistas, financeiro, comissões, moderação, RADAR IA, relatórios e configurações.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-admin.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "painel admin, gestão da plataforma, dashboard executivo"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/painel-financeiro.html#service",
+      "name": "Painel Financeiro",
+      "serviceType": "Financeiro",
+      "description": "Consolidação financeira da plataforma: receita bruta, repasses a profissionais, comissões, ticket médio e composição por operação, com separação clara entre produção e sandbox.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-financeiro.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "financeiro, receita, ledger, extrato, pagamentos"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/grupos-whatsapp.html#service",
+      "name": "Gestão de Grupos WhatsApp",
+      "serviceType": "Divulgação",
+      "description": "Programa em que profissionais vinculam grupos de WhatsApp reais da sua região para ampliar a rede de divulgação da plataforma e reduzir a própria comissão.",
+      "url": "https://www.viagg-tx8.com.br/institucional/grupos-whatsapp.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "grupos whatsapp, rede de divulgação, engajamento local"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/pagamentos-pix-mercadopago.html#service",
+      "name": "Pagamentos PIX e Mercado Pago",
+      "serviceType": "Pagamentos",
+      "description": "Infraestrutura de pagamentos com PIX instantâneo e checkout oficial do Mercado Pago (cartão, boleto e saldo), com confirmação automática via webhook.",
+      "url": "https://www.viagg-tx8.com.br/institucional/pagamentos-pix-mercadopago.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "pix, mercado pago, checkout, pagamento online, recarga"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/painel-lojista.html#service",
+      "name": "Painel do Lojista",
+      "serviceType": "Painéis Profissionais",
+      "description": "Central do lojista: catálogo de produtos com imagens moderadas por IA, pedidos, chamadas de entrega por motoboy e carteira própria da loja.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-lojista.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "lojista, loja virtual, pedidos, entregas, anúncios"
+    },
+    {
+      "@type": "Service",
+      "@id": "https://www.viagg-tx8.com.br/institucional/relatorios-analytics.html#service",
+      "name": "Relatórios e Analytics",
+      "serviceType": "Gestão",
+      "description": "Camada de relatórios executivos: crescimento, cobertura territorial, desempenho de profissionais, saúde financeira e evolução dos módulos de IA.",
+      "url": "https://www.viagg-tx8.com.br/institucional/relatorios-analytics.html",
+      "provider": {
+        "@id": "https://www.viagg-tx8.com.br/#org"
+      },
+      "areaServed": "BR",
+      "keywords": "relatórios, analytics, kpis, estatísticas"
+    }
+  ]
+}

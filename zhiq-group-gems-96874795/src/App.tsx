@@ -11,6 +11,7 @@ import { FloatingCartButton } from "@/components/public/FloatingCartButton";
 import { FloatingSupportButton } from "@/components/public/FloatingSupportButton";
 import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
 import { GlobalRealtime } from "@/components/GlobalRealtime";
+import { SeoManager } from "@/lib/seo/SeoManager";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageFallback from "@/components/PageFallback";
 import { NotFound, MercadoLocalViagg } from "@/routes/lazyPages";
@@ -54,6 +55,7 @@ export default function App() {
             <GlobalCallProvider>
               <TooltipProvider>
                 <GlobalRealtime />
+                <SeoManager />
                 <Suspense fallback={<PageFallback />}>
                   <Routes>
                     {/* ── Rotas públicas / auth / legal ── */}

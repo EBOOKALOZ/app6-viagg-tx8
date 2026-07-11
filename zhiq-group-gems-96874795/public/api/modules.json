@@ -1,0 +1,232 @@
+{
+  "plataforma": "Viagg-TX8",
+  "versao": "1.0",
+  "atualizado_em": "2026-07-11",
+  "modulos": [
+    {
+      "slug": "corridas-motoboy",
+      "nome": "Corridas de Motoboy (Entregas)",
+      "categoria": "Mobilidade",
+      "tags": [
+        "motoboy",
+        "entrega rápida",
+        "delivery",
+        "corrida pré-paga",
+        "código de coleta"
+      ],
+      "descricao": "Sistema de chamadas de motoboy para entregas locais: o cliente marca coleta e destino no mapa, vê o preço oficial calculado por rotas reais e paga antes da corrida, direto da carteira digital.",
+      "url": "https://www.viagg-tx8.com.br/institucional/corridas-motoboy.html"
+    },
+    {
+      "slug": "moto-taxi",
+      "nome": "Moto-Táxi",
+      "categoria": "Mobilidade",
+      "tags": [
+        "moto táxi",
+        "transporte de passageiro",
+        "corrida de moto"
+      ],
+      "descricao": "Transporte rápido de passageiros por moto, com despacho em tempo real para os profissionais online da região.",
+      "url": "https://www.viagg-tx8.com.br/institucional/moto-taxi.html"
+    },
+    {
+      "slug": "motorista",
+      "nome": "Motorista (Carro)",
+      "categoria": "Mobilidade",
+      "tags": [
+        "motorista particular",
+        "corrida de carro",
+        "transporte urbano"
+      ],
+      "descricao": "Corridas de carro com motoristas parceiros, incluindo cadastro do veículo com fotos, capacidade e acessibilidade.",
+      "url": "https://www.viagg-tx8.com.br/institucional/motorista.html"
+    },
+    {
+      "slug": "fretes",
+      "nome": "Fretes e Transportes",
+      "categoria": "Mobilidade",
+      "tags": [
+        "frete",
+        "mudança",
+        "carreto",
+        "transporte de carga"
+      ],
+      "descricao": "Módulo de fretes para cargas maiores: mudanças, entregas volumosas e transportes agendados com transportadores parceiros.",
+      "url": "https://www.viagg-tx8.com.br/institucional/fretes.html"
+    },
+    {
+      "slug": "marketplace",
+      "nome": "Marketplace Local",
+      "categoria": "Comércio",
+      "tags": [
+        "marketplace",
+        "produtos locais",
+        "lojas",
+        "compras online",
+        "comércio local"
+      ],
+      "descricao": "Vitrine de produtos, serviços, veículos, imóveis e viagens de lojistas e anunciantes locais, com categorias navegáveis e contato direto.",
+      "url": "https://www.viagg-tx8.com.br/institucional/marketplace.html"
+    },
+    {
+      "slug": "carteira-digital",
+      "nome": "Carteira Digital",
+      "categoria": "Pagamentos",
+      "tags": [
+        "carteira digital",
+        "PIX",
+        "Mercado Pago",
+        "saldo",
+        "recarga"
+      ],
+      "descricao": "Carteira digital integrada com recarga via PIX e cartão (Mercado Pago), usada para pagar corridas, entregas e serviços dentro da plataforma.",
+      "url": "https://www.viagg-tx8.com.br/institucional/carteira-digital.html"
+    },
+    {
+      "slug": "painel-motoboy",
+      "nome": "Painel do Motoboy",
+      "categoria": "Painéis Profissionais",
+      "tags": [
+        "painel motoboy",
+        "ganhos",
+        "corridas",
+        "comissão",
+        "grupos whatsapp"
+      ],
+      "descricao": "Central do profissional motoboy: ofertas de corrida em tempo real, ganhos, extrato, saques e o programa de redução de comissão por grupos de WhatsApp.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-motoboy.html"
+    },
+    {
+      "slug": "radar-ia",
+      "nome": "RADAR IA — Inteligência de Grupos",
+      "categoria": "Inteligência Artificial",
+      "tags": [
+        "radar ia",
+        "auditoria de grupos",
+        "whatsapp",
+        "score",
+        "inteligência artificial"
+      ],
+      "descricao": "Centro de inteligência que audita, pontua (0-100), classifica e monitora os grupos de WhatsApp vinculados pelos profissionais, com verificação real dos links de convite.",
+      "url": "https://www.viagg-tx8.com.br/institucional/radar-ia.html"
+    },
+    {
+      "slug": "comissao-inteligente",
+      "nome": "Comissão Inteligente",
+      "categoria": "Financeiro",
+      "tags": [
+        "comissão",
+        "taxa",
+        "escada de comissão",
+        "financeiro"
+      ],
+      "descricao": "Sistema de comissão com fonte única de verdade: a taxa nasce na oferta, é consumida na liquidação e auditada de ponta a ponta — sem recálculos divergentes.",
+      "url": "https://www.viagg-tx8.com.br/institucional/comissao-inteligente.html"
+    },
+    {
+      "slug": "moderacao-ia",
+      "nome": "Moderação IA de Imagens",
+      "categoria": "Inteligência Artificial",
+      "tags": [
+        "moderação de imagens",
+        "ia de visão",
+        "segurança de conteúdo",
+        "marketplace seguro"
+      ],
+      "descricao": "IA de visão computacional que analisa 100% das imagens do marketplace antes de qualquer publicação, bloqueando conteúdo impróprio automaticamente.",
+      "url": "https://www.viagg-tx8.com.br/institucional/moderacao-ia.html"
+    },
+    {
+      "slug": "postador-inteligente",
+      "nome": "Postador Inteligente (GLM)",
+      "categoria": "Inteligência Artificial",
+      "tags": [
+        "postador automático",
+        "divulgação",
+        "grupos whatsapp",
+        "ia comercial"
+      ],
+      "descricao": "Motor de divulgação que enfileira anúncios e os distribui de forma inteligente pela rede de grupos de WhatsApp auditados pelo RADAR IA.",
+      "url": "https://www.viagg-tx8.com.br/institucional/postador-inteligente.html"
+    },
+    {
+      "slug": "painel-admin",
+      "nome": "Painel Administrativo",
+      "categoria": "Gestão",
+      "tags": [
+        "painel admin",
+        "gestão da plataforma",
+        "dashboard executivo"
+      ],
+      "descricao": "Centro de comando da plataforma: usuários, profissionais, lojistas, financeiro, comissões, moderação, RADAR IA, relatórios e configurações.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-admin.html"
+    },
+    {
+      "slug": "painel-financeiro",
+      "nome": "Painel Financeiro",
+      "categoria": "Financeiro",
+      "tags": [
+        "financeiro",
+        "receita",
+        "ledger",
+        "extrato",
+        "pagamentos"
+      ],
+      "descricao": "Consolidação financeira da plataforma: receita bruta, repasses a profissionais, comissões, ticket médio e composição por operação, com separação clara entre produção e sandbox.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-financeiro.html"
+    },
+    {
+      "slug": "grupos-whatsapp",
+      "nome": "Gestão de Grupos WhatsApp",
+      "categoria": "Divulgação",
+      "tags": [
+        "grupos whatsapp",
+        "rede de divulgação",
+        "engajamento local"
+      ],
+      "descricao": "Programa em que profissionais vinculam grupos de WhatsApp reais da sua região para ampliar a rede de divulgação da plataforma e reduzir a própria comissão.",
+      "url": "https://www.viagg-tx8.com.br/institucional/grupos-whatsapp.html"
+    },
+    {
+      "slug": "pagamentos-pix-mercadopago",
+      "nome": "Pagamentos PIX e Mercado Pago",
+      "categoria": "Pagamentos",
+      "tags": [
+        "pix",
+        "mercado pago",
+        "checkout",
+        "pagamento online",
+        "recarga"
+      ],
+      "descricao": "Infraestrutura de pagamentos com PIX instantâneo e checkout oficial do Mercado Pago (cartão, boleto e saldo), com confirmação automática via webhook.",
+      "url": "https://www.viagg-tx8.com.br/institucional/pagamentos-pix-mercadopago.html"
+    },
+    {
+      "slug": "painel-lojista",
+      "nome": "Painel do Lojista",
+      "categoria": "Painéis Profissionais",
+      "tags": [
+        "lojista",
+        "loja virtual",
+        "pedidos",
+        "entregas",
+        "anúncios"
+      ],
+      "descricao": "Central do lojista: catálogo de produtos com imagens moderadas por IA, pedidos, chamadas de entrega por motoboy e carteira própria da loja.",
+      "url": "https://www.viagg-tx8.com.br/institucional/painel-lojista.html"
+    },
+    {
+      "slug": "relatorios-analytics",
+      "nome": "Relatórios e Analytics",
+      "categoria": "Gestão",
+      "tags": [
+        "relatórios",
+        "analytics",
+        "kpis",
+        "estatísticas"
+      ],
+      "descricao": "Camada de relatórios executivos: crescimento, cobertura territorial, desempenho de profissionais, saúde financeira e evolução dos módulos de IA.",
+      "url": "https://www.viagg-tx8.com.br/institucional/relatorios-analytics.html"
+    }
+  ]
+}

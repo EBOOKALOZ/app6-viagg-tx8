@@ -1,0 +1,278 @@
+{
+  "site": {
+    "name": "Viagg-TX8",
+    "url": "https://www.viagg-tx8.com.br",
+    "slogan": "Mobilidade urbana, marketplace local e pagamentos em uma plataforma só",
+    "descricao": "A Viagg-TX8 é uma plataforma brasileira que une mobilidade urbana (motoboy, moto-táxi, motorista e fretes), marketplace local (produtos, serviços, veículos, imóveis e viagens), carteira digital com PIX e Mercado Pago, e módulos de inteligência artificial para auditoria, moderação e divulgação.",
+    "idioma": "pt-BR",
+    "pais": "BR",
+    "categorias": ["mobilidade urbana", "delivery", "marketplace", "pagamentos", "inteligência artificial"],
+    "redes": []
+  },
+  "modulos": [
+    {
+      "slug": "corridas-motoboy",
+      "nome": "Corridas de Motoboy (Entregas)",
+      "categoria": "Mobilidade",
+      "publico": true,
+      "rota": "/solicitar-corrida?service=motoboy",
+      "tags": ["motoboy", "entrega rápida", "delivery", "corrida pré-paga", "código de coleta"],
+      "oQueE": "Sistema de chamadas de motoboy para entregas locais: o cliente marca coleta e destino no mapa, vê o preço oficial calculado por rotas reais e paga antes da corrida, direto da carteira digital.",
+      "comoFunciona": "O valor é debitado na chamada e fica em garantia (escrow) até a entrega. Motoboys online recebem a oferta em tempo real com comissão transparente. Códigos de coleta e entrega garantem que a corrida foi feita por quem aceitou. Na conclusão, o líquido cai na carteira do profissional automaticamente.",
+      "beneficios": ["Pagamento antecipado com garantia — sem calote", "Preço único oficial por rotas reais (sem faixa especulativa)", "Rastreamento com etapas em tempo real", "Comissão transparente definida antes do aceite"],
+      "casosDeUso": ["Lojista envia encomenda ao cliente na mesma hora", "Pessoa física envia documento entre bairros"],
+      "faq": [
+        { "p": "Como pago a corrida de motoboy?", "r": "Na hora da chamada, com o saldo da sua carteira Viagg-TX8 (recarregável via PIX ou cartão). O valor fica em garantia até a entrega ser confirmada." },
+        { "p": "Como sei que o motoboy certo pegou meu pacote?", "r": "Você recebe dois códigos: um informado na coleta e outro na entrega. Só quem aceitou a corrida consegue validá-los." },
+        { "p": "O preço pode mudar depois de chamar?", "r": "Não. O valor exibido é único e oficial, calculado por rotas reais de rua, e é o que você paga." }
+      ]
+    },
+    {
+      "slug": "moto-taxi",
+      "nome": "Moto-Táxi",
+      "categoria": "Mobilidade",
+      "publico": true,
+      "rota": "/solicitar-corrida?service=mototaxi",
+      "tags": ["moto táxi", "transporte de passageiro", "corrida de moto"],
+      "oQueE": "Transporte rápido de passageiros por moto, com despacho em tempo real para os profissionais online da região.",
+      "comoFunciona": "O passageiro marca origem e destino, paga antecipado pela carteira e acompanha o profissional no mapa. As carteiras financeiras do moto-taxista são independentes por perfil.",
+      "beneficios": ["Chegada rápida em trajetos urbanos", "Preço fechado antes de embarcar", "Profissionais com cadastro auditado"],
+      "casosDeUso": ["Trajeto casa-trabalho em horário de pico", "Chegar à rodoviária com agilidade"],
+      "faq": [
+        { "p": "O moto-táxi tem preço fixo?", "r": "Sim, o valor é calculado e exibido antes da chamada — o que você vê é o que paga." },
+        { "p": "Posso pagar em dinheiro?", "r": "O pagamento é digital, pela carteira Viagg-TX8, garantindo segurança para passageiro e profissional." }
+      ]
+    },
+    {
+      "slug": "motorista",
+      "nome": "Motorista (Carro)",
+      "categoria": "Mobilidade",
+      "publico": true,
+      "rota": "/solicitar-corrida?service=motorista",
+      "tags": ["motorista particular", "corrida de carro", "transporte urbano"],
+      "oQueE": "Corridas de carro com motoristas parceiros, incluindo cadastro do veículo com fotos, capacidade e acessibilidade.",
+      "comoFunciona": "Mesmo fluxo pré-pago das demais modalidades: valor oficial antes da chamada, débito da carteira, despacho em tempo real e liquidação automática ao motorista na conclusão.",
+      "beneficios": ["Veículo identificado com fotos e placa mascarada", "Informações de ar-condicionado e acessibilidade", "Pagamento garantido ao motorista"],
+      "casosDeUso": ["Corrida ao aeroporto", "Transporte de família com bagagem"],
+      "faq": [
+        { "p": "Vejo qual carro vai me buscar?", "r": "Sim: modelo, cor, capacidade, fotos e parte da placa aparecem no card da corrida aceita." }
+      ]
+    },
+    {
+      "slug": "fretes",
+      "nome": "Fretes e Transportes",
+      "categoria": "Mobilidade",
+      "publico": true,
+      "rota": "/fretes",
+      "tags": ["frete", "mudança", "carreto", "transporte de carga"],
+      "oQueE": "Módulo de fretes para cargas maiores: mudanças, entregas volumosas e transportes agendados com transportadores parceiros.",
+      "comoFunciona": "O cliente descreve a carga e o trajeto; transportadores da região recebem a solicitação e o pagamento flui pela mesma carteira digital com garantia.",
+      "beneficios": ["Rede local de transportadores", "Pagamento com escrow", "Histórico e rastreio na plataforma"],
+      "casosDeUso": ["Mudança de apartamento", "Entrega de móveis comprados no marketplace"],
+      "faq": [
+        { "p": "Posso agendar um frete?", "r": "Sim, o módulo de fretes aceita solicitações programadas com descrição da carga." }
+      ]
+    },
+    {
+      "slug": "marketplace",
+      "nome": "Marketplace Local",
+      "categoria": "Comércio",
+      "publico": true,
+      "rota": "/mercado",
+      "tags": ["marketplace", "produtos locais", "lojas", "compras online", "comércio local"],
+      "oQueE": "Vitrine de produtos, serviços, veículos, imóveis e viagens de lojistas e anunciantes locais, com categorias navegáveis e contato direto.",
+      "comoFunciona": "Anunciantes publicam com fotos moderadas por IA antes de irem ao ar. Compradores navegam por vitrines com rolagem horizontal por categoria, manifestam interesse e fecham negócio com entrega via motoboy integrada.",
+      "beneficios": ["100% das imagens auditadas por IA antes da publicação", "Entrega integrada com a rede de motoboys", "Vitrines por categoria: veículos, imóveis, serviços, fretes e viagens"],
+      "casosDeUso": ["Loja de bairro vendendo com entrega no mesmo dia", "Anúncio de veículo com fotos verificadas"],
+      "faq": [
+        { "p": "As fotos dos anúncios são verificadas?", "r": "Sim. Toda imagem passa por moderação com inteligência artificial antes de ser publicada — conteúdo impróprio é bloqueado automaticamente." },
+        { "p": "Como recebo um produto comprado?", "r": "O lojista chama um motoboy da rede Viagg-TX8 e você acompanha a entrega com código de confirmação." }
+      ]
+    },
+    {
+      "slug": "carteira-digital",
+      "nome": "Carteira Digital",
+      "categoria": "Pagamentos",
+      "publico": true,
+      "rota": "/minha-carteira",
+      "tags": ["carteira digital", "PIX", "Mercado Pago", "saldo", "recarga"],
+      "oQueE": "Carteira digital integrada com recarga via PIX e cartão (Mercado Pago), usada para pagar corridas, entregas e serviços dentro da plataforma.",
+      "comoFunciona": "O usuário adiciona saldo (mínimo R$ 35) por PIX com QR Code instantâneo ou cartão via checkout oficial do Mercado Pago. Cada movimentação fica registrada em um extrato de partida dobrada com garantia (escrow) nas corridas.",
+      "beneficios": ["Recarga instantânea via PIX", "Extrato completo de todas as movimentações", "Valores em garantia até a conclusão do serviço"],
+      "casosDeUso": ["Recarregar antes de chamar um motoboy", "Acompanhar recebimentos como profissional"],
+      "faq": [
+        { "p": "Como adiciono saldo?", "r": "Em Minha Carteira, toque em Adicionar saldo e escolha PIX (QR instantâneo) ou cartão pela página segura do Mercado Pago." },
+        { "p": "Meu dinheiro fica seguro?", "r": "Sim. Pagamentos de corridas ficam em conta de garantia (escrow) e só são liberados ao profissional quando o serviço é confirmado." }
+      ]
+    },
+    {
+      "slug": "painel-motoboy",
+      "nome": "Painel do Motoboy",
+      "categoria": "Painéis Profissionais",
+      "publico": true,
+      "rota": "/motoboy",
+      "tags": ["painel motoboy", "ganhos", "corridas", "comissão", "grupos whatsapp"],
+      "oQueE": "Central do profissional motoboy: ofertas de corrida em tempo real, ganhos, extrato, saques e o programa de redução de comissão por grupos de WhatsApp.",
+      "comoFunciona": "Ofertas tocam por cima de qualquer tela com valores e comissão transparentes. O motoboy acompanha resumo diário, gráfico de 7 dias, solicita saques e vincula grupos de WhatsApp auditados pelo RADAR IA para reduzir a taxa de 25% até 6%.",
+      "beneficios": ["Comissão decrescente por engajamento (25% → 6%)", "Recebimento automático na carteira ao concluir", "Extrato oficial com cada centavo rastreável"],
+      "casosDeUso": ["Profissional acompanha ganhos do dia", "Motoboy reduz comissão vinculando grupos da sua cidade"],
+      "faq": [
+        { "p": "Como reduzo minha comissão?", "r": "Vinculando grupos de WhatsApp reais da sua região (91+ membros, dentro de 100 km da sua base). Cada grupo válido reduz a taxa: 1 grupo = 20%, até o mínimo de 6% com 5 grupos." },
+        { "p": "Quando recebo pela entrega?", "r": "Na confirmação do código de entrega, o valor líquido cai na sua carteira automaticamente." }
+      ]
+    },
+    {
+      "slug": "radar-ia",
+      "nome": "RADAR IA — Inteligência de Grupos",
+      "categoria": "Inteligência Artificial",
+      "publico": true,
+      "rota": "/admin/radar-ia",
+      "tags": ["radar ia", "auditoria de grupos", "whatsapp", "score", "inteligência artificial"],
+      "oQueE": "Centro de inteligência que audita, pontua (0-100), classifica e monitora os grupos de WhatsApp vinculados pelos profissionais, com verificação real dos links de convite.",
+      "comoFunciona": "Um motor determinístico pontua cada grupo por membros, localização, atividade e cadastro; a camada de IA verifica o link na prévia pública (ativo/revogado), adota o nome real do grupo, explica o score e aprende com as decisões do administrador. Regras invioláveis: mínimo de 91 membros, link exclusivo, raio de 100 km.",
+      "beneficios": ["Verificação real do link de convite", "Score explicável fator a fator", "Ranking de profissionais com níveis Ouro/Prata/Bronze", "Radar territorial de cobertura por cidade"],
+      "casosDeUso": ["Administrador audita a rede de divulgação", "Detecção automática de grupos duplicados ou abandonados"],
+      "faq": [
+        { "p": "O que o RADAR IA verifica num grupo?", "r": "Link ativo ou revogado (na prévia oficial do convite), nome real do grupo, membros declarados, localização no raio de atuação, atividade recente e duplicidade de link." },
+        { "p": "Um grupo pode ser aprovado com menos de 91 membros?", "r": "Não. A regra é aplicada no banco de dados e vale para qualquer origem: formulário, administrador, IA ou API." }
+      ]
+    },
+    {
+      "slug": "comissao-inteligente",
+      "nome": "Comissão Inteligente",
+      "categoria": "Financeiro",
+      "publico": true,
+      "rota": "/admin/comissao-inteligente",
+      "tags": ["comissão", "taxa", "escada de comissão", "financeiro"],
+      "oQueE": "Sistema de comissão com fonte única de verdade: a taxa nasce na oferta, é consumida na liquidação e auditada de ponta a ponta — sem recálculos divergentes.",
+      "comoFunciona": "A comissão é definida no momento da chamada (override do admin ou escada por grupos válidos: 25/20/16/12/9/6%). O valor líquido prometido ao profissional é exatamente o liquidado, com espelho contábil para auditoria e painel administrativo com composição por corrida.",
+      "beneficios": ["Zero divergência entre o prometido e o pago", "Escada de incentivo por engajamento", "Auditoria por corrida no painel admin"],
+      "casosDeUso": ["Auditoria da receita da plataforma", "Verificação da taxa aplicada em cada entrega"],
+      "faq": [
+        { "p": "A comissão pode mudar depois que aceito a corrida?", "r": "Não. Ela é gravada na oferta no momento da chamada e é auditável — o que foi mostrado é o que liquida." }
+      ]
+    },
+    {
+      "slug": "moderacao-ia",
+      "nome": "Moderação IA de Imagens",
+      "categoria": "Inteligência Artificial",
+      "publico": true,
+      "rota": "/admin/moderacao-ia",
+      "tags": ["moderação de imagens", "ia de visão", "segurança de conteúdo", "marketplace seguro"],
+      "oQueE": "IA de visão computacional que analisa 100% das imagens do marketplace antes de qualquer publicação, bloqueando conteúdo impróprio automaticamente.",
+      "comoFunciona": "A imagem é analisada ANTES de tocar o armazenamento: aprovada vai ao ar; bloqueada nunca é armazenada; casos de baixa confiança ficam em quarentena privada para revisão do administrador, com justificativa e score de confiança registrados para auditoria.",
+      "beneficios": ["Nenhuma imagem pública sem análise", "Conteúdo bloqueado jamais é armazenado", "Fila de revisão com preview seguro e decisão em um clique"],
+      "casosDeUso": ["Bloqueio automático de conteúdo adulto ou violento", "Retenção de produto possivelmente restrito para revisão humana"],
+      "faq": [
+        { "p": "Quais conteúdos são bloqueados?", "r": "Nudez e conteúdo sexual, violência gráfica, drogas, armas, símbolos de ódio, fraudes, documentos falsos, produtos proibidos e spam visual, entre outros." },
+        { "p": "Quem decide os casos duvidosos?", "r": "A IA encaminha para a fila de revisão do administrador, que vê a imagem por link assinado temporário e aprova ou rejeita com registro de auditoria." }
+      ]
+    },
+    {
+      "slug": "postador-inteligente",
+      "nome": "Postador Inteligente (GLM)",
+      "categoria": "Inteligência Artificial",
+      "publico": true,
+      "rota": "/admin/postador",
+      "tags": ["postador automático", "divulgação", "grupos whatsapp", "ia comercial"],
+      "oQueE": "Motor de divulgação que enfileira anúncios e os distribui de forma inteligente pela rede de grupos de WhatsApp auditados pelo RADAR IA.",
+      "comoFunciona": "O anunciante clica em Postar e o pedido entra numa fila; a inteligência comercial decide distribuição, ritmo e destino nos grupos válidos, com trilha completa de eventos por publicação.",
+      "beneficios": ["Divulgação em rede local real", "Fila auditável com status por etapa", "Integração com o score de grupos do RADAR IA"],
+      "casosDeUso": ["Loja divulga oferta nos grupos da cidade", "Campanha distribuída sem spam manual"],
+      "faq": [
+        { "p": "Posso escolher em quais grupos postar?", "r": "A distribuição é otimizada pela plataforma sobre os grupos auditados e válidos, respeitando limites que protegem os grupos de spam." }
+      ]
+    },
+    {
+      "slug": "painel-admin",
+      "nome": "Painel Administrativo",
+      "categoria": "Gestão",
+      "publico": true,
+      "rota": "/admin",
+      "tags": ["painel admin", "gestão da plataforma", "dashboard executivo"],
+      "oQueE": "Centro de comando da plataforma: usuários, profissionais, lojistas, financeiro, comissões, moderação, RADAR IA, relatórios e configurações.",
+      "comoFunciona": "Módulos organizados por seções (Gestão, Financeiro, Pagamentos) com dashboards em tempo real, filtros e trilhas de auditoria em cada operação sensível.",
+      "beneficios": ["Visão executiva em tempo real", "Auditoria completa de operações financeiras", "Gestão integrada de todos os perfis"],
+      "casosDeUso": ["Acompanhar receita por ambiente (produção × sandbox)", "Auditar composição financeira de cada corrida"],
+      "faq": [
+        { "p": "Quem acessa o painel administrativo?", "r": "Apenas contas com papel de administrador — as demais têm os dados ocultados por segurança em todas as consultas." }
+      ]
+    },
+    {
+      "slug": "painel-financeiro",
+      "nome": "Painel Financeiro",
+      "categoria": "Financeiro",
+      "publico": true,
+      "rota": "/admin/comissao-inteligente",
+      "tags": ["financeiro", "receita", "ledger", "extrato", "pagamentos"],
+      "oQueE": "Consolidação financeira da plataforma: receita bruta, repasses a profissionais, comissões, ticket médio e composição por operação, com separação clara entre produção e sandbox.",
+      "comoFunciona": "Todas as movimentações passam por um motor de partida dobrada com contas por perfil (cliente, lojista, motoboy, moto-táxi, motorista e plataforma). O painel consome apenas valores oficiais liquidados — nunca recalcula.",
+      "beneficios": ["Partida dobrada com idempotência", "Selo de ambiente em cada transação (produção/sandbox)", "KPIs executivos com filtros por período e categoria"],
+      "casosDeUso": ["Fechamento financeiro mensal", "Auditoria de uma corrida específica do total ao líquido"],
+      "faq": [
+        { "p": "Os valores de teste se misturam com produção?", "r": "Não. Cada transação carrega o selo do ambiente e o painel separa Receita Produção, Receita Sandbox e Total." }
+      ]
+    },
+    {
+      "slug": "grupos-whatsapp",
+      "nome": "Gestão de Grupos WhatsApp",
+      "categoria": "Divulgação",
+      "publico": true,
+      "rota": "/motoboy/grupos",
+      "tags": ["grupos whatsapp", "rede de divulgação", "engajamento local"],
+      "oQueE": "Programa em que profissionais vinculam grupos de WhatsApp reais da sua região para ampliar a rede de divulgação da plataforma e reduzir a própria comissão.",
+      "comoFunciona": "O profissional cadastra o link do convite; a plataforma valida exclusividade (um link ativo por vez), raio de 100 km da base e mínimo de 91 membros; o RADAR IA verifica o link, adota o nome real do grupo e audita continuamente.",
+      "beneficios": ["Comissão reduzida por grupo válido", "Verificação automática do link e do nome", "Grupos liberados quando o dono desativa"],
+      "casosDeUso": ["Motoboy vincula 5 grupos e chega à taxa mínima de 6%"],
+      "faq": [
+        { "p": "Posso cadastrar um grupo de outra cidade?", "r": "Somente dentro de um raio de 100 km da sua base cadastrada — a validação é automática e mostra a distância quando recusa." },
+        { "p": "E se outro profissional já usa o mesmo grupo?", "r": "Um link só pode estar ativo com um profissional por vez. Se ele desativar, o grupo fica livre para outro vincular." }
+      ]
+    },
+    {
+      "slug": "pagamentos-pix-mercadopago",
+      "nome": "Pagamentos PIX e Mercado Pago",
+      "categoria": "Pagamentos",
+      "publico": true,
+      "rota": "/minha-carteira",
+      "tags": ["pix", "mercado pago", "checkout", "pagamento online", "recarga"],
+      "oQueE": "Infraestrutura de pagamentos com PIX instantâneo e checkout oficial do Mercado Pago (cartão, boleto e saldo), com confirmação automática via webhook.",
+      "comoFunciona": "Recargas geram QR PIX na hora ou redirecionam ao Checkout Pro do Mercado Pago; o webhook confirma o pagamento e credita a carteira automaticamente, com reconciliação manual disponível ('Já paguei').",
+      "beneficios": ["QR PIX instantâneo no próprio app", "Página de pagamento oficial do Mercado Pago", "Crédito automático na confirmação"],
+      "casosDeUso": ["Recarga de R$ 35 para chamar corridas", "Lojista adiciona saldo para pagar entregas"],
+      "faq": [
+        { "p": "Quais formas de pagamento são aceitas?", "r": "PIX (instantâneo, no app) e cartão pela página segura do Mercado Pago — que também oferece boleto e saldo Mercado Pago." }
+      ]
+    },
+    {
+      "slug": "painel-lojista",
+      "nome": "Painel do Lojista",
+      "categoria": "Painéis Profissionais",
+      "publico": true,
+      "rota": "/merchant",
+      "tags": ["lojista", "loja virtual", "pedidos", "entregas", "anúncios"],
+      "oQueE": "Central do lojista: catálogo de produtos com imagens moderadas por IA, pedidos, chamadas de entrega por motoboy e carteira própria da loja.",
+      "comoFunciona": "O lojista publica anúncios, recebe manifestações de interesse por e-mail e no painel, chama motoboys para entregar com códigos de confirmação e acompanha o financeiro da loja em extrato dedicado.",
+      "beneficios": ["Entrega integrada com um clique", "Notificações por e-mail em cada interesse", "Saldo e extrato separados da conta pessoal"],
+      "casosDeUso": ["Mercadinho local vendendo com entrega expressa"],
+      "faq": [
+        { "p": "Como envio um pedido ao cliente?", "r": "Direto do painel: a chamada de motoboy nasce com endereço da loja e do cliente, e você acompanha até a confirmação por código." }
+      ]
+    },
+    {
+      "slug": "relatorios-analytics",
+      "nome": "Relatórios e Analytics",
+      "categoria": "Gestão",
+      "publico": true,
+      "rota": "/admin",
+      "tags": ["relatórios", "analytics", "kpis", "estatísticas"],
+      "oQueE": "Camada de relatórios executivos: crescimento, cobertura territorial, desempenho de profissionais, saúde financeira e evolução dos módulos de IA.",
+      "comoFunciona": "Dashboards com atualização em tempo real consomem RPCs otimizadas e agregações no banco, com filtros por período, categoria, profissional e ambiente.",
+      "beneficios": ["Dados oficiais direto do motor financeiro", "Atualização em tempo real", "Filtros executivos"],
+      "casosDeUso": ["Decidir em que cidade investir em captação de parceiros"],
+      "faq": [
+        { "p": "Os relatórios atualizam sozinhos?", "r": "Sim, os painéis consomem dados ao vivo com atualização automática — sem precisar recarregar a página." }
+      ]
+    }
+  ]
+}
