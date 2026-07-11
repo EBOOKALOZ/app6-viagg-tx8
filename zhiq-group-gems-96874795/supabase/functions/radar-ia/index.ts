@@ -29,6 +29,14 @@ const json = (body: unknown, status = 200) =>
  * REAL do grupo (og:title) e a foto (og:image). A prévia NÃO expõe a
  * contagem de membros (isso só com bot dentro do grupo — Nível 2).
  */
+// og:title vem com entidades HTML (&#xe3; = ã, emojis &#x1f5e3;) — decodifica
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
 async function verifyInviteLink(link: string): Promise<{
   status: "ativo" | "revogado" | "erro";
   realName: string | null;
@@ -54,11 +62,12 @@ async function verifyInviteLink(link: string): Promise<{
 
     // Convite válido → og:title traz o NOME do grupo; revogado/inexistente →
     // título genérico ("WhatsApp Group Invite") ou ausente.
-    const generic = !title || /^whatsapp group invite$/i.test(title.trim());
+    const decoded = title ? decodeEntities(title).trim() : null;
+    const generic = !decoded || /^whatsapp group invite$/i.test(decoded);
     return {
       status: generic ? "revogado" : "ativo",
-      realName: generic ? null : title!.trim().slice(0, 200),
-      photoUrl: image && /^https?:\/\//i.test(image) ? image.slice(0, 500) : null,
+      realName: generic ? null : decoded!.slice(0, 200),
+      photoUrl: image && /^https?:\/\//i.test(image) ? decodeEntities(image).slice(0, 500) : null,
     };
   } catch {
     return { status: "erro", realName: null, photoUrl: null };
@@ -89,9 +98,13 @@ Deno.serve(async (req) => {
     .from("radar_group_scores")
     .select("group_id, score, classification, commercial_potential, recommendation, factors")
     .order("analyzed_at", { ascending: false });
+  // Lote: primeiro os nunca analisados; depois os mais antigos (permite
+  // reverificar links periodicamente clicando "Analisar com IA" de novo).
   targetsQuery = input.group_id
     ? targetsQuery.eq("group_id", input.group_id)
-    : targetsQuery.is("ai_analyzed_at", null).limit(Math.min(batch || 5, 20));
+    : targetsQuery
+      .order("ai_analyzed_at", { ascending: true, nullsFirst: true })
+      .limit(Math.min(batch || 5, 20));
 
   const { data: targets, error: tErr } = await targetsQuery;
   if (tErr) return json({ ok: false, error: tErr.message }, 500);
@@ -128,6 +141,11 @@ Deno.serve(async (req) => {
         link_verified_at: new Date().toISOString(),
         real_name: verification.realName,
         photo_url: verification.photoUrl,
+        // ADOÇÃO DO NOME REAL: o que o profissional digitou é só rótulo —
+        // verificado o nome verdadeiro, a plataforma passa a exibi-lo.
+        ...(verification.status === "ativo" && verification.realName
+          ? { group_name: verification.realName }
+          : {}),
       }).eq("id", g.id);
     }
 

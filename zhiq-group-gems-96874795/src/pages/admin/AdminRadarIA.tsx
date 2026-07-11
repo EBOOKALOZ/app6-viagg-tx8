@@ -21,6 +21,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Radar, Users, MapPin, Star, TrendingUp, Sparkles, ShieldAlert,
@@ -43,6 +44,8 @@ type GroupRow = {
   score: number; classification: string; commercial_potential: number;
   recommendation: string; ai_explanation: string | null; factors: any;
   analyzed_at: string | null; status_aprovacao: string;
+  link_status: string | null; link_verified_at: string | null;
+  real_name: string | null; photo_url: string | null;
 };
 type TerritoryRow = {
   city_name: string; state_code: string; grupos: number; membros: number;
@@ -119,6 +122,8 @@ export default function AdminRadarIA() {
   const [membrosFilter, setMembrosFilter] = useState("todos");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
+  // Relatório completo da análise (modal ao clicar no status/classificação)
+  const [reportGroup, setReportGroup] = useState<GroupRow | null>(null);
 
   const rpc = (name: string, args?: object) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -299,6 +304,163 @@ export default function AdminRadarIA() {
         <StatCard icon={Star} label="Score médio" value={ov?.score_medio ?? "…"} hint="0 a 100" />
       </div>
 
+      {/* ── MODAL: relatório completo da análise da IA ── */}
+      <Dialog open={!!reportGroup} onOpenChange={(v) => !v && setReportGroup(null)}>
+        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+          {reportGroup && (() => {
+            const f = reportGroup.factors ?? {};
+            const riscos: string[] = [];
+            if (f.link_invalido) riscos.push("🔗 Link inválido ou REVOGADO (verificado na prévia do convite)");
+            if (f.duplicado) riscos.push("♊ Link duplicado — já existe grupo ATIVO mais antigo com o mesmo link");
+            if (f.membros_implausiveis) riscos.push("👥 Contagem de membros implausível (5000+) — autodeclaração sob suspeita");
+            if (f.abandonado) riscos.push("🌵 Sem postagem registrada há 60+ dias");
+            if (f.nome_divergente) riscos.push("✏️ Nome digitado difere do nome real do grupo (informativo — o nome real é adotado)");
+            if ((reportGroup.members_count ?? 0) <= 90) riscos.push("👥 Membros declarados ≤ 90 — abaixo do mínimo (91) exigido para aprovação");
+            const pesos: [string, number, number][] = [
+              ["Membros (autodeclarados)", f.membros ?? 0, 30],
+              ["Localização confirmada (raio 100 km)", f.localizacao ?? 0, 20],
+              ["Atividade (postagem recente)", f.atividade ?? 0, 15],
+              ["Validade (aprovado + ativo)", f.validade ?? 0, 15],
+              ["Cadastro completo", f.cadastro_completo ?? 0, 10],
+              ["Antiguidade na plataforma", f.antiguidade ?? 0, 10],
+              ["Bônus: link verificado ✓", f.link_verificado ? 5 : 0, 5],
+            ];
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-base">
+                    {reportGroup.photo_url && (
+                      <img src={reportGroup.photo_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                    )}
+                    Relatório da análise — {reportGroup.group_name || "grupo"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={STATUS_APROVACAO[reportGroup.status_aprovacao]?.cls ?? ""}>
+                      {STATUS_APROVACAO[reportGroup.status_aprovacao]?.label ?? reportGroup.status_aprovacao}
+                    </Badge>
+                    <Badge className={CLASS_STYLE[reportGroup.classification] ?? ""}>{reportGroup.classification}</Badge>
+                    <Badge variant="outline">Score {reportGroup.score}/100</Badge>
+                    <Badge variant="outline">Potencial {reportGroup.commercial_potential}%</Badge>
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Verificações executadas
+                    </p>
+                    <ul className="space-y-1 text-xs">
+                      <li>
+                        🔗 Link do convite:{" "}
+                        {reportGroup.link_status === "ativo" ? (
+                          <span className="font-bold text-emerald-600">ATIVO ✓ (verificado {fmtDate(reportGroup.link_verified_at)})</span>
+                        ) : reportGroup.link_status === "revogado" ? (
+                          <span className="font-bold text-red-600">REVOGADO ✗ (verificado {fmtDate(reportGroup.link_verified_at)})</span>
+                        ) : (
+                          <span className="text-muted-foreground">ainda não verificado — clique em ✨ Analisar com IA</span>
+                        )}
+                      </li>
+                      <li>
+                        ✏️ Nome real (da prévia):{" "}
+                        {reportGroup.real_name
+                          ? <span className="font-bold">{reportGroup.real_name}</span>
+                          : <span className="text-muted-foreground">indisponível</span>}
+                      </li>
+                      <li>
+                        👥 Membros: <strong>{reportGroup.members_count ?? 0}</strong>{" "}
+                        <span className="text-muted-foreground">
+                          (AUTODECLARADO — a verificação real de contagem chega com o bot do Postador)
+                        </span>
+                      </li>
+                      <li>📍 Cidade: {reportGroup.city_name || "—"} · dentro do raio de 100 km da base (validado no cadastro)</li>
+                      <li>🕒 Última postagem: {fmtDate(reportGroup.last_posted_at)}</li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Composição do score ({reportGroup.score}/100)
+                    </p>
+                    <ul className="space-y-0.5 text-xs">
+                      {pesos.map(([nome, v, max]) => (
+                        <li key={nome} className="flex justify-between">
+                          <span>{nome}</span>
+                          <span className={v === 0 ? "text-red-500 font-bold" : "font-bold"}>{v}/{max}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Sinais de risco detectados
+                    </p>
+                    {riscos.length === 0 ? (
+                      <p className="text-xs text-emerald-600">Nenhum — grupo limpo. ✓</p>
+                    ) : (
+                      <ul className="list-inside space-y-1 text-xs">
+                        {riscos.map((r) => <li key={r}>{r}</li>)}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg bg-muted/40 p-3">
+                    <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Veredito
+                    </p>
+                    <p className="text-xs">
+                      {RECO_LABEL[reportGroup.recommendation] ?? reportGroup.recommendation}
+                      {reportGroup.invalid_reason && (
+                        <span className="mt-1 block font-bold text-red-600">{reportGroup.invalid_reason}</span>
+                      )}
+                    </p>
+                    {reportGroup.ai_explanation && (
+                      <p className="mt-2 rounded bg-violet-500/10 p-2 text-xs text-violet-700 dark:text-violet-300">
+                        🤖 {reportGroup.ai_explanation}
+                      </p>
+                    )}
+                  </div>
+
+                  {reportGroup.status_aprovacao !== "aprovado" && (
+                    <div className="rounded-lg border border-amber-400/40 bg-amber-500/10 p-3">
+                      <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                        O que falta para aprovar
+                      </p>
+                      <ul className="list-inside list-disc space-y-0.5 text-xs">
+                        {f.link_invalido && <li>Gerar um novo link de convite VÁLIDO no WhatsApp e recadastrar</li>}
+                        {f.duplicado && <li>Este link já pertence a outro vínculo ativo — usar um grupo diferente</li>}
+                        {(reportGroup.members_count ?? 0) <= 90 && <li>Grupo precisa de 91+ membros</li>}
+                        {f.abandonado && <li>Registrar postagem recente (grupo ativo de verdade)</li>}
+                        {f.membros_implausiveis && <li>Corrigir a contagem de membros para um valor real</li>}
+                        {!f.link_invalido && !f.duplicado && (reportGroup.members_count ?? 0) > 90 &&
+                          !f.abandonado && !f.membros_implausiveis && (
+                          <li>Aprovação manual do admin (✅ na tabela) ou reprocessar com IA</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                      onClick={() => { decide(reportGroup.id, "aprovar"); setReportGroup(null); }}>
+                      <CheckCircle2 className="mr-1 h-4 w-4" /> Aprovar
+                    </Button>
+                    <Button size="sm" variant="destructive" className="flex-1"
+                      onClick={() => { decide(reportGroup.id, "rejeitar"); setReportGroup(null); }}>
+                      <XCircle className="mr-1 h-4 w-4" /> Rejeitar
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1"
+                      onClick={() => { runAi(reportGroup.id); setReportGroup(null); }}>
+                      <Sparkles className="mr-1 h-4 w-4" /> Reanalisar
+                    </Button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
       <Tabs defaultValue="grupos">
         <TabsList className="flex-wrap">
           <TabsTrigger value="grupos">Gestão de Grupos</TabsTrigger>
@@ -418,7 +580,11 @@ export default function AdminRadarIA() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge className={STATUS_APROVACAO[g.status_aprovacao]?.cls ?? ""}>
+                          <Badge
+                            onClick={() => setReportGroup(g)}
+                            title="Clique para ver o relatório completo da análise"
+                            className={`cursor-pointer ${STATUS_APROVACAO[g.status_aprovacao]?.cls ?? ""}`}
+                          >
                             {STATUS_APROVACAO[g.status_aprovacao]?.label ?? g.status_aprovacao}
                           </Badge>
                         </TableCell>
@@ -436,7 +602,13 @@ export default function AdminRadarIA() {
                           <p className="text-[10px] text-amber-500">{stars(g.score)}</p>
                         </TableCell>
                         <TableCell>
-                          <Badge className={CLASS_STYLE[g.classification] ?? ""}>{g.classification}</Badge>
+                          <Badge
+                            onClick={() => setReportGroup(g)}
+                            title="Clique para ver o relatório completo da análise"
+                            className={`cursor-pointer ${CLASS_STYLE[g.classification] ?? ""}`}
+                          >
+                            {g.classification}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-center text-xs font-bold">{g.commercial_potential}%</TableCell>
                         <TableCell>
@@ -511,7 +683,7 @@ export default function AdminRadarIA() {
                             {g.city_name || "sem cidade"} · {g.owner_name || "—"} · score {g.score}
                           </p>
                         </div>
-                        <Button size="sm" variant="outline" className="h-7 text-xs text-red-600"
+                        <Button size="sm" variant="outline" className="h-7 text-xs text-white"
                           onClick={() => decide(g.id, "rejeitar")}>Rejeitar</Button>
                       </div>
                     ))}
