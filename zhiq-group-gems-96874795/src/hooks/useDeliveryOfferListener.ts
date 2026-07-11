@@ -113,9 +113,12 @@ export function useDeliveryOfferListener() {
   const [acceptedOrderId, setAcceptedOrderId] = useState<string | null>(null);
 
   const dismissedIdsRef = useRef<Set<string>>(new Set());
-  const seenIdsRef = useRef<Set<string>>(new Set()); 
+  const seenIdsRef = useRef<Set<string>>(new Set());
   const isFreshCallRef = useRef(false);
   const currentOfferRef = useRef<DeliveryOffer | null>(null);
+  // Fase em ref p/ o poll de revalidação (não pode limpar tela de quem aceitou)
+  const phaseRef = useRef<DeliveryListenerPhase>('idle');
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const setCurrentOfferSynced = useCallback((updater: DeliveryOffer | null | ((prev: DeliveryOffer | null) => DeliveryOffer | null)) => {
     if (typeof updater === 'function') {
@@ -370,9 +373,34 @@ export function useDeliveryOfferListener() {
 
     fetchInitialOffer();
 
-    const pollInterval = setInterval(() => {
-      if (!currentOfferRef.current) fetchInitialOffer();
-    }, 25000);
+    const pollInterval = setInterval(async () => {
+      const cur = currentOfferRef.current;
+      if (!cur) {
+        fetchInitialOffer();
+        return;
+      }
+      // REVALIDAÇÃO da oferta em curso: se OUTRO motoboy aceitou, o UPDATE
+      // realtime pode se perder (aba em 2º plano suspende o websocket) e o
+      // som tocava pra sempre. A cada ciclo, confere no banco se a oferta
+      // ainda está de pé; senão, para o som e limpa — exceto para quem
+      // ACEITOU (tela de confirmação não pode sumir).
+      if (phaseRef.current === 'accepted') return;
+      try {
+        const { data: row } = await (supabase.from('delivery_offers') as any)
+          .select('id, status, offer_status, expires_at')
+          .eq('id', cur.id)
+          .maybeSingle();
+        const st = String(row?.offer_status ?? row?.status ?? '');
+        const vencida = row?.expires_at && new Date(row.expires_at).getTime() < Date.now();
+        const aindaValida = row && ['pending', 'open'].includes(st) && !vencida;
+        if (!aindaValida && currentOfferRef.current?.id === cur.id) {
+          console.log('[DeliveryOfferListener] 🔇 Revalidação: oferta não está mais de pé (st=%s, vencida=%s) — parando som.', st, vencida);
+          stopMotobyAudio();
+          setCurrentOfferSynced(null);
+          setPhase('idle');
+        }
+      } catch { /* rede oscilou — tenta no próximo ciclo */ }
+    }, 10000);
 
     const channel = supabase
       .channel(`delivery_offers_motoboy_${user.id}`)
