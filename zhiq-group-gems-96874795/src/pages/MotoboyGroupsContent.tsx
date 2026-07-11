@@ -253,9 +253,15 @@ export default function MotoboyGroupsContent() {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
-    // Como a contagem de membros agora é auditada automaticamente pelo RADAR IA,
-    // enviamos valor inicial para permitir a entrada na auditoria (>90 membros).
-    const membros = 95;
+    // REGRA CENTRAL DO RADAR IA (91+ membros) — validação espelho do banco:
+    // o trigger recusa QUALQUER aprovação com ≤90, venha de onde vier.
+    const membros = parseInt(newGroupMembros, 10);
+    if (!Number.isFinite(membros) || membros <= 90) {
+      setLinkDuplicateError(
+        `Grupo reprovado pelo RADAR IA. Quantidade mínima exigida: 91 membros (informado: ${Number.isFinite(membros) ? membros : 0}).`,
+      );
+      return;
+    }
     setIsSubmitting(true);
     setLinkDuplicateError(null);
 
@@ -416,6 +422,16 @@ export default function MotoboyGroupsContent() {
                   <p className="text-xs leading-relaxed text-white">
                     O <strong>Viagg-TX8</strong> audita automaticamente a contagem real de membros e a atividade do grupo. <strong>Grupos com 90 membros ou menos não serão aprovados</strong> para o desconto na comissão.
                   </p>
+                </div>
+                <div>
+                  <Label>Nº de membros do grupo * (mínimo 91)</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={newGroupMembros}
+                    onChange={e => setNewGroupMembros(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Ex: 250"
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <Label>Categoria</Label>
