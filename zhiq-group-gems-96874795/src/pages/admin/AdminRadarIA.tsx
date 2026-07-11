@@ -7,7 +7,7 @@
  * score e refina recomendações usando as decisões manuais do admin como
  * aprendizado. Este painel só CONSOME RPCs admin-gated (mp_is_admin).
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,7 @@ type GroupRow = {
   owner_user_id: string; owner_name: string | null; profile_kind: string;
   score: number; classification: string; commercial_potential: number;
   recommendation: string; ai_explanation: string | null; factors: any;
+  analyzed_at: string | null; status_aprovacao: string;
 };
 type TerritoryRow = {
   city_name: string; state_code: string; grupos: number; membros: number;
@@ -80,6 +81,12 @@ const SITUACAO_STYLE: Record<string, string> = {
   saturada:       "bg-red-500/15 text-red-600 border border-red-500/30",
 };
 const NIVEL_EMOJI: Record<string, string> = { Ouro: "🥇", Prata: "🥈", Bronze: "🥉" };
+const STATUS_APROVACAO: Record<string, { label: string; cls: string }> = {
+  aprovado:  { label: "🟢 Aprovado",  cls: "bg-emerald-600 text-white" },
+  reprovado: { label: "🔴 Reprovado", cls: "bg-red-600 text-white" },
+  pendente:  { label: "🟡 Pendente",  cls: "bg-amber-500/20 text-amber-600 border border-amber-500/40" },
+  inativo:   { label: "⚪ Inativo",   cls: "bg-zinc-500/15 text-zinc-500 border border-zinc-500/30" },
+};
 
 const stars = (score: number) => "★".repeat(Math.max(1, Math.round(score / 20)));
 const fmtDate = (iso?: string | null) =>
@@ -107,6 +114,9 @@ export default function AdminRadarIA() {
   const [search, setSearch] = useState("");
   const [classFilter, setClassFilter] = useState("todas");
   const [recoFilter, setRecoFilter] = useState("todas");
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [scoreFilter, setScoreFilter] = useState("0");
+  const [membrosFilter, setMembrosFilter] = useState("todos");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
 
@@ -166,13 +176,16 @@ export default function AdminRadarIA() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return groups.filter((g) => {
+      if (statusFilter !== "todos" && g.status_aprovacao !== statusFilter) return false;
+      if (membrosFilter === "91mais" && (g.members_count ?? 0) < 91) return false;
+      if (Number(scoreFilter) > 0 && (g.score ?? 0) < Number(scoreFilter)) return false;
       if (classFilter !== "todas" && g.classification !== classFilter) return false;
       if (recoFilter !== "todas" && g.recommendation !== recoFilter) return false;
       if (!q) return true;
-      return [g.group_name, g.city_name, g.owner_name, g.group_link]
+      return [g.group_name, g.city_name, g.owner_name, g.group_link, g.neighborhood]
         .some((v) => (v ?? "").toLowerCase().includes(q));
     });
-  }, [groups, search, classFilter, recoFilter]);
+  }, [groups, search, classFilter, recoFilter, statusFilter, scoreFilter, membrosFilter]);
 
   // Auditoria automática: buckets de problemas
   const audit = useMemo(() => ({
@@ -190,6 +203,18 @@ export default function AdminRadarIA() {
     qc.invalidateQueries({ queryKey: ["radar-territory"] });
     qc.invalidateQueries({ queryKey: ["radar-ranking"] });
   };
+
+  // TEMPO REAL: grupo cadastrado/alterado ou score novo da IA → cards,
+  // tabela, contadores, filtros e ranking atualizam sem recarregar.
+  useEffect(() => {
+    const ch = supabase
+      .channel("radar-ia-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_groups" }, refreshAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "radar_group_scores" }, refreshAll)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const decide = async (groupId: string, decision: string) => {
     setBusyId(groupId);
@@ -250,7 +275,7 @@ export default function AdminRadarIA() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={reprocessAll}>
+          <Button size="sm" variant="outline" onClick={reprocessAll} className="text-black dark:text-white border-gray-400 dark:border-white/30 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/15 font-semibold">
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Reprocessar motor
           </Button>
           <Button size="sm" onClick={() => runAi()} disabled={aiBusy}
@@ -289,17 +314,47 @@ export default function AdminRadarIA() {
         {/* ── GESTÃO DE GRUPOS ── */}
         <TabsContent value="grupos" className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            <Input placeholder="Buscar por nome, cidade, profissional ou link…"
-              value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+            <Input
+              placeholder="Buscar por nome, cidade, categoria, profissional ou link…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-300 font-semibold bg-white dark:bg-card border-gray-300 dark:border-border/60"
+            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40 text-black dark:text-white font-semibold bg-white dark:bg-card border-gray-300 dark:border-border/60"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os status</SelectItem>
+                <SelectItem value="aprovado">🟢 Aprovados</SelectItem>
+                <SelectItem value="reprovado">🔴 Reprovados</SelectItem>
+                <SelectItem value="pendente">🟡 Pendentes</SelectItem>
+                <SelectItem value="inativo">⚪ Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={membrosFilter} onValueChange={setMembrosFilter}>
+              <SelectTrigger className="w-40 text-black dark:text-white font-semibold bg-white dark:bg-card border-gray-300 dark:border-border/60"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Qualquer nº de membros</SelectItem>
+                <SelectItem value="91mais">👥 91+ membros</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={scoreFilter} onValueChange={setScoreFilter}>
+              <SelectTrigger className="w-36 text-black dark:text-white font-semibold bg-white dark:bg-card border-gray-300 dark:border-border/60"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Qualquer score</SelectItem>
+                <SelectItem value="60">Score 60+</SelectItem>
+                <SelectItem value="75">Score 75+</SelectItem>
+                <SelectItem value="90">Score 90+</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={classFilter} onValueChange={setClassFilter}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-44 text-black dark:text-white font-semibold bg-white dark:bg-card border-gray-300 dark:border-border/60"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas as classes</SelectItem>
                 {Object.keys(CLASS_STYLE).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={recoFilter} onValueChange={setRecoFilter}>
-              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-56 text-black dark:text-white font-semibold bg-white dark:bg-card border-gray-300 dark:border-border/60"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todas">Todas as recomendações</SelectItem>
                 {Object.entries(RECO_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
@@ -314,7 +369,8 @@ export default function AdminRadarIA() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Grupo</TableHead>
-                      <TableHead>Cidade</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Cidade / Categoria</TableHead>
                       <TableHead>Profissional</TableHead>
                       <TableHead className="text-center">Membros</TableHead>
                       <TableHead className="text-center">Score</TableHead>
@@ -326,22 +382,41 @@ export default function AdminRadarIA() {
                   </TableHeader>
                   <TableBody>
                     {groupsQ.isLoading && (
-                      <TableRow><TableCell colSpan={9} className="py-8 text-center">
+                      <TableRow><TableCell colSpan={10} className="py-8 text-center">
                         <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                       </TableCell></TableRow>
                     )}
                     {!groupsQ.isLoading && filtered.length === 0 && (
-                      <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                      <TableRow><TableCell colSpan={10} className="py-8 text-center text-sm text-muted-foreground">
                         Nenhum grupo neste filtro.
                       </TableCell></TableRow>
                     )}
                     {filtered.map((g) => (
                       <TableRow key={g.id} className={!g.is_active ? "opacity-55" : ""}>
                         <TableCell>
-                          <p className="max-w-40 truncate text-xs font-bold">{g.group_name || "—"}</p>
-                          <p className="text-[10px] text-muted-foreground">{fmtDate(g.created_at)}{!g.is_active && " · inativo"}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="max-w-36 truncate text-xs font-bold">{g.group_name || "—"}</p>
+                            {g.group_link && (
+                              <a href={g.group_link} target="_blank" rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-primary" title={g.group_link}>
+                                🔗
+                              </a>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            cad. {fmtDate(g.created_at)}
+                            {g.analyzed_at ? ` · IA ${fmtDate(g.analyzed_at)}` : " · sem análise"}
+                          </p>
                         </TableCell>
-                        <TableCell className="text-xs">{g.city_name || "—"}{g.state_code ? `/${g.state_code}` : ""}</TableCell>
+                        <TableCell>
+                          <Badge className={STATUS_APROVACAO[g.status_aprovacao]?.cls ?? ""}>
+                            {STATUS_APROVACAO[g.status_aprovacao]?.label ?? g.status_aprovacao}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {g.city_name || "—"}{g.state_code ? `/${g.state_code}` : ""}
+                          <p className="text-[10px] text-muted-foreground">{g.neighborhood || "Geral"}</p>
+                        </TableCell>
                         <TableCell>
                           <p className="max-w-28 truncate text-xs">{g.owner_name || "—"}</p>
                           <p className="text-[10px] text-muted-foreground">{g.profile_kind}</p>
