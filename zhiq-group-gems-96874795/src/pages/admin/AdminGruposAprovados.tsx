@@ -51,6 +51,17 @@ export default function AdminGruposAprovados() {
   const [membrosMin, setMembrosMin] = useState("0");
   const [periodo, setPeriodo] = useState("todos");
 
+  // As RPCs do RADAR retornam VAZIO para quem não é admin (mp_is_admin) —
+  // sem este aviso, conta errada logada parecia "nenhum grupo aprovado".
+  const isAdminQ = useQuery({
+    queryKey: ["mp-is-admin"],
+    queryFn: async (): Promise<boolean> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase.rpc as any)("mp_is_admin");
+      return Boolean(data);
+    },
+  });
+
   const groupsQ = useQuery({
     queryKey: ["radar-groups-aprovados"],
     queryFn: async (): Promise<GroupRow[]> => {
@@ -119,6 +130,14 @@ export default function AdminGruposAprovados() {
           </p>
         </div>
       </div>
+
+      {isAdminQ.data === false && (
+        <div className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-600">
+          ⚠️ A conta logada não tem papel de <strong>admin</strong> — os dados do RADAR IA
+          ficam ocultos por segurança. Entre com a conta de administrador
+          (ex.: ANGELO ZANATTA) e recarregue.
+        </div>
+      )}
 
       {/* Cards */}
       <div className="grid grid-cols-3 gap-2">
