@@ -42,6 +42,14 @@ const CLASS_STYLE: Record<string, string> = {
 const fmtDate = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString("pt-BR") : "—";
 
+// Exibição padronizada: "aripuana"/"ARIPUANA" → "Aripuana" (não altera o dado)
+const titleCase = (s?: string | null) =>
+  (s ?? "")
+    .toLowerCase()
+    .split(/(\s|-|\/)/)
+    .map((p) => (/[a-zà-ú]/.test(p[0] ?? "") ? p[0].toUpperCase() + p.slice(1) : p))
+    .join("") || "—";
+
 export default function AdminGruposAprovados() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -235,9 +243,9 @@ export default function AdminGruposAprovados() {
                 )}
                 {filtered.map((g) => (
                   <TableRow key={g.id}>
-                    <TableCell className="max-w-44 truncate text-xs font-bold">{g.group_name || "—"}</TableCell>
-                    <TableCell className="text-xs">{g.city_name || "—"}{g.state_code ? `/${g.state_code}` : ""}</TableCell>
-                    <TableCell className="text-xs">{g.neighborhood || "Geral"}</TableCell>
+                    <TableCell className="max-w-44 truncate text-xs font-bold">{titleCase(g.group_name)}</TableCell>
+                    <TableCell className="text-xs">{titleCase(g.city_name)}{g.state_code ? `/${g.state_code.toUpperCase()}` : ""}</TableCell>
+                    <TableCell className="text-xs">{titleCase(g.neighborhood) === "—" ? "Geral" : titleCase(g.neighborhood)}</TableCell>
                     <TableCell>
                       {g.group_link ? (
                         <a href={g.group_link} target="_blank" rel="noopener noreferrer"
