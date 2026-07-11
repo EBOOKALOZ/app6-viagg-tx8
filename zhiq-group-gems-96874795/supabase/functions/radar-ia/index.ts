@@ -23,6 +23,48 @@ const json = (body: unknown, status = 200) =>
     headers: { ...CORS, "Content-Type": "application/json" },
   });
 
+/**
+ * NÍVEL 1 de verificação: consulta a PRÉVIA PÚBLICA do convite
+ * (chat.whatsapp.com) — revela se o link está ATIVO ou REVOGADO, o nome
+ * REAL do grupo (og:title) e a foto (og:image). A prévia NÃO expõe a
+ * contagem de membros (isso só com bot dentro do grupo — Nível 2).
+ */
+async function verifyInviteLink(link: string): Promise<{
+  status: "ativo" | "revogado" | "erro";
+  realName: string | null;
+  photoUrl: string | null;
+}> {
+  try {
+    if (!/chat\.whatsapp\.com\//i.test(link)) {
+      return { status: "revogado", realName: null, photoUrl: null };
+    }
+    const resp = await fetch(link, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      },
+      redirect: "follow",
+    });
+    const html = await resp.text();
+    const title = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']*)["']/i)?.[1]
+      ?? html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:title["']/i)?.[1]
+      ?? null;
+    const image = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)["']/i)?.[1]
+      ?? null;
+
+    // Convite válido → og:title traz o NOME do grupo; revogado/inexistente →
+    // título genérico ("WhatsApp Group Invite") ou ausente.
+    const generic = !title || /^whatsapp group invite$/i.test(title.trim());
+    return {
+      status: generic ? "revogado" : "ativo",
+      realName: generic ? null : title!.trim().slice(0, 200),
+      photoUrl: image && /^https?:\/\//i.test(image) ? image.slice(0, 500) : null,
+    };
+  } catch {
+    return { status: "erro", realName: null, photoUrl: null };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
@@ -74,6 +116,21 @@ Deno.serve(async (req) => {
     const g = (groups ?? []).find((x: any) => x.id === t.group_id);
     if (!g) continue;
 
+    // ── VERIFICAÇÃO REAL DO LINK (prévia pública) ──────────────────
+    // Grava o resultado no grupo; o UPDATE dispara o trigger do motor,
+    // que repontua e aplica/retira vetos sozinho (link revogado, nome
+    // divergente). Só depois a IA explica.
+    let verification: Awaited<ReturnType<typeof verifyInviteLink>> | null = null;
+    if (g.group_link) {
+      verification = await verifyInviteLink(g.group_link);
+      await svc.from("whatsapp_groups").update({
+        link_status: verification.status,
+        link_verified_at: new Date().toISOString(),
+        real_name: verification.realName,
+        photo_url: verification.photoUrl,
+      }).eq("id", g.id);
+    }
+
     const prompt = `Você é o RADAR IA da plataforma VIAGG-TX8: auditor especialista em grupos de WhatsApp cadastrados por profissionais (motoboys, moto-táxis, motoristas) para divulgação comercial local.
 
 GRUPO EM ANÁLISE:
@@ -83,6 +140,12 @@ SCORE DO MOTOR DETERMINÍSTICO (0-100) E FATORES:
 score=${t.score} classificação=${t.classification} potencial_comercial=${t.commercial_potential}
 fatores=${JSON.stringify(t.factors)}
 recomendação_atual=${t.recommendation}
+
+VERIFICAÇÃO REAL DO LINK (prévia pública do convite, feita agora):
+${verification
+  ? `status=${verification.status} nome_real=${verification.realName ?? "(indisponível)"}
+ATENÇÃO: a contagem de membros informada (${g.members_count}) é AUTODECLARADA — a prévia não expõe membros. Se o link está revogado ou o nome real diverge do cadastrado, isso pesa contra a confiança.`
+  : "(sem link para verificar)"}
 
 APRENDIZADO — decisões manuais recentes do administrador (use como calibração do que ele considera aprovável):
 ${JSON.stringify(decisions ?? [])}

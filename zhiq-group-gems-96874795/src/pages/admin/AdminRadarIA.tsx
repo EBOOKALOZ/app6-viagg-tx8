@@ -406,7 +406,16 @@ export default function AdminRadarIA() {
                           <p className="text-[10px] text-muted-foreground">
                             cad. {fmtDate(g.created_at)}
                             {g.analyzed_at ? ` · IA ${fmtDate(g.analyzed_at)}` : " · sem análise"}
+                            {g.factors?.link_verificado && (
+                              <span className="ml-1 text-emerald-500" title="Link verificado: convite ATIVO">🔗✓</span>
+                            )}
+                            {g.factors?.link_invalido && (
+                              <span className="ml-1 text-red-500" title="Link inválido ou REVOGADO (verificado)">🔗✗</span>
+                            )}
                           </p>
+                          {g.factors?.nome_divergente && (
+                            <p className="text-[10px] font-bold text-red-500">⚠️ nome real difere do cadastrado</p>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge className={STATUS_APROVACAO[g.status_aprovacao]?.cls ?? ""}>
