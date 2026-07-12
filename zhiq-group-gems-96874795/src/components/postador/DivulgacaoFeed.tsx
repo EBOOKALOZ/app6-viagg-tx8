@@ -491,7 +491,12 @@ export function DivulgacaoFeed({
                   </div>
 
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]" style={{ color: '#94a3b8' }}>
-                    {item.city && <span className="inline-flex items-center gap-0.5"><MapPin className="h-3 w-3" />{item.city}</span>}
+                    {item.city && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <MapPin className="h-3 w-3" />{item.city}
+                        {item.ad?.distanceKm != null && item.ad.distanceKm > 0 && ` · ~${item.ad.distanceKm} km`}
+                      </span>
+                    )}
                     <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{timeAgo(item.createdAt)}</span>
                     {item.views != null && <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{item.views}</span>}
                   </div>
