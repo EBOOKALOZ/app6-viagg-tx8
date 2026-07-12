@@ -248,6 +248,24 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
         {/* Seções específicas do módulo */}
         {p.extras}
 
+        {/* Card de interesse inline (logo abaixo do bloco de segurança) */}
+        {(p.acoes?.onInteresse || p.acoes?.onContatar) && (
+          <div className="p-5 text-center" style={glass}>
+            <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Gostou deste anúncio?</p>
+            <p className="mt-0.5 text-xs" style={{ color: '#64748b' }}>
+              Demonstre interesse e o anunciante recebe seu contato com segurança.
+            </p>
+            <button
+              type="button"
+              onClick={p.acoes?.onInteresse ?? p.acoes?.onContatar}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm text-white transition-transform active:scale-[0.98]"
+              style={{ background: `linear-gradient(135deg, ${p.accent}, ${p.accent}dd)`, fontWeight: 800, boxShadow: `0 12px 26px -10px ${p.accent}88` }}
+            >
+              <Star className="h-4 w-4" /> {p.acoes?.interesseLabel ?? 'Tenho Interesse'}
+            </button>
+          </div>
+        )}
+
         {/* Relacionados */}
         {!!p.relacionados?.length && (
           <div className="p-5" style={glass}>
