@@ -417,7 +417,7 @@ export default function MotoboyGroupsContent() {
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="bg-[#F5E62B] border-[#F5E62B] text-motoboy hover:bg-[#f0e000] hover:border-[#f0e000] hover:text-motoboy whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center">
+              <Button size="sm" className="bg-yellow-400 hover:bg-yellow-300 text-black font-bold border-2 border-yellow-500 hover:border-yellow-400 shadow-md shadow-yellow-400/30 whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center">
                 <Plus className="h-4 w-4 mr-1 shrink-0" />
                 Vincular Grupo
               </Button>
@@ -769,7 +769,9 @@ export default function MotoboyGroupsContent() {
                                 variant={isCritical ? 'default' : 'secondary'}
                                 className={cn(
                                   "w-full text-xs font-semibold shadow-sm",
-                                  isCritical ? "bg-orange-600 hover:bg-orange-700 text-white" : ""
+                                  isCritical
+                                    ? "bg-orange-600 hover:bg-orange-700 text-white"
+                                    : "bg-[#16a34a] hover:bg-[#15803d] text-white"
                                 )}>
                                 <MessageSquare className="h-3.5 w-3.5 mr-1" />
                                 {isCritical ? "Risco de Punição: Postar Agora" : "Engajar Loja Local neste grupo"}
