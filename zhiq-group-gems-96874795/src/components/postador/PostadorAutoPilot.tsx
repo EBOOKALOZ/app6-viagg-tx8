@@ -46,6 +46,29 @@ export function PostadorAutoPilot({
   const { user } = useAuth();
   const { data: feed } = useDivulgacaoFeed();
 
+  /* Janela operacional (07:00–23:00 configurável) + estimativa dinâmica */
+  const { data: janela } = useQuery({
+    queryKey: ['janela-status'],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('janela_status');
+      if (error) throw error;
+      return data as any;
+    },
+  });
+  const { data: estim } = useQuery({
+    queryKey: ['divulgacao-estimativa'],
+    refetchInterval: 120_000,
+    queryFn: async () => {
+      const { data } = await (supabase.rpc as any)('divulgacao_estimativa');
+      return data as any;
+    },
+  });
+  const janelaFechada = janela ? !janela.aberta : false;
+  const estimativaTxt = estim?.minutos != null
+    ? (estim.minutos >= 60 ? `até ${Math.ceil(estim.minutos / 60)}h` : `até ${estim.minutos}min`)
+    : `até ${estim?.horas_padrao ?? 3}h`;
+
   const [now, setNow] = useState(() => Date.now());
   const [preparing, setPreparing] = useState(true);
   const [skipped, setSkipped] = useState<string[]>([]);      // oportunidades locais expiradas/puladas
@@ -135,9 +158,10 @@ export function PostadorAutoPilot({
     return () => clearTimeout(t);
   }, [opKey]);
 
-  /* reserva local de anúncio expira → devolve à fila e prepara a próxima */
+  /* reserva local de anúncio expira → devolve à fila e prepara a próxima
+     (congelada durante a pausa noturna — nada expira fora da janela) */
   useEffect(() => {
-    if (!reservaLocalAte || preparing) return;
+    if (!reservaLocalAte || preparing || janelaFechada) return;
     if (now >= reservaLocalAte && oportunidade?.tipo === 'anuncio') {
       toast.info('Reserva expirada — oportunidade devolvida à fila. Preparando a próxima…');
       setSkipped(s => [...s, (oportunidade as any).ad.id]);
@@ -239,11 +263,13 @@ export function PostadorAutoPilot({
         <div>
           <p className="text-sm text-white" style={{ fontWeight: 700 }}>Despachante Inteligente</p>
           <p className="text-[11px] text-emerald-200/80">
-            {preparing
-              ? 'Analisando prioridades, grupos e horários…'
-              : oportunidade
-                ? 'Divulgação pronta — só confirmar.'
-                : 'Monitorando novas oportunidades para você.'}
+            {janelaFechada
+              ? `Operação pausada (${(janela?.fim ?? '23:00').slice(0, 5)}–${(janela?.inicio ?? '07:00').slice(0, 5)}) · contadores congelados.`
+              : preparing
+                ? 'Analisando prioridades, grupos e horários…'
+                : oportunidade
+                  ? 'Divulgação pronta — só confirmar.'
+                  : 'Monitorando novas oportunidades para você.'}
           </p>
         </div>
         {restanteMs != null && !preparing && (
@@ -259,7 +285,18 @@ export function PostadorAutoPilot({
       </div>
 
       {/* corpo */}
-      {preparing ? (
+      {janelaFechada ? (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+          <p className="text-2xl">⏸️</p>
+          <p className="mt-1 text-sm text-white" style={{ fontWeight: 700 }}>
+            Operação pausada ({(janela?.fim ?? '23:00').slice(0, 5)}–{(janela?.inicio ?? '07:00').slice(0, 5)})
+          </p>
+          <p className="mt-1 text-xs text-emerald-200/70">
+            Retorna às {(janela?.inicio ?? '07:00').slice(0, 5)} — suas reservas estão congeladas e
+            voltam exatamente do ponto em que pararam. A IA segue organizando a fila em segundo plano.
+          </p>
+        </div>
+      ) : preparing ? (
         <div className="mt-5 space-y-3">
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16 shrink-0">
@@ -302,6 +339,9 @@ export function PostadorAutoPilot({
                 <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{info.cidade}</span>
                 <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" />{info.grupos} grupo{info.grupos === 1 ? '' : 's'}</span>
                 <span className="inline-flex items-center gap-1"><Timer className="h-3 w-3" />~2 min</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5" style={{ fontWeight: 700 }}>
+                  ⏱ Estimativa: {estimativaTxt}
+                </span>
               </div>
               <p className="mt-1.5 text-[11px] text-emerald-200/80">
                 ✅ Postagem confirmada mantém seus grupos ativos na plataforma.

@@ -103,6 +103,35 @@ export default function AdminFilaDivulgacoes() {
     refetchAloc();
   };
 
+  /* Janela Operacional (config) */
+  const { data: janela, refetch: refetchJanela } = useQuery({
+    queryKey: ['admin-janela-status'],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.rpc as any)('janela_status');
+      return data as any;
+    },
+  });
+  const [jw, setJw] = useState<{ ini: string; fim: string; pausa: boolean; est: number; exc: string } | null>(null);
+  useEffect(() => {
+    if (janela && !jw) {
+      setJw({
+        ini: String(janela.inicio).slice(0, 5), fim: String(janela.fim).slice(0, 5),
+        pausa: janela.pausa_ativa, est: janela.estimativa_padrao_horas, exc: '[]',
+      });
+    }
+  }, [janela, jw]);
+  const salvarJanela = async () => {
+    if (!jw) return;
+    let exc: any = [];
+    try { exc = JSON.parse(jw.exc || '[]'); } catch { alert('Exceções: JSON inválido'); return; }
+    const { error } = await (supabase.rpc as any)('janela_config_set', {
+      p_inicio: jw.ini, p_fim: jw.fim, p_pausa: jw.pausa, p_estimativa: jw.est, p_excecoes: exc,
+    });
+    if (error) { alert(error.message); return; }
+    refetchJanela();
+  };
+
   const { data: fila = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['admin-fila-divulgacoes'],
     refetchInterval: 30_000,
@@ -301,6 +330,54 @@ export default function AdminFilaDivulgacoes() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── JANELA OPERACIONAL ── */}
+      {jw && (
+        <div
+          className="rounded-[20px] bg-white p-5"
+          style={{ boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 12px 36px -16px rgba(15,23,42,.12)' }}
+        >
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>
+              🕗 Janela Operacional {janela?.aberta
+                ? <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700">ABERTA</span>
+                : <span className="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600">⏸ PAUSADA</span>}
+            </p>
+            <p className="text-[11px]" style={{ color: '#64748b' }}>
+              Fora da janela: sem novas reservas, contadores congelados (retomada automática pelo cron a cada 15 min).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-[10px] font-bold text-slate-500">Início
+              <input type="time" value={jw.ini} onChange={e => setJw({ ...jw, ini: e.target.value })}
+                className="mt-1 block rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none" />
+            </label>
+            <label className="text-[10px] font-bold text-slate-500">Encerramento
+              <input type="time" value={jw.fim} onChange={e => setJw({ ...jw, fim: e.target.value })}
+                className="mt-1 block rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none" />
+            </label>
+            <label className="text-[10px] font-bold text-slate-500">Estimativa padrão (h)
+              <input type="number" min={1} max={24} value={jw.est} onChange={e => setJw({ ...jw, est: Number(e.target.value) })}
+                className="mt-1 block w-20 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none" />
+            </label>
+            <label className="flex items-center gap-1.5 pb-2 text-[11px] font-bold text-slate-700">
+              <input type="checkbox" checked={jw.pausa} onChange={e => setJw({ ...jw, pausa: e.target.checked })}
+                className="h-3.5 w-3.5 accent-emerald-600" />
+              Pausa noturna ativa
+            </label>
+            <label className="min-w-[220px] flex-1 text-[10px] font-bold text-slate-500">
+              Exceções (JSON: [{'{'}"data":"2026-12-25","fechado":true{'}'}])
+              <input value={jw.exc} onChange={e => setJw({ ...jw, exc: e.target.value })}
+                className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-800 outline-none" />
+            </label>
+            <button type="button" onClick={salvarJanela}
+              className="rounded-full px-5 py-2 text-xs text-white"
+              style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', fontWeight: 700 }}>
+              Salvar janela
+            </button>
+          </div>
         </div>
       )}
 
