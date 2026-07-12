@@ -224,7 +224,7 @@ export function TierLadderCard({ validGroups }: TierLadderCardProps) {
           return (
             <div
               key={tier.name}
-              className={cn('tier-card relative rounded-[18px] p-5 text-center', isCurrent && 'tier-atual')}
+              className={cn('tier-card relative rounded-[18px] p-5 text-center', isCurrent && tier.name === 'VIP' && 'tier-atual')}
               style={
                 isCurrent
                   ? {
