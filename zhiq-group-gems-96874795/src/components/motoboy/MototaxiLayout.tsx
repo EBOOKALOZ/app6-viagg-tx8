@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { MotoboyPanelHeader } from '@/components/motoboy/MotoboyPanelHeader';
 import MototaxiBottomNav from '@/components/motoboy/MototaxiBottomNav';
 import { WeatherEventsCard } from '@/components/motoboy/WeatherEventsCard';
+import { CentralImpulsionamentoBanner } from '@/components/ridv/CentralImpulsionamentoBanner';
 
 export function MototaxiLayout() {
   const { user, refreshProfiles } = useAuth();
@@ -74,6 +75,9 @@ export function MototaxiLayout() {
         <div className="px-3 pt-2">
           <WeatherEventsCard city={city || undefined} state={state || undefined} />
         </div>
+        
+        <CentralImpulsionamentoBanner />
+        
         <Outlet />
       </main>
 

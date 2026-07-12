@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { DriverPanelHeader } from '@/components/driver/DriverPanelHeader';
 import DriverBottomNav from '@/components/driver/DriverBottomNav';
 import { WeatherEventsCard } from '@/components/motoboy/WeatherEventsCard';
+import { CentralImpulsionamentoBanner } from '@/components/ridv/CentralImpulsionamentoBanner';
 
 export function DriverLayout() {
   const { user, refreshProfiles } = useAuth();
@@ -74,6 +75,9 @@ export function DriverLayout() {
         <div className="px-3 pt-2">
           <WeatherEventsCard city={city || undefined} state={state || undefined} />
         </div>
+        
+        <CentralImpulsionamentoBanner />
+        
         <Outlet />
       </main>
 

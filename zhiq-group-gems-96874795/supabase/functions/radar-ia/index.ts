@@ -87,8 +87,8 @@ Deno.serve(async (req) => {
   const { data: isAdmin } = await userClient.rpc("mp_is_admin");
   if (!isAdmin) return json({ ok: false, error: "Apenas administradores" }, 403);
 
-  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropicKey) return json({ ok: false, error: "ANTHROPIC_API_KEY ausente" }, 500);
+  const xaiKey = Deno.env.get("XAI_API_KEY");
+  if (!xaiKey) return json({ ok: false, error: "XAI_API_KEY ausente" }, 500);
 
   const input = await req.json().catch(() => ({}));
   const batch = Number(input.batch ?? 0);
@@ -173,21 +173,20 @@ Responda APENAS um JSON válido:
  "recomendacao_final": "aprovar_automatico|enviar_revisao|grupo_duplicado|link_invalido|grupo_suspeito|grupo_abandonado|baixa_qualidade|alto_potencial"}`;
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: {
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
+          "Authorization": `Bearer ${xaiKey}`,
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
+          model: "grok-3-mini",
           max_tokens: 400,
           messages: [{ role: "user", content: prompt }],
         }),
       });
       const data = await resp.json();
-      const text: string = data?.content?.[0]?.text ?? "";
+      const text: string = data?.choices?.[0]?.message?.content ?? "";
       const parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
 
       await svc

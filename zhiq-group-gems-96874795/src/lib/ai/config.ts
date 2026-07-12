@@ -12,7 +12,7 @@
  *     OPENAI_API_KEY, AIAPI_KEY, GLM_API_KEY
  */
 
-export type AIProvider = "openai" | "deepseek" | "gemini" | "claude";
+export type AIProvider = "openai" | "deepseek" | "gemini" | "claude" | "grok";
 
 /** Protocolo de autenticação e request */
 export type AIProtocol =
@@ -61,10 +61,17 @@ export const PROVIDER_CONFIGS: Record<AIProvider, AIProviderConfig> = {
     envKeyName: "ANTHROPIC_API_KEY",
     requiresCustomAdapter: true,
   },
+  grok: {
+    provider: "grok",
+    protocol: "openai",          // xAI Grok é compatível com OpenAI SDK
+    model: "grok-3-mini",
+    baseUrl: "https://api.x.ai/v1",
+    envKeyName: "XAI_API_KEY",
+  },
 };
 
 // ─── ÚNICA LINHA A ALTERAR PARA TROCAR DE PROVEDOR ───────────────────────────
-export const ACTIVE_PROVIDER: AIProvider = "openai";
+export const ACTIVE_PROVIDER: AIProvider = "grok";
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Configuração do provedor ativo */

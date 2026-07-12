@@ -6,6 +6,7 @@ import { MotoboyPanelHeader } from '@/components/motoboy/MotoboyPanelHeader';
 import MotoboyBottomNav from '@/components/motoboy/MotoboyBottomNav';
 import { MotoboyFooter } from '@/components/motoboy/MotoboyFooter';
 import { WeatherEventsCard } from '@/components/motoboy/WeatherEventsCard';
+import { CentralImpulsionamentoBanner } from '@/components/ridv/CentralImpulsionamentoBanner';
 
 export function MotoboyLayout() {
   const { user, refreshProfiles } = useAuth();
@@ -62,7 +63,12 @@ export function MotoboyLayout() {
   }, [user?.id, location.pathname]);
 
   return (
-    <div className="min-h-screen bg-motoboy-surface flex flex-col">
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background: 'linear-gradient(180deg, #F0F2F5 0%, #E8ECF0 40%, #F5F7FA 100%)',
+      }}
+    >
       <MotoboyPanelHeader
         avatarUrl={avatarUrl}
         userName={userName}
@@ -72,9 +78,19 @@ export function MotoboyLayout() {
       />
 
       <main className="flex-1 flex flex-col">
-        <div className="px-3 pt-2">
+        {/* Gradiente de transição header → conteúdo */}
+        <div
+          className="h-3 shrink-0"
+          style={{
+            background: 'linear-gradient(180deg, hsl(25 100% 50% / 0.08), transparent)',
+          }}
+        />
+        <div className="px-4 pb-3">
           <WeatherEventsCard city={city || undefined} state={state || undefined} />
         </div>
+        
+        <CentralImpulsionamentoBanner />
+
         <Outlet />
       </main>
 

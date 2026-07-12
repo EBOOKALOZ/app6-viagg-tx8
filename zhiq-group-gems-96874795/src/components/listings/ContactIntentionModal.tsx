@@ -252,7 +252,7 @@ export function ContactIntentionModal({
         </div>
 
         {/* ── Body ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto bg-gradient-to-b from-zinc-50 to-white">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-orange-50 text-zinc-900">
 
           {/* ── Estado de Sucesso ── */}
           {submitted ? (
@@ -264,12 +264,12 @@ export function ContactIntentionModal({
                 <Sparkles className="w-5 h-5 text-orange-400 absolute -top-1 -right-2 animate-bounce" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-black text-zinc-900 tracking-tight">Interesse Enviado!</h3>
-                <p className="text-zinc-500 text-sm leading-relaxed max-w-xs mx-auto">
+                <h3 className="text-2xl font-black text-orange-600 tracking-tight">Interesse Enviado!</h3>
+                <p className="text-zinc-600 text-sm leading-relaxed max-w-xs mx-auto">
                   O anunciante recebeu sua mensagem e entrará em contato em breve.
                 </p>
               </div>
-              <div className="w-full bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-4 flex items-center gap-3">
+              <div className="w-full bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 flex items-center gap-3">
                 <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
                 <p className="text-xs font-semibold text-emerald-700 text-left leading-snug">
                   Seus dados estão protegidos e não serão compartilhados sem autorização.
@@ -277,14 +277,14 @@ export function ContactIntentionModal({
               </div>
               <Button
                 onClick={handleClose}
-                className="w-full h-12 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-black uppercase text-xs tracking-widest"
+                className="w-full h-12 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-black uppercase text-xs tracking-widest transition-colors"
               >
                 Fechar
               </Button>
               {listingModule === "travel" && user && (
                 <button
                   onClick={() => { handleClose(); window.location.href = "/viagens/minha-conta"; }}
-                  className="text-xs text-sky-600 font-bold underline underline-offset-2"
+                  className="text-xs text-orange-600 font-bold underline underline-offset-2"
                 >
                   Ver meus interesses →
                 </button>
@@ -295,38 +295,38 @@ export function ContactIntentionModal({
             /* ── Formulário ── */
             <div className="px-6 py-6 space-y-4">
 
-              <p className="text-zinc-500 text-[13px] leading-relaxed">
+              <p className="text-zinc-600 text-[13px] leading-relaxed">
                 Preencha seus dados e o anunciante entrará em contato com você.
               </p>
 
               {/* Nome */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                <label className="flex items-center gap-1.5 text-[10px] font-black text-orange-700 uppercase tracking-widest">
                   <User className="w-3 h-3" /> Seu nome <span className="text-orange-500">*</span>
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 pointer-events-none" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                   <Input
                     placeholder="Nome completo"
                     value={form.name}
                     onChange={(e) => update("name", e.target.value)}
-                    className="pl-10 h-12 rounded-xl border-zinc-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-800 shadow-sm"
+                    className="pl-10 h-12 rounded-xl border-orange-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-900 placeholder:text-zinc-400 shadow-sm transition-all"
                   />
                 </div>
               </div>
 
               {/* Telefone / WhatsApp */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                <label className="flex items-center gap-1.5 text-[10px] font-black text-orange-700 uppercase tracking-widest">
                   <Phone className="w-3 h-3" /> WhatsApp / Telefone <span className="text-orange-500">*</span>
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 pointer-events-none" />
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                   <Input
                     placeholder="(00) 00000-0000"
                     value={form.phone}
                     onChange={(e) => update("phone", maskPhone(e.target.value))}
-                    className="pl-10 h-12 rounded-xl border-zinc-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-800 shadow-sm"
+                    className="pl-10 h-12 rounded-xl border-orange-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-900 placeholder:text-zinc-400 shadow-sm transition-all"
                     inputMode="tel"
                   />
                 </div>
@@ -334,37 +334,38 @@ export function ContactIntentionModal({
 
               {/* E-mail */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                <label className="flex items-center gap-1.5 text-[10px] font-black text-orange-700 uppercase tracking-widest">
                   <Mail className="w-3 h-3" /> E-mail <span className="text-orange-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-300 pointer-events-none" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
                   <Input
                     type="email"
                     placeholder="voce@email.com"
                     value={form.email}
                     onChange={(e) => update("email", e.target.value)}
-                    className="pl-10 h-12 rounded-xl border-zinc-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-800 shadow-sm"
+                    className="pl-10 h-12 rounded-xl border-orange-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-900 placeholder:text-zinc-400 shadow-sm transition-all"
                     inputMode="email"
                     autoComplete="email"
                   />
                 </div>
               </div>
 
-              {/* Mensagem */}
+              {/* Mensagem Opcional */}
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                  <MessageSquare className="w-3 h-3" /> Mensagem <span className="text-zinc-300 font-medium normal-case tracking-normal">(opcional)</span>
+                <label className="flex items-center gap-1.5 text-[10px] font-black text-orange-700 uppercase tracking-widest">
+                  <MessageSquare className="w-3 h-3" /> Mensagem <span className="text-zinc-500 normal-case font-medium">(opcional)</span>
                 </label>
-                <Textarea
-                  placeholder="Ex: Gostaria de mais informações sobre disponibilidade..."
-                  value={form.message}
-                  onChange={(e) => update("message", e.target.value)}
-                  className="rounded-xl border-zinc-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-800 shadow-sm resize-none"
-                  rows={3}
-                  maxLength={400}
-                />
-                <p className="text-right text-[10px] text-zinc-300 tabular-nums">{form.message.length}/400</p>
+                <div className="relative">
+                  <Textarea
+                    placeholder="Ex: Gostaria de mais informações sobre disponibilidade..."
+                    value={form.message}
+                    onChange={(e) => update("message", e.target.value)}
+                    maxLength={400}
+                    className="min-h-[100px] rounded-xl border-orange-200 bg-white focus-visible:ring-2 focus-visible:ring-orange-400/30 focus-visible:border-orange-400 font-medium text-zinc-900 placeholder:text-zinc-400 shadow-sm resize-none transition-all"
+                  />
+                </div>
+                <p className="text-right text-[10px] text-zinc-400 tabular-nums">{form.message.length}/400</p>
               </div>
 
               {/* Erro */}
@@ -375,20 +376,20 @@ export function ContactIntentionModal({
               )}
 
               {/* Privacidade + Botão */}
-              <div className="space-y-3 pt-1">
-                <div className="flex items-start gap-2.5 bg-zinc-50 border border-zinc-100 rounded-2xl px-4 py-3">
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start gap-2.5 bg-white border border-orange-200 rounded-2xl px-4 py-3 shadow-sm">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  <p className="text-[11px] text-zinc-600 leading-relaxed">
                     Seus dados são protegidos. Você não será adicionado a listas de email ou grupos sem autorização.
                   </p>
                 </div>
 
                 <FormDisclaimerStrip />
-
+                
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || isLoading}
-                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black uppercase text-sm tracking-widest shadow-lg shadow-orange-500/25 transition-all disabled:from-zinc-200 disabled:to-zinc-300 disabled:text-zinc-400 disabled:shadow-none disabled:cursor-not-allowed"
+                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black uppercase text-sm tracking-widest shadow-lg shadow-orange-500/25 transition-all disabled:opacity-50 disabled:from-zinc-200 disabled:to-zinc-300 disabled:text-zinc-400 disabled:shadow-none disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -400,7 +401,7 @@ export function ContactIntentionModal({
                   )}
                 </Button>
 
-                <p className="text-center text-[10px] text-zinc-400">
+                <p className="text-center text-[10px] text-zinc-500">
                   O anunciante verá sua mensagem após verificação da plataforma.
                 </p>
               </div>

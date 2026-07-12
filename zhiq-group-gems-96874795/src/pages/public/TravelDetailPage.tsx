@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,8 +133,9 @@ export default function TravelDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_260px] gap-6 items-start">
             {/* Cards laterais esquerdos */}
             <div className="hidden lg:flex flex-col gap-4">
-              {sideListings[0] && <MarketTravelCard travel={sideListings[0]} />}
-              {sideListings[1] && <MarketTravelCard travel={sideListings[1]} />}
+              {sideListings.filter((_: any, i: number) => i % 2 === 0).map((travel: any) => (
+                <MarketTravelCard key={travel.id} travel={travel} />
+              ))}
               <button
                 onClick={() => navigate("/viagens")}
                 className="text-xs font-black text-sky-600 hover:text-sky-700 underline underline-offset-2 text-center py-1"
@@ -247,8 +248,9 @@ export default function TravelDetailPage() {
 
             {/* Cards laterais direitos */}
             <div className="hidden lg:flex flex-col gap-4">
-              {sideListings[2] && <MarketTravelCard travel={sideListings[2]} />}
-              {sideListings[3] && <MarketTravelCard travel={sideListings[3]} />}
+              {sideListings.filter((_: any, i: number) => i % 2 !== 0).map((travel: any) => (
+                <MarketTravelCard key={travel.id} travel={travel} />
+              ))}
               <button
                 onClick={() => navigate("/viagens")}
                 className="text-xs font-black text-sky-600 hover:text-sky-700 underline underline-offset-2 text-center py-1"
@@ -285,7 +287,10 @@ export default function TravelDetailPage() {
       )}
 
       <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
-        <p>✈️ Viagg-TX8™ · Viagens &amp; Turismo · viagg-tx8.com</p>
+        <p className="flex items-center justify-center gap-1.5">
+          <img src="/logo.png" alt="Viagg" className="h-3 w-auto object-contain" />
+          Viagg-TX8™ · Viagens &amp; Turismo · viagg-tx8
+        </p>
         <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
       </footer>
     </MarketLayout>

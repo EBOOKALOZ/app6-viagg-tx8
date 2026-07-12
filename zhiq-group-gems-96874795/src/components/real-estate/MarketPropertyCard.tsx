@@ -243,7 +243,7 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
               <div className="absolute inset-0 bg-zinc-100" />
             )}
             <p className={cn(
-              "relative px-3.5 py-3 leading-relaxed line-clamp-2",
+              "relative px-3.5 py-3 w-full text-center leading-relaxed line-clamp-2",
               property.thumbnail_url
                 ? "text-white/95 drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)]"
                 : "text-zinc-600",

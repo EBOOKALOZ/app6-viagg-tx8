@@ -285,7 +285,7 @@ BEGIN
     UPDATE public.whatsapp_groups SET validation_status = 'approved', is_active = true WHERE id = p_group_id;
   ELSIF p_decision = 'rejeitar' THEN
     UPDATE public.whatsapp_groups SET validation_status = 'rejected', is_active = false,
-      invalid_reason = COALESCE(p_notes, 'Rejeitado pelo RADAR IA/admin') WHERE id = p_group_id;
+      invalid_reason = COALESCE(p_notes, 'Rejeitado pela Viagg-TX8') WHERE id = p_group_id;
   ELSIF p_decision = 'arquivar' THEN
     UPDATE public.whatsapp_groups SET is_active = false WHERE id = p_group_id;
   END IF;

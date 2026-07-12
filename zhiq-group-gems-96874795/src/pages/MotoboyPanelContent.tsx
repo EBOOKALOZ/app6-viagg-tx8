@@ -178,7 +178,7 @@ export default function MotoboyPanelContent() {
   // PADRÃO — Dashboard premium
   // ══════════════════════════════════════════════════════════
   return (
-    <div className="flex-1 px-4 py-3 space-y-4 overflow-y-auto bg-[hsl(var(--motoboy-dashboard-bg))]">
+    <div className="flex-1 px-4 py-3 space-y-4 overflow-y-auto">
       {/* Hero Commission Card */}
       <HeroCommissionCard
         commissionRate={commissionRate}

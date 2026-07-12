@@ -234,7 +234,10 @@ export function MarketLayout({
             {/* ═══ FOOTER / BOTTOM NAV ═══ */}
             {blueFooter ? (
                 <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
-                    <p>Viagg-TX8™ · {blueFooterLabel} · viagg-tx8.com</p>
+                    <p className="flex items-center justify-center gap-1.5">
+                        <img src="/logo.png" alt="Viagg" className="h-3 w-auto object-contain" />
+                        Viagg-TX8™ · {blueFooterLabel} · viagg-tx8
+                    </p>
                     <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
                 </footer>
             ) : (
