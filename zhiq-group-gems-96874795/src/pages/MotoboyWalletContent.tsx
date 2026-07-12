@@ -321,14 +321,25 @@ export default function MotoboyWalletContent() {
       </Card>
 
       {/* ==================== EDUCATIONAL NOTE ==================== */}
-      <Alert className="border-motoboy/20 bg-motoboy/5">
-        <Info className="h-4 w-4 text-motoboy" />
-        <AlertDescription className="text-xs leading-relaxed">
-          <strong>Sua carteira é única.</strong> Todos os valores ganhos em qualquer perfil
-          (motoboy, moto-táxi, motorista, etc.) são somados em uma única carteira.
-          Você pode sacar todo o saldo disponível, independentemente do perfil ativo.
-        </AlertDescription>
-      </Alert>
+      <div
+        className="flex items-start gap-3.5 rounded-2xl p-5"
+        style={{ background: '#f0fdf4', border: '1px solid rgba(22,163,74,.22)', boxShadow: '0 6px 18px -12px rgba(22,163,74,.35)' }}
+      >
+        <div
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl"
+          style={{ background: '#dcfce7' }}
+        >
+          🛡️
+        </div>
+        <div>
+          <p className="text-sm" style={{ color: '#0f172a', fontWeight: 700 }}>Carteira Inteligente</p>
+          <p className="mt-1 text-sm leading-relaxed" style={{ color: '#475569' }}>
+            <strong style={{ color: '#16a34a' }}>Sua carteira é única.</strong> Todos os valores ganhos em qualquer perfil
+            (motoboy, moto-táxi, motorista, etc.) são somados em uma única carteira.
+            Você pode sacar todo o saldo disponível, independentemente do perfil ativo.
+          </p>
+        </div>
+      </div>
 
       {/* ==================== PAYMENT METHODS ==================== */}
       <Card>
