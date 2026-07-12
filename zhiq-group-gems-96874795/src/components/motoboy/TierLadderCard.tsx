@@ -229,7 +229,7 @@ export function TierLadderCard({ validGroups }: TierLadderCardProps) {
                 isCurrent
                   ? {
                       background: 'linear-gradient(180deg,#fff 0%,#fff7ed 100%)',
-                      border: '16px solid #f97316',
+                      border: '4px solid #f97316',
                       boxShadow: '0 10px 30px -10px rgba(249,115,22,.35), 0 0 0 4px rgba(249,115,22,.08)',
                     }
                   : {
