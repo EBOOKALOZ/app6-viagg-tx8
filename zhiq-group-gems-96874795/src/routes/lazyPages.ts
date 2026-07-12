@@ -302,6 +302,9 @@ export const AdminGruposAprovados = lazy(() => import("@/pages/admin/AdminGrupos
 /* ── Moderação IA de Imagens do Marketplace ── */
 export const AdminModeracaoIA = lazy(() => import("@/pages/admin/AdminModeracaoIA"));
 
+/* ── Fila Inteligente de Divulgações (visão admin transparente) ── */
+export const AdminFilaDivulgacoes = lazy(() => import("@/pages/admin/AdminFilaDivulgacoes"));
+
 /* ── Análises Financeiras por Perfil Operacional ── */
 export const AdminMotoboyFinanceiro = lazy(() => import("@/pages/admin/AdminMotoboyFinanceiro"));
 export const AdminMotoTaxiFinanceiro = lazy(() => import("@/pages/admin/AdminMotoTaxiFinanceiro"));

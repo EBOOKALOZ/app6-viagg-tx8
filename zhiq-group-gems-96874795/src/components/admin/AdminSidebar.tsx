@@ -104,6 +104,7 @@ const menuSections: MenuSection[] = [
       { title: "Buscador de Grupos", url: "/admin/group-finder", icon: Search },
       { title: "Config. de Grupos", url: "/admin/group-settings", icon: Settings },
       { title: "Fila de Grupos", url: "/admin/marketing/fila-grupos", icon: Users },
+      { title: "Fila de Divulgações", url: "/admin/fila-divulgacoes", icon: Inbox },
       { title: "Central de Campanhas", url: "/admin/campaign-queue", icon: Inbox },
       { title: "Dispatch de Campanhas", url: "/admin/campaign-dispatch", icon: Send },
       { title: "Biblioteca de Mídias", url: "/admin/marketing/biblioteca", icon: Layers },

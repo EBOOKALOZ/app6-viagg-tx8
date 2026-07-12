@@ -91,6 +91,7 @@ import {
   AdminRealtimeDashboard,
   AdminMapDashboard,
   AdminPostingQueuePage,
+  AdminFilaDivulgacoes,
   AdminCommissionIntelligence,
   AdminRadarIA,
   AdminGruposAprovados,
@@ -216,6 +217,8 @@ export const adminRoutes = (
       <Route path="/dashboards/*"            element={<DashboardShell />} />
       {/* M49: Monitor & Fila do Impulsionamento */}
       <Route path="/admin/fila-impulsionar" element={<AdminPostingQueuePage />} />
+      {/* Fila Inteligente de Divulgações — transparência total (admin) */}
+      <Route path="/admin/fila-divulgacoes" element={<AdminFilaDivulgacoes />} />
       {/* Redirect legado */}
       <Route path="/admin/fila-postador" element={<Navigate to="/admin/fila-impulsionar" replace />} />
       <Route path="/admin/postador-central" element={<Navigate to="/admin/impulsionar-central" replace />} />
