@@ -77,6 +77,7 @@ export function WeatherEventsCard({ city: cityProp, state }: WeatherEventsCardPr
   const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>(undefined);
   const [geoDone, setGeoDone] = useState(!city);
   const [expanded, setExpanded] = useState(false);
+  const [aerialFailed, setAerialFailed] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   /* Mesma estratégia do card de clima atual: geocodifica a cidade cadastrada. */
@@ -188,18 +189,42 @@ export function WeatherEventsCard({ city: cityProp, state }: WeatherEventsCardPr
         .wx-bar { animation: wxBarGrow .7s cubic-bezier(.22,.9,.35,1) both; }
       `}</style>
 
-      {/* Cabeçalho */}
+      {/* Cabeçalho — vista aérea da cidade de cadastro quando disponível */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl"
-            style={{ background: 'linear-gradient(135deg,#38bdf8,#2563eb)', boxShadow: '0 8px 18px -8px rgba(37,99,235,.55)' }}
-          >
-            🌦️
-          </div>
+          {(() => {
+            const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
+            const aerialUrl = coords && token && !aerialFailed
+              ? `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/static/${coords.lng},${coords.lat},13,0/96x96@2x?access_token=${token}`
+              : undefined;
+            return aerialUrl ? (
+              <div className="relative h-12 w-12 shrink-0">
+                <img
+                  src={aerialUrl}
+                  alt={`Vista aérea de ${city || 'sua cidade'}`}
+                  className="h-full w-full rounded-xl object-cover"
+                  style={{ boxShadow: '0 8px 18px -8px rgba(15,23,42,.4)' }}
+                  loading="lazy"
+                  onError={() => setAerialFailed(true)}
+                />
+                <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border border-slate-100 bg-white text-sm leading-none shadow-sm">
+                  {events[0]?.icon ?? '🌦️'}
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl"
+                style={{ background: 'linear-gradient(135deg,#38bdf8,#2563eb)', boxShadow: '0 8px 18px -8px rgba(37,99,235,.55)' }}
+              >
+                🌦️
+              </div>
+            );
+          })()}
           <div>
             <h3 className="text-base leading-tight text-slate-900" style={{ fontWeight: 700 }}>Eventos do Clima</h3>
-            <p className="text-xs" style={{ color: '#64748b' }}>Próximas horas</p>
+            <p className="text-xs" style={{ color: '#64748b' }}>
+              Próximas horas{city ? <> · <span style={{ fontWeight: 600, color: '#475569' }}>📍 {city}</span></> : null}
+            </p>
           </div>
         </div>
         <button
