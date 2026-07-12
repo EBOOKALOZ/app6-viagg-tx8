@@ -70,6 +70,18 @@ export default function MerchantCampaigns() {
     const lojista = useLojistaCampaigns();
     const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
 
+    // ── Central de divulgações: gratuita diária + saldo de pacotes (RPC) ──
+    const { data: divStatus, refetch: refetchDivStatus } = useQuery({
+        queryKey: ["divulgacao-status", user?.id],
+        enabled: !!user?.id,
+        refetchInterval: 60_000,
+        queryFn: async () => {
+            const { data, error } = await (supabase.rpc as any)("divulgacao_status");
+            if (error) throw error;
+            return data as any;
+        },
+    });
+
     // ── Material form state ──
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -292,23 +304,32 @@ export default function MerchantCampaigns() {
         try {
             const ad = materials.find(m => m.id === selectedAdId);
             if (!ad) throw new Error("Material não encontrado");
-            const { data, error } = await (supabase.rpc as any)("create_merchant_campaign_queue_item", {
+            // Porta única do anunciante: aplica gratuita diária → pacote → bloqueio
+            const { data, error } = await (supabase.rpc as any)("merchant_dispatch_divulgacao", {
                 p_merchant_store_id: merchantStore.id,
-                p_created_by_user_id: user?.id,
+                p_product_id: null,
+                p_campaign_type: "store_product",
                 p_title: ad.title,
                 p_message_text: customPitch.trim() || ad.short_description || null,
                 p_media_url: ad.image_url || null,
-                p_campaign_type: "store_product",
                 p_target_city: merchantStore?.city || null,
                 p_target_region: merchantStore?.region || null,
-                p_target_bairro: merchantStore?.bairro || null,
-                p_priority: 2,
                 p_source_type: "merchant_marketing_product",
                 p_source_id: ad.id,
             });
-            if (error) throw error;
+            if (error) {
+                if (String(error.message || "").includes("SEM_SALDO")) {
+                    throw new Error("Sua divulgação gratuita de hoje já foi utilizada e você não tem créditos de pacote. Adquira um pacote para continuar divulgando.");
+                }
+                throw error;
+            }
             if (data?.success === false) throw new Error(data.error || "Erro");
-            toast.success("Campanha disparada!");
+            if (data?.origem === "gratuita_diaria") {
+                toast.success("🎁 Divulgação GRATUITA de hoje enviada à fila inteligente!");
+            } else {
+                toast.success(`📦 Divulgação enviada à fila! Saldo restante: ${data?.saldo_restante ?? "—"} divulgação(ões).`);
+            }
+            refetchDivStatus();
             setIsDispatchOpen(false);
             setSelectedAdId("");
             setCustomPitch("");
@@ -401,6 +422,95 @@ export default function MerchantCampaigns() {
                             <p className="text-[10px] text-gray-400 font-medium mt-0.5">{k.sub}</p>
                         </div>
                     ))}
+                </div>
+
+                {/* ══════════════════════════════════ */}
+                {/* CENTRAL DE DIVULGAÇÕES (gratuita + pacotes + fila) */}
+                {/* ══════════════════════════════════ */}
+                <div className="rounded-2xl border border-emerald-500/[0.12] bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-lg">📢</div>
+                            <div>
+                                <h2 className="text-sm font-black tracking-tight text-gray-900">Central de Divulgações</h2>
+                                <p className="text-[10px] font-medium text-gray-400">
+                                    1 divulgação gratuita por dia · pacotes para divulgar mais · tudo na mesma fila inteligente do Postador.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                        {/* Gratuita de hoje */}
+                        <div className={cn("rounded-2xl border p-4",
+                            divStatus?.gratis_disponivel
+                                ? "border-emerald-500/25 bg-emerald-50/60"
+                                : "border-gray-200 bg-gray-50")}>
+                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">🎁 Gratuita de hoje</p>
+                            <p className={cn("mt-1 text-lg font-black tracking-tight",
+                                divStatus?.gratis_disponivel ? "text-emerald-600" : "text-gray-500")}>
+                                {divStatus == null ? "…" : divStatus.gratis_disponivel ? "Disponível" : "Utilizada"}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-medium text-gray-400">
+                                {divStatus?.gratis_disponivel ? "use no botão Disparar" : "renova à meia-noite"}
+                            </p>
+                        </div>
+
+                        {/* Saldo de pacotes */}
+                        <div className="rounded-2xl border border-sky-500/20 bg-sky-50/50 p-4">
+                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">📦 Saldo de pacotes</p>
+                            <p className="mt-1 text-2xl font-black tracking-tight text-sky-600 tabular-nums">
+                                {divStatus?.saldo_pacotes ?? "…"}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-medium text-gray-400">divulgações restantes</p>
+                        </div>
+
+                        {/* Na fila */}
+                        <div className="rounded-2xl border border-amber-500/20 bg-amber-50/50 p-4">
+                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">⏳ Na fila</p>
+                            <p className="mt-1 text-2xl font-black tracking-tight text-amber-600 tabular-nums">
+                                {divStatus?.na_fila ?? "…"}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-medium text-gray-400">aguardando o Postador</p>
+                        </div>
+
+                        {/* Publicadas */}
+                        <div className="rounded-2xl border border-violet-500/20 bg-violet-50/50 p-4">
+                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">✅ Publicadas</p>
+                            <p className="mt-1 text-2xl font-black tracking-tight text-violet-600 tabular-nums">
+                                {divStatus?.publicadas ?? "…"}
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-medium text-gray-400">
+                                {divStatus?.postagens_realizadas ?? 0} postagens · {divStatus?.grupos_alcancados ?? 0} grupos
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Catálogo de pacotes */}
+                    {Array.isArray(divStatus?.pacotes) && divStatus.pacotes.length > 0 && (
+                        <div className="mt-4">
+                            <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Pacotes de divulgação</p>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                {divStatus.pacotes.map((p: any) => (
+                                    <div key={p.id} className="rounded-xl border border-gray-200 bg-white p-3 text-center transition-all hover:-translate-y-0.5 hover:shadow-md">
+                                        <p className="text-[10px] font-bold text-gray-500">{p.nome}</p>
+                                        <p className="mt-1 text-xl font-black text-gray-900 tabular-nums">{p.qtd}</p>
+                                        <p className="text-[9px] text-gray-400">divulgações</p>
+                                        <p className="mt-1 text-xs font-black text-emerald-600">
+                                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(p.preco_brl))}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => toast.info("Compra de pacotes em integração com o pagamento — em breve disponível.")}
+                                            className="mt-2 w-full rounded-full border border-emerald-500/30 bg-emerald-50 py-1 text-[10px] font-bold text-emerald-600 hover:bg-emerald-100"
+                                        >
+                                            Comprar
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <MerchantRecentEvents module="campaigns" />
