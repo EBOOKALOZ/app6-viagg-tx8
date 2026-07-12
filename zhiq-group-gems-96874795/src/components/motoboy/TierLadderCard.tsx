@@ -97,6 +97,11 @@ export function TierLadderCard({ validGroups }: TierLadderCardProps) {
         .tier-fadein { animation: tierFadeIn .45s ease-out both; }
         .tier-card { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
         .tier-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -12px rgba(15,23,42,.16); }
+        @keyframes tierPulseAtual {
+          0%, 100% { border-color: #f97316; box-shadow: 0 10px 30px -10px rgba(249,115,22,.35), 0 0 0 4px rgba(249,115,22,.08); }
+          50%      { border-color: #16a34a; box-shadow: 0 10px 30px -10px rgba(22,163,74,.45), 0 0 0 4px rgba(22,163,74,.18); }
+        }
+        .tier-atual { animation: tierPulseAtual 1s ease-in-out infinite; }
       `}</style>
 
       {/* ── Cabeçalho ─────────────────────────────────────────────── */}
@@ -219,7 +224,7 @@ export function TierLadderCard({ validGroups }: TierLadderCardProps) {
           return (
             <div
               key={tier.name}
-              className={cn('tier-card relative rounded-[18px] p-5 text-center')}
+              className={cn('tier-card relative rounded-[18px] p-5 text-center', isCurrent && 'tier-atual')}
               style={
                 isCurrent
                   ? {
