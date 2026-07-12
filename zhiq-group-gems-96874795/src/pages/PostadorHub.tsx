@@ -84,7 +84,8 @@ export default function PostadorHub() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* ── Hub identity bar ─────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-motoboy-surface border-b border-motoboy/15 shadow-sm">
+      {/* Faixa AMARELA padrão do app segurando os botões do hub */}
+      <div className="sticky top-0 z-30 bg-[#F5E62B] border-b border-black/10 shadow-sm">
         {/* RIDV identity strip */}
         <div
           className="flex items-center gap-2 px-3 pt-1.5 pb-1"
@@ -119,7 +120,7 @@ export default function PostadorHub() {
                       ? tab.isRIDV
                         ? ridvActiveClass
                         : `${activeClass} shadow-sm`
-                      : 'text-muted-foreground hover:bg-muted/60'
+                      : 'text-black/65 hover:bg-black/10'
                   )}
                   style={isActive && tab.isRIDV ? {
                     background: 'linear-gradient(135deg, #FF6A00, #FF9500)',
