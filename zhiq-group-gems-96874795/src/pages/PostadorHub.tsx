@@ -22,7 +22,8 @@ const TABS: Tab[] = [
   { key: 'creditos',     label: 'Créditos',        icon: Sparkles,        segment: 'creditos',     isRIDV: true },
   { key: 'notificacoes', label: 'Notificações',    icon: Bell,            segment: 'notificacoes', isRIDV: true },
   { key: 'divulgacoes',  label: 'Divulgações',     icon: Send,            segment: 'divulgacoes' },
-  { key: 'campanhas',    label: 'Campanhas',       icon: Megaphone,       segment: 'campanhas',    isRIDV: true },
+  // Aba Campanhas UNIFICADA dentro de Divulgações (2026-07-12) — código preservado; descomentar para reativar
+  // { key: 'campanhas',    label: 'Campanhas',       icon: Megaphone,       segment: 'campanhas',    isRIDV: true },
   { key: 'resultados',   label: 'Resultados',      icon: BarChart3,       segment: 'resultados',   isRIDV: true },
   { key: 'impacto',      label: 'Impacto',         icon: Globe2,          segment: 'impacto',      isRIDV: true },
   { key: 'ia-ridv',      label: 'IA RIDV',         icon: Sparkles,        segment: 'ia-ridv',      isRIDV: true },

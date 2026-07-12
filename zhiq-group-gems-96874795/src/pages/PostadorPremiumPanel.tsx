@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import PostadorProofModal from "@/components/postador/PostadorProofModal";
+import { DivulgacaoFeed } from "@/components/postador/DivulgacaoFeed";
+import { PostadorAutoPilot } from "@/components/postador/PostadorAutoPilot";
 import PostadorLotCard from "@/components/postador/PostadorLotCard";
 import PostadorLotSkeleton from "@/components/postador/PostadorLotSkeleton";
 import PostadorLotProofModal from "@/components/postador/PostadorLotProofModal";
@@ -692,6 +694,31 @@ export default function PostadorPremiumPanel() {
             <SafeErrorBoundary>
                 <div className="space-y-4 pb-16">
 
+                    {/* ── DESPACHANTE INTELIGENTE — ação única POSTAR AGORA ── */}
+                    <PostadorAutoPilot
+                        lots={[...lots.availableLots, ...lots.cooldownLots]}
+                        groupRuntimes={legacy.groupRuntimes}
+                        actionState={lots.actionState as any}
+                        onClaim={(id) => lots.claimLot(id)}
+                        onOpenProof={(l) => setLotProofTarget(l)}
+                    />
+
+                    {/* ── Exploração opcional: feed unificado (recolhido por padrão) ── */}
+                    <details className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <summary className="cursor-pointer select-none text-xs font-bold text-muted-foreground hover:text-foreground">
+                            🔎 Explorar todas as oportunidades (opcional)
+                        </summary>
+                        <div className="mt-3">
+                            <DivulgacaoFeed
+                                campaigns={lots.availableLots}
+                                onOpenCampaign={() => {
+                                    setActiveTab("lotes");
+                                    setTimeout(() => document.getElementById("lotes-section")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+                                }}
+                            />
+                        </div>
+                    </details>
+
                     {/* ── KPI BAR (POSTADOR 3) ── */}
                     {activeTab === "lotes" ? (
                         <LotKpiBar kpis={lots.kpis} isLoading={lots.loadingKpis} />
@@ -751,7 +778,7 @@ export default function PostadorPremiumPanel() {
                     {/* TAB: LOTES (POSTADOR 3) — DEFAULT     */}
                     {/* ═══════════════════════════════════════ */}
                     {activeTab === "lotes" && (
-                        <div className="space-y-6">
+                        <div className="space-y-6" id="lotes-section">
                             {/* Lotes Disponíveis */}
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2 px-1">
