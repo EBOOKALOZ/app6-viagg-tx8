@@ -6,6 +6,7 @@ import { MotoboyPanelHeader } from '@/components/motoboy/MotoboyPanelHeader';
 import MotoboyBottomNav from '@/components/motoboy/MotoboyBottomNav';
 import { MotoboyFooter } from '@/components/motoboy/MotoboyFooter';
 import { OperationalWeatherCard } from '@/components/motoboy/OperationalWeatherCard';
+import { WeatherEventsCard } from '@/components/motoboy/WeatherEventsCard';
 
 export function MotoboyLayout() {
   const { user, refreshProfiles } = useAuth();
@@ -72,8 +73,9 @@ export function MotoboyLayout() {
       />
 
       <main className="flex-1 flex flex-col">
-        <div className="px-3 pt-2">
+        <div className="grid gap-2 px-3 pt-2 lg:grid-cols-2">
           <OperationalWeatherCard city={city || undefined} state={state || undefined} />
+          <WeatherEventsCard city={city || undefined} state={state || undefined} />
         </div>
         <Outlet />
       </main>
