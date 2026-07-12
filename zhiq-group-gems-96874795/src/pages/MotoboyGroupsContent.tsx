@@ -764,7 +764,7 @@ export default function MotoboyGroupsContent() {
                           {group.status === 'ativo' && (
                             <div className="pt-2">
                               <Button
-                                onClick={() => navigate('/motoboy/postador')}
+                                onClick={() => navigate('/motoboy/impulsionar')}
                                 size="sm"
                                 variant={isCritical ? 'default' : 'secondary'}
                                 className={cn(
