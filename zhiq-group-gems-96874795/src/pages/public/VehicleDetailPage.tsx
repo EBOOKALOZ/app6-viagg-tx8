@@ -30,6 +30,7 @@ import { MarketVehicleCard } from '@/components/advertiser/MarketVehicleCard';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
 /* ─────── helpers ─────── */
 const vehicleTypeLabel: Record<string, string> = {
@@ -247,276 +248,85 @@ export const VehicleDetailPage = () => {
   const vehicleTitle =
     vehicle.title || `${vehicle.brand} ${vehicle.model} ${vehicle.year}`;
 
+  /* ─── Galeria (todas as mídias) ─── */
+  const galeria: string[] = media.length
+    ? media.map((m: any) => getListingImageUrl(m.original_storage_path, 'original')!).filter(Boolean)
+    : (mainImageUrl ? [mainImageUrl] : []);
+
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="bg-[#F5E62B] min-h-screen relative" blueFooter blueFooterLabel="🚗 Veículos" myAccountPath="/minha-conta">
-        {/* ─── HEADER BAR (sticky em amarelo) ─── */}
-        <div className="sticky top-0 z-40 bg-[#F5E62B]/90 backdrop-blur-md border-b border-zinc-900/10">
-          <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="rounded-full gap-2 font-bold text-zinc-900 hover:bg-zinc-900/10"
-            >
-              <ChevronLeft className="w-4 h-4" /> Voltar
-            </Button>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="rounded-full h-10 w-10 p-0 border-zinc-900/20 bg-white text-zinc-900 hover:bg-zinc-50 shadow-md"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-
-
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] gap-6 items-start">
-            {/* ── Coluna esquerda ── */}
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.slice(0, 2).map((v: any) => (
-                <MarketVehicleCard key={v.id} vehicle={v} />
-              ))}
-              {sideListings.length > 0 && (
-                <button onClick={() => navigate('/veiculos')} className="text-xs font-bold text-[#FF6A00] hover:underline text-center py-1">Ver mais veículos →</button>
-              )}
-            </div>
-          <div className="space-y-6">
-              {/* Gallery */}
-              <div className="space-y-4">
-                <div className="relative aspect-[16/10] rounded-[32px] lg:rounded-[40px] overflow-hidden bg-white shadow-2xl ring-1 ring-zinc-900/10">
-                  {mainImageUrl ? (
-                    <img
-                      src={mainImageUrl}
-                      alt={vehicleTitle}
-                      className="w-full h-full object-cover animate-in fade-in zoom-in duration-500"
-                      onError={(e) => {
-                        const fallback = getMediaFallbackUrl(
-                          (e.target as HTMLImageElement).src
-                        );
-                        if (fallback) (e.target as HTMLImageElement).src = fallback;
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Car className="w-20 h-20 text-zinc-300" />
-                    </div>
-                  )}
-                  <Badge className="absolute top-6 left-6 font-black uppercase text-[10px] bg-blue-500 text-white py-1.5 px-4 backdrop-blur-md shadow-lg">
-                    {vehicleTypeLabel[vehicle.vehicle_type] || 'Veículo'}
-                  </Badge>
-                  {vehicle.condition && (
-                    <Badge className="absolute top-6 right-6 font-black uppercase text-[10px] bg-emerald-500 text-white py-1.5 px-4 backdrop-blur-md shadow-lg">
-                      {conditionLabel[vehicle.condition] || vehicle.condition}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Thumbnails */}
-                {media.length > 1 && (
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide py-2">
-                    {media.map((m: any, idx: number) => {
-                      const thumbUrl = getListingImageUrl(
-                        m.original_storage_path,
-                        'original'
-                      );
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setActiveImage(thumbUrl)}
-                          className={cn(
-                            'flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all',
-                            activeImage === thumbUrl || (!activeImage && idx === 0)
-                              ? 'border-blue-500 scale-105 shadow-lg'
-                              : 'border-transparent opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
-                          )}
-                        >
-                          <img
-                            src={thumbUrl!}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const fallback = getMediaFallbackUrl(
-                                (e.target as HTMLImageElement).src
-                              );
-                              if (fallback)
-                                (e.target as HTMLImageElement).src = fallback;
-                            }}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative" blueFooter blueFooterLabel="🚗 Veículos" myAccountPath="/minha-conta">
+        <DetailPageLayout
+          accent="#dc2626"
+          moduloLabel="Veículos"
+          titulo={vehicleTitle}
+          preco={vehicle.price_brl ? formatCurrencyBRL(vehicle.price_brl) : 'Consulte'}
+          categoria={vehicleTypeLabel[vehicle.vehicle_type] || 'Veículo'}
+          cidade={vehicle.public_address_label || `${vehicle.neighborhood ? vehicle.neighborhood + ', ' : ''}${vehicle.city}/${vehicle.state}`}
+          badges={[
+            ...(vehicle.condition ? [{ label: conditionLabel[vehicle.condition] || vehicle.condition, bg: '#dcfce7', color: '#15803d' }] : []),
+            ...(vehicle.is_promoted ? [{ label: '⭐ Patrocinado', bg: '#fef3c7', color: '#b45309' }] : []),
+          ]}
+          imagens={galeria}
+          caracteristicas={[
+            ...(vehicle.year ? [{ icone: <Calendar className="h-3.5 w-3.5" />, label: String(vehicle.year) }] : []),
+            ...(vehicle.kilometers != null ? [{ icone: <Gauge className="h-3.5 w-3.5" />, label: `${Number(vehicle.kilometers).toLocaleString('pt-BR')} km` }] : []),
+            ...(vehicle.fuel_type ? [{ icone: <Fuel className="h-3.5 w-3.5" />, label: fuelLabel[vehicle.fuel_type] || vehicle.fuel_type }] : []),
+            ...(vehicle.transmission ? [{ icone: <Settings className="h-3.5 w-3.5" />, label: transmissionLabel[vehicle.transmission] || vehicle.transmission }] : []),
+            ...(vehicle.color ? [{ icone: <Palette className="h-3.5 w-3.5" />, label: vehicle.color }] : []),
+          ]}
+          descricao={vehicle.description}
+          especificacoes={[
+            ...(vehicle.brand ? [{ label: 'Marca', value: vehicle.brand }] : []),
+            ...(vehicle.model ? [{ label: 'Modelo', value: vehicle.model }] : []),
+            ...(vehicle.year ? [{ label: 'Ano', value: String(vehicle.year) }] : []),
+            ...(vehicle.kilometers != null ? [{ label: 'Km', value: Number(vehicle.kilometers).toLocaleString('pt-BR') }] : []),
+            ...(vehicle.fuel_type ? [{ label: 'Combustível', value: fuelLabel[vehicle.fuel_type] || vehicle.fuel_type }] : []),
+            ...(vehicle.transmission ? [{ label: 'Câmbio', value: transmissionLabel[vehicle.transmission] || vehicle.transmission }] : []),
+            ...(vehicle.color ? [{ label: 'Cor', value: vehicle.color }] : []),
+            ...(vehicle.plate_end ? [{ label: 'Final da placa', value: String(vehicle.plate_end) }] : []),
+          ]}
+          mapa={vehicle.latitude && vehicle.longitude ? (
+            <div className="p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <MapPin className="h-4 w-4" style={{ color: '#dc2626' }} />
+                <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Localização do anunciante</p>
               </div>
-
-              {/* Vehicle Info */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h1 className="text-4xl lg:text-6xl font-black text-zinc-900 tracking-tighter leading-[0.95]">
-                    {vehicleTitle}
-                  </h1>
-                  <div className="flex items-center gap-2 text-zinc-700 font-bold text-xs uppercase tracking-widest pt-2">
-                    <MapPin className="w-4 h-4 text-[#FF6A00]" />
-                    {vehicle.public_address_label ||
-                      `${vehicle.neighborhood ? vehicle.neighborhood + ', ' : ''}${vehicle.city}/${vehicle.state}`}
-                  </div>
-                </div>
-
-                {/* Specs Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      Ano
-                    </span>
-                    <div className="flex items-center gap-2 font-black text-xl text-zinc-900">
-                      <Calendar className="w-5 h-5 text-[#FF6A00]" />
-                      {vehicle.year || '—'}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      Km
-                    </span>
-                    <div className="flex items-center gap-2 font-black text-xl text-zinc-900">
-                      <Gauge className="w-5 h-5 text-[#FF6A00]" />
-                      {vehicle.kilometers
-                        ? Number(vehicle.kilometers).toLocaleString('pt-BR')
-                        : '0'}
-                    </div>
-                  </div>
-                  {vehicle.fuel_type && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        Combustível
-                      </span>
-                      <div className="flex items-center gap-2 font-black text-xl text-zinc-900">
-                        <Fuel className="w-5 h-5 text-[#FF6A00]" />
-                        {fuelLabel[vehicle.fuel_type] || vehicle.fuel_type}
-                      </div>
-                    </div>
-                  )}
-                  {vehicle.transmission && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        Câmbio
-                      </span>
-                      <div className="flex items-center gap-2 font-black text-xl text-zinc-900">
-                        <Settings className="w-5 h-5 text-[#FF6A00]" />
-                        {transmissionLabel[vehicle.transmission] || vehicle.transmission}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Brand + Model + Color chips */}
-                <div className="flex flex-wrap gap-3">
-                  {vehicle.brand && (
-                    <Badge
-                      variant="secondary"
-                      className="py-2 px-5 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-[#FF6A00] text-white hover:bg-[#FF6A00] shadow-md"
-                    >
-                      <TrendingUp className="w-3 h-3 mr-2" />
-                      {vehicle.brand}
-                    </Badge>
-                  )}
-                  {vehicle.model && (
-                    <Badge
-                      variant="secondary"
-                      className="py-2 px-5 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-white text-zinc-900 ring-1 ring-zinc-900/10 hover:bg-zinc-50 shadow-md"
-                    >
-                      <Car className="w-3 h-3 mr-2" />
-                      {vehicle.model}
-                    </Badge>
-                  )}
-                  {vehicle.color && (
-                    <Badge
-                      variant="secondary"
-                      className="py-2 px-5 rounded-2xl font-black uppercase text-[10px] tracking-widest bg-white text-zinc-900 ring-1 ring-zinc-900/10 hover:bg-zinc-50 shadow-md"
-                    >
-                      <Palette className="w-3 h-3 mr-2" />
-                      {vehicle.color}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Description */}
-                {vehicle.description && (
-                  <div className="space-y-4 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                    <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900">
-                      Descrição do Veículo
-                    </h3>
-                    <p className="text-zinc-600 font-medium leading-relaxed whitespace-pre-line text-base lg:text-lg">
-                      {vehicle.description}
-                    </p>
-                  </div>
-                )}
-
-                {(vehicle.latitude && vehicle.longitude) && (
-                  <div className="space-y-3 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-[#FF6A00]" />
-                      <h3 className="font-black text-zinc-900 text-sm">Localização do anunciante</h3>
-                    </div>
-                    {vehicle.public_address_label && (
-                      <p className="text-xs text-zinc-500 font-medium">{vehicle.public_address_label}</p>
-                    )}
-                    <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
-                      <StoreLocationMap
-                        initialLat={vehicle.latitude}
-                        initialLng={vehicle.longitude}
-                        addressLabel={vehicle.public_address_label ?? vehicle.city}
-                        markerLabel={vehicle.title ?? `${vehicle.brand} ${vehicle.model}`}
-                        readOnly
-                        hasConfirmedLocation
-                        onLocationSelect={() => {}}
-                        className="w-full h-full"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200 shadow-xl">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Preço</span>
-                    <div className="text-4xl lg:text-5xl font-black text-[#FF6A00] tracking-tighter">
-                      {vehicle.price_brl ? formatCurrencyBRL(vehicle.price_brl) : 'Consulte'}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleInterest}
-                    className="w-full h-16 rounded-2xl font-black text-lg text-white shadow-xl shadow-[#FF6A00]/30 bg-[#FF6A00] hover:bg-[#E65C00] transition-all active:scale-95"
-                  >
-                    ESTOU INTERESSADO
-                  </Button>
-                  <div className="pt-4 border-t border-zinc-100 flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
-                      Contato Seguro Protegido por IA. Suas informações não são expostas
-                      sem sua autorização.
-                    </p>
-                  </div>
-                </div>
+              {vehicle.public_address_label && <p className="mb-2 text-xs text-slate-500">{vehicle.public_address_label}</p>}
+              <div className="h-52 overflow-hidden rounded-2xl border border-slate-200">
+                <StoreLocationMap
+                  initialLat={vehicle.latitude}
+                  initialLng={vehicle.longitude}
+                  addressLabel={vehicle.public_address_label ?? vehicle.city}
+                  markerLabel={vehicle.title ?? `${vehicle.brand} ${vehicle.model}`}
+                  readOnly hasConfirmedLocation onLocationSelect={() => {}}
+                  className="h-full w-full"
+                />
               </div>
-          </div>
-            {/* ── Coluna direita ── */}
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.slice(2, 4).map((v: any) => (
-                <MarketVehicleCard key={v.id} vehicle={v} />
-              ))}
-              {sideListings.length > 0 && (
-                <button onClick={() => navigate('/veiculos')} className="text-xs font-bold text-[#FF6A00] hover:underline text-center py-1">Ver mais veículos →</button>
-              )}
             </div>
-          </div>
-        </div>
-
-        <InstitutionalSafetyBanner />
+          ) : undefined}
+          extras={(
+            <>
+              {storeInfo && <StoreHeader store={storeInfo} />}
+              <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>
+                  Contato Seguro Protegido por IA. Suas informações não são expostas sem sua autorização.
+                </p>
+              </div>
+              <InstitutionalSafetyBanner />
+            </>
+          )}
+          acoes={{ onInteresse: handleInterest, interesseLabel: 'Tenho Interesse' }}
+          relacionados={sideListings.map((v: any) => ({
+            id: v.id,
+            titulo: v.title || `${v.brand ?? ''} ${v.model ?? ''}`.trim() || 'Veículo',
+            imagem: v.thumbnail_url,
+            preco: v.price_brl ? formatCurrencyBRL(v.price_brl) : null,
+            cidade: v.city,
+            href: `/veiculos/${v.id}`,
+          }))}
+        />
       </MarketLayout>
 
       {/* Contact Intention Modal */}
