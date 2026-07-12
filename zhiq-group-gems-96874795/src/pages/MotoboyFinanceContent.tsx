@@ -41,16 +41,8 @@ import {
   CartesianGrid,
 } from "recharts";
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
+import { TierLadderCard } from '@/components/motoboy/TierLadderCard';
 import { cn } from "@/lib/utils";
-
-const COMMISSION_TIERS = [
-  { pct: 25, groupsMin: 0 },
-  { pct: 20, groupsMin: 1 },
-  { pct: 16, groupsMin: 2 },
-  { pct: 12, groupsMin: 3 },
-  { pct: 9, groupsMin: 4 },
-  { pct: 6, groupsMin: 5 },
-] as const;
 
 export default function MotoboyFinanceContent() {
   const {
@@ -255,83 +247,12 @@ export default function MotoboyFinanceContent() {
         </CardContent>
       </Card>
 
-      {/* Commission Card */}
-      <Card className="bg-white">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Comissão Inteligente
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoadingCommission ? (
-            <Skeleton className="h-20 w-full" />
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Comissão Atual</span>
-                <span className="text-xl font-bold text-motoboy">
-                  {commissionPercent}%
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Grupos Ativos</span>
-                <span className="font-medium flex items-center gap-1">
-                  <Users className="h-4 w-4 text-motoboy" />
-                  {activeGroups} / 6
-                </span>
-              </div>
-              <Progress value={(activeGroups / 6) * 100} className="h-2" />
-              {groupsToMin > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Faltam <strong>{groupsToMin}</strong> grupos para atingir a
-                  comissão mínima de <strong>6%</strong>
-                </p>
-              )}
-              {groupsToMin === 0 && (
-                <p className="text-xs text-success">
-                  Parabéns! Você está na comissão mínima.
-                </p>
-              )}
-
-              {/* Escada de faixas de comissão */}
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                {COMMISSION_TIERS.map((tier) => {
-                  const isCurrent = tier.pct === commissionPercent;
-                  return (
-                    <div
-                      key={tier.pct}
-                      className={cn(
-                        "text-center rounded-lg border p-2",
-                        isCurrent
-                          ? "border-motoboy bg-motoboy/10"
-                          : "border-muted bg-muted/30"
-                      )}
-                    >
-                      <p
-                        className={cn(
-                          "text-lg font-black tabular-nums",
-                          isCurrent ? "text-motoboy" : "text-muted-foreground"
-                        )}
-                      >
-                        {tier.pct}%
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {tier.groupsMin === 0 ? "0 grupos" : `${tier.groupsMin}+ grupos`}
-                      </p>
-                      {isCurrent && (
-                        <p className="text-[9px] font-bold text-motoboy mt-0.5">
-                          Você está aqui
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Commission Card — mesmo sistema premium da página Grupos */}
+      {isLoadingCommission ? (
+        <Skeleton className="h-40 w-full rounded-[20px]" />
+      ) : (
+        <TierLadderCard validGroups={activeGroups} />
+      )}
 
       {/* Financial Timeline */}
       <Card className="bg-white">
