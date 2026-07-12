@@ -24,6 +24,7 @@ import { resolveFreightVehicleIcon } from '@/lib/freight/vehicleTypes';
 import { MarketFreightCard } from '@/components/freight/MarketFreightCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
 export const FreightDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -171,236 +172,75 @@ export const FreightDetailPage = () => {
   const TypeIcon = resolveFreightVehicleIcon(freight.vehicle_type);
   const freightTitle = freight.title;
 
+  const galeria: string[] = media.length
+    ? media.map((m: any) => getListingImageUrl(m.original_storage_path, 'original')!).filter(Boolean)
+    : (mainImageUrl ? [mainImageUrl] : []);
+
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="bg-[#F5E62B] min-h-screen relative" blueFooter blueFooterLabel="🚚 Fretes & Mudanças" myAccountPath="/minha-conta">
-        <div className="sticky top-0 z-40 bg-[#F5E62B]/90 backdrop-blur-md border-b border-zinc-900/10">
-          <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="rounded-full gap-2 font-bold text-zinc-900 hover:bg-zinc-900/10"
-            >
-              <ChevronLeft className="w-4 h-4" /> Voltar
-            </Button>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="rounded-full h-10 w-10 p-0 border-zinc-900/20 bg-white text-zinc-900 hover:bg-zinc-50 shadow-md"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] gap-6 items-start">
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.slice(0, 2).map((f: any) => (
-                <MarketFreightCard key={f.id} freight={f} />
-              ))}
-              {sideListings.length > 0 && (
-                <button onClick={() => navigate('/fretes')} className="text-xs font-bold text-blue-600 hover:underline text-center py-1">Ver mais fretes →</button>
-              )}
-            </div>
-          <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="relative aspect-[16/10] rounded-[32px] lg:rounded-[40px] overflow-hidden bg-white shadow-2xl ring-1 ring-zinc-900/10">
-                  {mainImageUrl ? (
-                    <img
-                      src={mainImageUrl}
-                      alt={freightTitle}
-                      className="w-full h-full object-cover animate-in fade-in zoom-in duration-500"
-                      onError={(e) => {
-                        const fallback = getMediaFallbackUrl(
-                          (e.target as HTMLImageElement).src
-                        );
-                        if (fallback) (e.target as HTMLImageElement).src = fallback;
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
-                      <span className="flex items-center justify-center w-28 h-28 rounded-full bg-white/80 text-blue-600 ring-1 ring-blue-200 shadow-md">
-                        <TypeIcon className="w-14 h-14" />
-                      </span>
-                    </div>
-                  )}
-                  <div className="absolute top-6 left-6 flex gap-2">
-                    <Badge className="font-black uppercase text-[10px] bg-blue-600 text-white py-1.5 px-4 backdrop-blur-md shadow-lg">
-                      {freight.vehicle_type}
-                    </Badge>
-                    {freight.is_featured && (
-                      <Badge className="font-black uppercase text-[10px] bg-amber-500 text-white py-1.5 px-4 backdrop-blur-md shadow-lg flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-current" /> Destaque
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {media.length > 1 && (
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide py-2">
-                    {media.map((m: any, idx: number) => {
-                      const thumbUrl = getListingImageUrl(
-                        m.original_storage_path,
-                        'original'
-                      );
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setActiveImage(thumbUrl)}
-                          className={cn(
-                            'flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all',
-                            activeImage === thumbUrl || (!activeImage && idx === 0)
-                              ? 'border-blue-500 scale-105 shadow-lg'
-                              : 'border-transparent opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
-                          )}
-                        >
-                          <img
-                            src={thumbUrl!}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const fallback = getMediaFallbackUrl(
-                                (e.target as HTMLImageElement).src
-                              );
-                              if (fallback)
-                                (e.target as HTMLImageElement).src = fallback;
-                            }}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative" blueFooter blueFooterLabel="🚚 Fretes & Mudanças" myAccountPath="/minha-conta">
+        <DetailPageLayout
+          accent="#ca8a04"
+          moduloLabel="Fretes & Mudanças"
+          titulo={freightTitle}
+          preco={freight.price_label?.trim() || 'Consulte'}
+          precoSufixo={freight.price_per_km ? `ou R$ ${Number(freight.price_per_km).toFixed(2)}/km` : undefined}
+          categoria={freight.vehicle_type}
+          cidade={freight.public_address_label || `${freight.neighborhood ? freight.neighborhood + ', ' : ''}${freight.city}/${freight.state}`}
+          badges={freight.is_featured ? [{ label: '⭐ Destaque', bg: '#fef3c7', color: '#b45309' }] : []}
+          imagens={galeria}
+          caracteristicas={[
+            { icone: <TypeIcon className="h-3.5 w-3.5" />, label: freight.vehicle_type },
+            ...(freight.price_per_km ? [{ label: `R$ ${Number(freight.price_per_km).toFixed(2)}/km` }] : []),
+          ]}
+          descricao={freight.description}
+          especificacoes={[
+            { label: 'Tipo de Veículo', value: freight.vehicle_type },
+            { label: 'Valor', value: freight.price_label?.trim() || 'Consulte' },
+            ...(freight.price_per_km ? [{ label: 'Preço por km', value: `R$ ${Number(freight.price_per_km).toFixed(2)}` }] : []),
+            ...(freight.coverage_routes?.trim() ? [{ label: 'Rotas Atendidas', value: freight.coverage_routes }] : []),
+            ...(freight.city ? [{ label: 'Cidade', value: `${freight.city}/${freight.state ?? ''}` }] : []),
+          ]}
+          mapa={freight.latitude && freight.longitude ? (
+            <div className="p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <MapPin className="h-4 w-4" style={{ color: '#ca8a04' }} />
+                <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Localização da transportadora</p>
               </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h1 className="text-4xl lg:text-6xl font-black text-zinc-900 tracking-tighter leading-[0.95]">
-                    {freightTitle}
-                  </h1>
-                  <div className="flex items-center gap-2 text-zinc-700 font-bold text-xs uppercase tracking-widest pt-2">
-                    <MapPin className="w-4 h-4 text-blue-600" />
-                    {freight.public_address_label ||
-                      `${freight.neighborhood ? freight.neighborhood + ', ' : ''}${freight.city}/${freight.state}`}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      Tipo de Veículo
-                    </span>
-                    <div className="flex items-center gap-2.5 font-black text-xl text-zinc-900">
-                      <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 text-blue-700 ring-1 ring-blue-200/60 shrink-0">
-                        <TypeIcon className="h-[19px] w-[19px]" />
-                      </span>
-                      {freight.vehicle_type}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      Valor
-                    </span>
-                    <div className="flex items-center gap-2 font-black text-xl text-zinc-900">
-                      {freight.price_label?.trim() || 'Consulte'}
-                    </div>
-                  </div>
-                  {!!freight.price_per_km && (
-                    <div className="space-y-2 col-span-2 sm:col-span-1">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        Preço por km
-                      </span>
-                      <div className="flex items-center gap-2 font-black text-xl text-blue-600">
-                        R$ {Number(freight.price_per_km).toFixed(2)}/km
-                      </div>
-                    </div>
-                  )}
-                  {!!freight.coverage_routes?.trim() && (
-                    <div className="space-y-2 col-span-2">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        Rotas Atendidas
-                      </span>
-                      <div className="font-bold text-sm text-zinc-700">
-                        {freight.coverage_routes}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {freight.description && (
-                  <div className="space-y-4 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                    <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900">
-                      Descrição do Serviço
-                    </h3>
-                    <p className="text-zinc-600 font-medium leading-relaxed whitespace-pre-line text-base lg:text-lg">
-                      {freight.description}
-                    </p>
-                  </div>
-                )}
-
-                {(freight.latitude && freight.longitude) && (
-                  <div className="space-y-3 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-blue-600" />
-                      <h3 className="font-black text-zinc-900 text-sm">Localização da transportadora</h3>
-                    </div>
-                    {freight.public_address_label && (
-                      <p className="text-xs text-zinc-500 font-medium">{freight.public_address_label}</p>
-                    )}
-                    <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
-                      <StoreLocationMap
-                        initialLat={freight.latitude}
-                        initialLng={freight.longitude}
-                        addressLabel={freight.public_address_label ?? freight.city}
-                        markerLabel={freight.title}
-                        readOnly
-                        hasConfirmedLocation
-                        onLocationSelect={() => {}}
-                        className="w-full h-full"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200 shadow-xl">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Valor</span>
-                    <div className="text-4xl lg:text-5xl font-black text-blue-600 tracking-tighter">
-                      {freight.price_label?.trim() || 'Consulte'}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleInterest}
-                    className="w-full h-16 rounded-2xl font-black text-lg text-white shadow-xl shadow-blue-600/30 bg-blue-600 hover:bg-blue-700 transition-all active:scale-95"
-                  >
-                    ESTOU INTERESSADO
-                  </Button>
-                  <div className="pt-4 border-t border-zinc-100 flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
-                      Contato Seguro Protegido por IA. Suas informações não são expostas
-                      sem sua autorização.
-                    </p>
-                  </div>
-                </div>
+              {freight.public_address_label && <p className="mb-2 text-xs text-slate-500">{freight.public_address_label}</p>}
+              <div className="h-52 overflow-hidden rounded-2xl border border-slate-200">
+                <StoreLocationMap
+                  initialLat={freight.latitude}
+                  initialLng={freight.longitude}
+                  addressLabel={freight.public_address_label ?? freight.city}
+                  markerLabel={freight.title}
+                  readOnly hasConfirmedLocation onLocationSelect={() => {}}
+                  className="h-full w-full"
+                />
               </div>
-          </div>
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.slice(2, 4).map((f: any) => (
-                <MarketFreightCard key={f.id} freight={f} />
-              ))}
-              {sideListings.length > 0 && (
-                <button onClick={() => navigate('/fretes')} className="text-xs font-bold text-blue-600 hover:underline text-center py-1">Ver mais fretes →</button>
-              )}
             </div>
-          </div>
-        </div>
-
-        <InstitutionalSafetyBanner />
+          ) : undefined}
+          extras={(
+            <>
+              <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>
+                  Contato Seguro Protegido por IA. Suas informações não são expostas sem sua autorização.
+                </p>
+              </div>
+              <InstitutionalSafetyBanner />
+            </>
+          )}
+          acoes={{ onInteresse: handleInterest, interesseLabel: 'Tenho Interesse' }}
+          relacionados={sideListings.map((f: any) => ({
+            id: f.id,
+            titulo: f.title || 'Frete',
+            imagem: f.thumbnail_url,
+            preco: f.price_label?.trim() || (f.price_per_km ? `R$ ${Number(f.price_per_km).toFixed(2)}/km` : null),
+            cidade: f.city,
+            href: `/fretes/${f.id}`,
+          }))}
+        />
       </MarketLayout>
 
       {id && freight && (
