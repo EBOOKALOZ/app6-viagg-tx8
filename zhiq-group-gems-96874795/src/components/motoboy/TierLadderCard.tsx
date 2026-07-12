@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Award, Check, Lock, Crown, Trophy, Medal, Sparkles, Users, TrendingUp, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import viaggLogo from '@/assets/logo.png';
 
 export type TierName = 'Inicial' | 'Bronze' | 'Prata' | 'Ouro' | 'Elite' | 'VIP';
 
@@ -108,10 +109,10 @@ export function TierLadderCard({ validGroups }: TierLadderCardProps) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-2xl"
+            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full"
             style={{ background: 'linear-gradient(135deg,#22c55e 0%,#16a34a 100%)', boxShadow: '0 8px 20px -8px rgba(22,163,74,.5)' }}
           >
-            🎯
+            <img src={viaggLogo} alt="Viagg-TX8" className="h-full w-full object-cover" />
           </div>
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-900" style={{ fontWeight: 700 }}>
