@@ -221,9 +221,19 @@ export function useRealtimeCalls({
         },
         async (payload) => {
           const record = payload.new as any;
-          
+
           console.log('[Realtime] 🔔 Delivery OFFER recebida:', record.id, 'para Order:', record.service_order_id);
-          
+
+          // ★ GUARDA DE IDENTIDADE: oferta de OUTRO motoboy vazada pelo canal
+          // não pode tocar aqui (comissão/valores são individuais por oferta).
+          const mine =
+            String(record.professional_uid ?? '') === String(effectiveProfileId ?? '') ||
+            String(record.motoboy_id ?? '') === String(user?.id ?? '');
+          if (!mine) {
+            console.log('[Realtime] ❌ Offer ignorada - não é deste profissional');
+            return;
+          }
+
           if (record.offer_status !== 'pending') {
             console.log('[Realtime] ❌ Offer ignorada - status não é pending:', record.offer_status);
             return;
@@ -292,8 +302,16 @@ export function useRealtimeCalls({
         },
         (payload) => {
           const record = payload.new as any;
+          // ★ GUARDA DE IDENTIDADE: só reagir a eventos da MINHA oferta.
+          // O filtro do canal pode vazar em reconexões — e como o remove é
+          // pelo ID DA ORDEM (compartilhado por todos os motoboys), a
+          // rejeição de OUTRO motoboy derrubava o modal deste aqui.
+          const mine =
+            String(record.professional_uid ?? '') === String(effectiveProfileId ?? '') ||
+            String(record.motoboy_id ?? '') === String(user?.id ?? '');
+          if (!mine) return;
           if (record.offer_status !== 'pending') {
-            console.log('[Realtime] ❌ Offer não mais disponível:', record.service_order_id, 'status:', record.offer_status);
+            console.log('[Realtime] ❌ MINHA offer não mais disponível:', record.service_order_id, 'status:', record.offer_status);
             removeCall(record.service_order_id);
           }
         }
