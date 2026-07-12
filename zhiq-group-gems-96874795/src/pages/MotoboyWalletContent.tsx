@@ -95,7 +95,7 @@ export default function MotoboyWalletContent() {
   // mototaxi_wallet / driver_wallet (owner = auth.uid), usa a de MAIOR saldo
   // disponível. Enquanto não existir retenção, available == current; quando
   // houver, os baldes (available/reserved/pending) refletem automaticamente.
-  const { user } = useAuth();
+  const { user, avatarUrl } = useAuth();
   const queryClient = useQueryClient();
   const { data: proWallet } = useQuery({
     queryKey: ["professional-wallet-balance", user?.id],
@@ -297,8 +297,12 @@ export default function MotoboyWalletContent() {
                   key={p.profileType}
                   className="flex items-center gap-3 p-3 rounded-xl border border-border/60 bg-card hover:bg-accent/30 transition-colors"
                 >
-                  <div className={`h-10 w-10 rounded-full ${meta.bg} flex items-center justify-center`}>
-                    <Icon className={`h-5 w-5 ${meta.color}`} />
+                  <div className={`h-10 w-10 rounded-full ${meta.bg} flex items-center justify-center overflow-hidden ring-2 ring-motoboy/30`}>
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Foto do perfil" className="h-full w-full object-cover" />
+                    ) : (
+                      <Icon className={`h-5 w-5 ${meta.color}`} />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm">{p.label}</p>
