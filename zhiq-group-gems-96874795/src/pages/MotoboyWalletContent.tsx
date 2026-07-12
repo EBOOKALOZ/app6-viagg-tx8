@@ -48,6 +48,8 @@ import { BalanceCard } from "@/components/wallet/BalanceCard";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import pixLogo from "@/assets/pix-logo.svg";
+import bankLogo from "@/assets/bank-logo.svg";
 
 // ============= Profile icon & color map =============
 const PROFILE_META: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
@@ -340,8 +342,8 @@ export default function MotoboyWalletContent() {
             onClick={() => setPixModalOpen(true)}
             className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/60 hover:bg-accent/30 transition-colors text-left"
           >
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-              <QrCode className="h-5 w-5 text-muted-foreground" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white p-1.5 ring-1 ring-border/60">
+              <img src={pixLogo} alt="Pix" className="h-full w-full object-contain" />
             </div>
             <div className="flex-1">
               <p className="font-medium text-sm">Pix</p>
@@ -359,8 +361,8 @@ export default function MotoboyWalletContent() {
             onClick={() => setBankModalOpen(true)}
             className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/60 hover:bg-accent/30 transition-colors text-left"
           >
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
+            <div className="h-10 w-10 overflow-hidden rounded-full">
+              <img src={bankLogo} alt="Banco" className="h-full w-full object-cover" />
             </div>
             <div className="flex-1">
               <p className="font-medium text-sm">Conta Bancária</p>

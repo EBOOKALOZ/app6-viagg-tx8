@@ -28,6 +28,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMotoboyCommission } from "@/hooks/useMotoboyCommission";
 import { useUnifiedWalletViews, WalletStatement } from "@/hooks/useUnifiedWalletViews";
 import { cn } from "@/lib/utils";
+import pixLogo from "@/assets/pix-logo.svg";
+import bankLogo from "@/assets/bank-logo.svg";
 
 const PROFILE_ICONS: Record<string, React.ElementType> = {
   motoboy: Bike,
@@ -525,7 +527,9 @@ export default function Wallet() {
         <section id="metodos-saque" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dcfce7' }}>⚡</div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white p-2" style={{ border: '1px solid #e2e8f0' }}>
+                <img src={pixLogo} alt="Pix" className="h-full w-full object-contain" />
+              </div>
               <div>
                 <p className="text-sm text-slate-900" style={{ fontWeight: 700 }}>PIX</p>
                 <p className="text-xs" style={{ color: '#64748b' }}>Receba em segundos, a qualquer hora.</p>
@@ -543,7 +547,9 @@ export default function Wallet() {
 
           <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-6">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dbeafe' }}>🏦</div>
+              <div className="h-12 w-12 overflow-hidden rounded-full">
+                <img src={bankLogo} alt="Banco" className="h-full w-full object-cover" />
+              </div>
               <div>
                 <p className="text-sm text-slate-900" style={{ fontWeight: 700 }}>Conta Bancária</p>
                 <p className="text-xs" style={{ color: '#64748b' }}>Transferência direta para seu banco.</p>
