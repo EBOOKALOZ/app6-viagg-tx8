@@ -1,9 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Award, Check, Lock, Crown, Trophy, Medal, Sparkles, ChevronRight } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useRef, useState } from 'react';
+import { Award, Check, Lock, Crown, Trophy, Medal, Sparkles, Users, TrendingUp, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type TierName = 'Inicial' | 'Bronze' | 'Prata' | 'Ouro' | 'Elite' | 'VIP';
@@ -49,198 +45,274 @@ interface TierLadderCardProps {
   userName?: string;
 }
 
-/**
- * Escada visual dos 6 tiers de comissão (Inicial → VIP).
- * Mostra onde o motoboy está, quanto falta pro próximo, e o tier final.
- */
-export function TierLadderCard({ validGroups, avatarUrl, userName }: TierLadderCardProps) {
-  const { user, avatarUrl: authAvatarUrl, displayName } = useAuth();
-  const [dbAvatarUrl, setDbAvatarUrl] = useState<string | null>(null);
-
+/** Contador animado (sobe suave até o valor em ~700ms). */
+function useCountUp(target: number, durationMs = 700) {
+  const [value, setValue] = useState(target);
+  const fromRef = useRef(target);
   useEffect(() => {
-    if (avatarUrl || authAvatarUrl) return;
-    if (!user?.id) return;
-    supabase
-      .from('profiles')
-      .select('avatar_url')
-      .eq('id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data?.avatar_url) setDbAvatarUrl(data.avatar_url);
-      });
-  }, [user?.id, avatarUrl, authAvatarUrl]);
+    const from = fromRef.current;
+    if (from === target) return;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+  return value;
+}
 
+/**
+ * COMISSÃO INTELIGENTE — painel executivo premium.
+ * Mesma lógica de tiers (Inicial → VIP); visual elevado: Inter, branco,
+ * respiro, contador animado, barra com brilho, grid de níveis com o
+ * card ATUAL em destaque laranja e rodapé explicativo.
+ */
+export function TierLadderCard({ validGroups }: TierLadderCardProps) {
   const current = getCurrentTier(validGroups);
   const next = getNextTier(validGroups);
   const groupsToNext = next ? next.groupsRequired - validGroups : 0;
-
-  // Foto do avatar do motoboy logado (com fallback profissional)
-  const motoboyPhoto = avatarUrl || authAvatarUrl || dbAvatarUrl || 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=150&auto=format&fit=crop&q=80';
-  const motoboyName = userName || displayName || 'Motoboy';
-  const motoboyInitials = motoboyName
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const MAX_GROUPS = 5;
+  const progress = Math.min(100, Math.round((Math.min(validGroups, MAX_GROUPS) / MAX_GROUPS) * 100));
+  const animatedRate = useCountUp(current.rate);
+  const animatedProgress = useCountUp(progress);
 
   return (
-    <Card className="border border-black/15 bg-[#F5E62B] text-slate-950 shadow-2xl overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
+    <div
+      className="w-full rounded-[20px] bg-white p-6 sm:p-8 text-slate-900 tier-fadein"
+      style={{
+        fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 12px 40px -12px rgba(15,23,42,0.10)',
+      }}
+    >
+      {/* Keyframes locais (brilho da barra, fade-in, glow do atual) */}
+      <style>{`
+        @keyframes tierShine { 0% { transform: translateX(-150%);} 100% { transform: translateX(400%);} }
+        @keyframes tierFadeIn { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none;} }
+        .tier-fadein { animation: tierFadeIn .45s ease-out both; }
+        .tier-card { transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+        .tier-card:hover { transform: translateY(-3px); box-shadow: 0 14px 30px -12px rgba(15,23,42,.16); }
+      `}</style>
+
+      {/* ── Cabeçalho ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-2xl"
+            style={{ background: 'linear-gradient(135deg,#22c55e 0%,#16a34a 100%)', boxShadow: '0 8px 20px -8px rgba(22,163,74,.5)' }}
+          >
+            🎯
+          </div>
           <div>
-            <CardTitle className="text-base font-black flex items-center gap-2 text-slate-950">
-              <Trophy className="h-5 w-5 text-slate-950" />
-              Sua Escada de Tiers
-            </CardTitle>
-            <p className="text-[11px] font-semibold text-slate-900/90 mt-1">
-              Cada grupo válido te leva pro próximo nível e reduz sua taxa.
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-900" style={{ fontWeight: 700 }}>
+              Comissão Inteligente
+            </h2>
+            <p className="mt-1 text-sm" style={{ color: '#64748b', fontWeight: 400 }}>
+              Quanto mais grupos ativos, menor será sua comissão.
             </p>
           </div>
-          <div className="shrink-0 px-3 py-1.5 rounded-xl bg-[#00a300] text-center shadow-lg border border-black/20">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-[#F5E62B]">Você está em</p>
-            <p className="text-sm font-black text-white">{current.name}</p>
+        </div>
+
+        {/* Card de destaque à direita */}
+        <div
+          className="flex items-center gap-3 rounded-2xl px-5 py-4"
+          style={{
+            background: '#dcfce7',
+            border: '1px solid rgba(22,163,74,.25)',
+            boxShadow: '0 6px 16px -10px rgba(22,163,74,.35)',
+          }}
+        >
+          <span className="text-3xl">🏆</span>
+          <div>
+            {next ? (
+              <>
+                <p className="text-sm font-semibold text-slate-900" style={{ fontWeight: 600 }}>
+                  Falta{groupsToNext > 1 ? 'm' : ' apenas'} {groupsToNext} grupo{groupsToNext > 1 ? 's' : ''}
+                </p>
+                <p className="text-xs" style={{ color: '#64748b' }}>
+                  Para atingir a comissão mínima de 6%.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-slate-900" style={{ fontWeight: 600 }}>
+                  Comissão mínima atingida!
+                </p>
+                <p className="text-xs" style={{ color: '#64748b' }}>
+                  Você garante os 6% — a menor taxa da plataforma.
+                </p>
+              </>
+            )}
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-2">
+      {/* ── Indicadores ───────────────────────────────────────────── */}
+      <div className="mt-8 grid grid-cols-2 items-center gap-6">
+        <div className="text-center">
+          <p className="text-6xl leading-none sm:text-7xl" style={{ color: '#16a34a', fontWeight: 700 }}>
+            {animatedRate}%
+          </p>
+          <p className="mt-2 text-sm" style={{ color: '#64748b', fontWeight: 400 }}>
+            Comissão Atual
+          </p>
+        </div>
+        <div className="relative text-center">
+          <span aria-hidden className="absolute left-0 top-1/2 h-16 w-px -translate-y-1/2 bg-slate-200" />
+          <p className="flex items-center justify-center gap-2 text-5xl leading-none sm:text-6xl" style={{ fontWeight: 700 }}>
+            <Users className="h-8 w-8 shrink-0" style={{ color: '#16a34a' }} />
+            {Math.min(validGroups, MAX_GROUPS)}<span className="text-3xl text-slate-300">/</span>{MAX_GROUPS}
+          </p>
+          <p className="mt-2 text-sm" style={{ color: '#64748b' }}>
+            Grupos Ativos
+          </p>
+        </div>
+      </div>
+
+      {/* ── Barra de progresso premium ────────────────────────────── */}
+      <div className="mt-8">
+        <div className="relative h-7 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="relative flex h-full items-center justify-end overflow-hidden rounded-full pr-3 transition-all"
+            style={{
+              width: `${Math.max(progress, 9)}%`,
+              background: 'linear-gradient(90deg,#22c55e 0%,#16a34a 100%)',
+              transition: 'width .6s cubic-bezier(.22,.9,.35,1)',
+            }}
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 w-16"
+              style={{
+                background: 'linear-gradient(105deg, transparent 0%, rgba(255,255,255,.45) 50%, transparent 100%)',
+                animation: 'tierShine 2.8s ease-in-out infinite',
+              }}
+            />
+            <span className="relative text-xs text-white" style={{ fontWeight: 700 }}>
+              {animatedProgress}%
+            </span>
+          </div>
+        </div>
+        <p className="mt-3 flex items-center gap-2 text-sm" style={{ color: '#16a34a', fontWeight: 600 }}>
+          <TrendingUp className="h-4 w-4" />
+          {progress >= 100
+            ? 'Nível máximo alcançado — comissão mínima garantida!'
+            : progress >= 60
+              ? 'Você está muito perto! Continue aumentando seus grupos ativos.'
+              : 'Cada grupo ativo reduz sua comissão. Continue crescendo!'}
+        </p>
+      </div>
+
+      {/* ── Faixas de comissão ────────────────────────────────────── */}
+      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         {TIER_LADDER.map((tier, idx) => {
           const achieved = validGroups >= tier.groupsRequired;
           const isCurrent = current.name === tier.name;
-          const isNext = next?.name === tier.name;
           const Icon = tier.icon;
+          const nivel = TIER_LADDER.length - idx; // 25%=Nível 6 … 6%=Nível 1
 
           return (
             <div
               key={tier.name}
-              className={cn(
-                'relative flex items-center gap-3 rounded-xl p-3 transition-all border shadow-md',
-                // ATUAL: fundo verde exato #00a300 com contraste premium
-                isCurrent && 'bg-[#00a300] text-white border-2 border-slate-950 shadow-xl scale-[1.02] ring-2 ring-black/20',
-                // CONQUISTADOS (abaixo do atual)
-                !isCurrent && achieved && 'bg-[#00a300]/90 text-white border-black/15',
-                // PRÓXIMO: card branco com destaque amarelo #F5E62B pulsante
-                isNext && !isCurrent && 'bg-white text-slate-950 border-2 border-[#00a300] shadow-lg animate-pulse',
-                // BLOQUEADOS: card escuro translúcido elegante
-                !achieved && !isNext && 'bg-slate-950/75 text-white/90 border-slate-900/40'
-              )}
+              className={cn('tier-card relative rounded-[18px] p-5 text-center')}
+              style={
+                isCurrent
+                  ? {
+                      background: 'linear-gradient(180deg,#fff 0%,#fff7ed 100%)',
+                      border: '2px solid #f97316',
+                      boxShadow: '0 10px 30px -10px rgba(249,115,22,.35), 0 0 0 4px rgba(249,115,22,.08)',
+                    }
+                  : {
+                      background: 'rgba(255,255,255,.75)',
+                      border: '1px solid #e2e8f0',
+                      backdropFilter: 'blur(4px)',
+                    }
+              }
             >
-              {/* Avatar do Motoboy na Escada de Tiers */}
-              <div className={cn(
-                'relative shrink-0 w-12 h-12 rounded-full bg-gradient-to-br flex items-center justify-center shadow-md ring-2 overflow-visible',
-                tier.gradient,
-                isCurrent && 'ring-[#F5E62B] shadow-lg shadow-[#F5E62B]/40',
-                !isCurrent && achieved && 'ring-[#F5E62B]/60',
-                !achieved && 'grayscale ring-white/10'
-              )}>
-                <Avatar className="h-full w-full rounded-full border border-white/20 shadow-inner">
-                  <AvatarImage
-                    src={motoboyPhoto}
-                    alt={motoboyName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className={cn('bg-gradient-to-br text-white font-black text-xs flex items-center justify-center', tier.gradient)}>
-                    {motoboyInitials}
-                  </AvatarFallback>
-                </Avatar>
-
-                {achieved && (
-                  <span className="absolute -top-1 -right-1 bg-[#F5E62B] text-slate-950 text-[8px] font-black rounded-full w-5 h-5 flex items-center justify-center shadow-lg ring-2 ring-[#00a300] z-10">
-                    <Check className="h-3 w-3 stroke-[3]" />
-                  </span>
-                )}
-                {!achieved && !isNext && (
-                  <span className="absolute -bottom-1 -right-1 bg-slate-700 text-slate-300 rounded-full w-5 h-5 flex items-center justify-center shadow ring-2 ring-slate-900 z-10">
-                    <Lock className="h-2.5 w-2.5" />
-                  </span>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-black text-sm">{tier.name}</h4>
-                  {isCurrent && (
-                    <span className="text-[9px] uppercase tracking-widest font-bold bg-[#F5E62B] text-slate-950 px-1.5 py-0.5 rounded shadow-sm">
-                      Você está aqui
-                    </span>
-                  )}
-                  {isNext && (
-                    <span className="text-[9px] uppercase tracking-widest font-bold bg-[#F5E62B] text-slate-950 px-1.5 py-0.5 rounded">
-                      Próximo
-                    </span>
-                  )}
-                </div>
-                <p className={cn(
-                  'text-[11px] leading-tight mt-0.5',
-                  isNext && !isCurrent ? 'text-slate-700 font-medium' : 'text-slate-100 font-medium'
-                )}>
-                  {tier.groupsRequired === 0
-                    ? 'Sem grupos vinculados'
-                    : `${tier.groupsRequired}${tier.name === 'VIP' ? '+' : ''} grupo${tier.groupsRequired > 1 ? 's' : ''} válido${tier.groupsRequired > 1 ? 's' : ''}`}
-                </p>
-              </div>
-
-              {/* % de comissão */}
-              <div className="text-right shrink-0">
-                <p className={cn(
-                  'text-2xl font-black leading-none',
-                  isCurrent && 'text-[#F5E62B]',
-                  !isCurrent && achieved && 'text-[#F5E62B]',
-                  isNext && !isCurrent && 'text-slate-950',
-                  !achieved && !isNext && 'text-slate-400'
-                )}>
-                  {tier.rate}%
-                </p>
-                <p className={cn(
-                  'text-[9px] uppercase tracking-wider mt-0.5',
-                  achieved ? 'text-[#F5E62B]/90 font-bold' : isNext && !isCurrent ? 'text-slate-600 font-bold' : 'text-slate-400'
-                )}>
-                  taxa TX8
-                </p>
-              </div>
-
-              {/* Conector entre tiers (linha vertical) */}
-              {idx < TIER_LADDER.length - 1 && (
+              {isCurrent && (
                 <span
-                  aria-hidden
-                  className={cn(
-                    'absolute left-9 -bottom-2 w-0.5 h-2',
-                    achieved && validGroups >= TIER_LADDER[idx + 1].groupsRequired
-                      ? 'bg-[#F5E62B]'
-                      : achieved
-                        ? 'bg-[#F5E62B]/50'
-                        : 'bg-slate-700/60'
-                  )}
-                />
+                  className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] uppercase tracking-widest text-white"
+                  style={{ background: '#f97316', fontWeight: 700, boxShadow: '0 4px 10px -4px rgba(249,115,22,.6)' }}
+                >
+                  Atual
+                </span>
+              )}
+
+              <div
+                className={cn(
+                  'mx-auto flex items-center justify-center rounded-full',
+                  isCurrent ? 'h-12 w-12' : 'h-10 w-10',
+                )}
+                style={{
+                  background: achieved ? '#dcfce7' : '#f1f5f9',
+                  color: achieved ? '#16a34a' : '#94a3b8',
+                }}
+              >
+                {achieved ? <Icon className={isCurrent ? 'h-6 w-6' : 'h-5 w-5'} /> : <Lock className="h-4 w-4" />}
+              </div>
+
+              <p
+                className="mt-3 text-3xl leading-none"
+                style={{ fontWeight: 700, color: isCurrent ? '#f97316' : achieved ? '#16a34a' : '#94a3b8' }}
+              >
+                {tier.rate}%
+              </p>
+              <p className="mt-1 text-xs" style={{ color: '#64748b' }}>
+                {tier.groupsRequired === 0 ? '0 grupos' : `${tier.groupsRequired}+ grupo${tier.groupsRequired > 1 ? 's' : ''}`}
+              </p>
+
+              <span
+                className="mt-3 inline-block rounded-full px-2.5 py-0.5 text-[10px]"
+                style={{
+                  background: achieved ? '#dcfce7' : '#f1f5f9',
+                  color: achieved ? '#16a34a' : '#94a3b8',
+                  fontWeight: 600,
+                }}
+              >
+                Nível {nivel}
+              </span>
+
+              {isCurrent && (
+                <p className="mt-2 text-[11px]" style={{ color: '#f97316', fontWeight: 600 }}>
+                  Você está aqui!
+                </p>
+              )}
+              {achieved && !isCurrent && (
+                <p className="mt-2 flex items-center justify-center gap-1 text-[11px]" style={{ color: '#16a34a', fontWeight: 600 }}>
+                  <Check className="h-3 w-3" /> Conquistado
+                </p>
               )}
             </div>
           );
         })}
+      </div>
 
-        {/* Rodapé com call to action */}
-        {next && (
-          <div className="mt-3 p-3 rounded-xl bg-[#00a300] text-white border border-black/20 flex items-center gap-2 shadow-lg">
-            <ChevronRight className="h-4 w-4 text-[#F5E62B] shrink-0" />
-            <p className="text-xs text-white font-medium">
-              Falta{groupsToNext > 1 ? 'm' : ''}{' '}
-              <span className="font-black text-[#F5E62B]">{groupsToNext} grupo{groupsToNext > 1 ? 's' : ''}</span>{' '}
-              válido{groupsToNext > 1 ? 's' : ''} pra subir pra{' '}
-              <span className="font-black text-white">{next.name}</span>{' '}
-              <span className="text-[#F5E62B]">({next.rate}%)</span>.
-            </p>
-          </div>
-        )}
-        {!next && (
-          <div className="mt-3 p-3 rounded-xl bg-[#00a300] text-white border border-black/20 flex items-center gap-2 shadow-lg">
-            <Crown className="h-4 w-4 text-[#F5E62B] shrink-0" />
-            <p className="text-xs text-white font-medium">
-              Você atingiu o topo: <span className="font-black text-white">VIP</span> — a menor taxa da plataforma.
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* ── Rodapé informativo ────────────────────────────────────── */}
+      <div
+        className="mt-8 flex items-start gap-3 rounded-2xl p-5"
+        style={{ background: '#f0fdf4', border: '1px solid rgba(22,163,74,.18)' }}
+      >
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+          style={{ background: '#dcfce7', color: '#16a34a' }}
+        >
+          <Lightbulb className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm text-slate-900" style={{ fontWeight: 600 }}>
+            💡 Como funciona?
+          </p>
+          <p className="mt-0.5 text-sm" style={{ color: '#64748b', fontWeight: 400 }}>
+            Sua comissão diminui conforme você mantém mais grupos ativos. Mantenha pelo menos 5
+            grupos para garantir a comissão mínima de 6%.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
