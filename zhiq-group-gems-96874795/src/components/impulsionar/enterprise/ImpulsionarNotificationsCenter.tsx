@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Bell, CheckCircle2, AlertTriangle, Clock, TrendingUp,
-  Sparkles, ShieldCheck, Trash2, CheckCheck, Filter
+  Sparkles, ShieldCheck, Trash2, CheckCheck, Filter, EyeOff
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -58,21 +58,48 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
+const lsGet = (k: string): string[] => {
+  try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch { return []; }
+};
+
 export function ImpulsionarNotificationsCenter() {
   const [items, setItems] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [filter, setFilter] = useState<'todas' | 'nao-lidas' | 'alertas'>('todas');
+  // Escondidas (recuperáveis) e excluídas (definitivo) — persistem entre sessões
+  const [hiddenIds, setHiddenIds] = useState<string[]>(() => lsGet('ridvNotifHidden'));
+  const [deletedIds, setDeletedIds] = useState<string[]>(() => lsGet('ridvNotifDeleted'));
 
-  const unreadCount = items.filter((i) => !i.read).length;
+  const hideOne = (id: string) => {
+    const next = [...new Set([...hiddenIds, id])];
+    setHiddenIds(next);
+    localStorage.setItem('ridvNotifHidden', JSON.stringify(next));
+  };
+  const deleteOne = (id: string) => {
+    const next = [...new Set([...deletedIds, id])];
+    setDeletedIds(next);
+    localStorage.setItem('ridvNotifDeleted', JSON.stringify(next));
+  };
+  const unhideAll = () => {
+    setHiddenIds([]);
+    localStorage.setItem('ridvNotifHidden', '[]');
+  };
+
+  const visible = items.filter((i) => !deletedIds.includes(i.id) && !hiddenIds.includes(i.id));
+  const hiddenCount = items.filter((i) => !deletedIds.includes(i.id) && hiddenIds.includes(i.id)).length;
+
+  const unreadCount = visible.filter((i) => !i.read).length;
 
   const markAllRead = () => {
     setItems((prev) => prev.map((i) => ({ ...i, read: true })));
   };
 
   const clearAll = () => {
-    setItems([]);
+    const next = [...new Set([...deletedIds, ...items.map((i) => i.id)])];
+    setDeletedIds(next);
+    localStorage.setItem('ridvNotifDeleted', JSON.stringify(next));
   };
 
-  const filtered = items.filter((i) => {
+  const filtered = visible.filter((i) => {
     if (filter === 'nao-lidas') return !i.read;
     if (filter === 'alertas') return i.type === 'saldo' || i.type === 'pausada';
     return true;
@@ -145,9 +172,9 @@ export function ImpulsionarNotificationsCenter() {
       {/* Filtros */}
       <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
         {[
-          { id: 'todas', label: 'Todas', count: items.length },
+          { id: 'todas', label: 'Todas', count: visible.length },
           { id: 'nao-lidas', label: 'Não Lidas', count: unreadCount },
-          { id: 'alertas', label: 'Alertas de Saldo & Status', count: items.filter((i) => i.type === 'saldo' || i.type === 'pausada').length },
+          { id: 'alertas', label: 'Alertas de Saldo & Status', count: visible.filter((i) => i.type === 'saldo' || i.type === 'pausada').length },
         ].map((f) => (
           <button
             key={f.id}
@@ -163,6 +190,15 @@ export function ImpulsionarNotificationsCenter() {
             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/20 dark:bg-black/20">{f.count}</span>
           </button>
         ))}
+        {hiddenCount > 0 && (
+          <button
+            onClick={unhideAll}
+            className="ml-auto flex items-center gap-1 rounded-xl px-3 py-1.5 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            title="Restaurar notificações escondidas"
+          >
+            <EyeOff className="h-3 w-3" /> Mostrar ocultas ({hiddenCount})
+          </button>
+        )}
       </div>
 
       {/* Lista de notificações */}
@@ -210,9 +246,26 @@ export function ImpulsionarNotificationsCenter() {
                   </p>
                 </div>
 
-                {!item.read && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0 self-center" />
-                )}
+                {/* Ações do card: esconder / excluir */}
+                <div className="flex shrink-0 flex-col items-center gap-1 self-center">
+                  {!item.read && <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                  <button
+                    type="button"
+                    title="Esconder notificação"
+                    onClick={(e) => { e.stopPropagation(); hideOne(item.id); }}
+                    className="rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+                  >
+                    <EyeOff className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Excluir notificação"
+                    onClick={(e) => { e.stopPropagation(); deleteOne(item.id); }}
+                    className="rounded-lg p-1.5 text-zinc-300 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             );
           })}

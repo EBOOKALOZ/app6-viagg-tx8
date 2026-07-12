@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useHubBadges } from '@/hooks/useHubBadges';
 import {
   LayoutDashboard, Send, Users, History,
   TrendingUp, Megaphone, Wallet, Sparkles,
@@ -62,6 +63,12 @@ export default function PostadorHub() {
       });
     }
   }, [pathname]);
+
+  // Contadores reais de eventos por página (círculos verdes nas abas)
+  const hubProfile = base === '/mototaxi' ? 'mototaxi' as const
+    : base === '/driver' ? 'driver' as const
+    : 'motoboy' as const;
+  const badges = useHubBadges(hubProfile);
 
   // Active tab detection
   const getIsActive = (tab: Tab) => {
@@ -129,6 +136,14 @@ export default function PostadorHub() {
                 >
                   <tab.icon className="h-3.5 w-3.5 shrink-0" />
                   {tab.label}
+                  {badges?.[tab.key] != null && (
+                    <span
+                      className="ml-0.5 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[9px] font-black text-white"
+                      style={{ background: '#16a34a', boxShadow: '0 2px 6px rgba(22,163,74,.4)' }}
+                    >
+                      {badges[tab.key] > 99 ? '99+' : badges[tab.key]}
+                    </span>
+                  )}
                 </button>
               );
             })}
