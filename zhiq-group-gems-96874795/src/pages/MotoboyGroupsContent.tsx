@@ -65,6 +65,10 @@ interface ProfileGroup {
   member_count: number;
   last_post_subject: string | null;
   min_members_valid: boolean;
+  radar_scores?: {
+    recommendation: string;
+    factors: any;
+  } | null;
 }
 
 const statusConfig: Record<string, { label: string; icon: React.ReactNode; colorClass: string; bgClass: string; borderClass: string }> = {
@@ -84,6 +88,35 @@ const getDaysInactive = (lastPostedDate: string | null): number => {
   const last = new Date(lastPostedDate);
   const diffTime = Math.abs(new Date().getTime() - last.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const getDetailedRejectionReason = (group: ProfileGroup) => {
+  let reason = "";
+
+  if (group.members_count <= 90) {
+    reason = "Rejeitado: O grupo possui menos de 91 membros. ";
+  } else if (!group.radar_scores) {
+    return null;
+  } else {
+    const { recommendation, factors } = group.radar_scores;
+    if (recommendation === 'link_invalido' || factors?.link_invalido) {
+      reason = "Rejeitado: Link de convite inválido ou revogado. ";
+    } else if (recommendation === 'grupo_duplicado') {
+      reason = "Rejeitado: Este link de grupo já está cadastrado no sistema. ";
+    } else if (recommendation === 'grupo_abandonado') {
+      reason = "Rejeitado: Grupo sem postagens recentes. ";
+    } else if (recommendation === 'grupo_suspeito' || factors?.membros_implausiveis) {
+      reason = "Rejeitado: Contagem de membros implausível. ";
+    } else if (factors?.nome_divergente) {
+      reason = "Rejeitado: Nome real do grupo difere muito do cadastrado. ";
+    }
+  }
+
+  if (reason) {
+    return reason + "O grupo deve ter no mínimo 1 postagem por semana de qualquer outros de seus membros.";
+  }
+
+  return null;
 };
 
 export default function MotoboyGroupsContent() {
@@ -134,7 +167,8 @@ export default function MotoboyGroupsContent() {
           id, owner_user_id, group_name, group_link, neighborhood,
           city_name, state_code, members_count,
           validation_status, is_active, is_valid, valid_for_commission,
-          invalid_reason, last_posted_at, created_at, updated_at
+          invalid_reason, last_posted_at, created_at, updated_at,
+          radar_group_scores ( recommendation, factors )
         `)
         .eq('owner_user_id', user.id)
         .order('created_at', { ascending: false });
@@ -164,6 +198,7 @@ export default function MotoboyGroupsContent() {
           members_count: g.members_count || 0,
           last_posted_at: g.last_posted_at || null,
           invalid_reason: g.invalid_reason || null,
+          radar_scores: Array.isArray(g.radar_group_scores) ? g.radar_group_scores[0] : (g.radar_group_scores || null),
           is_valid: Boolean(g.is_valid),
           valid_for_commission: Boolean(g.valid_for_commission),
           // Legacy aliases for display compatibility
@@ -592,7 +627,7 @@ export default function MotoboyGroupsContent() {
                   size="sm"
                   variant="outline"
                   onClick={handleClearInactiveGroups}
-                  className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-400 h-8 px-3 text-xs font-semibold"
+                  className="bg-[#F5E62B] border-[#F5E62B] text-red-600 hover:bg-[#f0e000] hover:border-[#f0e000] hover:text-red-700 h-8 px-3 text-xs font-semibold"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   Limpar Inativos ({inactiveGroups.length})
@@ -679,7 +714,17 @@ export default function MotoboyGroupsContent() {
                                 <ShieldAlert className="h-4 w-4 shrink-0" />
                                 Motivo de Invalidação:
                               </div>
-                              <p className="pl-5">{group.invalid_reason}</p>
+                              <p className="pl-5">
+                                {getDetailedRejectionReason(group) ? (
+                                  <span className="animate-pulse text-red-500 font-semibold inline-block">
+                                    {getDetailedRejectionReason(group)}
+                                  </span>
+                                ) : (
+                                  group.invalid_reason === 'Rejeitado pelo RADAR IA/admin' 
+                                    ? 'Rejeitado pela Viagg-TX8' 
+                                    : group.invalid_reason
+                                )}
+                              </p>
                             </div>
                           )}
 
