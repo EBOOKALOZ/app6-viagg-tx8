@@ -69,6 +69,40 @@ export default function AdminFilaDivulgacoes() {
   const [fData, setFData] = useState('');
   const [now, setNow] = useState(() => Date.now());
 
+  /* Smart Queue: alocação dinâmica + configuração */
+  const { data: aloc, refetch: refetchAloc } = useQuery({
+    queryKey: ['admin-fila-alocacao'],
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('divulgacao_alocacao');
+      if (error) throw error;
+      return data as any;
+    },
+  });
+  const [cfgForm, setCfgForm] = useState<{ pagas: number; minG: number; maxP: number; auto: boolean } | null>(null);
+  useEffect(() => {
+    if (aloc?.config && !cfgForm) {
+      setCfgForm({
+        pagas: aloc.config.pct_pagas_inicial,
+        minG: aloc.config.pct_min_gratuitas,
+        maxP: aloc.config.pct_max_pagas,
+        auto: aloc.config.modo_auto,
+      });
+    }
+  }, [aloc, cfgForm]);
+
+  const salvarConfig = async () => {
+    if (!cfgForm) return;
+    const { error } = await (supabase.rpc as any)('divulgacao_config_set', {
+      p_pagas_inicial: cfgForm.pagas,
+      p_min_gratuitas: cfgForm.minG,
+      p_max_pagas: cfgForm.maxP,
+      p_modo_auto: cfgForm.auto,
+    });
+    if (error) { alert(error.message); return; }
+    refetchAloc();
+  };
+
   const { data: fila = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['admin-fila-divulgacoes'],
     refetchInterval: 30_000,
@@ -84,9 +118,15 @@ export default function AdminFilaDivulgacoes() {
     const ch = supabase
       .channel('admin-fila-divulgacoes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_queue' },
-        () => queryClient.invalidateQueries({ queryKey: ['admin-fila-divulgacoes'] }))
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['admin-fila-divulgacoes'] });
+          queryClient.invalidateQueries({ queryKey: ['admin-fila-alocacao'] });
+        })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_posting_targets' },
-        () => queryClient.invalidateQueries({ queryKey: ['admin-fila-divulgacoes'] }))
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['admin-fila-divulgacoes'] });
+          queryClient.invalidateQueries({ queryKey: ['admin-fila-alocacao'] });
+        })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [queryClient]);
@@ -165,6 +205,104 @@ export default function AdminFilaDivulgacoes() {
           <RefreshCw className={cn('h-3.5 w-3.5', isFetching && 'animate-spin')} /> Atualizar
         </button>
       </div>
+
+      {/* ── SMART QUEUE — alocação dinâmica em tempo real ── */}
+      {aloc?.success && (
+        <div
+          className="rounded-[20px] bg-white p-5"
+          style={{ boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 12px 36px -16px rgba(15,23,42,.12)' }}
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>
+              🧠 Smart Queue — alocação dinâmica {aloc.config.modo_auto ? '(modo automático)' : '(modo fixo)'}
+            </p>
+            <p className="text-[11px]" style={{ color: '#64748b' }}>
+              recalculada continuamente · pagas têm prioridade, nunca exclusividade
+            </p>
+          </div>
+
+          {/* métricas */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {[
+              { l: 'Capacidade total', v: aloc.capacidade_total, c: '#0f172a' },
+              { l: 'Utilizada', v: aloc.capacidade_utilizada, c: '#16a34a' },
+              { l: 'Ociosa', v: aloc.capacidade_ociosa, c: aloc.capacidade_ociosa > 0 ? '#d97706' : '#94a3b8' },
+              { l: 'Fila paga', v: aloc.fila_paga, c: '#1d4ed8' },
+              { l: 'Fila gratuita', v: aloc.fila_gratuita, c: '#15803d' },
+              { l: 'Profissionais disponíveis', v: aloc.profissionais_disponiveis, c: '#0f172a' },
+              { l: 'Em andamento', v: aloc.em_andamento, c: '#7c3aed' },
+              { l: 'Tempo médio', v: aloc.tempo_medio_min != null ? `${aloc.tempo_medio_min} min` : '—', c: '#0f172a' },
+              { l: 'Previsão de processamento', v: aloc.previsao_min != null ? `~${aloc.previsao_min} min` : '—', c: '#0f172a' },
+              { l: 'Alocação agora', v: `${aloc.pct_atual_pagas}% / ${aloc.pct_atual_gratuitas}%`, c: '#0f172a' },
+            ].map(m => (
+              <div key={m.l} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 text-center">
+                <p className="tabular-nums text-lg" style={{ fontWeight: 800, color: m.c }}>{m.v}</p>
+                <p className="text-[9px] uppercase tracking-wider" style={{ color: '#94a3b8', fontWeight: 700 }}>{m.l}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* barra dupla pagas × gratuitas */}
+          <div className="mt-4">
+            <div className="flex h-5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="flex items-center justify-center text-[9px] font-black text-white transition-all duration-500"
+                style={{ width: `${aloc.pct_atual_pagas}%`, background: 'linear-gradient(90deg,#3b82f6,#1d4ed8)' }}
+              >
+                {aloc.pct_atual_pagas > 12 ? `PAGAS ${aloc.pct_atual_pagas}%` : ''}
+              </div>
+              <div
+                className="flex items-center justify-center text-[9px] font-black text-white transition-all duration-500"
+                style={{ width: `${aloc.pct_atual_gratuitas}%`, background: 'linear-gradient(90deg,#22c55e,#16a34a)' }}
+              >
+                {aloc.pct_atual_gratuitas > 12 ? `GRATUITAS ${aloc.pct_atual_gratuitas}%` : ''}
+              </div>
+            </div>
+            <p className="mt-1.5 text-[10px]" style={{ color: '#94a3b8' }}>
+              Slots agora: {aloc.slots_pagas} paga(s) · {aloc.slots_gratuitas} gratuita(s). Capacidade livre migra
+              automaticamente para as gratuitas; mínimo garantido de {aloc.config.pct_min_gratuitas}% nunca é zerado.
+            </p>
+          </div>
+
+          {/* configuração administrável */}
+          {cfgForm && (
+            <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              {[
+                { k: 'pagas' as const, label: '% inicial Pagas' },
+                { k: 'minG' as const, label: '% mínimo Gratuitas' },
+                { k: 'maxP' as const, label: '% máximo Pagas' },
+              ].map(f => (
+                <label key={f.k} className="text-[10px]" style={{ color: '#64748b', fontWeight: 700 }}>
+                  {f.label}
+                  <input
+                    type="number" min={1} max={99}
+                    value={cfgForm[f.k]}
+                    onChange={e => setCfgForm({ ...cfgForm, [f.k]: Number(e.target.value) })}
+                    className="mt-1 block w-24 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 outline-none focus:border-emerald-500"
+                  />
+                </label>
+              ))}
+              <label className="flex items-center gap-1.5 pb-2 text-[11px] text-slate-700" style={{ fontWeight: 700 }}>
+                <input
+                  type="checkbox"
+                  checked={cfgForm.auto}
+                  onChange={e => setCfgForm({ ...cfgForm, auto: e.target.checked })}
+                  className="h-3.5 w-3.5 accent-emerald-600"
+                />
+                Modo automático
+              </label>
+              <button
+                type="button"
+                onClick={salvarConfig}
+                className="rounded-full px-5 py-2 text-xs text-white"
+                style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', fontWeight: 700 }}
+              >
+                Salvar configuração
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Abas */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
