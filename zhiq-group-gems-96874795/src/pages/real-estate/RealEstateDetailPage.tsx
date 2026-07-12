@@ -19,6 +19,7 @@ import { StoreHeader } from '@/components/public/store/StoreHeader';
 import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
 export const RealEstateDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -211,11 +212,121 @@ export const RealEstateDetailPage = () => {
         : `${(property.total_area_m2 / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ha`)
     : null;
 
+  const galeria: string[] = media.length
+    ? media.map((m: any) => getListingImageUrl(m.original_storage_path, 'original')!).filter(Boolean)
+    : (mainImageUrl ? [mainImageUrl] : []);
+
+  const operationLabel = String(property.operation_type || '').toLowerCase() === 'aluguel' ? 'Aluguel' : 'Venda';
+  const tipoLabel = String(property.property_type || 'Imóvel').replace(/_/g, ' ');
+
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="bg-gradient-to-b from-[#F5E62B] via-[#F8EC4A] to-[#FFF9B8] pb-24">
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative pb-24">
+        <DetailPageLayout
+          accent="#2563eb"
+          moduloLabel="Imóveis"
+          titulo={property.title}
+          preco={priceFormatted}
+          precoSufixo={operationLabel === 'Aluguel' ? '/mês' : undefined}
+          categoria={`${tipoLabel} · ${operationLabel}`}
+          cidade={property.public_address_label || property.public_location}
+          badges={[
+            ...(property.is_promoted ? [{ label: '⭐ Patrocinado', bg: '#fef3c7', color: '#b45309' }] : []),
+            { label: operationLabel, bg: '#dbeafe', color: '#1d4ed8' },
+          ]}
+          imagens={galeria}
+          caracteristicas={[
+            ...(areaLabel ? [{ icone: <Maximize2 className="h-3.5 w-3.5" />, label: areaLabel }] : []),
+            ...(property.bedrooms ? [{ icone: <BedDouble className="h-3.5 w-3.5" />, label: `${property.bedrooms} quarto${property.bedrooms > 1 ? 's' : ''}` }] : []),
+            ...(property.bathrooms ? [{ icone: <Bath className="h-3.5 w-3.5" />, label: `${property.bathrooms} banheiro${property.bathrooms > 1 ? 's' : ''}` }] : []),
+            ...(property.parking_spots ? [{ icone: <Home className="h-3.5 w-3.5" />, label: `${property.parking_spots} vaga${property.parking_spots > 1 ? 's' : ''}` }] : []),
+          ]}
+          descricao={property.description}
+          especificacoes={[
+            { label: 'Tipo', value: tipoLabel },
+            { label: 'Operação', value: operationLabel },
+            ...(areaLabel ? [{ label: 'Área total', value: areaLabel }] : []),
+            ...(property.built_area_m2 ? [{ label: 'Área construída', value: `${Number(property.built_area_m2).toLocaleString('pt-BR')} m²` }] : []),
+            ...(property.bedrooms ? [{ label: 'Quartos', value: String(property.bedrooms) }] : []),
+            ...(property.bathrooms ? [{ label: 'Banheiros', value: String(property.bathrooms) }] : []),
+            ...(property.parking_spots ? [{ label: 'Vagas', value: String(property.parking_spots) }] : []),
+            ...(property.agency_name ? [{ label: 'Imobiliária', value: property.agency_name }] : []),
+          ]}
+          mapa={property.lat && property.lng ? (
+            <div className="p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <MapPin className="h-4 w-4" style={{ color: '#2563eb' }} />
+                <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Localização aproximada</p>
+              </div>
+              {property.public_address_label && <p className="mb-2 text-xs text-slate-500">{property.public_address_label}</p>}
+              <div className="h-52 overflow-hidden rounded-2xl border border-slate-200">
+                <StoreLocationMap
+                  initialLat={property.lat}
+                  initialLng={property.lng}
+                  addressLabel={property.public_address_label ?? property.city}
+                  markerLabel={property.title}
+                  readOnly hasConfirmedLocation onLocationSelect={() => {}}
+                  className="h-full w-full"
+                />
+              </div>
+            </div>
+          ) : undefined}
+          extras={(
+            <>
+              {storeInfo && (
+                <StoreHeader
+                  store={storeInfo}
+                  stats={null}
+                  productsCount={0}
+                  whatsappNumber={null}
+                  onShare={handleShare}
+                  logoUrl={storeInfo.logo_url || null}
+                  bannerUrl={storeInfo.banner_url || null}
+                />
+              )}
+              <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>
+                  Contato Seguro Protegido por IA. Suas informações não são expostas sem sua autorização.
+                </p>
+              </div>
+              <InstitutionalSafetyBanner />
+            </>
+          )}
+          acoes={{
+            onContatar: handleWhatsApp,
+            onInteresse: handleInterest,
+            interesseLabel: 'Tenho Interesse',
+          }}
+          relacionados={sideListings.map((r: any) => ({
+            id: r.id,
+            titulo: r.title || 'Imóvel',
+            imagem: r.thumbnail_url,
+            preco: r.price_brl ? formatCurrencyBRL(r.price_brl) : null,
+            cidade: r.public_location,
+            href: `/imoveis/${r.id}`,
+          }))}
+        />
+      </MarketLayout>
 
-      {/* ─── HEADER BAR premium ─── */}
+      {id && property && (
+        <ContactIntentionModal
+          open={intentionModal.open}
+          onClose={() => setIntentionModal((prev) => ({ ...prev, open: false }))}
+          listingId={id}
+          listingModule="real_estate"
+          interestType={intentionModal.interestType}
+          listingTitle={property.title}
+        />
+      )}
+    </>
+  );
+};
+
+export default RealEstateDetailPage;
+
+/* LEGADO-REMOVIDO
+      {/* ─── HEADER BAR premium ─── * /}
       <div className="sticky top-0 z-40 bg-[#F5E62B]/80 backdrop-blur-xl border-b border-zinc-900/5">
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Button

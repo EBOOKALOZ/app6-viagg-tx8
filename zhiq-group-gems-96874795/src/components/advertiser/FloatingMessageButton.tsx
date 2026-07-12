@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import viaggLogo from "@/assets/logo.png";
 
 export function FloatingMessageButton() {
   const navigate = useNavigate();

@@ -26,19 +26,20 @@ function MetricItem({ icon: Icon, label, value, sub, glowHex, accentColor, comin
     <div
       className="relative rounded-2xl p-4 overflow-hidden"
       style={{
-        background: 'linear-gradient(145deg, #1B1F24 0%, #0D0F12 100%)',
-        border: comingSoon ? '1px solid rgba(42,48,56,0.50)' : '1px solid rgba(42,48,56,0.80)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.30)',
-        opacity: comingSoon ? 0.7 : 1,
+        background: 'linear-gradient(145deg, #ECFDF5 0%, #D1FAE5 100%)', // Verde suave claro (emerald-50 to emerald-100)
+        border: '1px solid rgba(16, 185, 129, 0.2)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
+        opacity: 1, // Mantém opacidade 100% para não escurecer com o fundo da página
       }}
     >
+      {/* Contraste de amarelo no topo */}
       <div
-        className="absolute top-0 left-0 right-0 h-[2px]"
-        style={{ background: `linear-gradient(90deg, transparent, ${comingSoon ? '#3f4550' : glowHex}, transparent)` }}
+        className="absolute top-0 left-0 right-0 h-[3px]"
+        style={{ background: `linear-gradient(90deg, transparent, #F5E62B, transparent)` }}
       />
       <div
-        className="absolute -top-6 -left-6 w-16 h-16 rounded-full blur-2xl opacity-15"
-        style={{ background: comingSoon ? '#3f4550' : glowHex }}
+        className="absolute -top-6 -left-6 w-16 h-16 rounded-full blur-2xl opacity-40"
+        style={{ background: '#F5E62B' }}
       />
 
       <div className="relative z-10">
@@ -46,24 +47,24 @@ function MetricItem({ icon: Icon, label, value, sub, glowHex, accentColor, comin
           <div
             className="p-1.5 rounded-lg"
             style={{
-              background: comingSoon ? 'rgba(63,69,80,0.18)' : `${glowHex}18`,
-              border: comingSoon ? '1px solid rgba(63,69,80,0.28)' : `1px solid ${glowHex}28`,
+              background: 'rgba(245, 230, 43, 0.25)', // Fundo amarelo suave
+              border: '1px solid rgba(245, 230, 43, 0.5)',
             }}
           >
-            <Icon className={cn('h-3.5 w-3.5', comingSoon ? 'text-zinc-600' : accentColor)} />
+            <Icon className={cn('h-3.5 w-3.5', comingSoon ? 'text-zinc-500' : 'text-emerald-700')} />
           </div>
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#A7B0BE]/45 leading-none">{label}</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-800/60 leading-none">{label}</p>
         </div>
-        <p className={cn('text-[26px] font-black leading-none tracking-tight', comingSoon ? 'text-zinc-600' : 'text-white')}>
+        <p className={cn('text-[26px] font-black leading-none tracking-tight', comingSoon ? 'text-zinc-500' : 'text-emerald-950')}>
           {value}
         </p>
         {sub && (
-          <p className={cn('text-[10px] mt-1 font-medium', comingSoon ? 'text-zinc-700' : 'text-[#A7B0BE]/50')}>
+          <p className={cn('text-[10px] mt-1 font-medium', comingSoon ? 'text-zinc-400' : 'text-emerald-800/70')}>
             {sub}
           </p>
         )}
         {comingSoon && (
-          <span className="inline-block mt-1.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-600 border border-zinc-700/50">
+          <span className="inline-block mt-1.5 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white/50 text-emerald-700 border border-emerald-200">
             em breve
           </span>
         )}
@@ -93,13 +94,13 @@ export function RIDVResultados({
           <div
             key={i}
             className="rounded-2xl p-4 animate-pulse"
-            style={{ background: 'linear-gradient(145deg, #1B1F24, #0D0F12)', border: '1px solid rgba(42,48,56,0.80)' }}
+            style={{ background: 'linear-gradient(145deg, #ECFDF5, #D1FAE5)', border: '1px solid rgba(16, 185, 129, 0.2)' }}
           >
             <div className="flex gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-white/5" />
-              <div className="h-2 w-16 rounded bg-white/5 self-center" />
+              <div className="w-7 h-7 rounded-lg bg-emerald-900/10" />
+              <div className="h-2 w-16 rounded bg-emerald-900/10 self-center" />
             </div>
-            <div className="h-7 w-10 rounded bg-white/5" />
+            <div className="h-7 w-10 rounded bg-emerald-900/10" />
           </div>
         ))}
       </div>

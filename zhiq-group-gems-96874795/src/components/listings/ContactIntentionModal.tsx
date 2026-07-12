@@ -203,8 +203,8 @@ export function ContactIntentionModal({
 
           {/* Linha superior: ícone + título */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6A00]/15 border border-[#FF6A00]/30 flex items-center justify-center shrink-0">
-              <MessageSquare className="w-5 h-5 text-[#FF6A00]" />
+            <div className="flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/logo.png" alt="Viagg" className="w-[52px] h-[52px] rounded-xl object-contain" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-black text-[#FF6A00] uppercase tracking-widest">{moduleLabel}</p>
