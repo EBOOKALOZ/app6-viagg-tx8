@@ -30,7 +30,8 @@ const TABS: Tab[] = [
   { key: 'grupos',       label: 'Grupos',          icon: Users,           segment: 'grupos' },
   { key: 'carteira',     label: 'Carteira',        icon: Wallet,          segment: 'carteira' },
   { key: 'comissao',     label: 'Comissão',        icon: TrendingUp,      segment: 'comissao' },
-  { key: 'promover',     label: 'Promover',        icon: Sparkles,        segment: 'promover' },
+  // Página Promover OCULTA a pedido (2026-07-12) — descomentar para reativar
+  // { key: 'promover',     label: 'Promover',        icon: Sparkles,        segment: 'promover' },
 ];
 
 export default function PostadorHub() {
