@@ -26,10 +26,10 @@ function MetricItem({ icon: Icon, label, value, sub, glowHex, accentColor, comin
     <div
       className="relative rounded-2xl p-4 overflow-hidden"
       style={{
-        background: 'linear-gradient(145deg, #ECFDF5 0%, #D1FAE5 100%)', // Verde suave claro (emerald-50 to emerald-100)
-        border: '1px solid rgba(16, 185, 129, 0.2)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
-        opacity: 1, // Mantém opacidade 100% para não escurecer com o fundo da página
+        background: 'linear-gradient(145deg, #F0FDF4 0%, #ECFDF5 100%)', // Verde bem leve e suave
+        border: '1px solid rgba(16, 185, 129, 0.15)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+        opacity: 1,
       }}
     >
       {/* Contraste de amarelo no topo */}
@@ -47,8 +47,8 @@ function MetricItem({ icon: Icon, label, value, sub, glowHex, accentColor, comin
           <div
             className="p-1.5 rounded-lg"
             style={{
-              background: 'rgba(245, 230, 43, 0.25)', // Fundo amarelo suave
-              border: '1px solid rgba(245, 230, 43, 0.5)',
+              background: 'rgba(245, 230, 43, 0.25)', // Fundo amarelo suave no ícone
+              border: '1px solid rgba(245, 230, 43, 0.4)',
             }}
           >
             <Icon className={cn('h-3.5 w-3.5', comingSoon ? 'text-zinc-500' : 'text-emerald-700')} />
@@ -139,29 +139,11 @@ export function RIDVResultados({
       icon: ShoppingCart,
       label: 'Conversões',
       value: fmt(conversoes),
-      sub: 'compras realizadas',
+      sub: 'ações realizadas',
       glowHex: '#f59e0b',
       accentColor: 'text-amber-400',
       comingSoon: conversoes === 0,
-    },
-    {
-      icon: Send,
-      label: 'Vendas Originadas',
-      value: fmt(vendas),
-      sub: 'através de você',
-      glowHex: '#ec4899',
-      accentColor: 'text-pink-400',
-      comingSoon: vendas === 0,
-    },
-    {
-      icon: DollarSign,
-      label: 'Receita Gerada',
-      value: receitaGerada != null ? fmtBRL(receitaGerada) : '—',
-      sub: 'aos anunciantes',
-      glowHex: '#22c55e',
-      accentColor: 'text-green-400',
-      comingSoon: receitaGerada == null,
-    },
+    }
   ];
 
   return (

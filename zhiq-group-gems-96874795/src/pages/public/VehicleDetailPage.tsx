@@ -255,8 +255,9 @@ export const VehicleDetailPage = () => {
 
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative" blueFooter blueFooterLabel="🚗 Veículos" myAccountPath="/minha-conta">
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🚗 Veículos" myAccountPath="/minha-conta">
         <DetailPageLayout
+          bg="#F5E62B"
           accent="#dc2626"
           moduloLabel="Veículos"
           titulo={vehicleTitle}

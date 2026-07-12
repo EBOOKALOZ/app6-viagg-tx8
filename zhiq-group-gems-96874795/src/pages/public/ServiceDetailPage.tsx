@@ -177,8 +177,9 @@ export const ServiceDetailPage = () => {
 
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative" blueFooter blueFooterLabel="🔧 Serviços" myAccountPath="/minha-conta">
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🔧 Serviços" myAccountPath="/minha-conta">
         <DetailPageLayout
+          bg="#F5E62B"
           accent="#7c3aed"
           moduloLabel="Serviços"
           titulo={serviceTitle}

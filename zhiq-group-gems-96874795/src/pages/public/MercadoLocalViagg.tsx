@@ -1108,7 +1108,7 @@ const scrollToProducts = () => {
 <InstitutionalSafetyBanner />
 
             {/* CTA para anunciantes */}
-            <div className="w-full px-4 lg:px-6 pb-4 pt-0">
+            <div className="w-full px-4 lg:px-6 pb-4 pt-6 lg:pt-8">
                 <div className="max-w-[1920px] mx-auto">
                     <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                         <div className="text-white space-y-1">

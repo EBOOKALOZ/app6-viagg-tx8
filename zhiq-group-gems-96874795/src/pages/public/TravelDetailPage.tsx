@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Plane, MapPin, Calendar, Users, Check, ArrowLeft, Loader2, DollarSign, Clock, ShieldCheck } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
 import { DetailPageLayout } from "@/components/detail/DetailPageLayout";
+import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 
 export default function TravelDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -120,12 +121,13 @@ export default function TravelDetailPage() {
       setSearch={setSearch}
       showSearch
       headerChildren={<MarketNavButtons />}
-      mainClassName="flex flex-col"
+      mainClassName="flex flex-col bg-[#F5E62B]"
       hideFooter
       hideStoreNav
       myAccountPath="/viagens/minha-conta"
     >
       <DetailPageLayout
+        bg="#F5E62B"
         accent="#0284c7"
         moduloLabel="Viagens & Turismo"
         titulo={listing.title}
@@ -228,6 +230,8 @@ export default function TravelDetailPage() {
           }}
         />
       )}
+
+      <ViaggAIChat welcomeMessage="Olá! 👋 Sou a IA Viagg. Posso te ajudar com os detalhes e dúvidas desta viagem?" />
 
       <footer className="w-full bg-sky-700 text-white text-center py-3 text-xs font-medium space-y-1">
         <p className="flex items-center justify-center gap-1.5">

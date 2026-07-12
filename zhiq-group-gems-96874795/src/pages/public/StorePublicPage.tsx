@@ -553,7 +553,7 @@ export default function StorePublicPage() {
     }
 
     return (
-        <MarketLayout mainClassName="bg-[#F5E62B] flex flex-col">
+        <MarketLayout mainClassName="bg-[#F5E62B] flex flex-col" blueFooter blueFooterLabel={`Loja: ${store.store_name}`}>
             <div className="min-h-screen pb-24">
                 
                 {/* ─── HEADER PREMIUM ─── */}

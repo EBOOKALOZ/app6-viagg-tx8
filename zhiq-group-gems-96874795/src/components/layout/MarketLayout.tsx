@@ -214,15 +214,15 @@ export function MarketLayout({
             </div>
 
             {/* ═══ TRUST BAR ═══ */}
-            <div className="bg-[#F5E62B] px-4 lg:py-1.5 py-1 flex items-center justify-center gap-4 lg:gap-6 text-[9px] lg:text-[11px] text-gray-600">
+            <div className="bg-[#0284c7] px-4 lg:py-1.5 py-1 flex items-center justify-center gap-4 lg:gap-6 text-[9px] lg:text-[11px] text-sky-50">
                 <span className="flex items-center gap-1 font-medium">
-                    <Truck className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-[#FF6A00]" /> Entrega Local
+                    <Truck className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-sky-200" /> Entrega Local
                 </span>
                 <span className="flex items-center gap-1 font-medium">
-                    <Shield className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-green-500" /> Comerciantes Verificados
+                    <Shield className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-sky-200" /> Comerciantes Verificados
                 </span>
                 <span className="flex items-center gap-1 font-medium hidden sm:flex">
-                    <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-blue-500" /> Melhores Preços
+                    <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-sky-200" /> Melhores Preços
                 </span>
             </div>
 

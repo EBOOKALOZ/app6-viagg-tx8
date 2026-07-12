@@ -49,6 +49,7 @@ export interface DetailPageLayoutProps {
   relacionados?: DetailRelated[];
   avaliacoes?: ReactNode;         // slot opcional
   loading?: boolean;
+  bg?: string;
 }
 
 const glass: React.CSSProperties = {
@@ -95,7 +96,7 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
     <div
       className="dpl-enter min-h-screen pb-10"
       style={{
-        background: `radial-gradient(900px 300px at 15% -5%, ${p.accent}14, transparent), #F4F7FB`,
+        background: p.bg ? p.bg : `radial-gradient(900px 300px at 15% -5%, ${p.accent}14, transparent), #F4F7FB`,
         fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
       }}
     >

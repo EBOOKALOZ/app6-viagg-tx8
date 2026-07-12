@@ -221,8 +221,9 @@ export const RealEstateDetailPage = () => {
 
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative pb-24">
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative pb-24 bg-[#F5E62B]" blueFooter blueFooterLabel="🏠 Imóveis" myAccountPath="/imoveis/minha-conta">
         <DetailPageLayout
+          bg="#F5E62B"
           accent="#2563eb"
           moduloLabel="Imóveis"
           titulo={property.title}
