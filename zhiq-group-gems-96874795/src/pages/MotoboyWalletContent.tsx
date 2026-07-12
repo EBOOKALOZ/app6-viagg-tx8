@@ -18,6 +18,8 @@ import {
   QrCode,
   Check,
   Filter,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -122,6 +124,7 @@ export default function MotoboyWalletContent() {
   const withdrawableTotal = walletBuckets.availableCents / 100;
   const { bankData, isLoading: isBankLoading, refetch: refetchBankData, hasPixData, hasBankAccountData } = useBankData();
 
+  const [extratoVisible, setExtratoVisible] = useState(true);
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState("");
   const [pixModalOpen, setPixModalOpen] = useState(false);
@@ -374,10 +377,22 @@ export default function MotoboyWalletContent() {
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Extrato unificado
-            </CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Extrato unificado
+              </CardTitle>
+              <button
+                type="button"
+                onClick={() => setExtratoVisible(v => !v)}
+                className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground transition-colors hover:bg-accent"
+                title={extratoVisible ? 'Esconder extrato' : 'Mostrar extrato'}
+              >
+                {extratoVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                {extratoVisible ? 'Esconder' : 'Mostrar'}
+              </button>
+            </div>
             {/* Filter chips */}
+            {extratoVisible && (
             <div className="flex items-center gap-1 overflow-x-auto">
               <button
                 onClick={() => setFilterProfile(undefined)}
@@ -402,10 +417,16 @@ export default function MotoboyWalletContent() {
                 );
               })}
             </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {isLoadingTimeline ? (
+          {!extratoVisible ? (
+            <div className="p-6 text-center">
+              <EyeOff className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+              <p className="text-xs text-muted-foreground">Extrato oculto. Toque em "Mostrar" para exibir suas movimentações.</p>
+            </div>
+          ) : isLoadingTimeline ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
             </div>
