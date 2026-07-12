@@ -417,7 +417,7 @@ export default function MotoboyGroupsContent() {
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" variant="outline" className="border-motoboy text-motoboy hover:bg-motoboy/10 whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center">
+              <Button size="sm" variant="outline" className="bg-[#F5E62B] border-[#F5E62B] text-motoboy hover:bg-[#f0e000] hover:border-[#f0e000] hover:text-motoboy whitespace-nowrap shrink-0 flex-1 sm:flex-initial justify-center">
                 <Plus className="h-4 w-4 mr-1 shrink-0" />
                 Vincular Grupo
               </Button>
