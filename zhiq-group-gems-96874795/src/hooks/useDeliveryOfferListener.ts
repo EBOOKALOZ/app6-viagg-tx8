@@ -398,6 +398,9 @@ export function useDeliveryOfferListener() {
           stopMotobyAudio();
           setCurrentOfferSynced(null);
           setPhase('idle');
+          // Busca imediatamente a PRÓXIMA oferta viva (se houver chamada
+          // nova em andamento, o motoboy volta a tocar sem esperar o poll)
+          fetchInitialOffer();
         }
       } catch { /* rede oscilou — tenta no próximo ciclo */ }
     }, 10000);
@@ -438,11 +441,21 @@ export function useDeliveryOfferListener() {
           if (dismissedIdsRef.current.has(record.id)) return;
 
           // ★ GUARD ANTI-DUPLO: Se já há uma oferta ativa sendo mostrada,
-          //   ignorar novos INSERTs de ofertas diferentes.
-          //   (O BD garante 1 oferta por motoboy; isso é proteção extra no frontend)
+          //   ignorar novos INSERTs — MAS se a atual está VENCIDA (zumbi de
+          //   chamada anterior), a nova SUBSTITUI. Sem isso, o app ficava
+          //   preso na oferta velha, descartava a chamada nova e, quando a
+          //   revalidação matava a zumbi, o motoboy ficava sem NADA — bem na
+          //   hora em que outro recusava ("recusa cancelou todo mundo").
           if (payload.eventType === 'INSERT' && currentOfferRef.current !== null) {
-            console.log('[DeliveryOfferListener] ⚠️ Ignorando INSERT duplicado — já há oferta ativa:', currentOfferRef.current.id);
-            return;
+            const cur: any = currentOfferRef.current;
+            const curVencida = cur?.expires_at
+              ? new Date(cur.expires_at).getTime() < Date.now()
+              : false;
+            if (!curVencida) {
+              console.log('[DeliveryOfferListener] ⚠️ Ignorando INSERT duplicado — já há oferta ativa:', cur.id);
+              return;
+            }
+            console.log('[DeliveryOfferListener] ♻️ Oferta atual VENCIDA — substituindo pela nova:', record.id);
           }
 
           if (payload.eventType === 'UPDATE' && currentOfferRef.current?.id === record.id) return;
