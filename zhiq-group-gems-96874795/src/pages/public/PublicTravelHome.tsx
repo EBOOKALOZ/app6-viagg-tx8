@@ -79,7 +79,7 @@ export default function PublicTravelHome() {
     >
       <InstitutionalSafetyBanner />
 
-      <div className="w-full px-4 lg:px-6 pt-0 bg-yellow-400">
+      <div className="w-full px-4 lg:px-6 pt-0 bg-[#F5E62B]">
         {/* CTA para agências */}
         <div className="pb-4 pt-2">
           <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
@@ -98,7 +98,7 @@ export default function PublicTravelHome() {
         </div>
       </div>
 
-      <div className="w-full py-12 bg-yellow-400">
+      <div className="w-full py-12 bg-[#F5E62B]">
         <div className="max-w-[1920px] mx-auto space-y-8">
 
           <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
