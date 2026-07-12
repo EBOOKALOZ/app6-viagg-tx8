@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Target, Users, AlertTriangle, CheckCircle2, History, Info, Percent,
+  Target, Users, AlertTriangle, CheckCircle2, History, Info, Percent, LayoutGrid, List
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -133,6 +133,7 @@ async function fetchOverviewFallback(): Promise<OverviewRow[]> {
 export default function AdminCommissionIntelligence() {
   const [search, setSearch] = useState("");
   const [onlyInconsistent, setOnlyInconsistent] = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
 
   const overviewQuery = useQuery({
     queryKey: ["admin-commission-overview"],
@@ -204,6 +205,10 @@ export default function AdminCommissionIntelligence() {
 
   const fmtPct = (v: number | string | null | undefined) =>
     v == null ? "—" : `${Number(v)}%`;
+
+  const getTierInfo = (pct: number) => {
+    return OFFICIAL_TIERS.find((t) => t.pct === pct) || OFFICIAL_TIERS[0];
+  };
 
   return (
     <div className="w-full px-4 md:px-6 py-4 space-y-4">
@@ -293,19 +298,47 @@ export default function AdminCommissionIntelligence() {
       {/* ── Pagamentos MP: Produção × Sandbox (etiqueta por ambiente) ── */}
       <PaymentsEnvironmentPanel />
 
-      {/* ── Tabela por usuário ── */}
+      {/* ── Listagem de profissionais (Cards ou Tabela) ── */}
       <Card className="bg-white">
-        <CardHeader className="pb-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Comissão por profissional (tempo real — atualiza a cada 15s)
+        <CardHeader className="pb-4 border-b">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <CardTitle className="text-base font-semibold text-foreground">
+              Posicionamento dos Profissionais
+              <span className="block text-xs font-normal text-muted-foreground mt-1">
+                Acompanhe a posição, comissão aplicada e grupos de cada autônomo (atualiza a cada 15s)
+              </span>
             </CardTitle>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center bg-muted/50 p-1 rounded-md border mr-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("cards")}
+                  className={cn(
+                    "p-1.5 rounded-sm transition-colors",
+                    viewMode === "cards" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Visualização em Cards"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  className={cn(
+                    "p-1.5 rounded-sm transition-colors",
+                    viewMode === "table" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Visualização em Tabela"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setOnlyInconsistent((v) => !v)}
                 className={cn(
-                  "text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors",
+                  "text-xs font-semibold px-3 py-1.5 rounded-md border transition-colors",
                   onlyInconsistent
                     ? "bg-destructive text-white border-destructive"
                     : "bg-muted/40 text-muted-foreground border-muted hover:bg-muted"
@@ -317,12 +350,12 @@ export default function AdminCommissionIntelligence() {
                 placeholder="Buscar nome, e-mail ou cidade…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 w-56 text-xs"
+                className="h-8 w-full md:w-64 text-xs"
               />
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className={cn("p-0", viewMode === "cards" && "p-4 bg-slate-50/50")}>
           {overviewQuery.isLoading ? (
             <div className="p-4 space-y-2">
               <Skeleton className="h-10 w-full" />
@@ -333,60 +366,141 @@ export default function AdminCommissionIntelligence() {
             <p className="p-6 text-center text-sm text-muted-foreground">
               {rows.length === 0 ? "Nenhum profissional com grupos encontrado." : "Nenhum resultado para o filtro."}
             </p>
+          ) : viewMode === "cards" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map((r) => {
+                const tier = getTierInfo(r.expected_percent);
+                return (
+                  <Card key={r.user_id} className={cn("overflow-hidden flex flex-col", !r.is_consistent && "border-destructive/50 shadow-sm")}>
+                    <div className="p-4 border-b bg-white flex flex-col gap-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h3 className="font-bold text-base line-clamp-1">{r.name || "Sem nome"}</h3>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{r.email || "—"}</p>
+                        </div>
+                        {r.is_consistent ? (
+                          <Badge className="bg-success/15 text-success hover:bg-success/20 border-0 shrink-0">OK</Badge>
+                        ) : (
+                          <Badge className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-0 shrink-0">
+                            Inconsistente
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        <Badge variant="outline" className="bg-slate-50 text-slate-600 font-medium">
+                          Nível: {tier.name}
+                        </Badge>
+                        {r.cidade && (
+                          <span className="text-xs text-muted-foreground flex items-center">
+                            📍 {r.cidade}{r.estado ? `/${r.estado}` : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-slate-50/50 flex-1 grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Grupos Válidos</p>
+                        <p className="text-xl font-bold tabular-nums">
+                          {r.valid_groups} <span className="text-sm font-normal text-muted-foreground">/ {r.total_groups}</span>
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">% Aplicado</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xl font-black text-motoboy tabular-nums">
+                            {fmtPct(r.persisted_percent)}
+                          </p>
+                          {r.override_rate != null && (
+                            <Badge variant="outline" className="text-[9px] h-5 px-1.5 border-violet-400 text-violet-600">
+                              Manual
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-1 col-span-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground">Taxa esperada na escada:</span>
+                          <span className="font-semibold">{fmtPct(r.expected_percent)}</span>
+                        </div>
+                        {!r.is_consistent && (
+                          <p className="text-[10px] text-destructive flex items-center gap-1 mt-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            A taxa cobrada ({fmtPct(r.persisted_percent)}) diverge da esperada ({fmtPct(r.override_rate ?? r.expected_percent)}).
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {r.last_change_at && (
+                      <div className="px-4 py-2 bg-slate-100/50 border-t text-[10px] text-muted-foreground text-center">
+                        Última alteração: {fmtDate(r.last_change_at)}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b text-muted-foreground">
-                    <th className="text-left font-medium px-3 py-2">Profissional</th>
-                    <th className="text-left font-medium px-3 py-2">Cidade</th>
-                    <th className="text-center font-medium px-3 py-2">Grupos válidos</th>
-                    <th className="text-center font-medium px-3 py-2">% aplicado</th>
-                    <th className="text-center font-medium px-3 py-2">% esperado</th>
-                    <th className="text-center font-medium px-3 py-2">Override</th>
-                    <th className="text-center font-medium px-3 py-2">Sincronização</th>
-                    <th className="text-right font-medium px-3 py-2">Última alteração</th>
+                  <tr className="border-b bg-slate-50/50 text-muted-foreground">
+                    <th className="text-left font-medium px-4 py-3">Profissional</th>
+                    <th className="text-left font-medium px-4 py-3">Nível</th>
+                    <th className="text-center font-medium px-4 py-3">Grupos válidos</th>
+                    <th className="text-center font-medium px-4 py-3">% aplicado</th>
+                    <th className="text-center font-medium px-4 py-3">% esperado</th>
+                    <th className="text-center font-medium px-4 py-3">Override</th>
+                    <th className="text-center font-medium px-4 py-3">Sincronização</th>
+                    <th className="text-right font-medium px-4 py-3">Última alteração</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filtered.map((r) => (
-                    <tr key={r.user_id} className={cn(!r.is_consistent && "bg-destructive/5")}>
-                      <td className="px-3 py-2">
-                        <p className="font-semibold">{r.name || "Sem nome"}</p>
-                        <p className="text-[10px] text-muted-foreground">{r.email || "—"}</p>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        {r.cidade ? `${r.cidade}${r.estado ? `/${r.estado}` : ""}` : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums">
-                        <span className="font-bold">{r.valid_groups}</span>
-                        <span className="text-muted-foreground"> / {r.total_groups}</span>
-                      </td>
-                      <td className="px-3 py-2 text-center font-bold text-motoboy tabular-nums">
-                        {fmtPct(r.persisted_percent)}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums">{fmtPct(r.expected_percent)}</td>
-                      <td className="px-3 py-2 text-center">
-                        {r.override_rate != null ? (
-                          <Badge variant="outline" className="text-[10px] border-violet-400 text-violet-600">
-                            {fmtPct(r.override_rate)} manual
+                  {filtered.map((r) => {
+                    const tier = getTierInfo(r.expected_percent);
+                    return (
+                      <tr key={r.user_id} className={cn(!r.is_consistent && "bg-destructive/5", "hover:bg-muted/30 transition-colors")}>
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-sm">{r.name || "Sem nome"}</p>
+                          <p className="text-[11px] text-muted-foreground">{r.email || "—"}</p>
+                          {r.cidade && <p className="text-[10px] text-muted-foreground mt-0.5">{r.cidade}{r.estado ? `/${r.estado}` : ""}</p>}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          <Badge variant="outline" className="bg-white font-medium text-xs">
+                            {tier.name}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        {r.is_consistent ? (
-                          <Badge className="bg-success/15 text-success border-0 text-[10px]">OK</Badge>
-                        ) : (
-                          <Badge className="bg-destructive/15 text-destructive border-0 text-[10px]">
-                            Inconsistente
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{fmtDate(r.last_change_at)}</td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3 text-center tabular-nums">
+                          <span className="font-bold text-sm">{r.valid_groups}</span>
+                          <span className="text-muted-foreground"> / {r.total_groups}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center font-bold text-motoboy text-sm tabular-nums">
+                          {fmtPct(r.persisted_percent)}
+                        </td>
+                        <td className="px-4 py-3 text-center tabular-nums">{fmtPct(r.expected_percent)}</td>
+                        <td className="px-4 py-3 text-center">
+                          {r.override_rate != null ? (
+                            <Badge variant="outline" className="text-[10px] border-violet-400 text-violet-600 bg-violet-50">
+                              {fmtPct(r.override_rate)} manual
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {r.is_consistent ? (
+                            <Badge className="bg-success/15 text-success hover:bg-success/20 border-0 text-[10px]">OK</Badge>
+                          ) : (
+                            <Badge className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-0 text-[10px]">
+                              Inconsistente
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-muted-foreground">{fmtDate(r.last_change_at)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -437,7 +551,7 @@ export default function AdminCommissionIntelligence() {
                         {fmtPct(h.old_percent)} → <strong className="text-motoboy">{fmtPct(h.new_percent)}</strong>
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-[10px] text-slate-700 border-slate-300">
                           {h.reason === "override" ? "Override admin" : "Mudança de grupos"}
                         </Badge>
                       </td>
