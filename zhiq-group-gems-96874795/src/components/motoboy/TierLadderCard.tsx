@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Award, Check, Lock, Crown, Trophy, Medal, Sparkles, Users, TrendingUp, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 import viaggLogo from '@/assets/logo.png';
 
 export type TierName = 'Inicial' | 'Bronze' | 'Prata' | 'Ouro' | 'Elite' | 'VIP';
@@ -74,7 +75,9 @@ function useCountUp(target: number, durationMs = 700) {
  * respiro, contador animado, barra com brilho, grid de níveis com o
  * card ATUAL em destaque laranja e rodapé explicativo.
  */
-export function TierLadderCard({ validGroups }: TierLadderCardProps) {
+export function TierLadderCard({ validGroups, avatarUrl: avatarProp }: TierLadderCardProps) {
+  const { avatarUrl: ctxAvatar } = useAuth();
+  const avatar = avatarProp || ctxAvatar || undefined;
   const current = getCurrentTier(validGroups);
   const next = getNextTier(validGroups);
   const groupsToNext = next ? next.groupsRequired - validGroups : 0;
@@ -251,15 +254,24 @@ export function TierLadderCard({ validGroups }: TierLadderCardProps) {
 
               <div
                 className={cn(
-                  'mx-auto flex items-center justify-center rounded-full',
+                  'mx-auto flex items-center justify-center overflow-hidden rounded-full',
                   isCurrent ? 'h-12 w-12' : 'h-10 w-10',
                 )}
                 style={{
                   background: achieved ? '#dcfce7' : '#f1f5f9',
                   color: achieved ? '#16a34a' : '#94a3b8',
+                  boxShadow: achieved && avatar
+                    ? `0 0 0 2px ${isCurrent ? '#f97316' : '#16a34a'}`
+                    : undefined,
                 }}
               >
-                {achieved ? <Icon className={isCurrent ? 'h-6 w-6' : 'h-5 w-5'} /> : <Lock className="h-4 w-4" />}
+                {achieved && avatar ? (
+                  <img src={avatar} alt="Foto do perfil" className="h-full w-full object-cover" />
+                ) : achieved ? (
+                  <Icon className={isCurrent ? 'h-6 w-6' : 'h-5 w-5'} />
+                ) : (
+                  <Lock className="h-4 w-4" />
+                )}
               </div>
 
               <p

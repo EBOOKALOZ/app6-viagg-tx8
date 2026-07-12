@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CloudOff } from 'lucide-react';
 import { useWeatherEvents, WeatherCategory, WeatherEvent } from '@/hooks/useWeatherEvents';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WeatherEventsCardProps {
   city?: string;
@@ -72,17 +74,62 @@ function buildSummary(events: WeatherEvent[]): string {
   return parts.join(' ');
 }
 
-export function WeatherEventsCard({ city: cityProp, state }: WeatherEventsCardProps) {
-  const city = cityProp && cityProp !== 'Cidade' ? cityProp : undefined;
+export function WeatherEventsCard({ city: cityProp, state: stateProp }: WeatherEventsCardProps) {
+  const { user, activeProfile } = useAuth();
+  const [city, setCity] = useState<string | undefined>(
+    cityProp && cityProp !== 'Cidade' ? cityProp : undefined
+  );
+  const [state, setState] = useState<string | undefined>(
+    stateProp && stateProp !== 'UF' ? stateProp : undefined
+  );
   const [coords, setCoords] = useState<{ lat: number; lng: number } | undefined>(undefined);
-  const [geoDone, setGeoDone] = useState(!city);
+  const [geoDone, setGeoDone] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [aerialFailed, setAerialFailed] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  /* Mesma estratégia do card de clima atual: geocodifica a cidade cadastrada. */
+  /* Cidade SEMPRE a do cadastro — prop do layout > RPC operacional > perfis.
+     Mesmo fallback do antigo card de clima atual. */
   useEffect(() => {
-    if (!city) { setGeoDone(true); return; }
+    if (cityProp && cityProp !== 'Cidade') {
+      setCity(cityProp);
+      setState(stateProp !== 'UF' ? stateProp : undefined);
+      return;
+    }
+    if (!user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: rpc } = await supabase.rpc('get_motoboy_operational_profile' as any);
+        const d = rpc as any;
+        if (d?.cidade) {
+          if (!cancelled) { setCity(d.cidade); setState(d.estado); }
+          return;
+        }
+        const tables = activeProfile === 'driver'
+          ? ['driver_profiles', 'motoboy_profiles']
+          : ['motoboy_profiles', 'driver_profiles'];
+        for (const table of tables) {
+          const { data } = await (supabase.from(table) as any)
+            .select('cidade, estado')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (data?.cidade) {
+            if (!cancelled) { setCity(data.cidade); setState(data.estado); }
+            return;
+          }
+        }
+        if (!cancelled) setGeoDone(true); // sem cidade cadastrada → segue fallback do hook
+      } catch {
+        if (!cancelled) setGeoDone(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [cityProp, stateProp, user?.id, activeProfile]);
+
+  /* Geocodifica a cidade cadastrada → coordenadas p/ previsão + vista aérea. */
+  useEffect(() => {
+    if (!city) return;
     let cancelled = false;
     (async () => {
       try {
