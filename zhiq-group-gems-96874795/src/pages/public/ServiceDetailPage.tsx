@@ -23,6 +23,7 @@ import { MarketServiceCard } from '@/components/services/MarketServiceCard';
 import { resolveServiceTypeLabel, resolveServiceTypeIcon } from '@/lib/services/serviceCategories';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
 export const ServiceDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -170,209 +171,71 @@ export const ServiceDetailPage = () => {
   const TypeIcon = resolveServiceTypeIcon(service.service_type);
   const serviceTitle = service.title;
 
+  const galeria: string[] = media.length
+    ? media.map((m: any) => getListingImageUrl(m.original_storage_path, 'original')!).filter(Boolean)
+    : (mainImageUrl ? [mainImageUrl] : []);
+
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="bg-[#F5E62B] min-h-screen relative" blueFooter blueFooterLabel="🔧 Serviços" myAccountPath="/minha-conta">
-        <div className="sticky top-0 z-40 bg-[#F5E62B]/90 backdrop-blur-md border-b border-zinc-900/10">
-          <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate(-1)}
-              className="rounded-full gap-2 font-bold text-zinc-900 hover:bg-zinc-900/10"
-            >
-              <ChevronLeft className="w-4 h-4" /> Voltar
-            </Button>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShare}
-                className="rounded-full h-10 w-10 p-0 border-zinc-900/20 bg-white text-zinc-900 hover:bg-zinc-50 shadow-md"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] gap-6 items-start">
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.slice(0, 2).map((s: any) => (
-                <MarketServiceCard key={s.id} service={s} />
-              ))}
-              {sideListings.length > 0 && (
-                <button onClick={() => navigate('/servicos')} className="text-xs font-bold text-violet-600 hover:underline text-center py-1">Ver mais serviços →</button>
-              )}
-            </div>
-          <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="relative aspect-[16/10] rounded-[32px] lg:rounded-[40px] overflow-hidden bg-white shadow-2xl ring-1 ring-zinc-900/10">
-                  {mainImageUrl ? (
-                    <img
-                      src={mainImageUrl}
-                      alt={serviceTitle}
-                      className="w-full h-full object-cover animate-in fade-in zoom-in duration-500"
-                      onError={(e) => {
-                        const fallback = getMediaFallbackUrl(
-                          (e.target as HTMLImageElement).src
-                        );
-                        if (fallback) (e.target as HTMLImageElement).src = fallback;
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-violet-50 to-violet-100">
-                      <span className="flex items-center justify-center w-28 h-28 rounded-full bg-white/80 text-violet-600 ring-1 ring-violet-200 shadow-md">
-                        <TypeIcon className="w-14 h-14" />
-                      </span>
-                    </div>
-                  )}
-                  <Badge className="absolute top-6 left-6 font-black uppercase text-[10px] bg-violet-600 text-white py-1.5 px-4 backdrop-blur-md shadow-lg">
-                    {typeLabel}
-                  </Badge>
-                </div>
-
-                {media.length > 1 && (
-                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide py-2">
-                    {media.map((m: any, idx: number) => {
-                      const thumbUrl = getListingImageUrl(
-                        m.original_storage_path,
-                        'original'
-                      );
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setActiveImage(thumbUrl)}
-                          className={cn(
-                            'flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all',
-                            activeImage === thumbUrl || (!activeImage && idx === 0)
-                              ? 'border-violet-500 scale-105 shadow-lg'
-                              : 'border-transparent opacity-60 grayscale hover:grayscale-0 hover:opacity-100'
-                          )}
-                        >
-                          <img
-                            src={thumbUrl!}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const fallback = getMediaFallbackUrl(
-                                (e.target as HTMLImageElement).src
-                              );
-                              if (fallback)
-                                (e.target as HTMLImageElement).src = fallback;
-                            }}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative" blueFooter blueFooterLabel="🔧 Serviços" myAccountPath="/minha-conta">
+        <DetailPageLayout
+          accent="#7c3aed"
+          moduloLabel="Serviços"
+          titulo={serviceTitle}
+          preco={service.price_label?.trim() || 'Consulte'}
+          categoria={typeLabel}
+          cidade={service.public_address_label || `${service.neighborhood ? service.neighborhood + ', ' : ''}${service.city}/${service.state}`}
+          imagens={galeria}
+          caracteristicas={[
+            { icone: <TypeIcon className="h-3.5 w-3.5" />, label: typeLabel },
+            ...(service.state ? [{ icone: <MapPin className="h-3.5 w-3.5" />, label: `${service.city}/${service.state}` }] : []),
+          ]}
+          descricao={service.description}
+          especificacoes={[
+            { label: 'Categoria', value: typeLabel },
+            { label: 'Valor', value: service.price_label?.trim() || 'Consulte' },
+            ...(service.city ? [{ label: 'Cidade', value: `${service.city}/${service.state ?? ''}` }] : []),
+          ]}
+          mapa={service.latitude && service.longitude ? (
+            <div className="p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <MapPin className="h-4 w-4" style={{ color: '#7c3aed' }} />
+                <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Localização do prestador</p>
               </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h1 className="text-4xl lg:text-6xl font-black text-zinc-900 tracking-tighter leading-[0.95]">
-                    {serviceTitle}
-                  </h1>
-                  <div className="flex items-center gap-2 text-zinc-700 font-bold text-xs uppercase tracking-widest pt-2">
-                    <MapPin className="w-4 h-4 text-violet-600" />
-                    {service.public_address_label ||
-                      `${service.neighborhood ? service.neighborhood + ', ' : ''}${service.city}/${service.state}`}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      Categoria
-                    </span>
-                    <div className="flex items-center gap-2.5 font-black text-xl text-zinc-900">
-                      <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-violet-50 to-violet-100 text-violet-700 ring-1 ring-violet-200/60 shrink-0">
-                        <TypeIcon className="h-[19px] w-[19px]" />
-                      </span>
-                      {typeLabel}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      Valor
-                    </span>
-                    <div className="flex items-center gap-2 font-black text-xl text-zinc-900">
-                      {service.price_label?.trim() || 'Consulte'}
-                    </div>
-                  </div>
-                </div>
-
-                {service.description && (
-                  <div className="space-y-4 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                    <h3 className="text-xl font-black uppercase tracking-tight text-zinc-900">
-                      Descrição do Serviço
-                    </h3>
-                    <p className="text-zinc-600 font-medium leading-relaxed whitespace-pre-line text-base lg:text-lg">
-                      {service.description}
-                    </p>
-                  </div>
-                )}
-
-                {(service.latitude && service.longitude) && (
-                  <div className="space-y-3 p-6 rounded-3xl bg-white shadow-xl ring-1 ring-zinc-900/10">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-violet-600" />
-                      <h3 className="font-black text-zinc-900 text-sm">Localização do prestador</h3>
-                    </div>
-                    {service.public_address_label && (
-                      <p className="text-xs text-zinc-500 font-medium">{service.public_address_label}</p>
-                    )}
-                    <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
-                      <StoreLocationMap
-                        initialLat={service.latitude}
-                        initialLng={service.longitude}
-                        addressLabel={service.public_address_label ?? service.city}
-                        markerLabel={service.title}
-                        readOnly
-                        hasConfirmedLocation
-                        onLocationSelect={() => {}}
-                        className="w-full h-full"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200 shadow-xl">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Valor</span>
-                    <div className="text-4xl lg:text-5xl font-black text-violet-600 tracking-tighter">
-                      {service.price_label?.trim() || 'Consulte'}
-                    </div>
-                  </div>
-                  <Button
-                    onClick={handleInterest}
-                    className="w-full h-16 rounded-2xl font-black text-lg text-white shadow-xl shadow-violet-600/30 bg-violet-600 hover:bg-violet-700 transition-all active:scale-95"
-                  >
-                    ESTOU INTERESSADO
-                  </Button>
-                  <div className="pt-4 border-t border-zinc-100 flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
-                      Contato Seguro Protegido por IA. Suas informações não são expostas
-                      sem sua autorização.
-                    </p>
-                  </div>
-                </div>
+              {service.public_address_label && <p className="mb-2 text-xs text-slate-500">{service.public_address_label}</p>}
+              <div className="h-52 overflow-hidden rounded-2xl border border-slate-200">
+                <StoreLocationMap
+                  initialLat={service.latitude}
+                  initialLng={service.longitude}
+                  addressLabel={service.public_address_label ?? service.city}
+                  markerLabel={service.title}
+                  readOnly hasConfirmedLocation onLocationSelect={() => {}}
+                  className="h-full w-full"
+                />
               </div>
-          </div>
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.slice(2, 4).map((s: any) => (
-                <MarketServiceCard key={s.id} service={s} />
-              ))}
-              {sideListings.length > 0 && (
-                <button onClick={() => navigate('/servicos')} className="text-xs font-bold text-violet-600 hover:underline text-center py-1">Ver mais serviços →</button>
-              )}
             </div>
-          </div>
-        </div>
-
-        <InstitutionalSafetyBanner />
+          ) : undefined}
+          extras={(
+            <>
+              <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>
+                  Contato Seguro Protegido por IA. Suas informações não são expostas sem sua autorização.
+                </p>
+              </div>
+              <InstitutionalSafetyBanner />
+            </>
+          )}
+          acoes={{ onInteresse: handleInterest, interesseLabel: 'Tenho Interesse' }}
+          relacionados={sideListings.map((s: any) => ({
+            id: s.id,
+            titulo: s.title || 'Serviço',
+            imagem: s.thumbnail_url,
+            preco: s.price_label?.trim() || null,
+            cidade: s.city,
+            href: `/servicos/${s.id}`,
+          }))}
+        />
       </MarketLayout>
 
       {id && service && (
