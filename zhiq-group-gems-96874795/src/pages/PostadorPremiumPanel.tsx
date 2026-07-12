@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import PostadorProofModal from "@/components/postador/PostadorProofModal";
 import { DivulgacaoFeed } from "@/components/postador/DivulgacaoFeed";
 import { PostadorAutoPilot } from "@/components/postador/PostadorAutoPilot";
+import { RIDVInteligenciaPanel } from "@/components/ridv/RIDVInteligenciaPanel";
 import PostadorLotCard from "@/components/postador/PostadorLotCard";
 import PostadorLotSkeleton from "@/components/postador/PostadorLotSkeleton";
 import PostadorLotProofModal from "@/components/postador/PostadorLotProofModal";
@@ -714,6 +715,9 @@ export default function PostadorPremiumPanel() {
         >
             <SafeErrorBoundary>
                 <div className="space-y-4 pb-16">
+
+                    {/* ── IA RIDV unificada: identidade + insights (motor invisível) ── */}
+                    <RIDVInteligenciaPanel />
 
                     {/* ── DESPACHANTE INTELIGENTE — ação única POSTAR AGORA ── */}
                     <PostadorAutoPilot

@@ -26,7 +26,8 @@ const TABS: Tab[] = [
   // { key: 'campanhas',    label: 'Campanhas',       icon: Megaphone,       segment: 'campanhas',    isRIDV: true },
   { key: 'resultados',   label: 'Resultados',      icon: BarChart3,       segment: 'resultados',   isRIDV: true },
   { key: 'impacto',      label: 'Impacto',         icon: Globe2,          segment: 'impacto',      isRIDV: true },
-  { key: 'ia-ridv',      label: 'IA RIDV',         icon: Sparkles,        segment: 'ia-ridv',      isRIDV: true },
+  // IA RIDV UNIFICADA em Divulgações (2026-07-12) — motor segue vivo, sem aba própria
+  // { key: 'ia-ridv',      label: 'IA RIDV',         icon: Sparkles,        segment: 'ia-ridv',      isRIDV: true },
   { key: 'historico',    label: 'Histórico',       icon: History,         segment: 'historico' },
   { key: 'grupos',       label: 'Grupos',          icon: Users,           segment: 'grupos' },
   { key: 'carteira',     label: 'Carteira',        icon: Wallet,          segment: 'carteira' },
