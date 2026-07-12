@@ -12,6 +12,7 @@ import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafe
 import { Button } from "@/components/ui/button";
 import { Plane, MapPin, Calendar, Users, Check, ArrowLeft, Loader2, DollarSign, Clock, ShieldCheck } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
+import { DetailPageLayout } from "@/components/detail/DetailPageLayout";
 
 export default function TravelDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -124,147 +125,89 @@ export default function TravelDetailPage() {
       hideStoreNav
       myAccountPath="/viagens/minha-conta"
     >
-      <div style={{ backgroundColor: "#F5E62B" }} className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <button onClick={() => navigate("/viagens")} className="flex items-center gap-2 text-sm font-bold text-zinc-600 hover:text-sky-600 mb-6">
-            <ArrowLeft className="w-4 h-4" /> Voltar para Viagens
-          </button>
-
-          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_260px] gap-6 items-start">
-            {/* Cards laterais esquerdos */}
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.filter((_: any, i: number) => i % 2 === 0).map((travel: any) => (
-                <MarketTravelCard key={travel.id} travel={travel} />
-              ))}
-              <button
-                onClick={() => navigate("/viagens")}
-                className="text-xs font-black text-sky-600 hover:text-sky-700 underline underline-offset-2 text-center py-1"
-              >
-                Ver mais viagens →
-              </button>
+      <DetailPageLayout
+        accent="#0284c7"
+        moduloLabel="Viagens & Turismo"
+        titulo={listing.title}
+        preco={priceDisplay}
+        categoria={`${emoji} ${listing.category}`}
+        cidade={listing.destination || `${listing.city ?? ''}${listing.state ? '/' + listing.state : ''}`}
+        badges={listing.is_featured ? [{ label: '⭐ Destaque', bg: '#fef3c7', color: '#b45309' }] : []}
+        imagens={media as string[]}
+        caracteristicas={[
+          ...(listing.departure_date ? [{ icone: <Calendar className="h-3.5 w-3.5" />, label: `Saída: ${new Date(listing.departure_date + 'T12:00:00').toLocaleDateString('pt-BR')}` }] : []),
+          ...(listing.duration_days ? [{ icone: <Plane className="h-3.5 w-3.5" />, label: `${listing.duration_days} dias` }] : []),
+          ...(listing.available_spots ? [{ icone: <Users className="h-3.5 w-3.5" />, label: `${listing.available_spots} vagas` }] : []),
+        ]}
+        descricao={listing.description}
+        especificacoes={[
+          { label: 'Categoria', value: listing.category },
+          { label: 'Valor', value: priceDisplay },
+          ...(listing.destination ? [{ label: 'Destino', value: listing.destination }] : []),
+          ...(listing.departure_date ? [{ label: 'Saída', value: new Date(listing.departure_date + 'T12:00:00').toLocaleDateString('pt-BR') }] : []),
+          ...(listing.duration_days ? [{ label: 'Duração', value: `${listing.duration_days} dias` }] : []),
+          ...(listing.available_spots ? [{ label: 'Vagas', value: String(listing.available_spots) }] : []),
+        ]}
+        mapa={listing.latitude && listing.longitude ? (
+          <div className="p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <MapPin className="h-4 w-4" style={{ color: '#0284c7' }} />
+              <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Localização da agência</p>
             </div>
-
-            {/* Conteúdo principal */}
-            <div className="space-y-6">
-          <div className="rounded-3xl overflow-hidden aspect-video">
-            {(media as string[]).length > 0 ? (
-              <img src={(media as string[])[0]} alt={listing.title} className="w-full h-full object-contain bg-zinc-900" />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3" style={{ backgroundColor: "#F5E62B" }}>
-                <span className="text-5xl">✈️</span>
-                <p className="text-zinc-800 font-black text-lg tracking-tight">Viagens &amp; Turismo</p>
-                <p className="text-zinc-600 text-sm font-medium">Sem foto cadastrada</p>
-              </div>
-            )}
+            {listing.endereco_formatado && <p className="mb-2 text-xs text-slate-500">{listing.endereco_formatado}</p>}
+            <div className="h-52 overflow-hidden rounded-2xl border border-slate-200">
+              <StoreLocationMap
+                initialLat={listing.latitude}
+                initialLng={listing.longitude}
+                addressLabel={listing.endereco_formatado ?? listing.city}
+                markerLabel={listing.title}
+                readOnly hasConfirmedLocation onLocationSelect={() => {}}
+                className="h-full w-full"
+              />
+            </div>
           </div>
-
-          <div className="bg-white rounded-3xl p-6 space-y-4 border border-zinc-200">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1 text-xs font-black text-sky-600 bg-sky-50 px-3 py-1 rounded-full">
-                  {emoji} {listing.category}
-                </span>
-                <div className="text-xl font-black text-sky-600">{priceDisplay}</div>
-              </div>
-              <h1 className="text-2xl font-black text-zinc-900 leading-tight break-words">{listing.title}</h1>
-            </div>
-
-            <div className="flex flex-wrap gap-4 text-sm text-zinc-500">
-              {listing.destination && (
-                <span className="flex items-center gap-1"><MapPin className="w-4 h-4 text-sky-500" /> {listing.destination}</span>
-              )}
-              {listing.departure_date && (
-                <span className="flex items-center gap-1"><Calendar className="w-4 h-4 text-sky-500" /> Saida: {new Date(listing.departure_date + "T12:00:00").toLocaleDateString("pt-BR")}</span>
-              )}
-              {listing.duration_days && (
-                <span className="flex items-center gap-1"><Plane className="w-4 h-4 text-sky-500" /> {listing.duration_days} dias</span>
-              )}
-              {listing.available_spots && (
-                <span className="flex items-center gap-1"><Users className="w-4 h-4 text-sky-500" /> {listing.available_spots} vagas</span>
-              )}
-            </div>
-
-            {listing.description && (
-              <p className="text-zinc-700 leading-relaxed whitespace-pre-line">{listing.description}</p>
-            )}
-
+        ) : undefined}
+        extras={(
+          <>
             {activeIncludes.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="font-black text-zinc-900">O que esta incluso:</h3>
-                <div className="grid grid-cols-2 gap-1.5">
+              <div className="rounded-[22px] bg-white/80 p-5" style={{ border: '1px solid rgba(255,255,255,.85)', boxShadow: '0 16px 40px -18px rgba(15,23,42,.14)', backdropFilter: 'blur(16px)' }}>
+                <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>O que está incluso</p>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   {activeIncludes.map(inc => (
-                    <div key={inc.key} className="flex items-center gap-2 text-sm text-zinc-700">
-                      <Check className="w-4 h-4 text-sky-600 shrink-0" /> {inc.label}
+                    <div key={inc.key} className="flex items-center gap-2 text-sm text-slate-700">
+                      <Check className="h-4 w-4 shrink-0" style={{ color: '#0284c7' }} /> {inc.label}
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {listing.not_included && (
-              <div className="space-y-1">
-                <h3 className="font-black text-zinc-900 text-sm">Nao incluso:</h3>
-                <p className="text-sm text-zinc-500">{listing.not_included}</p>
-              </div>
-            )}
-
-            {/* ── Mapa de localização da agência ── */}
-            {listing.latitude && listing.longitude && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-sky-500" />
-                  <h3 className="font-black text-zinc-900 text-sm">Localização da agência</h3>
-                </div>
-                {listing.endereco_formatado && (
-                  <p className="text-xs text-zinc-500 font-medium">{listing.endereco_formatado}</p>
+                {listing.not_included && (
+                  <p className="mt-3 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                    <strong>Não incluso:</strong> {listing.not_included}
+                  </p>
                 )}
-                <div className="rounded-2xl overflow-hidden border border-zinc-200 shadow-sm h-52">
-                  <StoreLocationMap
-                    initialLat={listing.latitude}
-                    initialLng={listing.longitude}
-                    addressLabel={listing.endereco_formatado ?? listing.city}
-                    markerLabel={listing.title}
-                    readOnly
-                    hasConfirmedLocation
-                    onLocationSelect={() => {}}
-                    className="w-full h-full"
-                  />
-                </div>
               </div>
             )}
-
-            <Button onClick={handleInterest} className="w-full bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black py-4 h-auto text-sm shadow-lg flex items-center justify-center gap-2 text-center whitespace-normal">
-              <Plane className="w-4 h-4 shrink-0" /> TENHO INTERESSE NESTA VIAGEM
-            </Button>
-
-            <div className="pt-4 border-t border-zinc-100 flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-              <p className="text-[10px] text-zinc-500 font-bold uppercase leading-relaxed tracking-tight">
-                Contato seguro protegido. Suas informações não são expostas sem sua autorização. A plataforma não é responsável por negociações ou pagamentos entre as partes.
+            <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>
+                Contato seguro protegido. Suas informações não são expostas sem sua autorização.
+                A plataforma não é responsável por negociações ou pagamentos entre as partes.
               </p>
             </div>
-          </div>
-            </div>{/* fim conteúdo principal */}
-
-            {/* Cards laterais direitos */}
-            <div className="hidden lg:flex flex-col gap-4">
-              {sideListings.filter((_: any, i: number) => i % 2 !== 0).map((travel: any) => (
-                <MarketTravelCard key={travel.id} travel={travel} />
-              ))}
-              <button
-                onClick={() => navigate("/viagens")}
-                className="text-xs font-black text-sky-600 hover:text-sky-700 underline underline-offset-2 text-center py-1"
-              >
-                Ver mais viagens →
-              </button>
-            </div>
-          </div>{/* fim grid 3 colunas */}
-        </div>
-
-        <div className="mt-8">
-          <InstitutionalSafetyBanner />
-        </div>
-      </div>
+            <InstitutionalSafetyBanner />
+          </>
+        )}
+        acoes={{ onInteresse: handleInterest, interesseLabel: 'Tenho Interesse nesta Viagem' }}
+        relacionados={sideListings.map((t: any) => ({
+          id: t.id,
+          titulo: t.title || 'Viagem',
+          imagem: t.thumbnail_url,
+          preco: t.entry_price?.trim()
+            || (t.price_per_person ? `R$ ${Number(t.price_per_person).toLocaleString('pt-BR')}/pessoa` : null)
+            || (t.total_price ? `R$ ${Number(t.total_price).toLocaleString('pt-BR')}` : null),
+          cidade: t.destination || t.city,
+          href: `/viagens/${t.id}`,
+        }))}
+      />
 
       {contactOpen && (
         <ContactIntentionModal
