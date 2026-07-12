@@ -67,11 +67,12 @@ function useCountdown(targetDate: string | null) {
 // ═══════════════════════════════════════
 
 function KpiBar({
-    kpis, operatorKpis, isLoading,
+    kpis, operatorKpis, isLoading, onSelect,
 }: {
     kpis: { pending_count: number; posted_count: number; cancelled_count: number; last_posted_at: string | null };
     operatorKpis: { my_posted_count: number; my_last_posted_at: string | null };
     isLoading: boolean;
+    onSelect?: (tab: "board" | "history") => void;
 }) {
     const fmt = (d: string | null) => {
         if (!d) return "—";
@@ -81,12 +82,12 @@ function KpiBar({
     };
 
     const items = [
-        { label: "Pendentes", value: kpis.pending_count, icon: <Clock className="h-4 w-4" />, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-        { label: "Postadas", value: kpis.posted_count, icon: <CheckCircle className="h-4 w-4" />, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-        { label: "Canceladas", value: kpis.cancelled_count, icon: <XCircle className="h-4 w-4" />, color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20" },
-        { label: "Última Post.", value: fmt(kpis.last_posted_at), icon: <CalendarDays className="h-4 w-4" />, color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20", isDate: true },
-        { label: "Meu Total", value: operatorKpis.my_posted_count, icon: <Trophy className="h-4 w-4" />, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20" },
-        { label: "Minha Última", value: fmt(operatorKpis.my_last_posted_at), icon: <User className="h-4 w-4" />, color: "text-teal-400", bg: "bg-teal-500/10", border: "border-teal-500/20", isDate: true },
+        { tab: "board" as const, hint: "Ver targets pendentes no Board", label: "Pendentes", value: kpis.pending_count, icon: <Clock className="h-4 w-4" />, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+        { tab: "history" as const, hint: "Ver postagens no histórico", label: "Postadas", value: kpis.posted_count, icon: <CheckCircle className="h-4 w-4" />, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+        { tab: "history" as const, hint: "Ver canceladas no histórico", label: "Canceladas", value: kpis.cancelled_count, icon: <XCircle className="h-4 w-4" />, color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20" },
+        { tab: "history" as const, hint: "Ver histórico", label: "Última Post.", value: fmt(kpis.last_posted_at), icon: <CalendarDays className="h-4 w-4" />, color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20", isDate: true },
+        { tab: "history" as const, hint: "Ver minhas postagens", label: "Meu Total", value: operatorKpis.my_posted_count, icon: <Trophy className="h-4 w-4" />, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20" },
+        { tab: "history" as const, hint: "Ver minhas postagens", label: "Minha Última", value: fmt(operatorKpis.my_last_posted_at), icon: <User className="h-4 w-4" />, color: "text-teal-400", bg: "bg-teal-500/10", border: "border-teal-500/20", isDate: true },
     ];
 
     return (
@@ -94,7 +95,16 @@ function KpiBar({
             {items.map((item) => (
                 <Card
                     key={item.label}
-                    className={cn("border shadow-lg overflow-hidden relative", item.border)}
+                    role="button"
+                    tabIndex={0}
+                    title={item.hint}
+                    onClick={() => onSelect?.(item.tab)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect?.(item.tab); }}
+                    className={cn(
+                        "border shadow-lg overflow-hidden relative cursor-pointer select-none",
+                        "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.97]",
+                        item.border,
+                    )}
                     style={{
                         background: "linear-gradient(135deg, #1A1F2B 0%, #1E2233 50%, rgba(255,228,225,0.06) 100%)",
                         borderColor: "rgba(255,228,225,0.12)",
@@ -583,9 +593,10 @@ function HistorySection({ title, icon, data, isLoading, showOperator }: {
 // BARRA DE KPIs DE LOTES — POSTADOR 3
 // ═══════════════════════════════════════
 
-function LotKpiBar({ kpis, isLoading }: {
+function LotKpiBar({ kpis, isLoading, onSelect }: {
     kpis: { posted_count: number; claimed_count: number; cooldown_count: number; last_posted_at: string | null; next_available_at: string | null };
     isLoading: boolean;
+    onSelect?: (key: "postados" | "reservados" | "espera" | "ultima") => void;
 }) {
     const fmt = (d: string | null) => {
         if (!d) return "—";
@@ -595,10 +606,10 @@ function LotKpiBar({ kpis, isLoading }: {
     };
 
     const items = [
-        { label: "Postados", value: kpis.posted_count, icon: <CheckCircle className="h-4 w-4" />, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-        { label: "Reservados", value: kpis.claimed_count, icon: <Shield className="h-4 w-4" />, color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20" },
-        { label: "Em Espera", value: kpis.cooldown_count, icon: <Timer className="h-4 w-4" />, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-        { label: "Última Post.", value: fmt(kpis.last_posted_at), icon: <CalendarDays className="h-4 w-4" />, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", isDate: true },
+        { key: "postados" as const, hint: "Ver meus lotes postados", label: "Postados", value: kpis.posted_count, icon: <CheckCircle className="h-4 w-4" />, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+        { key: "reservados" as const, hint: "Ver lotes reservados por mim", label: "Reservados", value: kpis.claimed_count, icon: <Shield className="h-4 w-4" />, color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20" },
+        { key: "espera" as const, hint: "Ver lotes em espera (cooldown)", label: "Em Espera", value: kpis.cooldown_count, icon: <Timer className="h-4 w-4" />, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+        { key: "ultima" as const, hint: "Ver histórico de postagens", label: "Última Post.", value: fmt(kpis.last_posted_at), icon: <CalendarDays className="h-4 w-4" />, color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20", isDate: true },
     ];
 
     return (
@@ -606,7 +617,16 @@ function LotKpiBar({ kpis, isLoading }: {
             {items.map((item) => (
                 <Card
                     key={item.label}
-                    className={cn("border shadow-lg overflow-hidden relative", item.border)}
+                    role="button"
+                    tabIndex={0}
+                    title={item.hint}
+                    onClick={() => onSelect?.(item.key)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect?.(item.key); }}
+                    className={cn(
+                        "border shadow-lg overflow-hidden relative cursor-pointer select-none",
+                        "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.97]",
+                        item.border,
+                    )}
                     style={{
                         background: "linear-gradient(135deg, #1A1F2B 0%, #1E2233 50%, rgba(255,228,225,0.06) 100%)",
                         borderColor: "rgba(255,228,225,0.12)",
@@ -622,6 +642,7 @@ function LotKpiBar({ kpis, isLoading }: {
                                 <span className={cn("mb-1", item.color)}>{item.icon}</span>
                                 <p className={cn("font-black", item.isDate ? "text-[10px]" : "text-xl", "text-white/90")}>{item.value}</p>
                                 <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider mt-0.5">{item.label}</p>
+                                <p className="text-[8px] text-white/25 mt-0.5 hidden sm:block">toque para abrir</p>
                             </>
                         )}
                     </CardContent>
@@ -719,11 +740,27 @@ export default function PostadorPremiumPanel() {
                         </div>
                     </details>
 
-                    {/* ── KPI BAR (POSTADOR 3) ── */}
+                    {/* ── KPI BAR (POSTADOR 3) — cards clicáveis ── */}
                     {activeTab === "lotes" ? (
-                        <LotKpiBar kpis={lots.kpis} isLoading={lots.loadingKpis} />
+                        <LotKpiBar
+                            kpis={lots.kpis}
+                            isLoading={lots.loadingKpis}
+                            onSelect={(key) => {
+                                if (key === "ultima") { setActiveTab("history"); return; }
+                                setActiveTab("lotes");
+                                const id = key === "espera" ? "espera-section"
+                                    : key === "postados" ? "postados-section"
+                                    : "lotes-section";
+                                setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+                            }}
+                        />
                     ) : (
-                        <KpiBar kpis={legacy.kpis} operatorKpis={legacy.operatorKpis} isLoading={legacy.loadingKpis || legacy.loadingOperatorKpis} />
+                        <KpiBar
+                            kpis={legacy.kpis}
+                            operatorKpis={legacy.operatorKpis}
+                            isLoading={legacy.loadingKpis || legacy.loadingOperatorKpis}
+                            onSelect={(tab) => setActiveTab(tab)}
+                        />
                     )}
 
                     {/* ── COMMISSION ELIGIBILITY BANNER ── */}
@@ -821,7 +858,7 @@ export default function PostadorPremiumPanel() {
 
                             {/* Lotes em Espera (Cooldown) */}
                             {lots.cooldownLots.length > 0 && (
-                                <div className="space-y-3">
+                                <div className="space-y-3" id="espera-section">
                                     <div className="flex items-center gap-2 px-1">
                                         <Timer className="h-5 w-5 text-amber-500" />
                                         <h3 className="text-sm font-bold text-foreground tracking-wide">Em Espera</h3>
@@ -846,7 +883,7 @@ export default function PostadorPremiumPanel() {
 
                             {/* Histórico de Lotes Postados */}
                             {lots.historyLots.length > 0 && (
-                                <div className="space-y-3">
+                                <div className="space-y-3" id="postados-section">
                                     <div className="flex items-center gap-2 px-1">
                                         <Trophy className="h-5 w-5 text-violet-500" />
                                         <h3 className="text-sm font-bold text-foreground tracking-wide">Meus Lotes Postados</h3>
