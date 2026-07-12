@@ -93,7 +93,7 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
 
   return (
     <div
-      className="dpl-enter min-h-screen pb-32"
+      className="dpl-enter min-h-screen pb-10"
       style={{
         background: `radial-gradient(900px 300px at 15% -5%, ${p.accent}14, transparent), #F4F7FB`,
         fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
@@ -255,14 +255,38 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
             <p className="mt-0.5 text-xs" style={{ color: '#64748b' }}>
               Demonstre interesse e o anunciante recebe seu contato com segurança.
             </p>
-            <button
-              type="button"
-              onClick={p.acoes?.onInteresse ?? p.acoes?.onContatar}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-sm text-white transition-transform active:scale-[0.98]"
-              style={{ background: `linear-gradient(135deg, ${p.accent}, ${p.accent}dd)`, fontWeight: 800, boxShadow: `0 12px 26px -10px ${p.accent}88` }}
-            >
-              <Star className="h-4 w-4" /> {p.acoes?.interesseLabel ?? 'Tenho Interesse'}
-            </button>
+            <div className="mt-3 flex items-center gap-2">
+              {p.acoes?.onFavoritar && (
+                <button type="button" onClick={p.acoes.onFavoritar} title="Favoritar"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-rose-500">
+                  <Heart className="h-5 w-5" />
+                </button>
+              )}
+              <button type="button" onClick={compartilhar} title="Compartilhar"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900">
+                <Share2 className="h-5 w-5" />
+              </button>
+              {p.acoes?.onConversar && (
+                <button type="button" onClick={p.acoes.onConversar} title="Conversar"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-emerald-600">
+                  <MessageCircle className="h-5 w-5" />
+                </button>
+              )}
+              {p.acoes?.onContatar && (
+                <button type="button" onClick={p.acoes.onContatar} title="Contatar"
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-sky-600">
+                  <Phone className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={p.acoes?.onInteresse ?? p.acoes?.onContatar}
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm text-white transition-transform active:scale-[0.98]"
+                style={{ background: `linear-gradient(135deg, ${p.accent}, ${p.accent}dd)`, fontWeight: 800, boxShadow: `0 12px 26px -10px ${p.accent}88` }}
+              >
+                <Star className="h-4 w-4" /> {p.acoes?.interesseLabel ?? 'Tenho Interesse'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -292,42 +316,6 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
 
         {/* Avaliações */}
         {p.avaliacoes}
-      </div>
-
-      {/* ── Painel FIXO de ações (idêntico em todos os módulos) ── */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/92 px-3 py-2.5 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center gap-2">
-          {p.acoes?.onFavoritar && (
-            <button type="button" onClick={p.acoes.onFavoritar} title="Favoritar"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-rose-500">
-              <Heart className="h-5 w-5" />
-            </button>
-          )}
-          <button type="button" onClick={compartilhar} title="Compartilhar"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-slate-900">
-            <Share2 className="h-5 w-5" />
-          </button>
-          {p.acoes?.onConversar && (
-            <button type="button" onClick={p.acoes.onConversar} title="Conversar"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-emerald-600">
-              <MessageCircle className="h-5 w-5" />
-            </button>
-          )}
-          {p.acoes?.onContatar && (
-            <button type="button" onClick={p.acoes.onContatar} title="Contatar"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:text-sky-600">
-              <Phone className="h-5 w-5" />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={p.acoes?.onInteresse ?? p.acoes?.onContatar ?? compartilhar}
-            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm text-white transition-transform active:scale-[0.98]"
-            style={{ background: `linear-gradient(135deg, ${p.accent}, ${p.accent}dd)`, fontWeight: 800, boxShadow: `0 10px 22px -10px ${p.accent}88` }}
-          >
-            <Star className="h-4 w-4" /> {p.acoes?.interesseLabel ?? 'Tenho Interesse'}
-          </button>
-        </div>
       </div>
 
       {/* Zoom */}
