@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Wallet as WalletIcon,
@@ -11,19 +11,23 @@ import {
   Car,
   Truck,
   Users,
-  Calendar,
-  Clock,
   CheckCircle2,
   XCircle,
-  Hourglass
+  Hourglass,
+  ShieldCheck,
+  Landmark,
+  Zap,
+  ArrowDownToLine,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMotoboyCommission } from "@/hooks/useMotoboyCommission";
 import { useUnifiedWalletViews, WalletStatement } from "@/hooks/useUnifiedWalletViews";
+import { cn } from "@/lib/utils";
 
 const PROFILE_ICONS: Record<string, React.ElementType> = {
   motoboy: Bike,
@@ -41,8 +45,41 @@ const PROFILE_LABELS: Record<string, string> = {
   passenger: "Passageiro",
 };
 
+const PROFILE_COLORS: Record<string, string> = {
+  motoboy: "#16a34a",
+  merchant: "#2563eb",
+  driver: "#f97316",
+  freight: "#8b5cf6",
+  passenger: "#0ea5e9",
+};
+
+const FILTER_CHIPS = ["Todos", "Motoboy", "Lojista", "Motorista", "Frete", "Passageiro"];
+
+/** Contador animado em centavos (sobe suave até o valor em ~800ms). */
+function useCountUp(target: number, durationMs = 800) {
+  const [value, setValue] = useState(target);
+  const fromRef = useRef(target);
+  useEffect(() => {
+    const from = fromRef.current;
+    if (from === target) return;
+    const start = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+  return value;
+}
+
 export default function Wallet() {
   const navigate = useNavigate();
+  const { user, activeProfile } = useAuth();
   const {
     overview,
     statement,
@@ -52,10 +89,14 @@ export default function Wallet() {
     filterProfile,
     setFilterProfile,
     fetchWalletData,
-    metrics
+    metrics,
   } = useUnifiedWalletViews();
 
   const [activeTab, setActiveTab] = useState<'statement' | 'payouts'>('statement');
+
+  // Comissão (só faz sentido para perfis de entregador)
+  const isRiderProfile = activeProfile === 'motoboy' || activeProfile === 'mototaxi';
+  const { commissionRate, validForCommission } = useMotoboyCommission(isRiderProfile ? user?.id : undefined);
 
   useEffect(() => {
     fetchWalletData();
@@ -77,7 +118,67 @@ export default function Wallet() {
 
   const isCurrentlyLoading = isLoading && !overview;
 
-  const renderStatementItem = (item: WalletStatement) => {
+  const available = overview?.available_balance || 0;
+  const processing = overview?.processing_balance || 0;
+  const total = overview?.total_balance || 0;
+  const animatedTotal = useCountUp(total);
+  const animatedAvailable = useCountUp(available);
+
+  // Contagem de transações (derivado local, só exibição)
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dow = (now.getDay() + 6) % 7; // segunda = 0
+  const startWeek = new Date(startToday); startWeek.setDate(startWeek.getDate() - dow);
+  const txToday = statement.filter(s => s.direction === 'credit' && new Date(s.created_at) >= startToday).length;
+  const txWeek = statement.filter(s => s.direction === 'credit' && new Date(s.created_at) >= startWeek).length;
+
+  // Origem dos ganhos (créditos por perfil) — derivado local, só exibição
+  const originTotals = statement
+    .filter(s => s.direction === 'credit')
+    .reduce<Record<string, number>>((acc, s) => {
+      acc[s.profile_type] = (acc[s.profile_type] || 0) + s.amount_cents;
+      return acc;
+    }, {});
+  const originSum = Object.values(originTotals).reduce((a, b) => a + b, 0);
+  const originEntries = Object.entries(originTotals).sort((a, b) => b[1] - a[1]);
+
+  // Progresso da comissão (5 grupos = 6%)
+  const groupsProgress = Math.min(100, Math.round(((validForCommission ?? 0) / 5) * 100));
+  const groupsToMin = Math.max(0, 5 - (validForCommission ?? 0));
+
+  const scrollToWithdraw = () => {
+    document.getElementById('metodos-saque')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  // Donut SVG (sem libs): um arco por perfil
+  const renderDonut = () => {
+    const R = 54, C = 2 * Math.PI * R;
+    let offset = 0;
+    return (
+      <svg viewBox="0 0 140 140" className="h-40 w-40 shrink-0 -rotate-90">
+        <circle cx="70" cy="70" r={R} fill="none" stroke="#f1f5f9" strokeWidth="16" />
+        {originEntries.map(([profile, cents]) => {
+          const frac = originSum > 0 ? cents / originSum : 0;
+          const seg = (
+            <circle
+              key={profile}
+              cx="70" cy="70" r={R} fill="none"
+              stroke={PROFILE_COLORS[profile] || '#16a34a'}
+              strokeWidth="16"
+              strokeLinecap={originEntries.length > 1 ? 'butt' : 'round'}
+              strokeDasharray={`${Math.max(0.0001, frac * C)} ${C}`}
+              strokeDashoffset={-offset}
+              style={{ transition: 'stroke-dasharray .6s ease' }}
+            />
+          );
+          offset += frac * C;
+          return seg;
+        })}
+      </svg>
+    );
+  };
+
+  const renderStatementItem = (item: WalletStatement, idx: number) => {
     const isCredit = item.direction === 'credit';
     const Icon = PROFILE_ICONS[item.profile_type] || WalletIcon;
     const profileName = PROFILE_LABELS[item.profile_type] || item.profile_type;
@@ -90,188 +191,436 @@ export default function Wallet() {
     else title = "Movimentação";
 
     return (
-      <div key={item.id} className="flex items-center justify-between p-4 border-b border-border hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isCredit ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+      <div
+        key={item.id}
+        className="wlt-rise flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-[250ms] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
+        style={{ animationDelay: `${Math.min(idx, 12) * 40}ms` }}
+      >
+        <div className="flex min-w-0 items-center gap-3.5">
+          <div
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+            style={{
+              background: isCredit ? '#dcfce7' : '#fee2e2',
+              color: isCredit ? '#16a34a' : '#dc2626',
+            }}
+          >
             {isCredit ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
           </div>
-          <div>
-            <p className="font-semibold text-sm text-foreground">{title}</p>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-slate-900" style={{ fontWeight: 600 }}>{title}</p>
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px]"
+                style={{
+                  background: isCredit ? '#dcfce7' : '#fee2e2',
+                  color: isCredit ? '#16a34a' : '#dc2626',
+                  fontWeight: 600,
+                }}
+              >
+                {isCredit ? 'Recebimento' : 'Pagamento'}
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs" style={{ color: '#64748b' }}>
               <Icon className="h-3 w-3" />
               <span>{profileName}</span>
-              <span className="mx-1">•</span>
+              <span>•</span>
               <span>{formatDate(item.created_at)}</span>
             </div>
           </div>
         </div>
-        <div className={`font-bold tabular-nums ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
-          {isCredit ? '+' : '-'}{formatCurrency(item.amount_cents)}
+        <div className="text-right">
+          <p className={cn('tabular-nums text-sm sm:text-base', isCredit ? 'text-[#16a34a]' : 'text-red-600')} style={{ fontWeight: 700 }}>
+            {isCredit ? '+' : '-'}{formatCurrency(item.amount_cents)}
+          </p>
+          {isCredit && (
+            <p className="text-[10px]" style={{ color: '#64748b' }}>Para saque</p>
+          )}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col flex-1 h-screen bg-background">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center justify-between w-full px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+    <div
+      className="flex min-h-screen flex-1 flex-col"
+      style={{ background: '#f8fafc', fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif" }}
+    >
+      <style>{`
+        @keyframes wltRise { from { opacity: 0; transform: translateY(10px);} to { opacity: 1; transform: none;} }
+        .wlt-rise { animation: wltRise .45s ease-out both; }
+        @keyframes wltShine { 0% { transform: translateX(-150%);} 100% { transform: translateX(400%);} }
+        @keyframes wltGlow { 0%,100% { opacity: .5;} 50% { opacity: 1;} }
+        .wlt-card { transition: transform .25s ease, box-shadow .25s ease; }
+        .wlt-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px -14px rgba(15,23,42,.16); }
+        .wlt-btn { transition: transform .25s ease, box-shadow .25s ease, filter .25s ease; }
+        .wlt-btn:hover { filter: brightness(1.06); box-shadow: 0 12px 26px -10px rgba(22,163,74,.55); }
+        .wlt-btn:active { transform: scale(.97); }
+      `}</style>
+
+      {/* Header fixo */}
+      <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-slate-700 hover:bg-slate-100">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold">Carteira Unificada</h1>
+            <h1 className="text-base text-slate-900 sm:text-lg" style={{ fontWeight: 700 }}>Carteira Unificada</h1>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => fetchWalletData()}
             disabled={isLoading}
-            className="flex gap-2"
+            className="flex gap-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar carteira
+            <span className="hidden sm:inline">Atualizar carteira</span>
           </Button>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="pt-20 pb-20 px-4 space-y-6 max-w-3xl mx-auto w-full">
+      <main className="mx-auto w-full max-w-5xl space-y-6 px-4 pb-24 pt-24">
 
         {error && (
-          <Alert className="border-red-500/50 bg-red-950/30 text-red-400">
-            <AlertCircle className="h-5 w-5 mb-1" />
+          <Alert className="border-red-300 bg-red-50 text-red-700">
+            <AlertCircle className="mb-1 h-5 w-5" />
             <AlertDescription className="font-mono text-xs">{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* 1. Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Available Balance */}
-          <Card className="bg-primary text-primary-foreground border-0 shadow-md relative overflow-hidden">
-            <div className="absolute -right-4 -top-4 opacity-10"><WalletIcon className="h-24 w-24" /></div>
-            <CardContent className="p-5 relative z-10">
-              <p className="text-xs font-medium uppercase tracking-wide opacity-80 mb-1">Saldo Disponível</p>
-              {isCurrentlyLoading ? (
-                <Skeleton className="h-8 w-32 bg-white/20" />
-              ) : (
-                <p className="text-3xl font-black tabular-nums">
-                  {formatCurrency(overview?.available_balance || 0)}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Processing Balance */}
-          <Card className="bg-emerald-50 text-emerald-900 border-emerald-100 shadow-sm relative overflow-hidden dark:bg-emerald-950 dark:text-emerald-100 dark:border-emerald-900">
-            <div className="absolute -right-4 -top-4 opacity-[0.05]"><Clock className="h-24 w-24" /></div>
-            <CardContent className="p-5 relative z-10">
-              <p className="text-xs font-medium uppercase tracking-wide opacity-80 mb-1">Em Processamento</p>
-              {isCurrentlyLoading ? (
-                <Skeleton className="h-8 w-32 bg-emerald-900/20 dark:bg-emerald-100/20" />
-              ) : (
-                <p className="text-2xl font-bold tabular-nums">
-                  {formatCurrency(overview?.processing_balance || 0)}
-                </p>
-              )}
-              <p className="text-[10px] opacity-70 mt-1">Entregas em andamento</p>
-            </CardContent>
-          </Card>
-
-          {/* Total Balance */}
-          <Card className="bg-slate-50 text-slate-900 border-slate-200 shadow-sm relative overflow-hidden dark:bg-slate-900 dark:text-slate-100 dark:border-slate-800">
-            <CardContent className="p-5 relative z-10">
-              <p className="text-xs font-medium uppercase tracking-wide opacity-80 mb-1">Saldo Total</p>
-              {isCurrentlyLoading ? (
-                <Skeleton className="h-8 w-32 bg-slate-200 dark:bg-slate-800" />
-              ) : (
-                <p className="text-2xl font-bold tabular-nums">
-                  {formatCurrency(overview?.total_balance || 0)}
-                </p>
-              )}
-              <p className="text-[10px] opacity-70 mt-1">Soma geral da carteira</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 2. Top Indicators (Earnings) */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-background border border-border rounded-xl p-3 text-center shadow-sm">
-            <p className="text-[10px] text-muted-foreground uppercase font-medium mb-1 flex items-center justify-center gap-1">
-              Hoje
-            </p>
-            {isCurrentlyLoading ? <Skeleton className="h-5 w-16 mx-auto" /> : (
-              <p className="text-sm font-bold text-green-600 dark:text-green-500">{formatCurrency(metrics.earningsToday)}</p>
-            )}
-          </div>
-          <div className="bg-background border border-border rounded-xl p-3 text-center shadow-sm">
-            <p className="text-[10px] text-muted-foreground uppercase font-medium mb-1 flex items-center justify-center gap-1">
-              Semana
-            </p>
-            {isCurrentlyLoading ? <Skeleton className="h-5 w-16 mx-auto" /> : (
-              <p className="text-sm font-bold text-green-600 dark:text-green-500">{formatCurrency(metrics.earningsWeek)}</p>
-            )}
-          </div>
-          <div className="bg-background border border-border rounded-xl p-3 text-center shadow-sm">
-            <p className="text-[10px] text-muted-foreground uppercase font-medium mb-1 flex items-center justify-center gap-1">
-              Mês
-            </p>
-            {isCurrentlyLoading ? <Skeleton className="h-5 w-16 mx-auto" /> : (
-              <p className="text-sm font-bold text-green-600 dark:text-green-500">{formatCurrency(metrics.earningsMonth)}</p>
-            )}
-          </div>
-        </div>
-
-        {/* 3. List Toggle & Filters */}
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <Button
-                variant={activeTab === 'statement' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('statement')}
-                className="rounded-full"
+        {/* ── Cabeçalho premium ─────────────────────────────────── */}
+        <section
+          className="wlt-rise rounded-[24px] bg-white p-6 sm:p-8"
+          style={{ boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 14px 44px -14px rgba(15,23,42,.10)' }}
+        >
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-2xl"
+                style={{ background: 'linear-gradient(135deg,#22c55e 0%,#16a34a 100%)', boxShadow: '0 8px 20px -8px rgba(22,163,74,.5)' }}
               >
-                Extrato
-              </Button>
-              <Button
-                variant={activeTab === 'payouts' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setActiveTab('payouts')}
-                className="rounded-full"
-              >
-                Saques
-              </Button>
+                💳
+              </div>
+              <div>
+                <h2 className="text-2xl tracking-tight text-slate-900" style={{ fontWeight: 800 }}>
+                  Carteira Unificada
+                </h2>
+                <p className="mt-1 max-w-md text-sm" style={{ color: '#64748b' }}>
+                  Sua carteira inteligente reúne automaticamente todos os ganhos da plataforma em um único saldo.
+                </p>
+              </div>
             </div>
 
-            {activeTab === 'statement' && (
-              <Select value={filterProfile} onValueChange={setFilterProfile}>
-                <SelectTrigger className="w-[140px] h-8 text-xs rounded-full">
-                  <SelectValue placeholder="Filtrar perfil" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todos">Todos</SelectItem>
-                  <SelectItem value="Motoboy">Motoboy</SelectItem>
-                  <SelectItem value="Lojista">Lojista</SelectItem>
-                  <SelectItem value="Motorista">Motorista</SelectItem>
-                  <SelectItem value="Frete">Frete</SelectItem>
-                  <SelectItem value="Passageiro">Passageiro</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+            <div
+              className="flex items-center gap-4 rounded-2xl px-6 py-5"
+              style={{
+                background: 'linear-gradient(135deg,rgba(220,252,231,.9) 0%,rgba(240,253,244,.75) 100%)',
+                border: '1px solid rgba(22,163,74,.22)',
+                boxShadow: '0 8px 24px -12px rgba(22,163,74,.35)',
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <span className="text-3xl">💰</span>
+              <div>
+                <p className="text-xs" style={{ color: '#64748b', fontWeight: 600 }}>Saldo disponível</p>
+                {isCurrentlyLoading ? <Skeleton className="mt-1 h-7 w-28" /> : (
+                  <p className="tabular-nums text-2xl leading-tight" style={{ color: '#16a34a', fontWeight: 800 }}>
+                    {formatCurrency(animatedAvailable)}
+                  </p>
+                )}
+                <p className="text-[11px]" style={{ color: '#64748b' }}>Pronto para saque imediato.</p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+          {/* Saldo total gigante */}
+          <div className="mt-8 text-center">
+            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: '#64748b', fontWeight: 600 }}>Saldo Total</p>
+            {isCurrentlyLoading ? <Skeleton className="mx-auto mt-2 h-14 w-56" /> : (
+              <p
+                className="relative mx-auto mt-1 inline-block tabular-nums text-5xl sm:text-6xl"
+                style={{ color: '#0f172a', fontWeight: 800, textShadow: '0 0 24px rgba(22,163,74,.18)' }}
+              >
+                {formatCurrency(animatedTotal)}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -right-3 -top-1 text-lg"
+                  style={{ animation: 'wltGlow 2.4s ease-in-out infinite' }}
+                >✨</span>
+              </p>
+            )}
+            <p className="mt-2 text-sm" style={{ color: '#64748b' }}>Saldo disponível para saque.</p>
+
+            <button
+              type="button"
+              onClick={scrollToWithdraw}
+              className="wlt-btn mx-auto mt-5 flex items-center gap-2 rounded-full px-8 py-3.5 text-sm text-white"
+              style={{
+                background: 'linear-gradient(135deg,#22c55e 0%,#16a34a 100%)',
+                fontWeight: 700,
+                boxShadow: '0 10px 24px -10px rgba(22,163,74,.55)',
+              }}
+            >
+              <ArrowDownToLine className="h-4 w-4" />
+              Sacar Agora
+            </button>
+          </div>
+        </section>
+
+        {/* ── Cards financeiros ─────────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { emoji: '💵', label: 'Disponível', value: formatCurrency(available), color: '#16a34a', bg: '#dcfce7', sub: 'Livre para saque' },
+            { emoji: '🔒', label: 'Reservado', value: formatCurrency(0), color: '#f97316', bg: '#ffedd5', sub: 'Valores em garantia' },
+            { emoji: '⏳', label: 'Pendente', value: formatCurrency(processing), color: '#2563eb', bg: '#dbeafe', sub: 'Entregas em andamento' },
+          ].map((c, i) => (
+            <div
+              key={c.label}
+              className="wlt-card wlt-rise rounded-[20px] border border-slate-200 bg-white/80 p-5"
+              style={{ animationDelay: `${i * 60}ms`, backdropFilter: 'blur(4px)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full text-xl" style={{ background: c.bg }}>
+                  {c.emoji}
+                </div>
+                <p className="text-sm" style={{ color: '#64748b', fontWeight: 600 }}>{c.label}</p>
+              </div>
+              {isCurrentlyLoading ? <Skeleton className="mt-3 h-8 w-24" /> : (
+                <p className="mt-3 tabular-nums text-2xl" style={{ color: c.color, fontWeight: 700 }}>{c.value}</p>
+              )}
+              <p className="mt-1 text-xs" style={{ color: '#64748b' }}>{c.sub}</p>
+            </div>
+          ))}
+
+          <div
+            className="wlt-card wlt-rise rounded-[20px] border border-slate-200 bg-white/80 p-5"
+            style={{ animationDelay: '180ms', backdropFilter: 'blur(4px)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full text-xl" style={{ background: '#f1f5f9' }}>📊</div>
+              <p className="text-sm" style={{ color: '#64748b', fontWeight: 600 }}>Saldo Contábil</p>
+            </div>
+            {isCurrentlyLoading ? <Skeleton className="mt-3 h-8 w-24" /> : (
+              <p className="mt-3 tabular-nums text-2xl text-slate-900" style={{ fontWeight: 700 }}>{formatCurrency(total)}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => { setActiveTab('statement'); document.getElementById('extrato-unificado')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className="mt-1 text-xs underline-offset-2 hover:underline"
+              style={{ color: '#2563eb', fontWeight: 600 }}
+            >
+              Visualizar extrato →
+            </button>
+          </div>
+        </section>
+
+        {/* ── Estatísticas ──────────────────────────────────────── */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-5 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dcfce7' }}>📈</div>
+            <p className="mt-3 text-xs" style={{ color: '#64748b', fontWeight: 600 }}>Ganhos Hoje</p>
+            {isCurrentlyLoading ? <Skeleton className="mx-auto mt-1 h-7 w-20" /> : (
+              <p className="tabular-nums text-2xl" style={{ color: '#16a34a', fontWeight: 700 }}>{formatCurrency(metrics.earningsToday)}</p>
+            )}
+            <p className="text-xs" style={{ color: '#64748b' }}>{txToday} transaç{txToday === 1 ? 'ão' : 'ões'}</p>
+          </div>
+
+          <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-5 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dbeafe' }}>📅</div>
+            <p className="mt-3 text-xs" style={{ color: '#64748b', fontWeight: 600 }}>Ganhos Semana</p>
+            {isCurrentlyLoading ? <Skeleton className="mx-auto mt-1 h-7 w-20" /> : (
+              <p className="tabular-nums text-2xl" style={{ color: '#16a34a', fontWeight: 700 }}>{formatCurrency(metrics.earningsWeek)}</p>
+            )}
+            <p className="text-xs" style={{ color: '#64748b' }}>{txWeek} transaç{txWeek === 1 ? 'ão' : 'ões'}</p>
+          </div>
+
+          {isRiderProfile ? (
+            <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-5 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#ffedd5' }}>🎯</div>
+              <p className="mt-3 text-xs" style={{ color: '#64748b', fontWeight: 600 }}>Comissão Atual</p>
+              <p className="tabular-nums text-2xl" style={{ color: '#f97316', fontWeight: 700 }}>{commissionRate ?? 25}%</p>
+              <p className="text-xs" style={{ color: '#64748b' }}>{validForCommission ?? 0} grupo{(validForCommission ?? 0) === 1 ? '' : 's'} ativo{(validForCommission ?? 0) === 1 ? '' : 's'}</p>
+              <div className="mx-auto mt-2 h-2 w-4/5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${groupsProgress}%`, background: 'linear-gradient(90deg,#22c55e,#16a34a)', transition: 'width .6s ease' }}
+                />
+              </div>
+              {groupsToMin > 0 ? (
+                <p className="mt-1.5 text-[11px]" style={{ color: '#16a34a', fontWeight: 600 }}>
+                  Falta{groupsToMin > 1 ? 'm' : ''} apenas {groupsToMin} grupo{groupsToMin > 1 ? 's' : ''} para atingir 6%.
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[11px]" style={{ color: '#16a34a', fontWeight: 600 }}>Comissão mínima de 6% garantida!</p>
+              )}
+            </div>
+          ) : (
+            <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-5 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dcfce7' }}>🗓️</div>
+              <p className="mt-3 text-xs" style={{ color: '#64748b', fontWeight: 600 }}>Ganhos Mês</p>
+              {isCurrentlyLoading ? <Skeleton className="mx-auto mt-1 h-7 w-20" /> : (
+                <p className="tabular-nums text-2xl" style={{ color: '#16a34a', fontWeight: 700 }}>{formatCurrency(metrics.earningsMonth)}</p>
+              )}
+              <p className="text-xs" style={{ color: '#64748b' }}>Acumulado do mês</p>
+            </div>
+          )}
+        </section>
+
+        {/* ── Origem dos ganhos ─────────────────────────────────── */}
+        <section
+          className="wlt-rise rounded-[24px] bg-white p-6 sm:p-8"
+          style={{ boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 14px 44px -14px rgba(15,23,42,.10)' }}
+        >
+          <h3 className="text-lg text-slate-900" style={{ fontWeight: 700 }}>Origem dos Ganhos</h3>
+          <div className="mt-5 flex flex-col items-center gap-8 sm:flex-row">
+            <div className="relative">
+              {renderDonut()}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="tabular-nums text-lg text-slate-900" style={{ fontWeight: 800 }}>
+                  {originSum > 0 ? formatCurrency(originSum) : 'R$ 0,00'}
+                </p>
+                <p className="text-[10px]" style={{ color: '#64748b' }}>ganhos totais</p>
+              </div>
+            </div>
+            <div className="w-full flex-1 space-y-3">
+              {originEntries.length === 0 ? (
+                <p className="text-sm" style={{ color: '#64748b' }}>Nenhum ganho registrado ainda — assim que você começar a receber, a distribuição por perfil aparece aqui.</p>
+              ) : (
+                originEntries.map(([profile, cents]) => {
+                  const pct = originSum > 0 ? Math.round((cents / originSum) * 100) : 0;
+                  const Icon = PROFILE_ICONS[profile] || WalletIcon;
+                  return (
+                    <div key={profile} className="flex items-center gap-3">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: PROFILE_COLORS[profile] || '#16a34a' }} />
+                      <Icon className="h-4 w-4 shrink-0" style={{ color: '#64748b' }} />
+                      <span className="min-w-0 flex-1 text-sm text-slate-900" style={{ fontWeight: 600 }}>
+                        {PROFILE_LABELS[profile] || profile}
+                      </span>
+                      <span className="tabular-nums text-sm" style={{ color: '#64748b' }}>{pct}%</span>
+                      <span className="tabular-nums text-sm text-slate-900" style={{ fontWeight: 700 }}>{formatCurrency(cents)}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Carteira inteligente (explicação) ─────────────────── */}
+        <section
+          className="wlt-rise flex items-start gap-4 rounded-[20px] p-6"
+          style={{ background: '#f0fdf4', border: '1px solid rgba(22,163,74,.18)' }}
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl" style={{ background: '#dcfce7' }}>🛡️</div>
+          <div>
+            <p className="text-sm text-slate-900" style={{ fontWeight: 700 }}>Carteira Inteligente</p>
+            <p className="mt-1 text-sm" style={{ color: '#64748b' }}>
+              Sua carteira é única. Todos os valores ganhos em qualquer perfil são automaticamente
+              consolidados em um único saldo. Você pode sacar independentemente do perfil utilizado.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Métodos de saque ──────────────────────────────────── */}
+        <section id="metodos-saque" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dcfce7' }}>⚡</div>
+              <div>
+                <p className="text-sm text-slate-900" style={{ fontWeight: 700 }}>PIX</p>
+                <p className="text-xs" style={{ color: '#64748b' }}>Receba em segundos, a qualquer hora.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toast.info('Cadastro de chave PIX em preparação — em breve disponível.')}
+              className="wlt-btn mt-4 w-full rounded-full py-2.5 text-sm text-white"
+              style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', fontWeight: 600, boxShadow: '0 8px 18px -8px rgba(22,163,74,.5)' }}
+            >
+              Cadastrar chave PIX
+            </button>
+          </div>
+
+          <div className="wlt-card rounded-[20px] border border-slate-200 bg-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full text-2xl" style={{ background: '#dbeafe' }}>🏦</div>
+              <div>
+                <p className="text-sm text-slate-900" style={{ fontWeight: 700 }}>Conta Bancária</p>
+                <p className="text-xs" style={{ color: '#64748b' }}>Transferência direta para seu banco.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toast.info('Vínculo de conta bancária em preparação — em breve disponível.')}
+              className="wlt-btn mt-4 w-full rounded-full py-2.5 text-sm text-white"
+              style={{ background: 'linear-gradient(135deg,#3b82f6,#2563eb)', fontWeight: 600, boxShadow: '0 8px 18px -8px rgba(37,99,235,.5)' }}
+            >
+              <span className="inline-flex items-center gap-2"><Landmark className="h-4 w-4" /> Vincular Banco</span>
+            </button>
+          </div>
+        </section>
+
+        {/* ── Extrato unificado ─────────────────────────────────── */}
+        <section
+          id="extrato-unificado"
+          className="wlt-rise rounded-[24px] bg-white p-6 sm:p-8"
+          style={{ boxShadow: '0 1px 2px rgba(15,23,42,.04), 0 14px 44px -14px rgba(15,23,42,.10)' }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-lg text-slate-900" style={{ fontWeight: 700 }}>Extrato Unificado</h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('statement')}
+                className="rounded-full px-4 py-1.5 text-xs transition-all duration-[250ms]"
+                style={activeTab === 'statement'
+                  ? { background: '#16a34a', color: '#fff', fontWeight: 700, boxShadow: '0 6px 14px -6px rgba(22,163,74,.5)' }
+                  : { background: '#f1f5f9', color: '#64748b', fontWeight: 600 }}
+              >
+                Extrato
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('payouts')}
+                className="rounded-full px-4 py-1.5 text-xs transition-all duration-[250ms]"
+                style={activeTab === 'payouts'
+                  ? { background: '#16a34a', color: '#fff', fontWeight: 700, boxShadow: '0 6px 14px -6px rgba(22,163,74,.5)' }
+                  : { background: '#f1f5f9', color: '#64748b', fontWeight: 600 }}
+              >
+                Saques
+              </button>
+            </div>
+          </div>
+
+          {/* Chips de filtro por perfil */}
+          {activeTab === 'statement' && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {FILTER_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setFilterProfile(chip)}
+                  className="rounded-full px-3.5 py-1.5 text-xs transition-all duration-[250ms]"
+                  style={filterProfile === chip
+                    ? { background: '#dcfce7', color: '#16a34a', border: '1px solid rgba(22,163,74,.35)', fontWeight: 700 }
+                    : { background: '#fff', color: '#64748b', border: '1px solid #e2e8f0', fontWeight: 600 }}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-5">
             {activeTab === 'statement' && (
-              <div className="flex flex-col">
+              <div className="space-y-3">
                 {isCurrentlyLoading ? (
-                  <div className="p-8 flex justify-center"><Skeleton className="h-10 w-10 rounded-full" /></div>
+                  <div className="flex justify-center p-8"><Skeleton className="h-10 w-10 rounded-full" /></div>
                 ) : statement.length === 0 ? (
-                  <div className="p-12 flex flex-col items-center justify-center text-center text-muted-foreground">
-                    <WalletIcon className="h-12 w-12 mb-4 opacity-20" />
-                    <p className="font-semibold text-foreground">Nenhuma movimentação ainda.</p>
-                    <p className="text-sm mt-1">Saldo {formatCurrency(0)}</p>
+                  <div className="flex flex-col items-center justify-center p-12 text-center">
+                    <WalletIcon className="mb-4 h-12 w-12 text-slate-200" />
+                    <p className="text-slate-900" style={{ fontWeight: 600 }}>Nenhuma movimentação ainda.</p>
+                    <p className="mt-1 text-sm" style={{ color: '#64748b' }}>Saldo {formatCurrency(0)}</p>
                   </div>
                 ) : (
                   statement.map(renderStatementItem)
@@ -280,44 +629,66 @@ export default function Wallet() {
             )}
 
             {activeTab === 'payouts' && (
-              <div className="flex flex-col">
+              <div className="space-y-3">
                 {isCurrentlyLoading ? (
-                  <div className="p-8 flex justify-center"><Skeleton className="h-10 w-10 rounded-full" /></div>
+                  <div className="flex justify-center p-8"><Skeleton className="h-10 w-10 rounded-full" /></div>
                 ) : payouts.length === 0 ? (
-                  <div className="p-12 flex flex-col items-center justify-center text-center text-muted-foreground">
-                    <AlertCircle className="h-12 w-12 mb-4 opacity-20" />
-                    <p className="font-semibold text-foreground">Nenhum saque solicitado.</p>
+                  <div className="flex flex-col items-center justify-center p-12 text-center">
+                    <AlertCircle className="mb-4 h-12 w-12 text-slate-200" />
+                    <p className="text-slate-900" style={{ fontWeight: 600 }}>Nenhum saque solicitado.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-muted text-muted-foreground text-xs uppercase">
-                        <tr>
-                          <th className="px-4 py-3 font-medium">Data</th>
-                          <th className="px-4 py-3 font-medium">Valor</th>
-                          <th className="px-4 py-3 font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {payouts.map((p) => (
-                          <tr key={p.id} className="hover:bg-muted/50 transition-colors">
-                            <td className="px-4 py-3 text-xs whitespace-nowrap">{formatDate(p.created_at)}</td>
-                            <td className="px-4 py-3 font-semibold tabular-nums">{formatCurrency(p.amount_cents)}</td>
-                            <td className="px-4 py-3">
-                              {p.status === 'completed' && <span className="inline-flex items-center gap-1 text-green-600 bg-green-100 px-2 py-0.5 rounded-full text-xs font-medium"><CheckCircle2 className="h-3 w-3" /> Concluído</span>}
-                              {p.status === 'pending' && <span className="inline-flex items-center gap-1 text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full text-xs font-medium"><Hourglass className="h-3 w-3" /> Pendente</span>}
-                              {p.status === 'failed' && <span className="inline-flex items-center gap-1 text-red-600 bg-red-100 px-2 py-0.5 rounded-full text-xs font-medium"><XCircle className="h-3 w-3" /> Falhou</span>}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  payouts.map((p, idx) => (
+                    <div
+                      key={p.id}
+                      className="wlt-rise flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-[250ms] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/70"
+                      style={{ animationDelay: `${Math.min(idx, 12) * 40}ms` }}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full text-xl" style={{ background: '#dcfce7' }}>
+                          <Zap className="h-5 w-5" style={{ color: '#16a34a' }} />
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-900" style={{ fontWeight: 600 }}>Saque PIX</p>
+                          <p className="mt-0.5 text-xs" style={{ color: '#64748b' }}>{formatDate(p.created_at)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="tabular-nums text-sm sm:text-base" style={{ color: '#0f172a', fontWeight: 700 }}>{formatCurrency(p.amount_cents)}</p>
+                        {p.status === 'completed' && <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-700" style={{ fontWeight: 600 }}><CheckCircle2 className="h-3 w-3" /> Concluído</span>}
+                        {p.status === 'pending' && <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-700" style={{ fontWeight: 600 }}><Hourglass className="h-3 w-3" /> Pendente</span>}
+                        {p.status === 'failed' && <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700" style={{ fontWeight: 600 }}><XCircle className="h-3 w-3" /> Falhou</span>}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             )}
           </div>
-        </div>
+        </section>
+
+        {/* ── Segurança ─────────────────────────────────────────── */}
+        <section
+          className="wlt-rise flex flex-col items-start gap-4 rounded-[20px] bg-white p-6 sm:flex-row sm:items-center sm:justify-between"
+          style={{ border: '1px solid #e2e8f0', boxShadow: '0 8px 24px -14px rgba(15,23,42,.12)' }}
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl" style={{ background: '#f1f5f9' }}>🔒</div>
+            <div>
+              <p className="text-sm text-slate-900" style={{ fontWeight: 700 }}>Segurança Financeira</p>
+              <p className="mt-1 max-w-xl text-sm" style={{ color: '#64748b' }}>
+                Todos os seus dados financeiros são protegidos por criptografia de ponta a ponta,
+                autenticação segura e infraestrutura de alta disponibilidade.
+              </p>
+            </div>
+          </div>
+          <span
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs"
+            style={{ background: '#dcfce7', color: '#16a34a', fontWeight: 700 }}
+          >
+            <ShieldCheck className="h-4 w-4" /> Criptografia Ativa
+          </span>
+        </section>
       </main>
     </div>
   );

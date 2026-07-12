@@ -171,7 +171,9 @@ export default function MotoboyWalletContent() {
   return (
     <MotoboyPageTemplate title="Carteira" subtitle="Unificada" icon={Wallet}>
       {/* ==================== HERO BALANCE ==================== */}
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-motoboy via-motoboy-hover to-[hsl(25,100%,35%)] text-white shadow-xl">
+      <Card className={`relative overflow-hidden border-0 text-white shadow-xl ${withdrawableTotal > 0
+        ? 'bg-gradient-to-br from-[#22c55e] via-[#16a34a] to-[#15803d]'
+        : 'bg-gradient-to-br from-motoboy via-motoboy-hover to-[hsl(25,100%,35%)]'}`}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.12),transparent_60%)]" />
         <CardContent className="relative p-6 space-y-4">
           <div className="flex items-center gap-2 opacity-80">
@@ -193,7 +195,7 @@ export default function MotoboyWalletContent() {
 
           <Button
             size="lg"
-            className="bg-white text-motoboy hover:bg-white/90 font-semibold shadow-md transition-transform active:scale-95"
+            className={`bg-white hover:bg-white/90 font-semibold shadow-md transition-transform active:scale-95 ${withdrawableTotal > 0 ? 'text-[#16a34a]' : 'text-motoboy'}`}
             onClick={() => setPayoutModalOpen(true)}
             disabled={withdrawableTotal <= 0}
           >
