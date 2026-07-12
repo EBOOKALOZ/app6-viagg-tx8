@@ -461,11 +461,24 @@ export default function MotoboyWalletContent() {
 
                 return (
                   <div key={entry.id} className="flex items-center gap-3 p-3 animate-in fade-in duration-300">
-                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${isCredit ? "bg-success/10" : "bg-destructive/10"}`}>
-                      {isCredit ? (
-                        <ArrowDownLeft className="h-4 w-4 text-success" />
-                      ) : (
-                        <ArrowUpRight className="h-4 w-4 text-destructive" />
+                    <div className="relative shrink-0">
+                      <div className={`h-9 w-9 rounded-full flex items-center justify-center overflow-hidden ring-2 ${isCredit ? "bg-success/10 ring-success/40" : "bg-destructive/10 ring-destructive/40"}`}>
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Perfil" className="h-full w-full object-cover" />
+                        ) : isCredit ? (
+                          <ArrowDownLeft className="h-4 w-4 text-success" />
+                        ) : (
+                          <ArrowUpRight className="h-4 w-4 text-destructive" />
+                        )}
+                      </div>
+                      {avatarUrl && (
+                        <span className={`absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-background ${isCredit ? "bg-success" : "bg-destructive"}`}>
+                          {isCredit ? (
+                            <ArrowDownLeft className="h-2.5 w-2.5 text-white" />
+                          ) : (
+                            <ArrowUpRight className="h-2.5 w-2.5 text-white" />
+                          )}
+                        </span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
