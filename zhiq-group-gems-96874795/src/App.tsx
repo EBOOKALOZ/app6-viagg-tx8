@@ -12,6 +12,10 @@ import { FloatingSupportButton } from "@/components/public/FloatingSupportButton
 import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
 import { GlobalRealtime } from "@/components/GlobalRealtime";
 import { SeoManager } from "@/lib/seo/SeoManager";
+import { installGlobalErrorReporter } from "@/lib/telemetry/errorReporter";
+
+// Caixa-preta: erros de tela vão para o banco (client_errors)
+installGlobalErrorReporter();
 import ErrorBoundary from "@/components/ErrorBoundary";
 import PageFallback from "@/components/PageFallback";
 import { NotFound, MercadoLocalViagg } from "@/routes/lazyPages";

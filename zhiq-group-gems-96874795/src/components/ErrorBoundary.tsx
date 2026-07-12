@@ -48,6 +48,14 @@ class ErrorBoundary extends Component<Props, State> {
     // Guarda o rastro de componentes p/ aparecer em "Detalhes técnicos" —
     // sem isso a tela não diz QUEM quebrou e o diagnóstico vira adivinhação.
     this.setState({ componentStack: errorInfo?.componentStack ?? null });
+    // Caixa-preta: grava o crash no banco (diagnóstico sem prints)
+    import('@/lib/telemetry/errorReporter').then(({ reportClientError }) =>
+      reportClientError({
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo?.componentStack,
+      })
+    ).catch(() => {});
 
     if (this.isChunkLoadError(error)) {
       const RELOAD_KEY = 'viagg_chunk_reload_at';
