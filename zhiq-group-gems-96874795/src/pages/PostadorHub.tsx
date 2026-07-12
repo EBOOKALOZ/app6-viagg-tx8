@@ -19,7 +19,8 @@ const TABS: Tab[] = [
   { key: 'dashboard',    label: 'Início',          icon: LayoutDashboard, segment: '' },
   { key: 'gerenciador',  label: 'Gerenciar',       icon: Rocket,          segment: 'gerenciador',  isRIDV: true },
   { key: 'analytics',    label: 'Analytics',       icon: BarChart3,       segment: 'analytics',    isRIDV: true },
-  { key: 'creditos',     label: 'Créditos',        icon: Sparkles,        segment: 'creditos',     isRIDV: true },
+  // Página Créditos OCULTA a pedido (2026-07-12) — não usaremos por enquanto; descomentar para reativar
+  // { key: 'creditos',     label: 'Créditos',        icon: Sparkles,        segment: 'creditos',     isRIDV: true },
   { key: 'notificacoes', label: 'Notificações',    icon: Bell,            segment: 'notificacoes', isRIDV: true },
   { key: 'divulgacoes',  label: 'Divulgações',     icon: Send,            segment: 'divulgacoes' },
   // Aba Campanhas UNIFICADA dentro de Divulgações (2026-07-12) — código preservado; descomentar para reativar
