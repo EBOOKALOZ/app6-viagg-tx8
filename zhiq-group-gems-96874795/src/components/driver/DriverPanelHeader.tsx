@@ -90,7 +90,8 @@ export function DriverPanelHeader({
 
           <div className="flex items-center gap-0.5 shrink-0">
             <div id="global-audio-portal" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
-            <NotificationCenter profileType="driver" />
+            {/* Sininho de notificações OCULTO a pedido (2026-07-12) — descomentar para reativar */}
+            {/* <NotificationCenter profileType="driver" /> */}
             <Button variant="ghost" size="icon" onClick={() => setMenuOpen(true)} className="text-white hover:bg-white/10 h-8 w-8">
               <Menu className="h-4 w-4" />
             </Button>

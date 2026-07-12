@@ -117,7 +117,8 @@ export function MotoboyPanelHeader({
 
           <div className="flex items-center gap-0.5 shrink-0">
             <div id="global-audio-portal" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
-            <NotificationCenter profileType={isMototaxi ? "mototaxi" : "motoboy"} />
+            {/* Sininho de notificações OCULTO a pedido (2026-07-12) — descomentar para reativar */}
+            {/* <NotificationCenter profileType={isMototaxi ? "mototaxi" : "motoboy"} /> */}
             <Button
               variant="ghost"
               size="icon"
