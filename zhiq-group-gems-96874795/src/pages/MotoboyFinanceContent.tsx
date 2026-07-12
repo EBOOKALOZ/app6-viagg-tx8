@@ -43,6 +43,7 @@ import {
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { TierLadderCard } from '@/components/motoboy/TierLadderCard';
 import { cn } from "@/lib/utils";
+import viaggLogo from '@/assets/logo.png';
 
 export default function MotoboyFinanceContent() {
   const {
@@ -281,15 +282,18 @@ export default function MotoboyFinanceContent() {
                 <div key={entry.id} className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {entry.amount_cents > 0 ? (
-                        <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center">
-                          <ArrowDownLeft className="h-4 w-4 text-success" />
+                      <div className="relative shrink-0">
+                        <div className={`h-8 w-8 overflow-hidden rounded-full ring-2 ${entry.amount_cents > 0 ? "ring-success/40" : "ring-destructive/40"}`}>
+                          <img src={viaggLogo} alt="Viagg-TX8" className="h-full w-full object-cover" />
                         </div>
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center">
-                          <ArrowUpRight className="h-4 w-4 text-destructive" />
-                        </div>
-                      )}
+                        <span className={`absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-background ${entry.amount_cents > 0 ? "bg-success" : "bg-destructive"}`}>
+                          {entry.amount_cents > 0 ? (
+                            <ArrowDownLeft className="h-2 w-2 text-white" />
+                          ) : (
+                            <ArrowUpRight className="h-2 w-2 text-white" />
+                          )}
+                        </span>
+                      </div>
                       <div>
                         <p className="font-medium text-sm">
                           {getEntryReferenceLabel(entry.reference_type)}
