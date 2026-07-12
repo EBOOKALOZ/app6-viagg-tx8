@@ -213,7 +213,7 @@ function DivulgarModal({ item, onClose }: { item: FeedItem; onClose: () => void 
 
         <button
           type="button"
-          onClick={() => { toast.success('Divulgação preparada! Postar mantém seus grupos ativos e sua comissão baixa. 🎉'); onClose(); }}
+          onClick={() => { toast.success('Divulgação preparada! Postar mantém seus grupos ativos. 🎉'); onClose(); }}
           className="mt-5 w-full rounded-full border border-slate-200 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
           style={{ fontWeight: 600 }}
         >
@@ -392,7 +392,7 @@ export function DivulgacaoFeed({
           <div>
             <p className="text-sm text-slate-900" style={{ fontWeight: 800 }}>Oportunidades disponíveis hoje</p>
             <p className="text-xs" style={{ color: '#64748b' }}>
-              Divulgue anúncios reais e mantenha seus grupos ativos — atividade real sustenta sua comissão mínima.
+              Divulgue anúncios reais da plataforma e mantenha seus grupos sempre ativos.
             </p>
           </div>
         </div>

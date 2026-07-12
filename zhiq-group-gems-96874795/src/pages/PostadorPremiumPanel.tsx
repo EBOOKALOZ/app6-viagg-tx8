@@ -769,7 +769,7 @@ export default function PostadorPremiumPanel() {
                             <TrendingUp className="h-4 w-4 text-emerald-500" />
                         </div>
                         <p className="text-[11px] text-emerald-700 dark:text-emerald-300 leading-relaxed">
-                            <strong>Comissão depende de atividade real.</strong> Confirme suas postagens para manter a elegibilidade. Grupo sem postagem confirmada não gera benefício.
+                            <strong>Atividade real conta.</strong> Confirme suas postagens para manter seus grupos ativos na plataforma. Grupo sem postagem confirmada não conta como atividade.
                         </p>
                     </div>
 

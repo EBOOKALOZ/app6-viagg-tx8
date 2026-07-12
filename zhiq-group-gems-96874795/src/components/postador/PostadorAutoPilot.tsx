@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useMotoboyCommission } from '@/hooks/useMotoboyCommission';
 import { useDivulgacaoFeed, scoreAd, normCity, FeedAd } from '@/hooks/useDivulgacaoFeed';
 import type { PostingLot, GroupRuntimeView } from '@/types/postador';
 import { toast } from 'sonner';
@@ -45,7 +44,6 @@ export function PostadorAutoPilot({
   onOpenProof: (lot: PostingLot) => void;
 }) {
   const { user } = useAuth();
-  const { commissionRate } = useMotoboyCommission(user?.id);
   const { data: feed } = useDivulgacaoFeed();
 
   const [now, setNow] = useState(() => Date.now());
@@ -306,8 +304,7 @@ export function PostadorAutoPilot({
                 <span className="inline-flex items-center gap-1"><Timer className="h-3 w-3" />~2 min</span>
               </div>
               <p className="mt-1.5 text-[11px] text-emerald-200/80">
-                💰 Postagem confirmada mantém seus grupos ativos e sua comissão em{' '}
-                <strong className="text-white">{commissionRate ?? 25}%</strong>.
+                ✅ Postagem confirmada mantém seus grupos ativos na plataforma.
               </p>
             </div>
           </div>

@@ -390,8 +390,8 @@ export default function PostadorProofModal({
                         <div className="flex items-start gap-2">
                             <Sparkles className="h-3.5 w-3.5 text-emerald-500 mt-0.5 shrink-0" />
                             <p className="text-[10px] text-muted-foreground leading-[1.7]">
-                                <strong className="text-emerald-600">Postagem confirmada = benefício ativo.</strong>{" "}
-                                Grupos com postagem real contam para sua comissão e mantêm o ecossistema territorial vivo.
+                                <strong className="text-emerald-600">Postagem confirmada = atividade registrada.</strong>{" "}
+                                Grupos com postagem real permanecem ativos e mantêm o ecossistema territorial vivo.
                             </p>
                         </div>
                     </div>
