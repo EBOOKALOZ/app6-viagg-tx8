@@ -265,7 +265,7 @@ export default function CorridasInicio() {
       blueFooter
       blueFooterLabel="🚗 Corridas"
       myAccountPath="/minha-carteira"
-      mainClassName="bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f3460]"
+      mainClassName="bg-gradient-to-b from-[#FF6A00] via-[#FF7E1A] to-[#FF8C00]"
     >
       <div className="min-h-[calc(100vh-160px)] flex flex-col items-center justify-center px-4 py-10">
 
@@ -284,7 +284,7 @@ export default function CorridasInicio() {
         <div className="w-full max-w-3xl mb-5">
           <button
             onClick={() => navigate("/solicitar-corrida")}
-            className="group w-full relative overflow-hidden bg-gradient-to-br from-[#FF6A00] to-[#FF4500] rounded-3xl shadow-2xl shadow-orange-900/40 border border-[#FF6A00]/40 p-6 text-left hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] transition-all"
+            className="group w-full relative overflow-hidden bg-gradient-to-br from-[#68c7f2] to-[#4aa8d8] rounded-3xl shadow-2xl shadow-sky-900/40 border border-[#68c7f2]/40 p-6 text-left hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] transition-all"
           >
             {/* Badge */}
             <span className="absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-white/20 text-white border border-white/30">
@@ -299,8 +299,8 @@ export default function CorridasInicio() {
 
               <div className="flex-1 min-w-0">
                 <p className="text-2xl font-black text-white tracking-tight">PEDIDOS DE CORRIDAS</p>
-                <p className="text-base font-black text-orange-200 tracking-tight">SOLICITAR AGORA</p>
-                <p className="text-sm text-orange-100/80 mt-1 leading-snug">
+                <p className="text-base font-black text-sky-100 tracking-tight">SOLICITAR AGORA</p>
+                <p className="text-sm text-sky-100/80 mt-1 leading-snug">
                   Moto Táxi, Motorista, Táxi, Motoboy, Entrega Expressa ou Frete — rastreio em tempo real e pagamento pela plataforma.
                 </p>
               </div>
