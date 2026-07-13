@@ -9,10 +9,10 @@ interface FooterProfileProps {
 
 const PROFILE_THEMES: Record<string, { bg: string; border: string; routePrefix: string; dbProfile: string }> = {
   motoboy:   { bg: 'bg-motoboy',   border: 'border-white/10', routePrefix: '/motoboy', dbProfile: 'motoboy' },
-  merchant:  { bg: 'bg-[#0F3D2E]', border: 'border-white/10', routePrefix: '',         dbProfile: 'comerciante' },
+  merchant:  { bg: 'bg-[#68c7f2]', border: 'border-white/10', routePrefix: '',         dbProfile: 'comerciante' },
 };
 
-const DEFAULT_THEME = { bg: 'bg-[#0F3D2E]', border: 'border-white/10', routePrefix: '', dbProfile: '' };
+const DEFAULT_THEME = { bg: 'bg-[#68c7f2]', border: 'border-white/10', routePrefix: '', dbProfile: '' };
 
 const APP_VERSION = '1.0.0';
 

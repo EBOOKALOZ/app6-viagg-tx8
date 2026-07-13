@@ -282,8 +282,8 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
               <button
                 type="button"
                 onClick={p.acoes?.onInteresse ?? p.acoes?.onContatar}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm text-white transition-transform active:scale-[0.98]"
-                style={{ background: `linear-gradient(135deg, #22c55e, #16a34a)`, fontWeight: 800, boxShadow: `0 12px 26px -10px #22c55e88` }}
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm text-zinc-900 transition-transform active:scale-[0.98]"
+                style={{ background: '#68c7f2', fontWeight: 800, boxShadow: '0 12px 26px -10px rgba(104,199,242,0.5)' }}
               >
                 <Star className="h-4 w-4" /> {p.acoes?.interesseLabel ?? 'Tenho Interesse'}
               </button>

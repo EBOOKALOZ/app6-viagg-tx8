@@ -233,12 +233,12 @@ export default function TravelDetailPage() {
 
       <ViaggAIChat welcomeMessage="Olá! 👋 Sou a IA Viagg. Posso te ajudar com os detalhes e dúvidas desta viagem?" />
 
-      <footer className="w-full bg-sky-700 text-white text-center py-1.5 text-xs font-medium space-y-0">
+      <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
         <p className="flex items-center justify-center gap-1.5">
           <img src="/logo.png" alt="Viagg" className="h-8 w-auto object-contain rounded-lg shadow-sm mt-1" />
           Viagg-TX8™ · Viagens &amp; Turismo
         </p>
-        <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
+        <p className="text-zinc-900/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
       </footer>
     </MarketLayout>
   );

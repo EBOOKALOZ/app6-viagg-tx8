@@ -1113,7 +1113,7 @@ const scrollToProducts = () => {
             {/* CTA para anunciantes */}
             <div className="w-full px-4 lg:px-6 pb-4 pt-6 lg:pt-8">
                 <div className="max-w-[1920px] mx-auto">
-                    <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                    <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                         <div className="text-white space-y-1">
                             <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para lojistas e comerciantes</p>
                             <h3 className="text-xl font-black leading-tight">🛍️ Anuncie seu produto aqui!</h3>
@@ -1161,7 +1161,7 @@ const scrollToProducts = () => {
                         </div>
 
                         {/* CTA Imóveis */}
-                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                             <div className="text-white space-y-1">
                                 <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para corretores e proprietários</p>
                                 <h3 className="text-xl font-black leading-tight">🏢 Anuncie seu imóvel aqui!</h3>
@@ -1231,7 +1231,7 @@ const scrollToProducts = () => {
                         </div>
 
                         {/* CTA Serviços */}
-                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                             <div className="text-white space-y-1">
                                 <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para prestadores de serviço</p>
                                 <h3 className="text-xl font-black leading-tight">🔧 Anuncie seu serviço aqui!</h3>
@@ -1301,7 +1301,7 @@ const scrollToProducts = () => {
                         </div>
 
                         {/* CTA Fretes */}
-                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                             <div className="text-white space-y-1">
                                 <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para transportadoras e motoristas</p>
                                 <h3 className="text-xl font-black leading-tight">🚚 Anuncie seu frete aqui!</h3>
@@ -1371,7 +1371,7 @@ const scrollToProducts = () => {
                         </div>
 
                         {/* CTA Viagens */}
-                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                             <div className="text-white space-y-1">
                                 <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para agências e guias</p>
                                 <h3 className="text-xl font-black leading-tight">✈️ Anuncie sua viagem aqui!</h3>
@@ -1441,7 +1441,7 @@ const scrollToProducts = () => {
                         </div>
 
                         {/* CTA Automóveis */}
-                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
                             <div className="text-white space-y-1">
                                 <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para concessionárias e vendedores</p>
                                 <h3 className="text-xl font-black leading-tight">🚗 Anuncie seu veículo aqui!</h3>
@@ -2147,7 +2147,7 @@ const scrollToProducts = () => {
                                                     });
                                                     setDiscountProduct(product);
                                                 }}
-                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-[#2563EB] hover:bg-[#1D4ED8] transition-all duration-200 shadow-sm"
+                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-zinc-900 bg-[#68c7f2] hover:opacity-90 transition-all duration-200 shadow-sm"
                                             >
                                                 Minha Oferta é...
                                             </button>

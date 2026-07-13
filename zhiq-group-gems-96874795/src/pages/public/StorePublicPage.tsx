@@ -30,13 +30,15 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 type TabValue = "home" | "all" | "promo";
 
-function normalizeImageUrl(url: string | null | undefined): string | null {
+function normalizeImageUrl(url: string | null | undefined, bucket: string = 'marketing-materials'): string | null {
     if (!url || typeof url !== "string") return null;
     const trimmed = url.trim();
     if (!trimmed) return null;
     const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (driveMatch) return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    if (!/^https?:\/\//i.test(trimmed)) return null;
+    if (!/^https?:\/\//i.test(trimmed)) {
+        return supabase.storage.from(bucket).getPublicUrl(trimmed).data.publicUrl;
+    }
     return trimmed;
 }
 
@@ -574,7 +576,7 @@ export default function StorePublicPage() {
                         const url = window.location.href;
                         navigator.share?.({ title: store.store_name, url }).catch(() => {});
                     }}
-                    logoUrl={normalizeImageUrl(store.logo_url)}
+                    logoUrl={normalizeImageUrl(store.logo_url, 'logos_lojas')}
                     bannerUrl={normalizeImageUrl(store.banner_url)}
                 />
 

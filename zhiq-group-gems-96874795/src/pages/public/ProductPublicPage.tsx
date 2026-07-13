@@ -27,13 +27,15 @@ import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafe
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 // ─── Helpers ────────────────────────────
-function normalizeImageUrl(url: string | null | undefined): string | null {
+function normalizeImageUrl(url: string | null | undefined, bucket: string = 'marketing-materials'): string | null {
     if (!url || typeof url !== "string") return null;
     const trimmed = url.trim();
     if (!trimmed) return null;
     const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (driveMatch) return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    if (!/^https?:\/\//i.test(trimmed)) return null;
+    if (!/^https?:\/\//i.test(trimmed)) {
+        return supabase.storage.from(bucket).getPublicUrl(trimmed).data.publicUrl;
+    }
     return trimmed;
 }
 
@@ -98,7 +100,9 @@ export default function ProductPublicPage() {
         queryFn: async () => {
             const { data } = await (supabase.from("merchant_stores") as any)
                 .select("*")
-                .eq("id", product.owner_user_id) // Assuming owner matches store ID
+                .eq("user_id", product.owner_user_id)
+                .order("created_at", { ascending: false })
+                .limit(1)
                 .maybeSingle();
             return data;
         }
@@ -179,6 +183,7 @@ export default function ProductPublicPage() {
             setSearch={setSearch}
             onSearchSubmit={handleSearchSubmit}
             headerChildren={<MarketNavButtons />}
+            blueFooter={true}
         >
             <div className="bg-[#F5E62B] min-h-screen pb-20 animate-in fade-in duration-1000">
                 <div className="container max-w-7xl mx-auto px-4 py-8">
@@ -465,9 +470,13 @@ export default function ProductPublicPage() {
             {store && (
                 <button
                     onClick={() => setStoreDrawerOpen(true)}
-                    className="fixed bottom-24 right-6 z-50 flex items-center justify-center bg-zinc-950 text-white w-14 h-14 rounded-[20px] shadow-2xl hover:scale-105 transition-all duration-200 border-2 border-zinc-800"
+                    className="fixed bottom-24 right-6 z-50 flex items-center justify-center bg-zinc-950 text-white w-14 h-14 rounded-[20px] shadow-2xl hover:scale-105 transition-all duration-200 border-2 border-zinc-800 overflow-hidden"
                 >
-                    <Store className="w-6 h-6" />
+                    {normalizeImageUrl(store.logo_url, 'logos_lojas') ? (
+                        <img src={normalizeImageUrl(store.logo_url, 'logos_lojas')!} alt="Loja" className="w-full h-full object-cover" />
+                    ) : (
+                        <Store className="w-6 h-6" />
+                    )}
                 </button>
             )}
 
@@ -483,8 +492,8 @@ export default function ProductPublicPage() {
                             <div className="rounded-2xl bg-white border border-zinc-200 shadow-sm p-5">
                                 <div className="flex items-center gap-3">
                                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-100 flex-shrink-0 bg-zinc-100">
-                                        {normalizeImageUrl(store.logo_url) ? (
-                                            <img src={normalizeImageUrl(store.logo_url)!} className="w-full h-full object-cover" alt={store.store_name || "Loja"} />
+                                        {normalizeImageUrl(store.logo_url, 'logos_lojas') ? (
+                                            <img src={normalizeImageUrl(store.logo_url, 'logos_lojas')!} className="w-full h-full object-cover" alt={store.store_name || "Loja"} />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center"><Store className="w-6 h-6 text-zinc-400" /></div>
                                         )}

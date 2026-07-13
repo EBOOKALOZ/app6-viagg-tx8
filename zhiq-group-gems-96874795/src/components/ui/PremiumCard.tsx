@@ -220,7 +220,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
 
           <Button 
             onClick={handleActionClick}
-            className="w-full sm:w-auto shrink-0 bg-sky-700 hover:bg-sky-800 text-white rounded-xl shadow-[0_4px_14px_0_rgb(2,132,199,0.39)] hover:shadow-[0_6px_20px_rgba(2,132,199,0.23)] hover:-translate-y-0.5 transition-all duration-200 px-5"
+            className="w-full sm:w-auto shrink-0 bg-[#68c7f2] hover:opacity-90 text-zinc-900 rounded-xl shadow-[0_4px_14px_0_rgba(104,199,242,0.39)] hover:shadow-[0_6px_20px_rgba(104,199,242,0.23)] hover:-translate-y-0.5 transition-all duration-200 px-5"
           >
             <span className="font-bold text-xs uppercase tracking-wider">{primaryActionLabel}</span>
           </Button>

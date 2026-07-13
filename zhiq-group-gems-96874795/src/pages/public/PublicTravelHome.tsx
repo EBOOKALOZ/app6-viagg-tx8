@@ -82,7 +82,7 @@ export default function PublicTravelHome() {
       <div className="w-full px-4 lg:px-6 pt-0 bg-[#F5E62B]">
         {/* CTA para agências */}
         <div className="pb-4 pt-2">
-          <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
             <div className="text-white space-y-1">
               <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para agências e operadoras</p>
               <h3 className="text-xl font-black leading-tight">✈️ Anuncie sua viagem aqui!</h3>
@@ -172,12 +172,12 @@ export default function PublicTravelHome() {
       </div>
 
       {/* Footer minimalista do módulo de Viagens */}
-      <footer className="w-full bg-sky-700 text-white text-center py-1.5 text-xs font-medium space-y-0">
+      <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
         <p className="flex items-center justify-center gap-1.5">
           <img src="/logo.png" alt="Viagg" className="h-8 w-auto object-contain rounded-lg shadow-sm mt-1" />
           Viagg-TX8™ · Viagens &amp; Turismo
         </p>
-        <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
+        <p className="text-zinc-900/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
       </footer>
     </MarketLayout>
   );

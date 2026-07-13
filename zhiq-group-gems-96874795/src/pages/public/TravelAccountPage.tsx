@@ -98,7 +98,7 @@ const { data: intentions = [], isLoading } = useQuery({
 
         {/* Produto de interesse pendente */}
         {pendingListing && (
-          <div className="bg-sky-700 rounded-3xl p-5 space-y-3 shadow-xl relative">
+          <div className="bg-[#68c7f2] rounded-3xl p-5 space-y-3 shadow-xl relative">
             <button
               onClick={() => navigate("/viagens/minha-conta", { replace: true })}
               className="absolute top-4 right-4 w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
@@ -238,12 +238,12 @@ const { data: intentions = [], isLoading } = useQuery({
         </div>
       </div>
 
-      <footer className="w-full bg-sky-700 text-white text-center py-1.5 text-xs font-medium space-y-0">
+      <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
         <p className="flex items-center justify-center gap-1.5">
           <img src="/logo.png" alt="Viagg" className="h-8 w-auto object-contain rounded-lg shadow-sm mt-1" />
           Viagg-TX8™ · Viagens &amp; Turismo
         </p>
-        <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
+        <p className="text-zinc-900/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
       </footer>
 
       {pendingInterestId && (

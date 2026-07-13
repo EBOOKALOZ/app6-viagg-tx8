@@ -179,7 +179,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     {onMakeOffer && (
                         <Button
                             variant="default"
-                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-[#2563EB] text-white hover:bg-[#1D4ED8] border-none shadow-sm flex items-center justify-center text-center px-1"
+                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-[#68c7f2] text-zinc-900 hover:opacity-90 border-none shadow-sm flex items-center justify-center text-center px-1"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onMakeOffer(product);

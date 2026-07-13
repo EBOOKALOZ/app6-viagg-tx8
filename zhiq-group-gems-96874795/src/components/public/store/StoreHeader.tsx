@@ -165,22 +165,22 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
             {/* Store Card */}
             <div className={cn("w-full px-2 lg:px-3 xl:px-4 relative z-10 mb-8 flex justify-center", compact ? "mt-0" : "mt-4 lg:mt-6")}>
                 <div className="w-full max-w-[1920px]">
-                <Card className="border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#022C22] ring-1 ring-emerald-900/60 overflow-hidden">
+                <Card className="border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#68c7f2] ring-1 ring-[#68c7f2]/60 overflow-hidden">
                     <div className={cn("flex items-center", sidebarMode ? "flex-col text-center p-4 gap-3" : cn("flex-col xl:flex-row", compact ? "p-3 lg:p-4 gap-4 xl:items-end" : "p-6 lg:p-10 gap-6 lg:gap-10 xl:items-end"))}>
                         
                         {/* Logo Avatar */}
                         <div className={cn("relative group shrink-0")}>
-                            <div className={cn("bg-[#14171B] shadow-xl ring-[#2A3038] relative overflow-hidden", sidebarMode ? "w-16 h-16 rounded-2xl p-1 ring-2" : compact ? "w-16 h-16 lg:w-20 lg:h-20 rounded-[14px] lg:rounded-2xl p-1 lg:p-1.5 ring-1 lg:ring-2" : "w-28 h-28 lg:w-40 lg:h-40 rounded-3xl lg:rounded-[32px] p-1.5 ring-2 lg:ring-4")}>
+                            <div className={cn("bg-white shadow-xl ring-white/40 relative overflow-hidden", sidebarMode ? "w-16 h-16 rounded-2xl p-1 ring-2" : compact ? "w-16 h-16 lg:w-20 lg:h-20 rounded-[14px] lg:rounded-2xl p-1 lg:p-1.5 ring-1 lg:ring-2" : "w-28 h-28 lg:w-40 lg:h-40 rounded-3xl lg:rounded-[32px] p-1.5 ring-2 lg:ring-4")}>
                                 {logoUrl ? (
                                     <img src={logoUrl} className={cn("w-full h-full object-cover", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")} alt="Logo" />
                                 ) : (
-                                    <div className={cn("w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")}>
-                                        <Store className={cn("text-white", compact ? "w-6 h-6 lg:w-8 lg:h-8" : "w-10 h-10 lg:w-16 lg:h-16")} />
+                                    <div className={cn("w-full h-full bg-gradient-to-br from-white/90 to-white/60 flex items-center justify-center", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")}>
+                                        <Store className={cn("text-[#68c7f2]", compact ? "w-6 h-6 lg:w-8 lg:h-8" : "w-10 h-10 lg:w-16 lg:h-16")} />
                                     </div>
                                 )}
                             </div>
-                            <div className={cn("absolute -bottom-1 -right-1 bg-[#1B1F24] text-white rounded-lg lg:rounded-xl shadow-lg ring-2 ring-[#2A3038] flex items-center justify-center", compact ? "p-1 w-5 h-5 lg:w-6 lg:h-6" : "p-2 lg:p-2.5 w-8 h-8 lg:w-10 lg:h-10")}>
-                                <CheckCircle2 className={cn("text-emerald-500", compact ? "w-3 h-3 lg:w-3.5 lg:h-3.5" : "w-4 h-4 lg:w-5 lg:h-5")} />
+                            <div className={cn("absolute -bottom-1 -right-1 bg-white text-white rounded-lg lg:rounded-xl shadow-lg ring-2 ring-[#68c7f2]/50 flex items-center justify-center", compact ? "p-1 w-5 h-5 lg:w-6 lg:h-6" : "p-2 lg:p-2.5 w-8 h-8 lg:w-10 lg:h-10")}>
+                                <CheckCircle2 className={cn("text-[#68c7f2]", compact ? "w-3 h-3 lg:w-3.5 lg:h-3.5" : "w-4 h-4 lg:w-5 lg:h-5")} />
                             </div>
                         </div>
 
@@ -190,12 +190,12 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                 <Badge className="bg-[#FF6A00] hover:bg-[#E65C00] text-white border-none rounded-md px-1.5 py-0 font-bold uppercase text-[8px] lg:text-[9px] tracking-wider shadow-sm">
                                     Loja Oficial
                                 </Badge>
-                                <div className="flex items-center gap-1 text-zinc-400 font-semibold text-[9px] lg:text-[10px] uppercase tracking-wider">
+                                <div className="flex items-center gap-1 text-white/90 font-bold text-[9px] lg:text-[10px] uppercase tracking-wider">
                                     <MapPin className="w-3 h-3" /> 
                                     {sCity || "Brasil"}{sRegion ? `, ${sRegion}` : ""}
                                 </div>
                                 {stats && (
-                                    <div className="flex items-center gap-1 text-white font-bold text-[9px] lg:text-[10px] bg-white/15 px-1.5 py-0 rounded-md">
+                                    <div className="flex items-center gap-1 text-white font-bold text-[9px] lg:text-[10px] bg-white/25 px-1.5 py-0 rounded-md">
                                         <Star className="w-3 h-3 fill-current" />
                                         {stats.average} ({stats.count})
                                     </div>
@@ -204,52 +204,52 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                             <h1 className={cn("font-black text-white tracking-tight leading-none", sidebarMode ? "text-lg" : compact ? "text-xl lg:text-2xl" : "text-3xl lg:text-5xl")}>
                                 {safeStoreName}
                             </h1>
-                            <p className={cn("text-zinc-400 font-medium max-w-2xl mt-1", sidebarMode ? "text-[10px] block line-clamp-1" : compact ? "hidden xl:block text-[10px] lg:text-xs line-clamp-1" : "text-xs lg:text-sm line-clamp-2")}>
+                            <p className={cn("text-white/90 font-medium max-w-2xl mt-1", sidebarMode ? "text-[10px] block line-clamp-1" : compact ? "hidden xl:block text-[10px] lg:text-xs line-clamp-1" : "text-xs lg:text-sm line-clamp-2")}>
                                 {safeDescription}
                             </p>
                             
                             {/* Privacy Filtered Address Block */}
                             {(sLogradouro || sBairro || sCity) && (
-                                <div className={cn("flex items-center gap-1.5 mt-2 text-zinc-400 font-medium", sidebarMode ? "hidden" : "text-[10px] lg:text-xs justify-center xl:justify-start")}>
-                                    <MapPin className="w-3.5 h-3.5 text-[#FF6A00] shrink-0"/>
+                                <div className={cn("flex items-center gap-1.5 mt-2 text-white/90 font-bold", sidebarMode ? "hidden" : "text-[10px] lg:text-xs justify-center xl:justify-start")}>
+                                    <MapPin className="w-3.5 h-3.5 text-white shrink-0"/>
                                     <span>{timidAddress}</span>
                                 </div>
                             )}
                         </div>
 
                         {/* Quick Stats Panel */}
-                        <div className={cn("flex justify-center w-full", sidebarMode ? "gap-4 pt-4 border-t border-zinc-700 mt-2" : cn("xl:justify-end xl:w-auto xl:border-l xl:border-zinc-700", compact ? "gap-4 lg:gap-6 pt-0 xl:pl-5" : "gap-6 lg:gap-10 pt-4 xl:pt-0 xl:pl-10"))}>
+                        <div className={cn("flex justify-center w-full", sidebarMode ? "gap-4 pt-4 border-t border-white/30 mt-2" : cn("xl:justify-end xl:w-auto xl:border-l xl:border-white/30", compact ? "gap-4 lg:gap-6 pt-0 xl:pl-5" : "gap-6 lg:gap-10 pt-4 xl:pt-0 xl:pl-10"))}>
                             <div className="text-center">
                                 <p className={cn("font-black text-white tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     {productsCount}
                                 </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Produtos</p>
+                                <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Produtos</p>
                             </div>
-                            <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
+                            <div className={cn("bg-white/30 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
                                 <p className={cn("font-black text-white tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     {followersText}
                                 </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
+                                <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
                             </div>
-                            <div className={cn("bg-zinc-700 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
+                            <div className={cn("bg-white/30 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
                                 <p className={cn("font-black text-white tracking-tight flex items-center justify-center", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     98<span className={compact ? "text-xs" : "text-sm"}>%</span>
                                 </p>
-                                <p className={cn("font-bold text-zinc-400 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Resposta</p>
+                                <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Resposta</p>
                             </div>
                         </div>
 
                     </div>
 
                     {/* Footer Actions Desktop */}
-                    <div className={cn("bg-black/15 border-t border-zinc-700 flex flex-wrap items-center gap-3", sidebarMode ? "hidden" : "justify-between", !sidebarMode && compact ? "px-4 py-2 lg:py-2.5 gap-3" : !sidebarMode ? "px-6 py-4 lg:py-5 gap-4" : "")}>
+                    <div className={cn("bg-black/10 border-t border-white/20 flex flex-wrap items-center gap-3", sidebarMode ? "hidden" : "justify-between", !sidebarMode && compact ? "px-4 py-2 lg:py-2.5 gap-3" : !sidebarMode ? "px-6 py-4 lg:py-5 gap-4" : "")}>
                         <div className={cn("items-center gap-4 lg:gap-5", sidebarMode ? "hidden" : "hidden lg:flex")}>
-                            <div className={cn("flex items-center gap-1.5 font-bold text-zinc-400 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
-                                <ShieldCheck className={cn("text-emerald-500", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Compra com Comércio Local
+                            <div className={cn("flex items-center gap-1.5 font-bold text-white/90 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
+                                <ShieldCheck className={cn("text-white", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Compra com Comércio Local
                             </div>
-                            <div className={cn("flex items-center gap-1.5 font-bold text-zinc-400 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
+                            <div className={cn("flex items-center gap-1.5 font-bold text-white/90 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
                                 <Zap className={cn("text-[#FF6A00]", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Entrega Rápida
                             </div>
                         </div>
@@ -260,8 +260,8 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                 className={cn(
                                     "flex-1 lg:flex-none rounded-lg lg:rounded-xl font-black uppercase tracking-wider",
                                     isFollowing
-                                        ? "border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400"
-                                        : "border-[#FF6A00]/30 hover:bg-[#FF6A00]/10 text-[#FF6A00]",
+                                        ? "border-white/40 bg-white/20 hover:bg-white/30 text-white"
+                                        : "border-[#FF6A00] bg-white hover:bg-white/90 text-[#FF6A00]",
                                     compact ? "text-[9px] h-8 lg:h-9 px-3 lg:px-4" : "text-[11px] h-11 lg:h-12 px-5"
                                 )}
                             >
@@ -275,7 +275,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                             <Button 
                                 variant="outline" 
                                 onClick={onShare}
-                                className={cn("p-0 border-[#FF6A00]/30 hover:bg-[#FF6A00]/10 text-[#FF6A00] shrink-0", compact ? "rounded-lg w-8 h-8 lg:w-9 lg:h-9" : "rounded-xl w-11 h-11 lg:w-12 lg:h-12")}
+                                className={cn("p-0 border-[#FF6A00] hover:bg-white/90 bg-white text-[#FF6A00] shrink-0", compact ? "rounded-lg w-8 h-8 lg:w-9 lg:h-9" : "rounded-xl w-11 h-11 lg:w-12 lg:h-12")}
                                 title="Compartilhar"
                             >
                                 <Share2 className={cn(compact ? "w-3.5 h-3.5" : "w-4 h-4")} />

@@ -14,7 +14,7 @@ export function FooterNeutral({ light = false, compact = false }: FooterNeutralP
   const currentDate = format(new Date(), "yyyy", { locale: ptBR });
 
   return (
-    <footer className={`mt-auto border-t border-white/10 bg-[#111827] relative z-10 w-full text-white ${compact ? 'pt-2.5 pb-2 px-3' : 'pt-0.5 pb-0.5 px-4'}`}>
+    <footer className={`mt-auto border-t border-white/10 bg-[#68c7f2] relative z-10 w-full text-white ${compact ? 'pt-2.5 pb-2 px-3' : 'pt-0.5 pb-0.5 px-4'}`}>
       <div className={compact ? "max-w-3xl mx-auto" : "max-w-6xl mx-auto"}>
         {/* Main Footer Grid */}
         <div className={`grid ${compact ? 'grid-cols-2 md:grid-cols-4 gap-2 mb-2' : 'grid-cols-2 md:grid-cols-4 gap-x-3 gap-y-1 mb-1'}`}>

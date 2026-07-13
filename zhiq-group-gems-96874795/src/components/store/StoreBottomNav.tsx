@@ -119,7 +119,7 @@ export function StoreBottomNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-zinc-950/95 backdrop-blur-md border-t border-yellow-500/10 text-zinc-400 z-50 md:hidden pb-safe">
+    <div className="fixed bottom-0 left-0 w-full bg-[#68c7f2] backdrop-blur-md border-t border-white/20 text-white z-50 md:hidden pb-safe">
       <div className="flex justify-around items-center h-[58px]">
         {navItems.map((item) => {
           const isActive = location.pathname.startsWith(item.path);
@@ -128,7 +128,7 @@ export function StoreBottomNav() {
               key={item.path}
               to={item.path}
               className={`relative flex flex-col items-center justify-center w-full h-full text-[11px] font-medium transition-colors ${
-                isActive ? "text-yellow-500" : "hover:text-zinc-200"
+                isActive ? "text-zinc-900" : "text-white/80 hover:text-white"
               }`}
             >
               <div className="relative">
@@ -139,9 +139,9 @@ export function StoreBottomNav() {
                   </span>
                 )}
               </div>
-              <span className={isActive ? "text-yellow-500" : ""}>{item.label}</span>
+              <span className={isActive ? "text-zinc-900 font-bold" : ""}>{item.label}</span>
               {isActive && (
-                <span className="absolute top-0 w-8 h-[2px] bg-yellow-500 rounded-b-full shadow-[0_0_8px_rgba(234,179,8,0.8)]" />
+                <span className="absolute top-0 w-8 h-[3px] bg-zinc-900 rounded-b-full shadow-sm" />
               )}
             </Link>
           );

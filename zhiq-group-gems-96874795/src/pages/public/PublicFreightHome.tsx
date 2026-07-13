@@ -104,7 +104,7 @@ export default function PublicFreightHome() {
 
       {/* ── CTA para anunciantes ── */}
       <div className="w-full px-4 lg:px-6 pb-4 pt-2">
-        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
           <div className="text-white space-y-1">
             <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para transportadoras e autônomos</p>
             <h3 className="text-xl font-black leading-tight">🚚 Anuncie seu frete aqui!</h3>

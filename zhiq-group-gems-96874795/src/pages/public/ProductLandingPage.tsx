@@ -22,13 +22,15 @@ import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function normalizeImageUrl(url: string | null | undefined): string | null {
+function normalizeImageUrl(url: string | null | undefined, bucket: string = 'marketing-materials'): string | null {
     if (!url || typeof url !== "string") return null;
     const trimmed = url.trim();
     if (!trimmed) return null;
     const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (driveMatch) return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
-    if (!/^https?:\/\//i.test(trimmed)) return null;
+    if (!/^https?:\/\//i.test(trimmed)) {
+        return supabase.storage.from(bucket).getPublicUrl(trimmed).data.publicUrl;
+    }
     return trimmed;
 }
 
@@ -215,6 +217,8 @@ export default function ProductLandingPage() {
                 const { data: userStore } = await (supabase.from("merchant_stores") as any)
                     .select("*")
                     .eq("user_id", resolvedUserId)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
                     .maybeSingle();
                 if (userStore) {
                     storeRow = userStore;
@@ -498,7 +502,11 @@ export default function ProductLandingPage() {
             : <Globe className="h-4 w-4" />;
 
     return (
-        <MarketLayout mainClassName="bg-[#F5E62B] flex flex-col">
+        <MarketLayout 
+            mainClassName="bg-[#F5E62B] flex flex-col"
+            blueFooter={true}
+            blueFooterLabel="Produto"
+        >
             <div className="flex-1 bg-[#F5E62B] flex flex-col">
             <div className="w-full px-4 lg:px-8 xl:px-12 py-6 lg:py-8 flex-1 flex flex-col">
 
@@ -559,7 +567,7 @@ export default function ProductLandingPage() {
                             <span className="text-4xl flex-shrink-0 mt-0.5 font-black">!</span>
                             <div>
                                 <p className="text-base font-black uppercase tracking-tight text-white">Alerta de Segurança Anti-Golpe</p>
-                                <p className="text-sm font-medium mt-1.5 leading-relaxed text-red-50">NUNCA faça pagamentos antecipados! A <strong className="font-black text-white">Viagg-TX8</strong> conecta você ao vendedor local. Encontre-se presencialmente ou pague no ato da entrega.</p>
+                                <p className="text-sm font-medium mt-1.5 leading-relaxed text-red-50">NUNCA faça pagamentos antecipados! A <strong className="font-black text-white">Viagg-TX8</strong> conecta você a(o) <strong className="font-black text-white">{store?.store_name || "vendedor local"}</strong>. Encontre-se presencialmente ou pague no ato da entrega.</p>
                             </div>
                         </div>
                     </div>
@@ -595,7 +603,7 @@ export default function ProductLandingPage() {
                                         }}
                                     />
                                 )}
-                                <button onClick={() => setShowDiscountModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                                <button onClick={() => setShowDiscountModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl bg-[#68c7f2] text-zinc-900 hover:opacity-90 transition-colors">
                                     <Percent className="h-4 w-4" /> Fazer uma oferta
                                 </button>
                                 <button onClick={() => setShowLeadModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl border-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
@@ -605,11 +613,11 @@ export default function ProductLandingPage() {
                         </div>
 
                         {store && (
-                            <div className="rounded-2xl bg-white border border-zinc-200 shadow-sm p-5">
+                            <div className="rounded-2xl bg-[#68c7f2] border border-zinc-200 shadow-sm p-5">
                                 <div className="flex items-center gap-3">
                                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-100 flex-shrink-0 bg-zinc-100">
-                                        {normalizeImageUrl(store.logo_url) ? (
-                                            <img src={normalizeImageUrl(store.logo_url)!} className="w-full h-full object-cover" alt={store.store_name || "Loja"} />
+                                        {normalizeImageUrl(store.logo_url, 'logos_lojas') ? (
+                                            <img src={normalizeImageUrl(store.logo_url, 'logos_lojas')!} className="w-full h-full object-cover" alt={store.store_name || "Loja"} />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center"><Store className="w-6 h-6 text-zinc-400" /></div>
                                         )}

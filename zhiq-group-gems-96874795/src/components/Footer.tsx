@@ -13,7 +13,7 @@ export function Footer() {
   const currentDate = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
   return (
-    <footer className="mt-auto border-t border-white/10 py-5 px-4 bg-black relative z-10">
+    <footer className="mt-auto border-t border-white/10 py-5 px-4 bg-[#68c7f2] relative z-10">
       <div className="container max-w-5xl mx-auto space-y-3">
         <nav className="flex flex-wrap justify-center gap-x-3 gap-y-2 text-[13px] font-medium">
           {!loading && links.map((link, index) => (
