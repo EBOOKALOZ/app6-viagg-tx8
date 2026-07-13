@@ -1935,8 +1935,13 @@ const scrollToProducts = () => {
                                                 source: "card",
                                             });
                                         }
+                                        /* Clique no produto → SEMPRE a loja do ofertante.
+                                           StorePublicPage resolve loja real, conta de anunciante
+                                           ou user_id (vitrine via profile). */
                                         if (product.merchant_store_id) {
                                             navigate(`/loja/${product.merchant_store_id}`);
+                                        } else if (product._advertiser_user_id) {
+                                            navigate(`/loja/${product._advertiser_user_id}`);
                                         } else if (product.tracking_slug) {
                                             navigate(`/p/${product.tracking_slug}`);
                                         } else {
