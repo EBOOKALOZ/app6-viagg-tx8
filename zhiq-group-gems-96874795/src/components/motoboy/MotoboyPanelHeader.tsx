@@ -76,27 +76,26 @@ export function MotoboyPanelHeader({
 
           {/* Avatar + Info */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="flex flex-col items-center justify-center gap-1 shrink-0">
-              <div className="relative shrink-0">
-                <Avatar className="h-10 w-10 border border-white/30 shadow shrink-0">
-                  <AvatarImage src={avatarUrl} alt={userName} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white font-bold text-xs">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className={cn(
-                  "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-background shadow-sm transition-colors duration-300",
-                  isOnline ? "bg-emerald-500" : "bg-slate-400"
-                )} />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/90 leading-none text-center whitespace-nowrap">
-                {panelLabel}
-              </span>
+            <div className="relative shrink-0">
+              <Avatar className="h-10 w-10 border border-white/30 shadow shrink-0">
+                <AvatarImage src={avatarUrl} alt={userName} />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white font-bold text-xs">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className={cn(
+                "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-background shadow-sm transition-colors duration-300",
+                isOnline ? "bg-emerald-500" : "bg-slate-400"
+              )} />
             </div>
 
-            <div className="flex flex-col items-start min-w-0 justify-center gap-1">
+            <div className="flex flex-col items-start min-w-0 justify-center gap-0.5">
               <span className="text-sm sm:text-base font-bold text-white max-w-full leading-tight break-words">
                 {userName}
+              </span>
+              {/* Selo do painel — agora abaixo do nome */}
+              <span className="text-[9px] font-black uppercase tracking-widest text-white/90 leading-none whitespace-nowrap">
+                {panelLabel}
               </span>
               <div className="flex items-center gap-2 max-w-full">
                 <span className={cn(
