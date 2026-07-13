@@ -112,7 +112,7 @@ export default function MinhaConta() {
                 onClick={() => navigate(item.to)}
                 className="w-full text-left"
               >
-                <Card className="rounded-2xl border border-white/20 bg-gradient-to-br from-[#2563eb] to-[#3b82f6] shadow-lg transition-all hover:-translate-y-0.5 hover:brightness-105 hover:shadow-xl">
+                <Card className="rounded-2xl border border-white/20 bg-[#FF6A00] shadow-lg transition-all hover:-translate-y-0.5 hover:brightness-105 hover:shadow-xl">
                   <CardContent className="flex items-center gap-4 p-4">
                     <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border overflow-hidden ${item.accent}`}>
                       {item.showUserAvatar && userAvatar ? (
@@ -142,7 +142,7 @@ export default function MinhaConta() {
           {user ? (
             <Button
               variant="outline"
-              className="w-full gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+              className="w-full gap-2 text-white hover:bg-white/10 hover:text-white dark:hover:bg-white/10"
               onClick={async () => { await signOut?.(); navigate("/mercado"); }}
             >
               <LogOut className="h-4 w-4" />

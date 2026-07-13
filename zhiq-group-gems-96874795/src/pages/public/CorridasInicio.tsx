@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, Car, Bike, Package, BrainCircuit, UserPlus, MapPin } from "lucide-react";
+import { ArrowRight, ChevronLeft, Car, Bike, Package, BrainCircuit, UserPlus, MapPin, CheckCircle2 } from "lucide-react";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
@@ -14,17 +14,19 @@ interface ProfileCard {
   title:          string;
   subtitle:       string;
   description:    string;
+  benefits?:      string[];       // nova propriedade
   badge:          string;
-  accent:         string;         // cor principal (Tailwind inline)
+  accent:         string;
   gradientFrom:   string;
   gradientTo:     string;
   Icon:           React.ElementType;
-  route:          string | null;  // null = card de IA (abre chat)
+  route:          string | null;
   buttonLabel:    string;
-  registerRoute:  string | null;  // null = sem botão de cadastro
+  registerRoute:  string | null;
   registerLabel:  string;
   imageSrc?:      string;
   callRoute?:     string | null;
+  callLabel?:     string;
 }
 
 // ─── Cards ────────────────────────────────────────────────────────────────────
@@ -34,68 +36,95 @@ const PROFILES: ProfileCard[] = [
     emoji:        "🚖",
     title:        "MOTO-TÁXI",
     subtitle:     "PASSAGEIRO",
-    description:  "Receba corridas de passageiros, aumente sua renda e cresça na plataforma.",
-    badge:        "Ganhe dinheiro",
+    description:  "Conecte-se rapidamente aos passageiros próximos e aumente sua renda com segurança.",
+    benefits:     [
+      "Cadastro 100% gratuito",
+      "Sem mensalidade fixa",
+      "Receba direto na carteira",
+      "Trabalhe no seu horário"
+    ],
+    badge:        "⭐ Profissional Parceiro",
     accent:       "#FF6A00",
     gradientFrom: "#FF6A00",
     gradientTo:   "#FF8C00",
     Icon:         Bike,
     route:        "/mototaxi/profile",
-    buttonLabel:  "Acessar Painel",
+    buttonLabel:  "Entrar como Moto Táxi",
     registerRoute:"/mototaxi/profile",
-    registerLabel:"Cadastrar Moto Táxi",
+    registerLabel:"Cadastrar Agora",
     imageSrc:     "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/platform-assets/moto-taxi.png",
     callRoute:    "/solicitar-corrida?service=mototaxi",
+    callLabel:    "Chamar Moto Táxi",
   },
   {
     id:           "motoboy",
     emoji:        "🏍️",
     title:        "MOTOBOY",
     subtitle:     "ENTREGAS",
-    description:  "Faça entregas rápidas, gerencie corridas e maximize seus ganhos diários.",
-    badge:        "Ganhe dinheiro",
+    description:  "Faça entregas rápidas na sua região, gerencie suas corridas e maximize seus ganhos diários.",
+    benefits:     [
+      "Sem taxa de adesão",
+      "Corridas e entregas locais",
+      "Saques direto no app",
+      "Suporte humanizado"
+    ],
+    badge:        "🚀 Mais Chamadas",
     accent:       "#DC2626",
     gradientFrom: "#DC2626",
     gradientTo:   "#EF4444",
     Icon:         Package,
     route:        "/motoboy/profile",
-    buttonLabel:  "Acessar Painel",
+    buttonLabel:  "Acessar Meu Painel",
     registerRoute:"/motoboy/profile",
-    registerLabel:"Cadastrar Motoboy",
+    registerLabel:"Cadastrar Agora",
     imageSrc:     motoboyHero,
     callRoute:    "/solicitar-corrida?service=motoboy",
+    callLabel:    "Chamar Motoboy",
   },
   {
     id:           "motorista",
     emoji:        "🚗",
     title:        "MOTORISTA",
     subtitle:     "PARTICULAR",
-    description:  "Realize corridas, gerencie comissões e conquiste mais clientes com seu veículo.",
-    badge:        "Ganhe dinheiro",
+    description:  "Realize viagens seguras, tenha previsibilidade de ganhos e conquiste mais clientes.",
+    benefits:     [
+      "Menor taxa do mercado",
+      "Passageiros verificados",
+      "Pagamentos no Pix",
+      "Clube de benefícios"
+    ],
+    badge:        "🟢 Cadastro Gratuito",
     accent:       "#D97706",
     gradientFrom: "#D97706",
     gradientTo:   "#F59E0B",
     Icon:         Car,
     route:        "/driver/profile",
-    buttonLabel:  "Acessar Painel",
+    buttonLabel:  "Acessar Meu Painel",
     registerRoute:"/driver/profile",
-    registerLabel:"Cadastrar Motorista",
+    registerLabel:"Cadastrar Agora",
     imageSrc:     "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/motorista-card.png/Motorista.png",
     callRoute:    "/solicitar-corrida?service=motorista",
+    callLabel:    "Chamar Motorista",
   },
   {
     id:           "ia",
     emoji:        "🤖",
     title:        "ASSISTENTE IA",
     subtitle:     "INTELIGENTE",
-    description:  "Atendimento 24h, suporte, análise de corridas e sugestões automáticas com IA.",
-    badge:        "NOVO",
+    description:  "Atendimento 24h, suporte, análise de corridas e sugestões automáticas com IA de ponta.",
+    benefits:     [
+      "Disponível 24 horas",
+      "Solução rápida de dúvidas",
+      "Suporte e integrações",
+      "100% automático"
+    ],
+    badge:        "✨ Tecnologia",
     accent:       "#6366F1",
     gradientFrom: "#6366F1",
     gradientTo:   "#8B5CF6",
     Icon:         BrainCircuit,
     route:        null,
-    buttonLabel:  "Acessar IA",
+    buttonLabel:  "Falar com a IA",
     registerRoute:null,
     registerLabel:"",
     callRoute:    null,
@@ -117,23 +146,21 @@ function ProfileCardItem({
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col h-full">
       {/* Card principal */}
       <div
-        className="group relative overflow-hidden bg-zinc-900 border border-zinc-700/50 rounded-3xl shadow-2xl flex flex-col items-center text-center transition-all w-full"
+        className="group relative h-full overflow-hidden bg-gradient-to-br from-[#1C2028] via-[#171A21] to-[#121417] border border-[#FF7A00]/35 rounded-[28px] shadow-[0_18px_45px_rgba(0,0,0,0.45)] flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1 hover:border-[#FF7A00] hover:shadow-[0_30px_60px_rgba(0,0,0,0.55),0_0_35px_rgba(255,122,0,0.18)] w-full"
       >
-        {/* Badge */}
-        <span
-          className="absolute top-4 right-4 z-10 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide border"
-          style={{ color: profile.accent, borderColor: `${profile.accent}40`, background: `${profile.accent}18` }}
-        >
-          {profile.badge}
-        </span>
+        {/* Cabeçalho do Card (Top bar c/ Badge) */}
+        <div className="w-full flex items-center justify-center pt-6 px-8 relative">
+           <span className="text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider bg-gradient-to-r from-[#FF7A00]/15 to-[#FF7A00]/5 text-[#FF7A00] border border-[#FF7A00]/20 shadow-sm transition-all duration-300">
+             {profile.badge}
+           </span>
+        </div>
 
-        {/* Ícone */}
+        {/* Imagem */}
         <div
-          className="mt-8 w-20 h-20 rounded-3xl overflow-hidden shadow-xl border-2 border-zinc-700 shrink-0 flex items-center justify-center"
-          style={{ background: `linear-gradient(135deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
+          className="mt-6 w-24 h-24 rounded-3xl overflow-hidden shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 border-2 border-[#FF7A00]/30 shadow-[0_0_30px_rgba(255,122,0,0.20)] ring-4 ring-[#1C2028] bg-[#1a1f28]"
         >
           {profile.imageSrc ? (
             <img
@@ -149,88 +176,82 @@ function ProfileCardItem({
           <div className={profile.imageSrc ? "hidden w-full h-full flex items-center justify-center" : "w-full h-full flex items-center justify-center"}>
             {isIA
               ? <img src={viaggLogo} alt="IA" className="w-full h-full object-cover" />
-              : <Icon className="w-11 h-11 text-white" />
+              : <Icon className="w-12 h-12 text-[#FF7A00]" />
             }
           </div>
         </div>
 
-        {/* Texto */}
-        <div className="px-6 pt-4 w-full">
-          <p className="text-xl font-black tracking-tight text-white">{profile.title}</p>
-          <p className="text-2xl font-black tracking-tight" style={{ color: profile.accent }}>{profile.subtitle}</p>
-          <p className="text-sm mt-2 leading-relaxed text-zinc-400">{profile.description}</p>
+        {/* Categoria e Título */}
+        <div className="px-8 pt-6 w-full flex flex-col items-center">
+          <p className="text-[14px] font-medium tracking-[0.2em] text-[#C9CED8] uppercase mb-1">{profile.title}</p>
+          <p className="text-[34px] leading-none font-black tracking-tight text-[#FF7A00]">
+            {profile.subtitle}
+          </p>
+          <p className="text-[16px] mt-4 leading-snug text-[#D7DCE5] line-clamp-2 px-2">
+            {profile.description}
+          </p>
         </div>
 
-        {/* Info de cadastro */}
-        {!isIA && (
-          <div className="mx-6 mt-4 w-[calc(100%-3rem)] text-left rounded-2xl border border-zinc-700 bg-white/5 px-4 py-3 flex items-start gap-2.5">
-            <div className="mt-0.5 shrink-0 w-7 h-7 rounded-xl flex items-center justify-center bg-white/10">
-              <UserPlus className="w-3.5 h-3.5" style={{ color: profile.accent }} />
+        {/* Área de Benefícios */}
+        {profile.benefits && profile.benefits.length > 0 && (
+          <div className="w-full px-8 mt-7">
+            <div className="bg-[#22262E] border border-[#2E3441] rounded-[18px] p-5 text-left flex flex-col gap-3 shadow-inner">
+              {profile.benefits.map((benefit, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <CheckCircle2 className="w-[18px] h-[18px] shrink-0 mt-[1px] text-[#00C853]" />
+                  <span className="text-[15px] font-medium text-[#F4F6F8] leading-snug">{benefit}</span>
+                </div>
+              ))}
             </div>
-            <p className="text-[11px] mt-0.5 leading-relaxed text-zinc-400">
-              Cadastre-se gratuitamente e comece a receber chamadas na plataforma.
-            </p>
           </div>
         )}
 
-        {isIA && (
-          <div className="mx-6 mt-4 w-[calc(100%-3rem)] text-left rounded-2xl border border-indigo-700/30 bg-indigo-900/20 px-4 py-3 flex items-start gap-2.5">
-            <div className="mt-0.5 shrink-0 w-7 h-7 rounded-xl flex items-center justify-center bg-white/10">
-              <BrainCircuit className="w-3.5 h-3.5 text-indigo-400" />
-            </div>
-            <p className="text-[11px] mt-0.5 leading-relaxed text-zinc-400">
-              Atendimento inteligente, suporte 24h e integração com GPT, DeepSeek e mais.
-            </p>
-          </div>
-        )}
+        {/* Espaçador flexível para empurrar os botões para o final se houver variação de altura */}
+        <div className="flex-1 min-h-[1.5rem]" />
 
         {/* Botões de Ação */}
-        <div className="flex gap-3 px-6 mt-5 mb-6 w-full shrink-0">
+        <div className="flex flex-col gap-3 px-8 pb-8 w-full shrink-0">
           {profile.callRoute ? (
             <>
-              {/* Botão Acessar Painel */}
+              {/* Botão Principal (Cadastrar) */}
+              {onRegister && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRegister(); }}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,184,77,0.30)] font-black text-[18px] text-white transition-all duration-250 bg-[#00B84D] hover:bg-[#00D65A] active:scale-[0.98]"
+                >
+                  {profile.registerLabel}
+                  <ArrowRight className="w-5 h-5 text-white" />
+                </button>
+              )}
+
+              {/* Botão Secundário (Painel) */}
               <button
                 onClick={(e) => { e.stopPropagation(); onAccess(); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl border font-bold text-xs transition-all hover:bg-white/5 active:scale-[0.98]"
-                style={{ borderColor: `${profile.accent}50`, color: profile.accent }}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[17px] transition-all duration-250 bg-[#FFC928] hover:bg-[#FFD447] text-[#1B1B1B] shadow-sm active:scale-[0.98]"
               >
                 {profile.buttonLabel}
               </button>
 
-              {/* Botão Chamar → passa por "Meus dados" e depois segue pro mapa (?next=) */}
+              {/* Botão Chamar (Terciário) */}
               <button
                 onClick={(e) => { e.stopPropagation(); navigate("/meus-dados?next=" + encodeURIComponent(profile.callRoute!)); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-2xl shadow-lg font-black text-xs text-white transition-all hover:brightness-110 active:scale-[0.98]"
-                style={{ background: `linear-gradient(90deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-[15px] text-[#9AA3B3] border border-[#404957] bg-transparent transition-all duration-250 hover:bg-[#252A34] hover:text-[#D7DCE5] active:scale-[0.98]"
               >
-                Chamar
-                <ArrowRight className="w-3.5 h-3.5 text-white" />
+                🚖 {profile.callLabel ?? "Chamar"}
               </button>
             </>
           ) : (
             /* Botão Único (ex: IA) */
             <button
               onClick={(e) => { e.stopPropagation(); onAccess(); }}
-              className="w-full flex items-center justify-center gap-1.5 py-3 rounded-2xl shadow-lg font-black text-xs text-white transition-all hover:brightness-110 active:scale-[0.98]"
-              style={{ background: `linear-gradient(90deg, ${profile.gradientFrom}, ${profile.gradientTo})` }}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,184,77,0.30)] font-black text-[18px] text-white transition-all duration-250 bg-[#00B84D] hover:bg-[#00D65A] active:scale-[0.98]"
             >
               {profile.buttonLabel}
-              <ArrowRight className="w-3.5 h-3.5 text-white" />
+              <ArrowRight className="w-5 h-5 text-white" />
             </button>
           )}
         </div>
       </div>
-
-      {/* Botão de cadastro — abaixo do card */}
-      {onRegister && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRegister(); }}
-          className="w-full py-3 rounded-2xl shadow-lg font-black text-sm transition-all hover:brightness-105 active:scale-[0.98]"
-          style={{ background: "linear-gradient(90deg, #FACC15, #EAB308)", color: "#0F172A" }}
-        >
-          + {profile.registerLabel}
-        </button>
-      )}
     </div>
   );
 }
@@ -287,20 +308,24 @@ export default function CorridasInicio() {
             className="group w-full relative overflow-hidden bg-gradient-to-br from-[#68c7f2] to-[#4aa8d8] rounded-3xl shadow-2xl shadow-sky-900/40 border border-[#68c7f2]/40 p-6 text-left hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] transition-all"
           >
             {/* Badge */}
-            <span className="absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-white/20 text-white border border-white/30">
+            <span className="absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-white/20 text-black border border-white/30">
               24H
             </span>
 
             <div className="flex items-center gap-4">
-              {/* Ícone */}
-              <div className="w-16 h-16 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0 shadow-lg">
-                <MapPin className="w-8 h-8 text-white" />
+              {/* Ícone: foto do usuário (se tiver) → logo da plataforma */}
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/20">
+                {userAvatar ? (
+                  <img src={userAvatar} alt="Foto do usuário" className="w-full h-full object-cover" />
+                ) : (
+                  <img src={viaggLogo} alt="Viagg-TX8 Logo" className="w-full h-full object-cover" />
+                )}
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-2xl font-black text-white tracking-tight">PEDIDOS DE CORRIDAS</p>
-                <p className="text-base font-black text-sky-100 tracking-tight">SOLICITAR AGORA</p>
-                <p className="text-sm text-sky-100/80 mt-1 leading-snug">
+                <p className="text-2xl font-black text-black tracking-tight">PEDIDOS DE CORRIDAS</p>
+                <p className="text-base font-black text-black/80 tracking-tight">SOLICITAR AGORA</p>
+                <p className="text-sm text-black/70 mt-1 leading-snug">
                   Moto Táxi, Motorista, Táxi, Motoboy, Entrega Expressa ou Frete — rastreio em tempo real e pagamento pela plataforma.
                 </p>
               </div>
@@ -308,14 +333,14 @@ export default function CorridasInicio() {
 
             {/* Botão interno */}
             <div className="mt-5 flex items-center gap-2 bg-white/15 border border-white/20 rounded-2xl px-5 py-3 w-fit">
-              <span className="font-black text-white text-sm">🚖 Solicitar Corrida</span>
-              <ArrowRight className="w-4 h-4 text-white" />
+              <span className="font-black text-black text-sm">🚖 Solicitar Corrida</span>
+              <ArrowRight className="w-4 h-4 text-black" />
             </div>
 
             {/* IA badge */}
             <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-2.5 py-1">
-              <BrainCircuit className="w-3 h-3 text-white/70" />
-              <span className="text-[10px] text-white/70 font-semibold">IA VIAGG</span>
+              <BrainCircuit className="w-3 h-3 text-black/70" />
+              <span className="text-[10px] text-black/70 font-semibold">IA VIAGG</span>
             </div>
           </button>
         </div>
@@ -339,11 +364,13 @@ export default function CorridasInicio() {
         >
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0 shadow-lg text-3xl overflow-hidden">
-              {userAvatar ? (
-                <img src={userAvatar} alt="Avatar do usuário" className="w-full h-full object-cover" />
-              ) : (
-                "👤"
-              )}
+                {!user ? (
+                  <img src={viaggLogo} alt="Viagg-TX8 Logo" className="w-full h-full object-cover" />
+                ) : userAvatar ? (
+                  <img src={userAvatar} alt="Avatar do usuário" className="w-full h-full object-cover" />
+                ) : (
+                  <img src={viaggLogo} alt="Viagg-TX8 Logo" className="w-full h-full object-cover" />
+                )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-lg font-black text-white tracking-tight truncate">

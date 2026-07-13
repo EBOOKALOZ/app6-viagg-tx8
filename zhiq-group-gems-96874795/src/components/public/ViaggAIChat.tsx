@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, Send, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { viaggAI, type AIMessage } from "@/lib/viaggAI";
+import { consultarPlataforma } from "@/lib/ai/moduleRegistry";
+import { useAuth } from "@/contexts/AuthContext";
 import viaggLogo from "@/assets/logo.png";
+import { buildViaggAIAssistantContext } from "@/lib/viaggAIContext";
 
 interface ViaggAIChatProps {
   context?: string;
@@ -25,7 +29,10 @@ export function ViaggAIChat({
   const [messages, setMessages] = useState<AIMessage[]>([
     { role: "assistant", content: welcomeMessage },
   ]);
+  const [acoes, setAcoes] = useState<{ label: string; path: string }[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const auth = useAuth();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,15 +51,68 @@ export function ViaggAIChat({
     setInput("");
     const userMsg: AIMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
+    setAcoes([]);
     setLoading(true);
+
+    /* MODULE REGISTRY: consulta dados REAIS da plataforma para esta pergunta
+       (via sessão do usuário — o RLS garante as permissões). Best-effort. */
+    let plataforma: { contexto: string; acoes: { label: string; path: string }[] } = { contexto: "", acoes: [] };
     try {
-      const { content } = await viaggAI.chat([...messages, userMsg], { context, maxTokens: 400 });
+      plataforma = await consultarPlataforma(text, {
+        userId: auth?.user?.id ?? null,
+        profile: auth?.activeProfile ?? null,
+      });
+    } catch { /* segue sem dados */ }
+
+    try {
+      // Constrói o contexto inteligente da IA com os dados do usuário atual
+      const aiContext = buildViaggAIAssistantContext({
+        id: auth?.user?.id,
+        name: auth?.displayName || auth?.user?.user_metadata?.full_name,
+        email: auth?.user?.email,
+        role: auth?.role || undefined,
+        activeProfile: auth?.activeProfile,
+        availableProfiles: auth?.availableProfiles
+      });
+
+      // Contexto final: identidade + tela atual + DADOS REAIS consultados agora
+      const finalContext = [
+        aiContext,
+        context ? `[CONTEXTO ESPECÍFICO DESTA TELA]\n${context}` : "",
+        plataforma.contexto,
+      ].filter(Boolean).join("\n\n");
+
+      let { content } = await viaggAI.chat([...messages, userMsg], { context: finalContext, maxTokens: 400 });
+
+      // [NAVEGAÇÃO INTELIGENTE] - Intercepta comando [NAVIGATE:/rota]
+      const navRegex = /\[NAVIGATE:([^\]]+)\]/i;
+      const navMatch = content.match(navRegex);
+      if (navMatch && navMatch[1]) {
+        const route = navMatch[1].trim();
+        // Remove a tag do texto visível
+        content = content.replace(navRegex, "").trim();
+        // Executa a navegação
+        navigate(route);
+      }
+
       setMessages((prev) => [...prev, { role: "assistant", content }]);
+      setAcoes(plataforma.acoes);
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "⚠️ Não consegui responder agora. Tente novamente." },
-      ]);
+      if (plataforma.contexto) {
+        // LLM indisponível, mas TEMOS os dados reais → responde direto com eles
+        const dados = plataforma.contexto
+          .split("\n")
+          .filter((l) => l.startsWith("•"))
+          .map((l) => l.replace(/^• \[[^\]]+\] /, ""))
+          .join("\n");
+        setMessages((prev) => [...prev, { role: "assistant", content: dados }]);
+        setAcoes(plataforma.acoes);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "⚠️ Não consegui responder agora. Tente novamente." },
+        ]);
+      }
     } finally {
       setLoading(false);
     }
@@ -71,7 +131,7 @@ export function ViaggAIChat({
               </div>
               <div>
                 <p className="text-white font-black text-sm leading-none">IA Viagg-TX8</p>
-                <p className="text-orange-100 text-[10px]">Assistente inteligente</p>
+                <p className="text-orange-100 text-[10px]">Assistente inteligente completo</p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white transition-colors">
@@ -114,6 +174,20 @@ export function ViaggAIChat({
                 <div className="bg-white shadow-sm border border-zinc-100 rounded-2xl rounded-tl-sm px-3 py-2">
                   <Loader2 className="w-4 h-4 text-[#FF6A00] animate-spin" />
                 </div>
+              </div>
+            )}
+            {/* Ações inteligentes (navegação sugerida pela IA) */}
+            {!loading && acoes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pl-8">
+                {acoes.map((a) => (
+                  <button
+                    key={a.path}
+                    onClick={() => { setOpen(false); navigate(a.path); }}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#FF6A00] px-3 py-1.5 text-[11px] font-black text-white shadow-md transition-all hover:brightness-110 active:scale-95"
+                  >
+                    {a.label} <ArrowRight className="h-3 w-3" />
+                  </button>
+                ))}
               </div>
             )}
             <div ref={bottomRef} />
