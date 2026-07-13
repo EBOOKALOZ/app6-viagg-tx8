@@ -478,37 +478,43 @@ export default function ProductPublicPage() {
                         <SheetTitle className="sr-only">Informações da Loja</SheetTitle>
                     </SheetHeader>
                     {store && (
-                        <div className="p-4 space-y-6 overflow-y-auto h-full pb-20">
-                            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                                <div className="w-24 h-24 rounded-3xl bg-white shadow-xl flex items-center justify-center border-4 border-zinc-100 overflow-hidden">
-                                    {store.logo_url ? (
-                                        <img src={normalizeImageUrl(store.logo_url) || ""} alt={store.store_name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <Store className="w-10 h-10 text-zinc-300" />
-                                    )}
+                        <div className="p-6 space-y-6 overflow-y-auto h-full pb-20">
+                            {/* Card Logo do Lojista (mesmo layout da ProductLandingPage) */}
+                            <div className="rounded-2xl bg-white border border-zinc-200 shadow-sm p-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-100 flex-shrink-0 bg-zinc-100">
+                                        {normalizeImageUrl(store.logo_url) ? (
+                                            <img src={normalizeImageUrl(store.logo_url)!} className="w-full h-full object-cover" alt={store.store_name || "Loja"} />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center"><Store className="w-6 h-6 text-zinc-400" /></div>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <span className="bg-[#FF6A00] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">Loja Oficial</span>
+                                        <h3 className="font-black text-zinc-900 leading-tight truncate mt-1">{store.store_name || "Vendedor Local"}</h3>
+                                        {(store.bairro || store.city) && (
+                                            <p className="text-xs text-zinc-500 flex items-center gap-1 mt-1">
+                                                {[store.bairro, store.city].filter(Boolean).join(", ")}
+                                                {store.region ? "/" + store.region : ""}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h2 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase">{store.store_name}</h2>
-                                    <p className="text-sm font-bold text-zinc-500 mt-1">{store.business_name || store.store_name}</p>
-                                </div>
-                                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none px-4 py-1.5 uppercase font-black text-[10px] tracking-widest">
-                                    Loja Verificada
-                                </Badge>
+                                
+                                <button 
+                                    onClick={(e) => { e.preventDefault(); navigate(`/loja/${store.store_id || store.id}`); setStoreDrawerOpen(false); }} 
+                                    className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-colors"
+                                >
+                                    <Store className="h-4 w-4" /> Visitar a Loja
+                                </button>
                             </div>
 
-                            <div className="bg-white p-6 rounded-[24px] shadow-sm border border-zinc-100 space-y-4">
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-zinc-100 space-y-3">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sobre a Loja</h3>
                                 <p className="text-sm font-medium text-zinc-700 leading-relaxed">
                                     {store.description || "Nenhuma descrição fornecida pela loja."}
                                 </p>
                             </div>
-
-                            <Button 
-                                onClick={() => navigate(`/loja/${store.id}`)}
-                                className="w-full h-14 rounded-2xl bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-widest shadow-xl"
-                            >
-                                Visitar Vitrine da Loja
-                            </Button>
                         </div>
                     )}
                 </SheetContent>
