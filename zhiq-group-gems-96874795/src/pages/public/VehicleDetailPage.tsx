@@ -25,7 +25,8 @@ import { cn, formatCurrencyBRL } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
-import { MarketLayout } from '@/components/layout/MarketLayout';
+import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketVehicleCard } from '@/components/advertiser/MarketVehicleCard';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
@@ -255,7 +256,7 @@ export const VehicleDetailPage = () => {
 
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🚗 Veículos" myAccountPath="/minha-conta">
+      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🚗 Veículos" myAccountPath="/minha-conta" headerChildren={<MarketNavButtons />}>
         <DetailPageLayout
           bg="#F5E62B"
           accent="#dc2626"

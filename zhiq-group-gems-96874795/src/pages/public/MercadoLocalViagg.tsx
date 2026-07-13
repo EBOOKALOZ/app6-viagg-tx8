@@ -1522,65 +1522,7 @@ const scrollToProducts = () => {
                 </div>
             </div>
 
-            {/* ═══ CATEGORY BAR ═══ */}
-            {false && activeCategories.length > 0 && (
-                <div className="bg-white border-b border-gray-100 shadow-sm">
-                    <div className="w-full px-4 lg:px-6 relative">
-                        <button
-                            type="button"
-                            aria-label="Categorias anteriores"
-                            onClick={() => scrollCategoryBar("left")}
-                            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white rounded-full shadow-lg border border-orange-100 flex items-center justify-center hover:bg-orange-50 active:scale-95 transition-all">
-                            <ChevronLeft className="h-5 w-5 text-[#FF6A00]" />
-                        </button>
-                        <button
-                            type="button"
-                            aria-label="Próximas categorias"
-                            onClick={() => scrollCategoryBar("right")}
-                            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-9 h-9 bg-white rounded-full shadow-lg border border-orange-100 flex items-center justify-center hover:bg-orange-50 active:scale-95 transition-all">
-                            <ChevronRight className="h-5 w-5 text-[#FF6A00]" />
-                        </button>
-
-                        <div ref={categoryBarRef}
-                            className="flex items-center gap-1 py-3 overflow-x-auto scrollbar-hide scroll-smooth px-10">
-                            <button
-                                onClick={() => { setCategoryFilter("all"); scrollToProducts(); }}
-                                className={cn(
-                                    "flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[72px] transition-all duration-200 shrink-0",
-                                    categoryFilter === "all"
-                                        ? "bg-[#FF6A00] text-white shadow-md shadow-orange-200 scale-105"
-                                        : "bg-gray-50 text-gray-500 hover:bg-orange-50 hover:text-[#FF6A00]"
-                                )}>
-                                <span className="text-3xl"><LayoutGrid className="h-9 w-9" /></span>
-                                <span className="text-[10px] font-bold whitespace-nowrap">Todos</span>
-                            </button>
-
-                            {activeCategories.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => { setCategoryFilter(cat.nome); scrollToProducts(); }}
-                                    className={cn(
-                                        "flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[72px] transition-all duration-200 shrink-0 relative",
-                                        categoryFilter === cat.nome
-                                            ? "bg-[#FF6A00] text-white shadow-md shadow-orange-200 scale-105"
-                                            : "bg-gray-50 text-gray-500 hover:bg-orange-50 hover:text-[#FF6A00]"
-                                    )}>
-                                    <CategoryIcon nome={cat.nome} icone={cat.icone} />
-                                    <span className="text-[10px] font-bold whitespace-nowrap">{cat.nome}</span>
-                                    <span className={cn(
-                                        "absolute -top-1 -right-1 text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1",
-                                        categoryFilter === cat.nome
-                                            ? "bg-white text-[#FF6A00]"
-                                            : "bg-[#FF6A00] text-white"
-                                    )}>
-                                        {cat.count}
-                                    </span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Categoria Bar Movida para baixo */}
 
             {/* ═══ ACTIVE AUCTIONS SECTION ═══ */}
             {auctionListings.filter((a: any) => {
@@ -1866,6 +1808,66 @@ const scrollToProducts = () => {
             <div className="flex-1" style={{ backgroundColor: '#F5E62B' }}>
             <div ref={productSectionRef} className="w-full px-4 lg:px-6 py-6">
 
+                {/* ═══ CATEGORY BAR (Sticky) ═══ */}
+                {activeCategories.length > 0 && (
+                    <div className="sticky top-[60px] z-40 bg-[#F5E62B] py-2 mb-6 -mx-4 px-4 lg:mx-0 lg:px-0 shadow-sm border-b border-yellow-500/20">
+                        <div className="w-full relative max-w-[1920px] mx-auto">
+                            <button
+                                type="button"
+                                aria-label="Categorias anteriores"
+                                onClick={() => scrollCategoryBar("left")}
+                                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-all">
+                                <ChevronLeft className="h-5 w-5 text-[#FF6A00]" />
+                            </button>
+                            <button
+                                type="button"
+                                aria-label="Próximas categorias"
+                                onClick={() => scrollCategoryBar("right")}
+                                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 transition-all">
+                                <ChevronRight className="h-5 w-5 text-[#FF6A00]" />
+                            </button>
+
+                            <div ref={categoryBarRef}
+                                className="flex items-center gap-2 md:gap-3 py-2 overflow-x-auto scrollbar-hide scroll-smooth px-10 lg:px-12">
+                                <button
+                                    onClick={() => { setCategoryFilter("all"); scrollToProducts(); }}
+                                    className={cn(
+                                        "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl min-w-[72px] md:min-w-[140px] md:flex-1 md:py-3 transition-all duration-200 shrink-0",
+                                        categoryFilter === "all"
+                                            ? "bg-[#FF6A00] text-white shadow-md shadow-orange-200 scale-105"
+                                            : "bg-white text-gray-500 shadow-sm hover:bg-orange-50 hover:text-[#FF6A00]"
+                                    )}>
+                                    <span className="text-3xl"><LayoutGrid className="h-8 w-8" /></span>
+                                    <span className="text-[10px] md:text-xs font-bold whitespace-nowrap">Todos</span>
+                                </button>
+
+                                {activeCategories.map(cat => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => { setCategoryFilter(cat.nome); scrollToProducts(); }}
+                                        className={cn(
+                                            "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl min-w-[72px] md:min-w-[140px] md:flex-1 md:py-3 transition-all duration-200 shrink-0 relative",
+                                            categoryFilter === cat.nome
+                                                ? "bg-[#FF6A00] text-white shadow-md shadow-orange-200 scale-105"
+                                                : "bg-white text-gray-500 shadow-sm hover:bg-orange-50 hover:text-[#FF6A00]"
+                                        )}>
+                                        <CategoryIcon nome={cat.nome} icone={cat.icone} />
+                                        <span className="text-[10px] md:text-xs font-bold whitespace-nowrap truncate w-full text-center">{cat.nome}</span>
+                                        <span className={cn(
+                                            "absolute -top-1 -right-1 text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 shadow-sm",
+                                            categoryFilter === cat.nome
+                                                ? "bg-white text-[#FF6A00]"
+                                                : "bg-[#FF6A00] text-white"
+                                        )}>
+                                            {cat.count}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {isLoading ? (
                     <div className="flex justify-center py-20">
                         <div className="text-center space-y-3">
@@ -1915,7 +1917,7 @@ const scrollToProducts = () => {
 
                             return (
                                 <div key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
-                                    className={`rounded-lg overflow-hidden cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 bg-white border border-gray-100 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
+                                    className={`rounded-lg overflow-hidden cursor-pointer lg:hover:shadow-lg lg:hover:-translate-y-0.5 transition-all duration-200 bg-white border border-gray-100 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
                                     onClick={() => {
                                         trackProductEvent({
                                             product_id: product.id,
@@ -1960,7 +1962,7 @@ const scrollToProducts = () => {
                                             <div className="relative w-full aspect-square flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
                                                 <ShoppingBag className="absolute h-8 w-8 text-gray-200 z-0" />
                                                 <img src={imgSrc} alt={product.title}
-                                                    className="absolute inset-0 w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-300 z-10"
+                                                    className="absolute inset-0 w-full h-full object-cover lg:group-hover/card:scale-105 transition-transform duration-300 z-10"
                                                     onLoad={(e) => {
                                                         const el = e.currentTarget;
                                                         console.log(`[MercadoLocal] Imagem do Produto Carregada com SUCESSO!
@@ -2046,7 +2048,7 @@ const scrollToProducts = () => {
                                                 const text = `🔥 *${product.title}*${priceText}\n\n${product.store_name ? `🏪 ${product.store_name}` : ""}${product.city ? ` • 🚚 Entrega em ${product.city}` : ""}\n✅ Pronta Entrega!\n\n👉 Confira: ${storeUrl}`;
                                                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                                             }}
-                                            className="absolute top-1.5 right-1.5 bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover/card:opacity-100 z-10"
+                                            className="absolute top-1.5 right-1.5 bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5 shadow-lg transition-all lg:opacity-0 lg:group-hover/card:opacity-100 z-10"
                                             title="Compartilhar no WhatsApp"
                                         >
                                             <Share2 className="h-3.5 w-3.5" />

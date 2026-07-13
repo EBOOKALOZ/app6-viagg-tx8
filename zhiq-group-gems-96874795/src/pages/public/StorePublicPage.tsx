@@ -26,6 +26,7 @@ import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import DiscountRequestModal from "@/components/public/DiscountRequestModal";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 type TabValue = "home" | "all" | "promo";
 
@@ -553,7 +554,14 @@ export default function StorePublicPage() {
     }
 
     return (
-        <MarketLayout mainClassName="bg-[#F5E62B] flex flex-col" blueFooter blueFooterLabel={`Loja: ${store.store_name}`}>
+        <MarketLayout 
+            search={search}
+            setSearch={setSearch}
+            mainClassName="bg-[#F5E62B] flex flex-col" 
+            blueFooter 
+            blueFooterLabel={`Loja: ${store.store_name}`}
+            headerChildren={<MarketNavButtons />}
+        >
             <div className="min-h-screen pb-24">
                 
                 {/* ─── HEADER PREMIUM ─── */}
@@ -570,18 +578,6 @@ export default function StorePublicPage() {
                     bannerUrl={normalizeImageUrl(store.banner_url)}
                 />
 
-                {/* ─── MOBILE SEARCH (Only visible below header on small screens) ─── */}
-                <div className="lg:hidden px-4 mb-4">
-                    <div className="relative">
-                        <Input 
-                            placeholder={`Buscar em ${store.store_name}...`}
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="h-12 pl-12 rounded-xl border-none shadow-md bg-white focus-visible:ring-[#FF6A00]"
-                        />
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                    </div>
-                </div>
 
                 {/* ─── STICKY TABS NAVIGATION ─── */}
                 <div className="sticky top-[64px] lg:top-[80px] z-30 bg-white/80 backdrop-blur-md border-b border-zinc-200 mb-8 shadow-sm">

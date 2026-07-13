@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { 
     Package, 
@@ -18,11 +18,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 // ─── Helpers ────────────────────────────
 function normalizeImageUrl(url: string | null | undefined): string | null {
@@ -38,6 +40,14 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
 export default function ProductPublicPage() {
     const { productId } = useParams();
     const navigate = useNavigate();
+    const [search, setSearch] = useState("");
+    const [storeDrawerOpen, setStoreDrawerOpen] = useState(false);
+
+    const handleSearchSubmit = (val: string) => {
+        if (val.trim()) {
+            navigate(`/mercado?q=${encodeURIComponent(val.trim())}`);
+        }
+    };
 
     const { data: product, isLoading, error } = useQuery({
         queryKey: ["product-details", productId],
@@ -96,7 +106,12 @@ export default function ProductPublicPage() {
 
     if (isLoading) {
         return (
-            <MarketLayout>
+            <MarketLayout
+                search={search}
+                setSearch={setSearch}
+                onSearchSubmit={handleSearchSubmit}
+                headerChildren={<MarketNavButtons />}
+            >
                 <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 bg-zinc-50/50">
                     <Loader2 className="w-12 h-12 animate-spin text-emerald-500" />
                     <p className="text-sm font-black text-zinc-400 uppercase tracking-[0.2em] animate-pulse">Carregando Vitrine...</p>
@@ -107,7 +122,12 @@ export default function ProductPublicPage() {
 
     if (error || !product) {
         return (
-            <MarketLayout>
+            <MarketLayout
+                search={search}
+                setSearch={setSearch}
+                onSearchSubmit={handleSearchSubmit}
+                headerChildren={<MarketNavButtons />}
+            >
                 <div className="container py-20 text-center space-y-6">
                     <div className="w-24 h-24 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
                         <Package className="w-12 h-12" />
@@ -154,7 +174,12 @@ export default function ProductPublicPage() {
     });
 
     return (
-        <MarketLayout>
+        <MarketLayout
+            search={search}
+            setSearch={setSearch}
+            onSearchSubmit={handleSearchSubmit}
+            headerChildren={<MarketNavButtons />}
+        >
             <div className="bg-[#F5E62B] min-h-screen pb-20 animate-in fade-in duration-1000">
                 <div className="container max-w-7xl mx-auto px-4 py-8">
                     
@@ -223,7 +248,10 @@ export default function ProductPublicPage() {
                                 </h1>
                                 <div className="flex items-center gap-4 py-2">
                                     {store && (
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors cursor-pointer border border-zinc-200">
+                                        <div 
+                                            onClick={() => setStoreDrawerOpen(true)}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors cursor-pointer border border-zinc-200"
+                                        >
                                             <Store className="w-3.5 h-3.5 text-zinc-500" />
                                             <span className="text-[10px] font-black uppercase tracking-tight text-zinc-600">
                                                 Vendido por: <span className="text-zinc-950 underline">{store.store_name}</span>
@@ -432,6 +460,60 @@ export default function ProductPublicPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Floating Store Button */}
+            {store && (
+                <button
+                    onClick={() => setStoreDrawerOpen(true)}
+                    className="fixed bottom-24 right-6 z-50 flex items-center justify-center bg-zinc-950 text-white w-14 h-14 rounded-[20px] shadow-2xl hover:scale-105 transition-all duration-200 border-2 border-zinc-800"
+                >
+                    <Store className="w-6 h-6" />
+                </button>
+            )}
+
+            {/* Store Drawer */}
+            <Sheet open={storeDrawerOpen} onOpenChange={setStoreDrawerOpen}>
+                <SheetContent side="bottom" className="rounded-t-[32px] h-[85vh] bg-zinc-50">
+                    <SheetHeader>
+                        <SheetTitle className="sr-only">Informações da Loja</SheetTitle>
+                    </SheetHeader>
+                    {store && (
+                        <div className="p-4 space-y-6 overflow-y-auto h-full pb-20">
+                            <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                                <div className="w-24 h-24 rounded-3xl bg-white shadow-xl flex items-center justify-center border-4 border-zinc-100 overflow-hidden">
+                                    {store.logo_url ? (
+                                        <img src={normalizeImageUrl(store.logo_url) || ""} alt={store.store_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Store className="w-10 h-10 text-zinc-300" />
+                                    )}
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-zinc-900 tracking-tighter uppercase">{store.store_name}</h2>
+                                    <p className="text-sm font-bold text-zinc-500 mt-1">{store.business_name || store.store_name}</p>
+                                </div>
+                                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none px-4 py-1.5 uppercase font-black text-[10px] tracking-widest">
+                                    Loja Verificada
+                                </Badge>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-[24px] shadow-sm border border-zinc-100 space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sobre a Loja</h3>
+                                <p className="text-sm font-medium text-zinc-700 leading-relaxed">
+                                    {store.description || "Nenhuma descrição fornecida pela loja."}
+                                </p>
+                            </div>
+
+                            <Button 
+                                onClick={() => navigate(`/loja/${store.id}`)}
+                                className="w-full h-14 rounded-2xl bg-[#FF6A00] hover:bg-[#E65C00] text-white font-black uppercase tracking-widest shadow-xl"
+                            >
+                                Visitar Vitrine da Loja
+                            </Button>
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+
 
             <InstitutionalSafetyBanner />
         </MarketLayout>

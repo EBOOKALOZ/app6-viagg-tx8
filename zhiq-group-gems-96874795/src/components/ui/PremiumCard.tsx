@@ -36,6 +36,7 @@ export interface PremiumCardProps {
   onPrimaryAction?: (e: React.MouseEvent) => void;
   className?: string;
   aspectRatio?: 'video' | 'square' | 'portrait';
+  imageObjectFit?: 'cover' | 'contain';
 }
 
 export const PremiumCard: React.FC<PremiumCardProps> = ({
@@ -57,7 +58,8 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
   primaryActionLabel = 'Tenho Interesse',
   onPrimaryAction,
   className,
-  aspectRatio = 'video'
+  aspectRatio = 'video',
+  imageObjectFit = 'cover'
 }) => {
   const getBadgeStyle = (variant: PremiumBadgeVariant) => {
     switch (variant) {
@@ -114,7 +116,10 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
             src={imageUrl} 
             alt={title}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className={cn(
+              "w-full h-full transition-transform duration-700 ease-out group-hover:scale-105",
+              imageObjectFit === 'contain' ? 'object-contain bg-zinc-900' : 'object-cover'
+            )}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-zinc-300">
@@ -187,8 +192,8 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         <div className="h-px w-full bg-zinc-100" />
 
         {/* Footer: Price & Action */}
-        <div className="flex items-center justify-between gap-4 pt-1">
-          <div className="flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 pt-1">
+          <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
             {oldPrice ? (
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-zinc-400 line-through font-medium">
@@ -215,7 +220,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
 
           <Button 
             onClick={handleActionClick}
-            className="shrink-0 bg-sky-700 hover:bg-sky-800 text-white rounded-xl shadow-[0_4px_14px_0_rgb(2,132,199,0.39)] hover:shadow-[0_6px_20px_rgba(2,132,199,0.23)] hover:-translate-y-0.5 transition-all duration-200 px-5"
+            className="w-full sm:w-auto shrink-0 bg-sky-700 hover:bg-sky-800 text-white rounded-xl shadow-[0_4px_14px_0_rgb(2,132,199,0.39)] hover:shadow-[0_6px_20px_rgba(2,132,199,0.23)] hover:-translate-y-0.5 transition-all duration-200 px-5"
           >
             <span className="font-bold text-xs uppercase tracking-wider">{primaryActionLabel}</span>
           </Button>
