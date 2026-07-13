@@ -246,7 +246,10 @@ export default function MercadoLocalViagg() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const viewParam = searchParams.get("view");
-    const productsOnly = viewParam === "produtos";
+    /* SEGMENTAÇÃO (2026-07-12): /mercado exibe SOMENTE produtos por padrão.
+       Imóveis/Veículos/Serviços/Fretes/Viagens têm páginas próprias.
+       ?view=completo restaura a vitrine agregada antiga se necessário. */
+    const productsOnly = viewParam !== "completo";
     const [search, setSearch] = useState("");
     const [cityFilter, setCityFilter] = useState<string>("all");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -881,8 +884,9 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             });
         });
 
-        // Add "Imóveis" category if there are properties
-        if (rawPropertyListings.length > 0) {
+        // Chips de outros módulos SÓ na visão agregada (?view=completo) —
+        // segmentação: o Mercado padrão não mistura categorias de outros módulos
+        if (!productsOnly && rawPropertyListings.length > 0) {
             extras.push({
                 id: 'cat-imoveis',
                 nome: 'Imóveis',
@@ -892,8 +896,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             });
         }
 
-        // Add "Automóveis" category if there are vehicles
-        if (rawVehicleListings.length > 0) {
+        if (!productsOnly && rawVehicleListings.length > 0) {
             extras.push({
                 id: 'cat-automoveis',
                 nome: 'Automóveis',
@@ -904,7 +907,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         }
 
         return [...matched, ...extras].sort((a, b) => b.count - a.count);
-    }, [categories, products, rawPropertyListings, rawVehicleListings, rawServiceListings]);
+    }, [categories, products, rawPropertyListings, rawVehicleListings, rawServiceListings, productsOnly]);
 
     const filtered = useMemo(() => {
         return products.filter(p => {
@@ -1128,7 +1131,7 @@ const scrollToProducts = () => {
 
             {/* ═══ REAL ESTATE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-[#FFE600]">
+                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1157,6 +1160,21 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
+                        {/* CTA Imóveis */}
+                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                            <div className="text-white space-y-1">
+                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para corretores e proprietários</p>
+                                <h3 className="text-xl font-black leading-tight">🏢 Anuncie seu imóvel aqui!</h3>
+                                <p className="text-sm text-sky-100">Encontre compradores e inquilinos na sua região. Cadastro rápido e gratuito.</p>
+                            </div>
+                            <button
+                                onClick={() => navigate("/auth?entry=advertiser")}
+                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+                            >
+                                Anunciar meu imóvel →
+                            </button>
+                        </div>
+
                         <HorizontalCarousel>
                             {propertyListings.length > 0 ? (
                                 propertyListings.map((prop) => (
@@ -1183,7 +1201,7 @@ const scrollToProducts = () => {
 
             {/* ═══ SERVICES SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Serviços") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-violet-50">
+                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1212,6 +1230,21 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
+                        {/* CTA Serviços */}
+                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                            <div className="text-white space-y-1">
+                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para prestadores de serviço</p>
+                                <h3 className="text-xl font-black leading-tight">🔧 Anuncie seu serviço aqui!</h3>
+                                <p className="text-sm text-sky-100">Alcance clientes na sua região. Cadastro rápido e gratuito.</p>
+                            </div>
+                            <button
+                                onClick={() => navigate("/auth?entry=advertiser")}
+                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+                            >
+                                Anunciar meu serviço →
+                            </button>
+                        </div>
+
                         <HorizontalCarousel>
                             {serviceListings.length > 0 ? (
                                 serviceListings.map((serv) => (
@@ -1238,7 +1271,7 @@ const scrollToProducts = () => {
 
             {/* ═══ FREIGHT SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Fretes") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-blue-50">
+                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1267,6 +1300,21 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
+                        {/* CTA Fretes */}
+                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                            <div className="text-white space-y-1">
+                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para transportadoras e motoristas</p>
+                                <h3 className="text-xl font-black leading-tight">🚚 Anuncie seu frete aqui!</h3>
+                                <p className="text-sm text-sky-100">Encontre clientes precisando de transporte na sua região. Cadastro rápido e gratuito.</p>
+                            </div>
+                            <button
+                                onClick={() => navigate("/auth?entry=advertiser")}
+                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+                            >
+                                Anunciar meu frete →
+                            </button>
+                        </div>
+
                         <HorizontalCarousel>
                             {freightListings.length > 0 ? (
                                 freightListings.map((fr) => (
@@ -1293,7 +1341,7 @@ const scrollToProducts = () => {
 
             {/* ═══ TRAVEL SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Viagens") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-yellow-400">
+                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1322,6 +1370,21 @@ const scrollToProducts = () => {
                             </Button>
                         </div>
 
+                        {/* CTA Viagens */}
+                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                            <div className="text-white space-y-1">
+                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para agências e guias</p>
+                                <h3 className="text-xl font-black leading-tight">✈️ Anuncie sua viagem aqui!</h3>
+                                <p className="text-sm text-sky-100">Venda pacotes e excursões para clientes. Cadastro rápido e gratuito.</p>
+                            </div>
+                            <button
+                                onClick={() => navigate("/auth?entry=advertiser")}
+                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+                            >
+                                Anunciar minha viagem →
+                            </button>
+                        </div>
+
                         <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-80">
                             {travelListings.length > 0 ? (
                                 travelListings.map((tr) => (
@@ -1348,7 +1411,7 @@ const scrollToProducts = () => {
 
             {/* ═══ AUTOMOTIVE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Automóveis") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-blue-50/50">
+                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1375,6 +1438,21 @@ const scrollToProducts = () => {
                                 {vehicleListings.length > 0 ? 'Ver todos os veículos' : 'Anunciar meu veículo'}
                                 <ArrowRight className="w-4 h-4" />
                             </Button>
+                        </div>
+
+                        {/* CTA Automóveis */}
+                        <div className="bg-sky-700 rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+                            <div className="text-white space-y-1">
+                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para concessionárias e vendedores</p>
+                                <h3 className="text-xl font-black leading-tight">🚗 Anuncie seu veículo aqui!</h3>
+                                <p className="text-sm text-sky-100">Venda carros, motos e caminhões rapidamente. Cadastro rápido e gratuito.</p>
+                            </div>
+                            <button
+                                onClick={() => navigate("/auth?entry=advertiser")}
+                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+                            >
+                                Anunciar meu veículo →
+                            </button>
                         </div>
 
                         <HorizontalCarousel>

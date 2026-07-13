@@ -143,6 +143,7 @@ const menuSections: MenuSection[] = [
     items: [
       { title: "Comissão Inteligente", url: "/admin/comissao-inteligente", icon: Target },
       { title: "Fila de Divulgações", url: "/admin/fila-divulgacoes", icon: Inbox, badge: "IA" },
+      { title: "Auditoria de Categorias", url: "/admin/auditoria-categorias", icon: Search },
       { title: "RADAR IA", url: "/admin/radar-ia", icon: Radar, badge: "IA" },
       { title: "Grupos Aprovados", url: "/admin/grupos-aprovados", icon: BadgeCheck, badge: "IA" },
       { title: "Moderação IA", url: "/admin/moderacao-ia", icon: ShieldCheck, badge: "IA" },

@@ -92,6 +92,7 @@ import {
   AdminMapDashboard,
   AdminPostingQueuePage,
   AdminFilaDivulgacoes,
+  AdminAuditoriaCategorias,
   AdminCommissionIntelligence,
   AdminRadarIA,
   AdminGruposAprovados,
@@ -219,6 +220,8 @@ export const adminRoutes = (
       <Route path="/admin/fila-impulsionar" element={<AdminPostingQueuePage />} />
       {/* Fila Inteligente de Divulgações — transparência total (admin) */}
       <Route path="/admin/fila-divulgacoes" element={<AdminFilaDivulgacoes />} />
+      {/* Auditoria de Categorias — segmentação por módulo */}
+      <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}
       <Route path="/admin/fila-postador" element={<Navigate to="/admin/fila-impulsionar" replace />} />
       <Route path="/admin/postador-central" element={<Navigate to="/admin/impulsionar-central" replace />} />
