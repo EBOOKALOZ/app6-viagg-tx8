@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
+import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -102,33 +103,47 @@ export function MarketLayout({
             {/* ═══ TOP BAR ═══ */}
             <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
-                    {/* ── MOBILE HEADER (< lg) ── */}
-                    <div className="relative flex items-center h-[50px] w-full lg:hidden px-2">
-                        {/* Centro absoluto: Logo + Cesta */}
-                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-                            <div className="cursor-pointer" onClick={() => navigate("/mercado")}>
-                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
-                            </div>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none"
-                                title="Cesta"
-                            >
-                                <ShoppingCart className="h-4 w-4" />
-                                {globalCart.totalItems > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-[#FF6A00] text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 shadow-md border border-[#F5E62B] animate-pulse">
-                                        {globalCart.totalItems}
-                                    </span>
-                                )}
-                            </button>
-                            <div id="global-audio-portal-mobile" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
-                        </div>
+                    {/* ── MOBILE HEADER (< lg): clima estreito + botões EMPILHADOS ── */}
+                    <div className="lg:hidden px-2 pt-2 pb-1">
+                        <div className="flex items-stretch gap-2">
+                            {/* Card de clima (estreitado pela coluna de botões) */}
+                            {showSearch ? (
+                                <div className="min-w-0 flex-1">
+                                    <HomeHeroWeather />
+                                </div>
+                            ) : (
+                                <div className="flex-1" />
+                            )}
 
-                        {/* Direita */}
-                        <div className="ml-auto flex items-center gap-1">
-                            {headerRight}
+                            {/* Botões um em cima do outro */}
+                            <div className="flex shrink-0 flex-col items-center justify-center gap-1.5">
+                                <div className="cursor-pointer" onClick={() => navigate("/mercado")}>
+                                    <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                                    className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none"
+                                    title="Cesta"
+                                >
+                                    <ShoppingCart className="h-4 w-4" />
+                                    {globalCart.totalItems > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-[#FF6A00] text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 shadow-md border border-[#F5E62B] animate-pulse">
+                                            {globalCart.totalItems}
+                                        </span>
+                                    )}
+                                </button>
+                                <div id="global-audio-portal-mobile" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
+                                {headerRight && <div className="flex items-center gap-1">{headerRight}</div>}
+                            </div>
                         </div>
                     </div>
+
+                    {/* Hero Card de Clima + IA RIDV — ACIMA da pesquisa (desktop) */}
+                    {showSearch && (
+                        <div className="hidden lg:block pt-2">
+                            <HomeHeroWeather compact />
+                        </div>
+                    )}
 
                     {/* ── DESKTOP HEADER (≥ lg) ── */}
                     <div className="hidden lg:flex items-center h-[72px] w-full gap-4">
@@ -141,7 +156,7 @@ export function MarketLayout({
                             <div id="global-audio-portal-desktop" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
                         </div>
 
-                        {/* Search — ocupa todo o espaço central */}
+                        {/* Search */}
                         {showSearch && (
                             <div className="flex-1 min-w-0">
                                 <div className="relative flex">
@@ -158,6 +173,7 @@ export function MarketLayout({
                                 </div>
                             </div>
                         )}
+
 
                         {/* Direita: Cesta + headerRight */}
                         <div className="flex items-center gap-3 shrink-0">
@@ -214,15 +230,15 @@ export function MarketLayout({
             </div>
 
             {/* ═══ TRUST BAR ═══ */}
-            <div className="bg-[#0284c7] px-4 lg:py-1.5 py-1 flex items-center justify-center gap-4 lg:gap-6 text-[9px] lg:text-[11px] text-sky-50">
+            <div className="bg-[#68c7f2] px-4 lg:py-1.5 py-1 flex items-center justify-center gap-4 lg:gap-6 text-[9px] lg:text-[11px] text-zinc-900">
                 <span className="flex items-center gap-1 font-medium">
-                    <Truck className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-sky-200" /> Entrega Local
+                    <Truck className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Entrega Local
                 </span>
                 <span className="flex items-center gap-1 font-medium">
-                    <Shield className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-sky-200" /> Comerciantes Verificados
+                    <Shield className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Comerciantes Verificados
                 </span>
                 <span className="flex items-center gap-1 font-medium hidden sm:flex">
-                    <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-sky-200" /> Melhores Preços
+                    <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Melhores Preços
                 </span>
             </div>
 
@@ -233,12 +249,12 @@ export function MarketLayout({
 
             {/* ═══ FOOTER / BOTTOM NAV ═══ */}
             {blueFooter ? (
-                <footer className="w-full bg-sky-700 text-white text-center py-1.5 text-xs font-medium space-y-0">
+                <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
                     <p className="flex items-center justify-center gap-1.5">
                         <img src="/logo.png" alt="Viagg" className="h-8 w-auto object-contain rounded-lg shadow-sm mt-1" />
                         Viagg-TX8™ · {blueFooterLabel}
                     </p>
-                    <p className="text-white/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
+                    <p className="text-zinc-900/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
                 </footer>
             ) : (
                 isMerchant && !hideStoreNav ? <StoreBottomNav /> : (!hideFooter && <FooterNeutral />)
