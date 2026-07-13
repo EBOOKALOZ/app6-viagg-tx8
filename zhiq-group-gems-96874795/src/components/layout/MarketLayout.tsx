@@ -103,8 +103,8 @@ export function MarketLayout({
             {/* ═══ TOP BAR ═══ */}
             <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
-                    {/* ── MOBILE HEADER (< lg): clima estreito + botões EMPILHADOS ── */}
-                    <div className="lg:hidden px-2 pt-2 pb-1">
+                    {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta ── */}
+                    <div className="lg:hidden pt-2 pb-1">
                         <div className="flex items-stretch gap-2">
                             {/* Card de clima (estreitado pela coluna de botões) */}
                             {showSearch ? (
@@ -115,26 +115,12 @@ export function MarketLayout({
                                 <div className="flex-1" />
                             )}
 
-                            {/* Botões um em cima do outro */}
-                            <div className="flex shrink-0 flex-col items-center justify-center gap-1.5">
-                                <div className="cursor-pointer" onClick={() => navigate("/mercado")}>
-                                    <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-7 w-7 rounded-md object-contain shadow-sm" />
+                            {/* Coluna lateral: apenas extras (som foi p/ a linha da pesquisa) */}
+                            {headerRight && (
+                                <div className="flex shrink-0 flex-col items-center justify-center gap-1.5">
+                                    {headerRight}
                                 </div>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                    className="relative flex h-7 w-10 items-center justify-center bg-[#F5E62B] text-gray-900 rounded-lg shadow-lg hover:brightness-95 transition-all outline-none"
-                                    title="Cesta"
-                                >
-                                    <ShoppingCart className="h-4 w-4" />
-                                    {globalCart.totalItems > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-[#FF6A00] text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 shadow-md border border-[#F5E62B] animate-pulse">
-                                            {globalCart.totalItems}
-                                        </span>
-                                    )}
-                                </button>
-                                <div id="global-audio-portal-mobile" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
-                                {headerRight && <div className="flex items-center gap-1">{headerRight}</div>}
-                            </div>
+                            )}
                         </div>
                     </div>
 
@@ -202,7 +188,11 @@ export function MarketLayout({
                     {/* Mobile search row */}
                     {showSearch && (
                         <div className="lg:hidden pb-2">
-                            <div className="relative flex">
+                            <div className="relative flex items-center gap-1.5">
+                                {/* Logo à esquerda da pesquisa (alinhado à altura do campo) */}
+                                <div className="flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center" onClick={() => navigate("/mercado")}>
+                                    <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[32px] w-[32px] rounded-md object-cover shadow-sm" />
+                                </div>
                                 <Input
                                     placeholder="Buscar produtos, lojas..."
                                     value={search}
@@ -212,7 +202,7 @@ export function MarketLayout({
                                             onSearchSubmit(search);
                                         }
                                     }}
-                                    className="w-full pl-3 pr-10 py-1.5 h-[32px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[12px] font-medium focus-visible:ring-0"
+                                    className="w-full max-w-[60vw] pl-3 pr-2 py-1.5 h-[32px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[12px] font-medium focus-visible:ring-0"
                                 />
                                 <button
                                     onClick={() => onSearchSubmit?.(search)}
@@ -220,6 +210,19 @@ export function MarketLayout({
                                     aria-label="Buscar"
                                 >
                                     <Search className="h-4 w-4 text-white" />
+                                </button>
+                                {/* Cesta à direita da pesquisa */}
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                                    className="relative ml-auto flex h-8 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F5E62B] text-gray-900 shadow-lg transition-all hover:brightness-95 outline-none"
+                                    title="Cesta"
+                                >
+                                    <ShoppingCart className="h-4 w-4" />
+                                    {globalCart.totalItems > 0 && (
+                                        <span className="absolute -top-1 -right-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full border border-[#F5E62B] bg-[#FF6A00] px-0.5 text-[8px] font-black text-white shadow-md animate-pulse">
+                                            {globalCart.totalItems}
+                                        </span>
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -240,7 +243,14 @@ export function MarketLayout({
                 <span className="flex items-center gap-1 font-medium hidden sm:flex">
                     <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Melhores Preços
                 </span>
+                <div
+                    id="global-audio-portal-mobile"
+                    className="flex items-center shrink-0 lg:hidden"
+                    onClick={(e) => e.stopPropagation()}
+                />
             </div>
+
+
 
             {/* ═══ MAIN CONTENT ═══ */}
             <main className={cn("flex-1", isMerchant && !hideStoreNav && !blueFooter && "pb-20 md:pb-0", mainClassName)}>

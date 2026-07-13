@@ -73,7 +73,7 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
   if (loading) {
     return (
       <div
-        className={compact ? 'h-[52px] w-full animate-pulse rounded-2xl' : 'h-[76px] w-full animate-pulse rounded-2xl'}
+        className="h-[30px] w-full animate-pulse rounded-xl"
         style={{ background: 'rgba(255,255,255,.25)' }}
       />
     );
@@ -100,46 +100,37 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
         .hhw-ico { animation: hhwFloat 2.6s ease-in-out infinite; display:inline-block; }
       `}</style>
 
-      <div className={compact ? 'flex items-center gap-2.5 px-3 py-1.5' : 'flex flex-wrap items-center gap-3 px-4 py-2.5'}>
-        {/* Temperatura + condição */}
-        <div className="flex shrink-0 items-center gap-2">
-          <span className={compact ? 'hhw-ico text-xl leading-none' : 'hhw-ico text-2xl leading-none'}>{weather.icon}</span>
-          <div className="leading-none">
-            <p className={compact ? 'text-base font-black text-slate-900' : 'text-xl font-black text-slate-900'}>
-              {weather.temperature}°C
-            </p>
-            <p className="mt-0.5 flex items-center gap-0.5 text-[9px] font-bold text-slate-500">
-              <MapPin className="h-2.5 w-2.5" style={{ color: '#68C7F2' }} />
-              <span className="max-w-[90px] truncate">{weather.cityName}</span>
-            </p>
-          </div>
-        </div>
+      {/* Faixa compacta (+30% sobre a slim), texto da IA SEMPRE visível */}
+      <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
+        <span className="hhw-ico shrink-0 text-base leading-none">{weather.icon}</span>
+        <span className="shrink-0 text-[14px] font-black leading-none text-slate-900">{weather.temperature}°C</span>
+        <span className="hidden sm:flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-slate-600">
+          <MapPin className="h-3 w-3" style={{ color: '#075985' }} />
+          <span className="max-w-[90px] truncate">{weather.cityName}</span>
+        </span>
 
-        {/* Métricas azuis (+30%) */}
-        <div className="flex shrink-0 items-center gap-2 text-[13px] font-bold" style={{ color: '#075985' }}>
-          <span className="flex items-center gap-1 rounded-full px-2 py-1" style={{ background: 'rgba(255,255,255,.6)' }}>
-            <Droplets className="h-4 w-4" style={{ color: '#68C7F2' }} />{weather.pop}%
+        <span className="flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-bold"
+          style={{ background: 'rgba(255,255,255,.6)', color: '#075985' }}>
+          <Droplets className="h-3.5 w-3.5" style={{ color: '#68C7F2' }} />{weather.pop}%
+        </span>
+        <span className="flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-bold"
+          style={{ background: 'rgba(255,255,255,.6)', color: '#075985' }}>
+          <Wind className="h-3.5 w-3.5" style={{ color: '#68C7F2' }} />{weather.windSpeed}
+        </span>
+        {!compact && (
+          <span className="flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-bold"
+            style={{ background: 'rgba(255,255,255,.6)', color: '#075985' }}>
+            <Thermometer className="h-3.5 w-3.5" style={{ color: '#68C7F2' }} />{weather.feelsLike}°
           </span>
-          <span className="flex items-center gap-1 rounded-full px-2 py-1" style={{ background: 'rgba(255,255,255,.6)' }}>
-            <Wind className="h-4 w-4" style={{ color: '#68C7F2' }} />{weather.windSpeed}
-          </span>
-          {!compact && (
-            <span className="flex items-center gap-1 rounded-full px-2 py-1" style={{ background: 'rgba(255,255,255,.6)' }}>
-              <Thermometer className="h-4 w-4" style={{ color: '#68C7F2' }} />{weather.feelsLike}°
-            </span>
-          )}
-        </div>
+        )}
 
-        {/* IA RIDV (+30%) */}
-        <div
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2"
+        <span
+          className="flex min-w-[180px] flex-1 items-start gap-1.5 rounded-lg px-2 py-1"
           style={{ background: tom.bg }}
         >
-          <span className="shrink-0 text-lg">🤖</span>
-          <p className={compact ? 'truncate text-[13px] font-bold' : 'line-clamp-2 text-[14px] font-bold leading-snug'} style={{ color: tom.cor }}>
-            {ia.texto}
-          </p>
-        </div>
+          <span className="shrink-0 text-[13px] leading-none">🤖</span>
+          <span className="line-clamp-2 text-[12px] font-bold leading-snug" style={{ color: tom.cor }}>{ia.texto}</span>
+        </span>
       </div>
     </div>
   );
