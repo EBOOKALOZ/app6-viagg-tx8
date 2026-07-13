@@ -250,7 +250,8 @@ export default function MercadoLocalViagg() {
        Imóveis/Veículos/Serviços/Fretes/Viagens têm páginas próprias.
        ?view=completo restaura a vitrine agregada antiga se necessário. */
     const productsOnly = viewParam !== "completo";
-    const [search, setSearch] = useState("");
+    // Pesquisa persistente: buscas feitas em outras páginas chegam via ?q=
+    const [search, setSearch] = useState(searchParams.get("q") ?? "");
     const [cityFilter, setCityFilter] = useState<string>("all");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [conditionFilter, setConditionFilter] = useState<"all" | "novo" | "usado">("all");

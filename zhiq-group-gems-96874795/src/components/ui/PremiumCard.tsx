@@ -37,6 +37,12 @@ export interface PremiumCardProps {
   className?: string;
   aspectRatio?: 'video' | 'square' | 'portrait';
   imageObjectFit?: 'cover' | 'contain';
+  merchant?: {
+    name: string;
+    avatarUrl?: string | null;
+    isOfficial?: boolean;
+    onClick?: (e: React.MouseEvent) => void;
+  };
 }
 
 export const PremiumCard: React.FC<PremiumCardProps> = ({
@@ -59,7 +65,8 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
   onPrimaryAction,
   className,
   aspectRatio = 'video',
-  imageObjectFit = 'cover'
+  imageObjectFit = 'cover',
+  merchant,
 }) => {
   const getBadgeStyle = (variant: PremiumBadgeVariant) => {
     switch (variant) {
@@ -190,6 +197,32 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
 
         {/* Divider */}
         <div className="h-px w-full bg-zinc-100" />
+
+        {/* Merchant Info */}
+        {merchant && (
+          <div 
+            className={cn("flex items-center gap-2.5 pt-1", merchant.onClick && "cursor-pointer hover:opacity-80 transition-opacity")}
+            onClick={(e) => {
+              if (merchant.onClick) {
+                e.preventDefault();
+                e.stopPropagation();
+                merchant.onClick(e);
+              }
+            }}
+          >
+            <div className="w-7 h-7 rounded-full overflow-hidden border border-zinc-200 bg-zinc-50 shrink-0 flex items-center justify-center">
+              {merchant.avatarUrl ? (
+                <img src={merchant.avatarUrl} className="w-full h-full object-cover" alt={merchant.name} />
+              ) : (
+                <span className="text-[10px] font-bold text-zinc-400">{merchant.name.charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 flex flex-col justify-center">
+              <span className="text-xs font-bold text-zinc-700 leading-none truncate">{merchant.name}</span>
+              {merchant.isOfficial && <span className="text-[9px] font-black text-[#FF6A00] uppercase tracking-wider mt-0.5">Loja Oficial</span>}
+            </div>
+          </div>
+        )}
 
         {/* Footer: Price & Action */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 pt-1">

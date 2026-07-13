@@ -23,6 +23,11 @@ interface MarketPropertyCardProps {
     city?: string | null;
     state?: string | null;
     thumbnail_url?: string;
+    merchant?: {
+      name: string;
+      avatarUrl?: string | null;
+      isOfficial?: boolean;
+    };
   };
   variant?: 'default' | 'featured';
 }
@@ -119,6 +124,7 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
       onClick={goToDetail}
       className={cn(isFeatured && "md:col-span-2 lg:col-span-2")}
       aspectRatio={isFeatured ? 'video' : 'square'}
+      merchant={property.merchant}
     />
   );
 };

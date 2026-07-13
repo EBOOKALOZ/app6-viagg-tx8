@@ -83,7 +83,33 @@ export const PublicRealEstateHome = () => {
         return { ...prop, thumbnail_url: thumbnailUrl };
       }));
 
-      return propertiesWithMedia;
+      // Fetch profiles for the owners to attach merchant info
+      const ownerIds = [...new Set(propertiesWithMedia.map(p => p.owner_user_id).filter(Boolean))];
+      let profilesMap: Record<string, any> = {};
+      
+      if (ownerIds.length > 0) {
+        const { data: profiles } = await (supabase.from('profiles') as any)
+          .select('id, full_name, name, nome_loja, avatar_url')
+          .in('id', ownerIds);
+          
+        if (profiles) {
+          profilesMap = profiles.reduce((acc: any, curr: any) => {
+            acc[curr.id] = curr;
+            return acc;
+          }, {});
+        }
+      }
+
+      return propertiesWithMedia.map(prop => {
+        const owner = prop.owner_user_id ? profilesMap[prop.owner_user_id] : null;
+        const merchant = owner ? {
+          name: owner.nome_loja || owner.full_name || owner.name || "Vendedor Local",
+          avatarUrl: owner.avatar_url || null,
+          isOfficial: false,
+        } : undefined;
+        
+        return { ...prop, merchant };
+      });
     },
     refetchInterval: 10000,
     refetchOnWindowFocus: true,

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -92,6 +93,16 @@ export function MarketLayout({
     const [cartOpen, setCartOpen] = useState(false);
     const globalCart = useGlobalCart();
 
+    /* CABEÇALHO GLOBAL: busca funciona em QUALQUER página — sem props,
+       usa estado interno e envia para /mercado?q= (pesquisa persistente). */
+    const [innerSearch, setInnerSearch] = useState("");
+    const effSearch = setSearch ? search : innerSearch;
+    const effSetSearch = setSearch ?? setInnerSearch;
+    const effSubmit = onSearchSubmit ?? ((v: string) => {
+        if (v.trim()) navigate(`/mercado?q=${encodeURIComponent(v.trim())}`);
+        else navigate('/mercado');
+    });
+
     useEffect(() => {
         const handleOpenCart = () => setCartOpen(true);
         window.addEventListener("vtx8-cart-add-action", handleOpenCart);
@@ -139,7 +150,6 @@ export function MarketLayout({
                             <span className="text-xl font-black text-white tracking-tight whitespace-nowrap">
                                 Mercado Local <span className="text-yellow-200">Viagg-TX8™</span>
                             </span>
-                            <div id="global-audio-portal-desktop" className="relative flex items-center shrink-0" onClick={(e) => e.stopPropagation()} />
                         </div>
 
                         {/* Search */}
@@ -148,12 +158,12 @@ export function MarketLayout({
                                 <div className="relative flex">
                                     <Input
                                         placeholder="Buscar produtos, lojas..."
-                                        value={search}
-                                        onChange={e => setSearch?.(e.target.value)}
-                                        onKeyDown={e => { if (e.key === "Enter" && onSearchSubmit) onSearchSubmit(search); }}
+                                        value={effSearch}
+                                        onChange={e => effSetSearch(e.target.value)}
+                                        onKeyDown={e => { if (e.key === "Enter") effSubmit(effSearch); }}
                                         className="w-full pl-4 h-[44px] rounded-l-xl rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0"
                                     />
-                                    <button onClick={() => onSearchSubmit?.(search)} className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-xl flex items-center shrink-0">
+                                    <button onClick={() => effSubmit(effSearch)} className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-xl flex items-center shrink-0">
                                         <Search className="h-5 w-5 text-white" />
                                     </button>
                                 </div>
@@ -195,17 +205,17 @@ export function MarketLayout({
                                 </div>
                                 <Input
                                     placeholder="Buscar produtos, lojas..."
-                                    value={search}
-                                    onChange={e => setSearch?.(e.target.value)}
+                                    value={effSearch}
+                                    onChange={e => effSetSearch(e.target.value)}
                                     onKeyDown={e => {
-                                        if (e.key === "Enter" && onSearchSubmit) {
-                                            onSearchSubmit(search);
+                                        if (e.key === "Enter") {
+                                            effSubmit(effSearch);
                                         }
                                     }}
                                     className="w-full max-w-[60vw] pl-3 pr-2 py-1.5 h-[32px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[12px] font-medium focus-visible:ring-0"
                                 />
                                 <button
-                                    onClick={() => onSearchSubmit?.(search)}
+                                    onClick={() => effSubmit(effSearch)}
                                     className="px-3 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center"
                                     aria-label="Buscar"
                                 >
@@ -228,7 +238,8 @@ export function MarketLayout({
                         </div>
                     )}
 
-                    {headerChildren}
+                    {/* Navegação principal — GLOBAL: se a página não passar nada, usa a nav padrão */}
+                    {headerChildren ?? <MarketNavButtons />}
                 </div>
             </div>
 
@@ -244,8 +255,8 @@ export function MarketLayout({
                     <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Melhores Preços
                 </span>
                 <div
-                    id="global-audio-portal-mobile"
-                    className="flex items-center shrink-0 lg:hidden"
+                    id="global-audio-portal-trustbar"
+                    className="flex items-center shrink-0"
                     onClick={(e) => e.stopPropagation()}
                 />
             </div>

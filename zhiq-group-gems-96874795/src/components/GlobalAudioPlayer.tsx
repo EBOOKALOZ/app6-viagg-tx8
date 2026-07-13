@@ -101,8 +101,7 @@ export function GlobalAudioPlayer() {
   // Watch for the portal container element in the DOM
   useEffect(() => {
     const findPortal = () => {
-      const isDesktop = window.innerWidth >= 1024;
-      const el = document.getElementById(isDesktop ? 'global-audio-portal-desktop' : 'global-audio-portal-mobile') 
+      const el = document.getElementById('global-audio-portal-trustbar') 
                  || document.getElementById('global-audio-portal');
       setPortalTarget(el);
     };
@@ -294,7 +293,7 @@ export function GlobalAudioPlayer() {
       : Volume2;
 
   const volumePercent = Math.round(settings.volume * 100);
-  const isMarketPortal = portalTarget && (portalTarget.id === 'global-audio-portal-desktop' || portalTarget.id === 'global-audio-portal-mobile');
+  const isMarketPortal = portalTarget && (portalTarget.id === 'global-audio-portal-trustbar');
 
   const componentContent = (
     <div className={cn(
@@ -330,31 +329,33 @@ export function GlobalAudioPlayer() {
       <div
         ref={panelRef}
         className={cn(
-          'absolute mt-2 bg-[hsl(142,50%,15%)] border border-primary/30 rounded-2xl shadow-xl p-4 min-w-[200px] transition-all duration-200 ease-out origin-top-right z-[60]',
+          'absolute mt-2 bg-[#0a1f16]/90 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 min-w-[220px] transition-all duration-300 ease-out origin-top-right z-[60]',
           isMarketPortal ? 'top-9 right-0' : portalTarget ? 'top-10 right-0' : 'top-12 right-0',
           isPanelOpen
             ? 'opacity-100 scale-100 translate-y-0'
             : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
         )}
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="relative flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-white">Volume</span>
+            <div className="p-1.5 bg-green-500/20 rounded-full ring-1 ring-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.4)]">
+              <Volume2 className="w-4 h-4 text-green-400" />
+            </div>
+            <span className="text-sm font-bold text-white tracking-wide">Volume</span>
           </div>
-          <span className="text-xs font-bold text-white bg-white/20 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-black text-green-300 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full shadow-inner">
             {volumePercent}%
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-4 mb-2">
           <button
             onClick={toggleMute}
             className={cn(
-              'p-1.5 rounded-lg transition-colors',
+              'p-2 rounded-full transition-all duration-300 ring-1',
               settings.muted
-                ? 'bg-destructive/20 text-destructive'
-                : 'bg-primary/20 text-primary hover:bg-primary/30'
+                ? 'bg-red-500/10 text-red-400 ring-red-500/30 hover:bg-red-500/20 hover:ring-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                : 'bg-green-500/10 text-green-400 ring-green-500/30 hover:bg-green-500/20 hover:ring-green-500/50 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]'
             )}
           >
             <VolumeIcon className="w-4 h-4" />
@@ -365,16 +366,29 @@ export function GlobalAudioPlayer() {
             onValueChange={handleVolumeChange}
             max={100}
             step={1}
-            className="flex-1 [&_[data-radix-slider-track]]:bg-white/20 [&_[data-radix-slider-range]]:bg-primary [&_[data-radix-slider-thumb]]:border-primary [&_[data-radix-slider-thumb]]:bg-white"
+            className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-track]]:h-1.5 [&_[data-radix-slider-range]]:bg-gradient-to-r [&_[data-radix-slider-range]]:from-green-500 [&_[data-radix-slider-range]]:to-emerald-400 [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:shadow-[0_0_10px_rgba(255,255,255,0.8)] [&_[data-radix-slider-thumb]]:w-4 [&_[data-radix-slider-thumb]]:h-4"
           />
         </div>
 
-        <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
-          <span className="text-xs text-white">
-            {isPlaying ? '♪ Tocando' : 'Pausado'}
-          </span>
+        <div className="relative mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isPlaying ? (
+              <span className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-xs text-green-400 font-medium">Tocando</span>
+              </span>
+            ) : (
+              <span className="text-xs text-zinc-400 font-medium">Pausado</span>
+            )}
+          </div>
+          
           {settings.muted && (
-            <span className="text-xs text-destructive/80">Mudo</span>
+            <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 uppercase tracking-wider">
+              Mudo
+            </span>
           )}
         </div>
       </div>

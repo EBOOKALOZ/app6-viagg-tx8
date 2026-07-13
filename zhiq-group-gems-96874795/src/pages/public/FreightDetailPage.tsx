@@ -178,7 +178,7 @@ export const FreightDetailPage = () => {
 
   return (
     <>
-      <MarketLayout showSearch={false} hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🚚 Fretes & Mudanças" myAccountPath="/minha-conta">
+      <MarketLayout hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🚚 Fretes & Mudanças" myAccountPath="/minha-conta">
         <DetailPageLayout
           bg="#F5E62B"
           accent="#ca8a04"
