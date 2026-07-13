@@ -77,7 +77,7 @@ export function MotoboyPanelHeader({
           {/* Avatar + Info */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative shrink-0">
-              <Avatar className="h-10 w-10 border border-white/30 shadow shrink-0">
+              <Avatar className="h-10 w-10 rounded-lg border border-white/30 shadow shrink-0">
                 <AvatarImage src={avatarUrl} alt={userName} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white font-bold text-xs">
                   {initials}
@@ -93,8 +93,8 @@ export function MotoboyPanelHeader({
               <span className="text-sm sm:text-base font-bold text-white max-w-full leading-tight break-words">
                 {userName}
               </span>
-              {/* Selo do painel — agora abaixo do nome */}
-              <span className="text-[9px] font-black uppercase tracking-widest text-white/90 leading-none whitespace-nowrap">
+              {/* Selo do painel — agora abaixo do nome, em VERDE */}
+              <span className="text-[9px] font-black uppercase tracking-widest text-[#00E05A] leading-none whitespace-nowrap" style={{ textShadow: '0 1px 2px rgba(0,0,0,.25)' }}>
                 {panelLabel}
               </span>
               <div className="flex items-center gap-2 max-w-full">

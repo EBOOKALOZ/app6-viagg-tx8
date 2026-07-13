@@ -165,6 +165,7 @@ export default function PublicTravelHome() {
                     <MarketTravelCard key={tr.id} travel={tr} />
                   ))}
                 </HorizontalCarousel>
+              )}
             </div>
           )}
         </div>
