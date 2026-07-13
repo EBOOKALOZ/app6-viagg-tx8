@@ -61,6 +61,7 @@ export function GlobalSearchPage() {
     { id: 'veiculos', label: 'Veículos', count: groupedResults.veiculos.length },
     { id: 'servicos', label: 'Serviços', count: groupedResults.servicos.length },
     { id: 'viagens', label: 'Viagens', count: groupedResults.viagens.length },
+    { id: 'fretes', label: 'Fretes', count: groupedResults.fretes.length },
   ].filter(tab => tab.id === 'all' || tab.count > 0);
 
   return (
