@@ -35,7 +35,8 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
   };
 
   return (
-    <div className="pb-2 flex gap-1 sm:gap-2 justify-center px-1.5">
+    // Alinhado às bordas do logo/cesta (padding vem do container do header)
+    <div className="pb-2 flex gap-1 sm:gap-2 justify-center px-0">
       {ROUTES.map(({ label, path }) => {
         const active = isActive(path);
         return (
