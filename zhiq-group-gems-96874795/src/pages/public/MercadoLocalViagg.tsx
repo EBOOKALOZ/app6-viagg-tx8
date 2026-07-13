@@ -1482,7 +1482,7 @@ const scrollToProducts = () => {
             {/* ═══ REAL ESTATE MODULE PROMO ═══ */}
             <div className="max-w-[1920px] mx-auto px-4 lg:px-6 mt-4">
                 <div 
-                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-zinc-900 to-zinc-800 p-6 md:p-10 border border-white/10 shadow-xl group cursor-pointer"
+                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#00a300] to-[#008c00] p-6 md:p-10 border border-white/10 shadow-xl group cursor-pointer"
                     onClick={() => {
                         supabase.from('analytics_events' as any).insert({ 
                             event_name: 'market_sell_cta_clicked', 
@@ -1499,7 +1499,7 @@ const scrollToProducts = () => {
                     }}
                 >
                     {/* Background glow */}
-                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-[#FF6A00]/20 rounded-full blur-[80px] animate-pulse" />
+                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-[#F5E62B]/25 rounded-full blur-[80px] animate-pulse" />
                     
                     <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="flex-1 space-y-3 text-center md:text-left">
@@ -1509,7 +1509,7 @@ const scrollToProducts = () => {
                             </div>
                             <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter leading-tight">
                                 ANUNCIE SEUS PRODUTOS E ALCANCE <br />
-                                <span className="text-[#FF6A00]">COMPRADORES DA SUA REGIÃO</span>
+                                <span className="text-[#F5E62B]">COMPRADORES DA SUA REGIÃO</span>
                             </h2>
                         </div>
                         <div className="shrink-0">
