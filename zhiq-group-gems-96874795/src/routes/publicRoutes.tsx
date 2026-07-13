@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
 import CheckoutReturnPage from "@/pages/public/CheckoutReturnPage";
+import { GlobalSearchPage } from "@/pages/public/GlobalSearchPage";
 import {
   InstitutionalLayout,
   LoadingScreenPremium,
@@ -94,6 +95,7 @@ export const publicRoutes = (
     <Route path="/aceite" element={<AceitePage />} />
 
     {/* ── Páginas públicas ── */}
+    <Route path="/busca" element={<GlobalSearchPage />} />
     <Route path="/produto/:id" element={<ProductLandingPage />} />
     <Route path="/p/:slug" element={<ProductRedirectPage />} />
     <Route path="/mercado" element={<MercadoLocalViagg />} />

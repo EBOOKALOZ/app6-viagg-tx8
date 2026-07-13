@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
+import { GlobalSearchBar } from "@/components/public/GlobalSearchBar";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import {
     DropdownMenu,
@@ -154,20 +155,7 @@ export function MarketLayout({
 
                         {/* Search */}
                         {showSearch && (
-                            <div className="flex-1 min-w-0">
-                                <div className="relative flex">
-                                    <Input
-                                        placeholder="Buscar produtos, lojas..."
-                                        value={effSearch}
-                                        onChange={e => effSetSearch(e.target.value)}
-                                        onKeyDown={e => { if (e.key === "Enter") effSubmit(effSearch); }}
-                                        className="w-full pl-4 h-[44px] rounded-l-xl rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0"
-                                    />
-                                    <button onClick={() => effSubmit(effSearch)} className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-xl flex items-center shrink-0">
-                                        <Search className="h-5 w-5 text-white" />
-                                    </button>
-                                </div>
-                            </div>
+                            <GlobalSearchBar initialValue={effSearch} />
                         )}
 
 
@@ -197,44 +185,27 @@ export function MarketLayout({
 
                     {/* Mobile search row */}
                     {showSearch && (
-                        <div className="lg:hidden pb-2">
-                            <div className="relative flex items-center gap-1.5">
-                                {/* Logo à esquerda da pesquisa (alinhado à altura do campo) */}
-                                <div className="flex h-[32px] w-[32px] shrink-0 cursor-pointer items-center justify-center" onClick={() => navigate("/mercado")}>
-                                    <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[32px] w-[32px] rounded-md object-cover shadow-sm" />
-                                </div>
-                                <Input
-                                    placeholder="Buscar produtos, lojas..."
-                                    value={effSearch}
-                                    onChange={e => effSetSearch(e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === "Enter") {
-                                            effSubmit(effSearch);
-                                        }
-                                    }}
-                                    className="w-full max-w-[60vw] pl-3 pr-2 py-1.5 h-[32px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[12px] font-medium focus-visible:ring-0"
-                                />
-                                <button
-                                    onClick={() => effSubmit(effSearch)}
-                                    className="px-3 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center"
-                                    aria-label="Buscar"
-                                >
-                                    <Search className="h-4 w-4 text-white" />
-                                </button>
-                                {/* Cesta à direita da pesquisa */}
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                    className="relative ml-auto flex h-8 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F5E62B] text-gray-900 shadow-lg transition-all hover:brightness-95 outline-none"
-                                    title="Cesta"
-                                >
-                                    <ShoppingCart className="h-4 w-4" />
-                                    {globalCart.totalItems > 0 && (
-                                        <span className="absolute -top-1 -right-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full border border-[#F5E62B] bg-[#FF6A00] px-0.5 text-[8px] font-black text-white shadow-md animate-pulse">
-                                            {globalCart.totalItems}
-                                        </span>
-                                    )}
-                                </button>
+                        <div className="lg:hidden pb-2 flex items-center gap-2">
+                            {/* Logo à esquerda da pesquisa */}
+                            <div className="flex h-[44px] w-[44px] shrink-0 cursor-pointer items-center justify-center" onClick={() => navigate("/mercado")}>
+                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[44px] w-[44px] rounded-xl object-cover shadow-sm" />
                             </div>
+                            
+                            <GlobalSearchBar initialValue={effSearch} />
+
+                            {/* Cesta à direita da pesquisa */}
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                                className="relative ml-auto flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-[#F5E62B] text-gray-900 shadow-lg transition-all hover:brightness-95 outline-none"
+                                title="Cesta"
+                            >
+                                <ShoppingCart className="h-5 w-5" />
+                                {globalCart.totalItems > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 flex h-[20px] min-w-[20px] items-center justify-center rounded-full border-2 border-[#F5E62B] bg-[#FF6A00] px-0.5 text-[10px] font-black text-white shadow-md animate-pulse">
+                                        {globalCart.totalItems}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     )}
 
