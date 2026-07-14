@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Inbox, ShieldCheck, CopyX, AlertOctagon, RefreshCw, Loader2, Activity, ListChecks,
+  CheckCircle2, XCircle, Gavel,
 } from "lucide-react";
 
 const rpc = async (fn: string, args?: Record<string, unknown>) => {
@@ -31,7 +32,20 @@ const MODULO_EMOJI: Record<string, string> = {
   mercado: "🛍️", imoveis: "🏠", veiculos: "🚗", servicos: "🛠️", fretes: "🚚", viagens: "✈️",
 };
 
-type Aba = "fila" | "eventos";
+// Fila de revisão manual: tabela do banco → rótulo/emoji
+const TABELA_INFO: Record<string, { label: string; emoji: string }> = {
+  real_estate_listings: { label: "Imóveis",   emoji: "🏠" },
+  vehicle_listings:     { label: "Veículos",  emoji: "🚗" },
+  travel_listings:      { label: "Viagens",   emoji: "✈️" },
+  freight_listings:     { label: "Fretes",    emoji: "🚚" },
+  service_listings:     { label: "Serviços",  emoji: "🛠️" },
+  product_listings:     { label: "Produtos",  emoji: "🛍️" },
+  advertiser_listings:  { label: "Anúncios",  emoji: "📦" },
+  marketplace_products: { label: "Mercado",   emoji: "🛒" },
+  auction_listings:     { label: "Leilões",   emoji: "🔨" },
+};
+
+type Aba = "fila" | "revisao" | "eventos";
 
 export default function AdminOrionPublisher() {
   const qc = useQueryClient();
@@ -60,6 +74,29 @@ export default function AdminOrionPublisher() {
     },
     refetchInterval: 30000,
   });
+
+  // Fila de revisão manual (anúncios presos aguardando decisão humana)
+  const { data: revisao, isLoading: revisaoLoading } = useQuery({
+    queryKey: ["ridv-fila-revisao"],
+    queryFn: async () => ((await rpc("ridv_fila_revisao")) || []) as any[],
+    refetchInterval: 30000,
+  });
+  const [decidindo, setDecidindo] = useState<string>("");
+  const decidir = async (item: any, decisao: "aprovar" | "rejeitar") => {
+    let motivo: string | null = null;
+    if (decisao === "rejeitar") {
+      motivo = window.prompt("Motivo da rejeição (o anunciante poderá vê-lo):");
+      if (!motivo) return;
+    }
+    setDecidindo(item.id);
+    try {
+      await rpc("ridv_manual_review", {
+        p_tabela: item.tabela, p_id: item.id, p_decisao: decisao, p_motivo: motivo,
+      });
+      qc.invalidateQueries({ queryKey: ["ridv-fila-revisao"] });
+    } catch (e: any) { alert("Erro: " + e.message); }
+    finally { setDecidindo(""); }
+  };
 
   const [varrendo, setVarrendo] = useState(false);
   const varrer = async () => {
@@ -138,6 +175,15 @@ export default function AdminOrionPublisher() {
             className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${aba === "fila" ? "bg-[#0a4f47] text-white shadow" : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
             <ListChecks className="h-4 w-4" /> Fila & Log
           </button>
+          <button onClick={() => setAba("revisao")}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${aba === "revisao" ? "bg-[#0a4f47] text-white shadow" : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
+            <Gavel className="h-4 w-4" /> Revisão Manual
+            {((revisao || []) as any[]).length > 0 && (
+              <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-amber-950">
+                {(revisao as any[]).length}
+              </span>
+            )}
+          </button>
           <button onClick={() => setAba("eventos")}
             className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${aba === "eventos" ? "bg-[#0a4f47] text-white shadow" : "bg-white text-zinc-600 ring-1 ring-zinc-200 hover:bg-zinc-50"}`}>
             <Activity className="h-4 w-4" /> Eventos
@@ -188,6 +234,60 @@ export default function AdminOrionPublisher() {
                             <li key={i} className="text-xs font-medium text-red-600">• {p}</li>
                           ))}
                         </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* REVISÃO MANUAL */}
+        {aba === "revisao" && (
+          <div className="mt-4 rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">
+            <p className="mb-3 text-xs text-zinc-400">
+              Anúncios aguardando decisão humana. Eles caem aqui quando a IA de moderação está
+              indisponível (ex.: sem créditos de API) ou pede revisão. Enquanto não forem aprovados,
+              <strong> não aparecem</strong> nas vitrines públicas. Toda decisão fica auditada no
+              histórico RIDV com autor, data e motivo.
+            </p>
+            {revisaoLoading ? (
+              <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-teal-500" /></div>
+            ) : !((revisao || []) as any[]).length ? (
+              <div className="p-10 text-center text-zinc-400">
+                🎉 Nenhum anúncio aguardando revisão manual.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {((revisao || []) as any[]).map((item: any) => {
+                  const info = TABELA_INFO[item.tabela] || { label: item.tabela, emoji: "📦" };
+                  const ocupado = decidindo === item.id;
+                  return (
+                    <div key={`${item.tabela}-${item.id}`} className="rounded-2xl border border-zinc-100 p-3 hover:bg-slate-50/60">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-lg">{info.emoji}</span>
+                        <p className="min-w-0 flex-1 truncate font-bold">{item.titulo || "(sem título)"}</p>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${item.status === "manual_review" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700"}`}>
+                          {item.status === "manual_review" ? "Revisão manual" : "Aguardando IA"}
+                        </span>
+                        <button onClick={() => decidir(item, "aprovar")} disabled={ocupado}
+                          className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-black text-white hover:brightness-110 disabled:opacity-50">
+                          {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                          Aprovar
+                        </button>
+                        <button onClick={() => decidir(item, "rejeitar")} disabled={ocupado}
+                          className="flex items-center gap-1 rounded-xl bg-red-600 px-3 py-1.5 text-xs font-black text-white hover:brightness-110 disabled:opacity-50">
+                          <XCircle className="h-3.5 w-3.5" /> Rejeitar
+                        </button>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-400">
+                        <span>{info.label}</span>
+                        {item.cidade && <span>· 📍 {item.cidade}</span>}
+                        {item.criado_em && <span>· {new Date(item.criado_em).toLocaleString("pt-BR")}</span>}
+                      </div>
+                      {item.motivo && (
+                        <p className="mt-1.5 text-xs font-medium text-amber-700">• {item.motivo}</p>
                       )}
                     </div>
                   );
