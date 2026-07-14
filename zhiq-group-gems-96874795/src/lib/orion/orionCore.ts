@@ -40,6 +40,31 @@ export const MOTORES: MotorOrion[] = [
     },
   },
   {
+    id: 'CONTEXTO_ADMIN', nome: 'DIRETRIZES & EVENTOS',
+    keywords: /./,
+    coletar: async () => {
+      const [dirs, evs] = await Promise.allSettled([
+        rpc('orion_diretrizes_ativas'),
+        rpc('orion_eventos_op_ativos'),
+      ]);
+      const d = dirs.status === 'fulfilled' ? ((dirs.value as any[]) || []) : [];
+      const e = evs.status === 'fulfilled' ? ((evs.value as any[]) || []) : [];
+      if (!d.length && !e.length) return null;
+      const partes: string[] = [];
+      if (d.length) {
+        partes.push(
+          'DIRETRIZES OPERACIONAIS APROVADAS pelo administrador (contexto AUTORIZADO — considere-as em toda análise e recomendação):\n' +
+          d.map(x => `- [${x.tipo} v${x.versao}] ${x.titulo}: ${x.conteudo}`).join('\n'));
+      }
+      if (e.length) {
+        partes.push(
+          'EVENTOS OPERACIONAIS ATIVOS hoje (influenciam demanda e prioridades):\n' +
+          e.map(x => `- [${x.tipo}] ${x.titulo}${x.cidade ? ` em ${x.cidade}${x.uf ? '/' + x.uf : ''}` : ''} (${x.inicio} até ${x.fim})${x.descricao ? ` — ${x.descricao}` : ''}`).join('\n'));
+      }
+      return partes.join('\n\n');
+    },
+  },
+  {
     id: 'GEO', nome: 'ORION GEO',
     keywords: /(cidade|municipio|regiao|uf\b|estado|expans|territor|onde|mapa|brasil|implantac)/,
     coletar: async () => {
@@ -101,12 +126,15 @@ export interface OrionResposta {
 /** ORION CORE: reúne evidências dos motores relevantes e consolida em UMA resposta. */
 export async function orionPerguntar(pergunta: string): Promise<OrionResposta> {
   const p = norm(pergunta);
+  /* EXECUTIVE e CONTEXTO_ADMIN (diretrizes/eventos) sempre participam;
+     os demais motores entram por relevância da pergunta. */
   const selecionados = [
     MOTORES[0],
-    ...MOTORES.slice(1).filter(m => m.keywords.test(p)),
-  ].slice(0, 4);
-  // sem casamento específico → visão executiva + territorial
-  if (selecionados.length === 1) selecionados.push(MOTORES[1]);
+    MOTORES[1],
+    ...MOTORES.slice(2).filter(m => m.keywords.test(p)),
+  ].slice(0, 5);
+  // sem casamento específico → acrescenta a visão territorial
+  if (selecionados.length === 2) selecionados.push(MOTORES[2]);
 
   const coletas = await Promise.allSettled(selecionados.map(m => m.coletar()));
   const evidencias: string[] = [];
@@ -129,8 +157,8 @@ export async function orionPerguntar(pergunta: string): Promise<OrionResposta> {
     `se a confiança for inferior a 50%, abra a resposta avisando que a base de dados ainda é limitada; ` +
     `a decisão final é sempre do administrador — apresente a recomendação, não a execute. ` +
     `Estruture em parágrafos curtos. ` +
-    `Feche indicando o nível de confiança desta análise: ${Math.round(confianca * 100)}% ` +
-    `(baseado em ${evidencias.length} motor(es) com dados reais).\n\n` +
+    `Feche SEMPRE com esta linha de rastreabilidade (adaptando a cidade quando houver): ` +
+    `"📊 Análise de ${new Date().toLocaleString('pt-BR')} · Fonte: banco oficial VIAGG-TX8 (${usados.join(', ') || 'motores ORION'}) · Confiança ${Math.round(confianca * 100)}%".\n\n` +
     `[EVIDÊNCIAS DOS MOTORES ESPECIALIZADOS — DADOS REAIS DA PLATAFORMA]\n\n` +
     evidencias.join('\n\n');
 

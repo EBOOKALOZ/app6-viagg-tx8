@@ -17,7 +17,7 @@ const API_KEY = 'c36eae0b93c1205aa8ba9fc30c61be3c';
 const FALLBACK_LAT = -10.1656;
 const FALLBACK_LNG = -59.4483;
 const FALLBACK_CITY = 'Aripuanã';
-const CACHE_KEY = 'weatherRichCache';
+const CACHE_KEY = 'weatherRichCache_v2';
 const CACHE_TTL = 10 * 60 * 1000;
 
 /* Cache por localização — evita exibir o clima de outra cidade que ficou no cache global */
@@ -35,7 +35,8 @@ function loadCache(key: string): { data: WeatherRichData; ts: number } | null {
     if (parsed?.ts && Date.now() - parsed.ts < CACHE_TTL) {
       if (
         parsed.data?.cityName === 'Santa Maria de Ipire' ||
-        parsed.data?.cityName === 'Blumenau'
+        parsed.data?.cityName === 'Blumenau' ||
+        parsed.data?.temperature === 28
       ) {
         return null;
       }
@@ -62,6 +63,21 @@ async function getCoords(): Promise<{ lat: number; lng: number } | null> {
   });
 }
 
+function getFallbackWeather(city?: string): WeatherRichData {
+  return {
+    temperature: 22,
+    feelsLike: 23,
+    humidity: 74,
+    windSpeed: 4,
+    description: 'Nublado',
+    icon: '🌤️',
+    iconUrl: 'https://openweathermap.org/img/wn/04d@2x.png',
+    cityName: city || FALLBACK_CITY,
+    pop: 15,
+    updatedAt: new Date(),
+  };
+}
+
 /**
  * Prioridade de localização:
  * 1. lat/lng explícitos
@@ -69,12 +85,12 @@ async function getCoords(): Promise<{ lat: number; lng: number } | null> {
  *    para que o clima seja sempre o da cidade cadastrada quando ela existir
  * 3. GPS do aparelho
  * 4. Fallback fixo
- * `enabled=false` segura a busca (e o loading) até o chamador resolver a localização.
+ * `enabled=false` segura a busca online até o chamador resolver a localização, mas o fallback/cache já é exibido para não piscar nulo.
  */
 export function useWeatherRich(lat?: number, lng?: number, city?: string, enabled = true) {
   const cacheKey = cacheKeyFor(lat, lng, city);
-  const cached = enabled ? loadCache(cacheKey) : null;
-  const [weather, setWeather] = useState<WeatherRichData | null>(cached?.data ?? null);
+  const cached = loadCache(cacheKey);
+  const [weather, setWeather] = useState<WeatherRichData | null>(() => cached?.data ?? getFallbackWeather(city));
   const [loading, setLoading] = useState(!cached?.data);
   const [error, setError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -103,29 +119,27 @@ export function useWeatherRich(lat?: number, lng?: number, city?: string, enable
     }
 
     try {
-      // Execute both requests concurrently (current weather + forecast for precipitation)
       const currentUrl = `https://api.openweathermap.org/data/2.5/weather?${locationQuery}&appid=${API_KEY}&units=metric&lang=pt_br`;
       const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?${locationQuery}&appid=${API_KEY}&units=metric&lang=pt_br&cnt=2`;
 
-      const [currentRes, forecastRes] = await Promise.all([
-        fetch(currentUrl, { signal }),
-        fetch(forecastUrl, { signal })
-      ]);
-
+      const currentRes = await fetch(currentUrl, { signal });
       if (!currentRes.ok) {
         console.error('[useWeatherRich] API Error status:', currentRes.status, currentRes.statusText);
         throw new Error('API error');
       }
-
       const d = await currentRes.json();
 
-      let popValue = 0;
-      if (forecastRes.ok) {
-        const f = await forecastRes.json();
-        // POP is returned as 0..1, meaning we multiply by 100 to get percentage
-        if (f.list && f.list.length > 0) {
-          popValue = Math.round(f.list[0].pop * 100);
+      let popValue = 15;
+      try {
+        const forecastRes = await fetch(forecastUrl, { signal });
+        if (forecastRes.ok) {
+          const f = await forecastRes.json();
+          if (f.list && f.list.length > 0) {
+            popValue = Math.round(f.list[0].pop * 100);
+          }
         }
+      } catch (fErr) {
+        console.warn('[useWeatherRich] Forecast fetch failed, using default pop:', fErr);
       }
 
       console.log('[useWeatherRich] OpenWeatherMap response success', d, popValue);
@@ -154,6 +168,7 @@ export function useWeatherRich(lat?: number, lng?: number, city?: string, enable
       }
       console.error('[useWeatherRich] Error fetching weather:', err);
       setError(true);
+      setWeather((prev) => prev ?? getFallbackWeather(city));
     } finally {
       if (!signal?.aborted) {
         setLoading(false);

@@ -94,6 +94,7 @@ import {
   AdminFilaDivulgacoes,
   AdminOrion,
   AdminOrionMobility,
+  AdminOrionOS,
   AdminAuditoriaCategorias,
   AdminCommissionIntelligence,
   AdminRadarIA,
@@ -224,6 +225,7 @@ export const adminRoutes = (
       <Route path="/admin/fila-divulgacoes" element={<AdminFilaDivulgacoes />} />
       <Route path="/admin/orion" element={<AdminOrion />} />
       <Route path="/admin/orion-mobility" element={<AdminOrionMobility />} />
+      <Route path="/admin/orion-os" element={<AdminOrionOS />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
       <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}

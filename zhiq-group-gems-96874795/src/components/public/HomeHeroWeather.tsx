@@ -80,14 +80,14 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
-    if (loading || !weather || !ia) return;
+    if (!weather || !ia) return;
 
     let interval: NodeJS.Timeout | null = null;
     let timeout: NodeJS.Timeout | null = null;
 
     if (expanded) {
-      // Quando visível, diminui o progresso ao longo de 8 segundos (80 passos de 100ms)
-      const duration = 8000;
+      // Quando visível, diminui o progresso ao longo de 15 segundos
+      const duration = 15000;
       const stepTime = 100;
       const stepValue = 100 / (duration / stepTime);
 
@@ -112,9 +112,9 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
       if (interval) clearInterval(interval);
       if (timeout) clearTimeout(timeout);
     };
-  }, [loading, weather, ia, expanded]);
+  }, [weather, ia, expanded]);
 
-  if (loading) {
+  if (loading && (!weather || !ia)) {
     return (
       <div
         className="h-[30px] w-full animate-pulse rounded-xl"

@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Satellite,
   Brain,
+  Cpu,
   LayoutDashboard,
   Package,
   Users,
@@ -145,6 +146,7 @@ const menuSections: MenuSection[] = [
     items: [
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
+      { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
     ],
   },
   {
