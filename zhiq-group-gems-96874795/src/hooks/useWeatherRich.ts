@@ -14,9 +14,9 @@ interface WeatherRichData {
 }
 
 const API_KEY = 'c36eae0b93c1205aa8ba9fc30c61be3c';
-const FALLBACK_LAT = -26.9194;
-const FALLBACK_LNG = -49.0661;
-const FALLBACK_CITY = 'Blumenau';
+const FALLBACK_LAT = -10.1656;
+const FALLBACK_LNG = -59.4483;
+const FALLBACK_CITY = 'Aripuanã';
 const CACHE_KEY = 'weatherRichCache';
 const CACHE_TTL = 10 * 60 * 1000;
 
@@ -33,6 +33,12 @@ function loadCache(key: string): { data: WeatherRichData; ts: number } | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed?.ts && Date.now() - parsed.ts < CACHE_TTL) {
+      if (
+        parsed.data?.cityName === 'Santa Maria de Ipire' ||
+        parsed.data?.cityName === 'Blumenau'
+      ) {
+        return null;
+      }
       return { ...parsed, data: { ...parsed.data, updatedAt: new Date(parsed.data.updatedAt) } };
     }
   } catch { }
@@ -132,7 +138,9 @@ export function useWeatherRich(lat?: number, lng?: number, city?: string, enable
         description: d.weather[0].description.charAt(0).toUpperCase() + d.weather[0].description.slice(1),
         icon: mapIcon(d.weather[0].icon),
         iconUrl: `https://openweathermap.org/img/wn/${d.weather[0].icon}@2x.png`,
-        cityName: d.name || city || FALLBACK_CITY,
+        cityName:
+          city ||
+          (d.name && d.name !== 'Santa Maria de Ipire' ? d.name : FALLBACK_CITY),
         pop: popValue,
         updatedAt: new Date(),
       };

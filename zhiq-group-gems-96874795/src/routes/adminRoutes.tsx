@@ -93,6 +93,7 @@ import {
   AdminPostingQueuePage,
   AdminFilaDivulgacoes,
   AdminOrion,
+  AdminOrionMobility,
   AdminAuditoriaCategorias,
   AdminCommissionIntelligence,
   AdminRadarIA,
@@ -222,6 +223,7 @@ export const adminRoutes = (
       {/* Fila Inteligente de Divulgações — transparência total (admin) */}
       <Route path="/admin/fila-divulgacoes" element={<AdminFilaDivulgacoes />} />
       <Route path="/admin/orion" element={<AdminOrion />} />
+      <Route path="/admin/orion-mobility" element={<AdminOrionMobility />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
       <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}

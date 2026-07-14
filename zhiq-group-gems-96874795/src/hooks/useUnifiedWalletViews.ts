@@ -90,16 +90,19 @@ export function useUnifiedWalletViews() {
                 .order('created_at', { ascending: false });
 
             if (filterProfile !== 'Todos') {
-                const profileMap: Record<string, string> = {
-                    'Motoboy': 'motoboy',
-                    'Lojista': 'merchant',
-                    'Motorista': 'driver',
-                    'Frete': 'freight', // Or whatever your freteiro string is
-                    'Passageiro': 'passenger'
+                /* profile_type é o enum pay_owner_type: platform, merchant_store,
+                   motoboy_profile, customer, mototaxi_profile, driver_profile.
+                   Valores fora do enum quebram a query (22P02). */
+                const profileMap: Record<string, string[]> = {
+                    'Motoboy': ['motoboy_profile', 'mototaxi_profile'],
+                    'Lojista': ['merchant_store'],
+                    'Motorista': ['driver_profile'],
+                    'Passageiro': ['customer'],
+                    // 'Frete': sem valor próprio no enum — fica sem filtro
                 };
                 const mappedProfile = profileMap[filterProfile];
                 if (mappedProfile) {
-                    statementQuery = statementQuery.eq('profile_type', mappedProfile);
+                    statementQuery = statementQuery.in('profile_type', mappedProfile);
                 }
             }
 

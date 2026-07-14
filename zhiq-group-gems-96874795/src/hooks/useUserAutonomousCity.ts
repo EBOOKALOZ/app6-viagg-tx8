@@ -8,9 +8,12 @@ export interface UserAutonomousLocation {
   resolved: boolean;
 }
 
+const DEFAULT_CITY = 'Aripuanã';
+const DEFAULT_STATE = 'MT';
+
 /**
- * Busca a cidade cadastrada do usuário nos 3 perfis autônomos (motoboy, mototaxi, motorista)
- * ou na tabela geral de perfis (profiles).
+ * Busca a cidade cadastrada do usuário nos perfis autônomos ou, se não houver,
+ * busca a cidade base dos motoboys cadastrados na plataforma (ex.: Aripuanã - MT).
  */
 export function useUserAutonomousCity(): UserAutonomousLocation {
   const { user, activeProfile } = useAuth();
@@ -19,48 +22,88 @@ export function useUserAutonomousCity(): UserAutonomousLocation {
   const [resolved, setResolved] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!user?.id) {
-      setResolved(true);
-      return;
-    }
-
     let cancelled = false;
 
     const fetchCity = async () => {
       try {
-        const tables =
-          activeProfile === 'driver' || activeProfile === 'mototaxi'
-            ? ['driver_profiles', 'motoboy_profiles']
-            : ['motoboy_profiles', 'driver_profiles'];
+        // 1. Se o usuário estiver autenticado, tenta buscar o cadastro dele primeiro
+        if (user?.id) {
+          const tables =
+            activeProfile === 'driver' || activeProfile === 'mototaxi'
+              ? ['driver_profiles', 'motoboy_profiles']
+              : ['motoboy_profiles', 'driver_profiles'];
 
-        for (const table of tables) {
-          const { data } = await (supabase.from(table) as any)
+          for (const table of tables) {
+            const { data } = await (supabase.from(table) as any)
+              .select('cidade, estado')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (data?.cidade && data.cidade !== 'Cidade' && !cancelled) {
+              setCity(data.cidade);
+              setState(data.estado || DEFAULT_STATE);
+              setResolved(true);
+              return;
+            }
+          }
+
+          // Busca no perfil geral (profiles)
+          const { data: profData } = await (supabase.from('profiles') as any)
             .select('cidade, estado')
-            .eq('user_id', user.id)
+            .eq('id', user.id)
             .maybeSingle();
 
-          if (data?.cidade && !cancelled) {
-            setCity(data.cidade);
-            setState(data.estado);
+          if (profData?.cidade && profData.cidade !== 'Cidade' && !cancelled) {
+            setCity(profData.cidade);
+            setState(profData.estado || DEFAULT_STATE);
             setResolved(true);
             return;
           }
         }
 
-        // Se não achou em tabelas profissionais, busca em profiles
-        const { data: profData } = await (supabase.from('profiles') as any)
+        // 2. Busca primeiro por motoboys na cidade principal (Aripuanã)
+        const { data: aripuanaMb } = await (supabase.from('motoboy_profiles') as any)
           .select('cidade, estado')
-          .eq('id', user.id)
+          .ilike('cidade', '%aripuan%')
+          .limit(1)
           .maybeSingle();
 
-        if (profData?.cidade && !cancelled) {
-          setCity(profData.cidade);
-          setState(profData.estado);
+        if (aripuanaMb?.cidade && !cancelled) {
+          setCity('Aripuanã');
+          setState(aripuanaMb.estado || DEFAULT_STATE);
+          setResolved(true);
+          return;
+        }
+
+        // 2b. Se não houver, busca qualquer motoboy válido (excluindo testes/estação homônima)
+        const { data: mbData } = await (supabase.from('motoboy_profiles') as any)
+          .select('cidade, estado')
+          .not('cidade', 'is', null)
+          .neq('cidade', '')
+          .neq('cidade', 'Cidade')
+          .neq('cidade', 'Santa Maria de Ipire')
+          .limit(1)
+          .maybeSingle();
+
+        if (mbData?.cidade && !cancelled) {
+          setCity(mbData.cidade);
+          setState(mbData.estado || DEFAULT_STATE);
+          setResolved(true);
+          return;
+        }
+
+        // 3. Fallback final garantido para Aripuanã - MT
+        if (!cancelled) {
+          setCity(DEFAULT_CITY);
+          setState(DEFAULT_STATE);
+          setResolved(true);
         }
       } catch {
-        // ignora erro e libera fallback de GPS
-      } finally {
-        if (!cancelled) setResolved(true);
+        if (!cancelled) {
+          setCity(DEFAULT_CITY);
+          setState(DEFAULT_STATE);
+          setResolved(true);
+        }
       }
     };
 
