@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { AdvertiserPanelLayout } from '@/components/advertiser/AdvertiserPanelLayout';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
+import { moderatedText } from '@/lib/moderation/moderatedText';
 import {
   Home,
   ArrowLeft,
@@ -281,17 +283,36 @@ export const PropertyForm = () => {
     try {
       setLoading(true);
 
+      // 0. Moderação de Texto (RIDV V2.0)
+      const fullDesc = isLote
+        ? [
+            propertyData.description,
+            propertyData.total_area_m2 ? `Dimensões: ${propertyData.total_area_m2}` : '',
+            propertyData.lot_quantity && propertyData.lot_quantity !== '1' ? `Quantidade de lotes: ${propertyData.lot_quantity}` : '',
+          ].filter(Boolean).join('\n')
+        : propertyData.description;
+
+      const textMod = await moderatedText({
+        title: propertyData.title,
+        description: fullDesc,
+        category: 'real_estate',
+        price: propertyData.price_brl ? parseBRLCurrency(propertyData.price_brl) : 0,
+        listingId: listingId ?? undefined,
+      });
+
+      if (textMod.status === 'blocked') {
+        toast.error(`Texto do anúncio bloqueado pela RIDV: ${textMod.reason}`);
+        setLoading(false);
+        return;
+      }
+
+      const isTextApproved = textMod.status === 'approved';
+
       // 1. Create/Update Listing
       const listingPayload = {
         owner_user_id: user.id,
         title: propertyData.title,
-        description: isLote
-          ? [
-              propertyData.description,
-              propertyData.total_area_m2 ? `Dimensões: ${propertyData.total_area_m2}` : '',
-              propertyData.lot_quantity && propertyData.lot_quantity !== '1' ? `Quantidade de lotes: ${propertyData.lot_quantity}` : '',
-            ].filter(Boolean).join('\n')
-          : propertyData.description,
+        description: fullDesc,
         property_type: propertyData.property_type,
         price_brl: propertyData.price_brl ? parseBRLCurrency(propertyData.price_brl) : 0,
         total_area_m2: propertyData.total_area_m2
@@ -310,6 +331,9 @@ export const PropertyForm = () => {
         public_address_label: locationData.public_address_label || `${locationData.neighborhood}, ${locationData.city}/${locationData.state}`,
         visibility_status: 'published',
         published_at: new Date().toISOString(),
+        moderation_status: isTextApproved ? 'approved' : 'pending_ai_analysis',
+        ai_status: isTextApproved ? 'approved' : 'queued',
+        moderation_reason: textMod.reason,
       };
 
       let currentListingId = listingId;
@@ -366,38 +390,44 @@ export const PropertyForm = () => {
             continue;
           }
 
-          const { error: uploadError } = await supabase.storage
-            .from('real-estate-original')
-            .upload(filePath, uploadBlob, { contentType: 'image/jpeg' });
-
-          if (uploadError) {
-            console.error('[PropertyForm] Falha no upload da foto:', uploadError);
-            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError.message}`);
+          let modRes;
+          try {
+            modRes = await moderatedUpload(uploadBlob, {
+              fileName: file.name,
+              mime: 'image/jpeg',
+              listingId: currentListingId,
+              category: 'real_estate',
+              targetBucket: 'real-estate-public',
+            });
+          } catch (modErr: any) {
+            console.error('[PropertyForm] Falha na moderação RIDV da foto:', modErr);
+            toast.error(`Falha na análise da foto "${file.name}": ${modErr.message}`);
             failures++;
             continue;
           }
 
-          const { data: mediaData, error: dbErr } = await supabase.from('real_estate_media' as any).insert({
+          if (modRes.status === 'blocked') {
+            toast.error(`Foto "${file.name}" bloqueada pela IA RIDV: ${modRes.reason}`);
+            failures++;
+            continue;
+          }
+
+          const finalPath = modRes.storagePath || filePath;
+          const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
+
+          const { error: dbErr } = await supabase.from('real_estate_media' as any).insert({
             listing_id: currentListingId,
             owner_user_id: user.id,
-            original_storage_path: filePath,
-          } as any).select().single();
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
+            moderation_status: finalStatus,
+          } as any);
 
           if (dbErr) {
             console.error('[PropertyForm] Falha ao registrar mídia:', dbErr);
             toast.error(`Falha ao registrar a foto "${file.name}".`);
             failures++;
             continue;
-          }
-
-          if (mediaData) {
-            // Auto-approve: copia para public e marca como aprovado
-            const { error: copyErr } = await supabase.storage.from('real-estate-public').upload(filePath, uploadBlob, { upsert: true, contentType: 'image/jpeg' });
-            if (copyErr) console.warn('[PropertyForm] Falha ao copiar para public:', copyErr.message);
-            await supabase.from('real_estate_media' as any).update({
-              moderation_status: 'approved',
-              public_masked_storage_path: filePath
-            } as any).eq('id', (mediaData as any).id);
           }
         }
         if (failures > 0) {

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,8 @@ import { StoreLocationPicker, type ValidAddressDetails } from "@/components/merc
 import { TRAVEL_CATEGORIES, TRAVEL_INCLUDES } from "@/lib/viagem/travelCategories";
 import { useToast } from "@/hooks/use-toast";
 import { formatBrazilianPhone } from "@/lib/utils";
+import { moderatedUpload } from "@/lib/moderation/moderatedUpload";
+import { moderatedText } from "@/lib/moderation/moderatedText";
 
 interface ExistingMedia {
   id: string;
@@ -205,6 +207,25 @@ export default function ViagemForm() {
       };
       TRAVEL_INCLUDES.forEach(i => { payload[`includes_${i.key}`] = form.includes[i.key] || false; });
 
+      const textMod = await moderatedText({
+        title: form.title.trim(),
+        description: form.description.trim() || '',
+        category: 'travel',
+        price: form.price_per_person ? Number(form.price_per_person) : 0,
+        listingId: listingId ?? undefined,
+      });
+
+      if (textMod.status === 'blocked') {
+        toast({ title: "Texto bloqueado pela RIDV", description: textMod.reason, variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
+      const isTextApproved = textMod.status === 'approved';
+      payload.moderation_status = isTextApproved ? 'approved' : 'pending_ai_analysis';
+      payload.ai_status = isTextApproved ? 'approved' : 'queued';
+      payload.moderation_reason = textMod.reason;
+
       let savedId = listingId;
       if (isEdit) {
         const { error: updErr } = await (supabase.from("travel_listings") as any).update(payload).eq("id", listingId);
@@ -228,17 +249,34 @@ export default function ViagemForm() {
       if (savedId && pendingFiles.length > 0) {
         for (let idx = 0; idx < pendingFiles.length; idx++) {
           const file = pendingFiles[idx];
-          const ext = file.name.split(".").pop() || "jpg";
-          const filePath = `${user.id}/travel/${savedId}/${Date.now()}_${idx}.${ext}`;
-          const { error: upErr } = await supabase.storage.from("real-estate-original").upload(filePath, file, { contentType: file.type });
-          if (upErr) {
-            toast({ title: "Erro no upload da foto", description: upErr.message, variant: "destructive" });
+          let modRes;
+          try {
+            modRes = await moderatedUpload(file, {
+              fileName: file.name,
+              mime: file.type || 'image/jpeg',
+              listingId: savedId,
+              category: 'travel',
+              targetBucket: 'travel-public',
+            });
+          } catch (modErr: any) {
+            toast({ title: "Erro na moderação da foto", description: modErr.message, variant: "destructive" });
             continue;
           }
+
+          if (modRes.status === 'blocked') {
+            toast({ title: "Foto bloqueada pela IA RIDV", description: modRes.reason, variant: "destructive" });
+            continue;
+          }
+
+          const finalPath = modRes.storagePath || `${user.id}/travel/${savedId}/${Date.now()}_${idx}.jpg`;
+          const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
+
           const { error: mediaErr } = await (supabase.from("travel_media") as any).insert({
             listing_id: savedId,
             owner_user_id: user.id,
-            original_storage_path: filePath,
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
+            moderation_status: finalStatus,
             sort_order: idx,
           });
           if (mediaErr) {
@@ -386,16 +424,38 @@ export default function ViagemForm() {
           const media = existingMedia[idx];
           if (!media || !user) return;
           // faz upload do novo arquivo
-          const ext = file.name.split(".").pop() || "jpg";
-          const filePath = `${user.id}/travel/${listingId}/${Date.now()}_replace.${ext}`;
-          const { error: upErr } = await supabase.storage.from("real-estate-original").upload(filePath, file, { contentType: file.type });
-          if (upErr) { toast({ title: "Erro no upload", description: upErr.message, variant: "destructive" }); return; }
+          let modRes;
+          try {
+            modRes = await moderatedUpload(file, {
+              fileName: file.name,
+              mime: file.type || 'image/jpeg',
+              listingId: listingId,
+              category: 'travel',
+              targetBucket: 'travel-public',
+            });
+          } catch (modErr: any) {
+            toast({ title: "Erro na moderação da foto", description: modErr.message, variant: "destructive" });
+            return;
+          }
+
+          if (modRes.status === 'blocked') {
+            toast({ title: "Foto bloqueada pela IA RIDV", description: modRes.reason, variant: "destructive" });
+            return;
+          }
+
+          const finalPath = modRes.storagePath || `${user.id}/travel/${listingId}/${Date.now()}_replace.jpg`;
+          const finalUrl = modRes.publicUrl || supabase.storage.from('travel-public').getPublicUrl(finalPath).data.publicUrl;
+
           // atualiza o registro no banco
-          await (supabase.from("travel_media") as any).update({ original_storage_path: filePath }).eq("id", media.id);
+          await (supabase.from("travel_media") as any).update({
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
+            moderation_status: modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis',
+          }).eq("id", media.id);
+
           // atualiza o preview localmente
-          const newUrl = supabase.storage.from("real-estate-original").getPublicUrl(filePath).data.publicUrl;
-          setExistingMedia(prev => prev.map((m, i) => i === idx ? { ...m, url: newUrl + `?t=${Date.now()}`, path: filePath } : m));
-          toast({ title: "Foto substituída!" });
+          setExistingMedia(prev => prev.map((m, i) => i === idx ? { ...m, url: finalUrl + `?t=${Date.now()}`, path: finalPath } : m));
+          toast({ title: modRes.status === 'approved' ? "Foto substituída e aprovada!" : "Foto enviada para análise!" });
           replaceIndexRef.current = -1;
           e.target.value = "";
         }} />

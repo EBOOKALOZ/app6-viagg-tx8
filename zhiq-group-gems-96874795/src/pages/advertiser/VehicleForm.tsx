@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
+import { moderatedText } from '@/lib/moderation/moderatedText';
 import { toast } from 'sonner';
 import {
   Car,
@@ -260,6 +262,22 @@ export const VehicleForm = () => {
     try {
       setLoading(true);
 
+      const textMod = await moderatedText({
+        title: vehicleData.title.trim(),
+        description: vehicleData.description || '',
+        category: 'vehicles',
+        price: vehicleData.price_brl ? parseBRLCurrency(vehicleData.price_brl) : 0,
+        listingId: listingId ?? undefined,
+      });
+
+      if (textMod.status === 'blocked') {
+        toast.error(`Texto bloqueado pela RIDV: ${textMod.reason}`);
+        setLoading(false);
+        return;
+      }
+
+      const isTextApproved = textMod.status === 'approved';
+
       const payload = {
         owner_user_id: user.id,
         title: vehicleData.title.trim(),
@@ -281,6 +299,9 @@ export const VehicleForm = () => {
           || `${locationData.neighborhood ? locationData.neighborhood + ', ' : ''}${locationData.city}/${locationData.state}`,
         visibility_status: 'published',
         published_at: new Date().toISOString(),
+        moderation_status: isTextApproved ? 'approved' : 'pending_ai_analysis',
+        ai_status: isTextApproved ? 'approved' : 'queued',
+        moderation_reason: textMod.reason,
       };
 
       let currentListingId = listingId;
@@ -335,37 +356,45 @@ export const VehicleForm = () => {
             continue;
           }
 
-          const { error: uploadError } = await supabase.storage
-            .from('real-estate-original')
-            .upload(filePath, uploadBlob, { contentType: 'image/jpeg' });
-
-          if (uploadError) {
-            console.error('[VehicleForm] Falha no upload da foto:', uploadError);
-            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError.message}`);
+          let modRes;
+          try {
+            modRes = await moderatedUpload(uploadBlob, {
+              fileName: file.name,
+              mime: 'image/jpeg',
+              listingId: currentListingId,
+              category: 'vehicles',
+              targetBucket: 'vehicles-public',
+            });
+          } catch (modErr: any) {
+            console.error('[VehicleForm] Falha na moderação RIDV da foto:', modErr);
+            toast.error(`Falha na análise da foto "${file.name}": ${modErr.message}`);
             failures++;
             continue;
           }
 
-          const { data: mediaData, error: dbErr } = await supabase.from('vehicle_media' as any).insert({
+          if (modRes.status === 'blocked') {
+            toast.error(`Foto "${file.name}" bloqueada pela IA RIDV: ${modRes.reason}`);
+            failures++;
+            continue;
+          }
+
+          const finalPath = modRes.storagePath || filePath;
+          const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
+
+          const { error: dbErr } = await supabase.from('vehicle_media' as any).insert({
             listing_id: currentListingId,
             owner_user_id: user.id,
-            original_storage_path: filePath,
-          } as any).select().single();
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
+            moderation_status: finalStatus,
+            media_type: 'image',
+          } as any);
 
           if (dbErr) {
             console.error('[VehicleForm] Falha ao registrar mídia:', dbErr);
             toast.error(`Falha ao registrar a foto "${file.name}".`);
             failures++;
             continue;
-          }
-
-          if (mediaData) {
-            const { error: copyErr } = await supabase.storage.from('real-estate-public').upload(filePath, uploadBlob, { upsert: true, contentType: 'image/jpeg' });
-            if (copyErr) console.warn('[VehicleForm] Falha ao copiar para public:', copyErr.message);
-            await supabase.from('vehicle_media' as any).update({
-              moderation_status: 'approved',
-              public_masked_storage_path: filePath,
-            } as any).eq('id', (mediaData as any).id);
           }
         }
         if (failures > 0) {

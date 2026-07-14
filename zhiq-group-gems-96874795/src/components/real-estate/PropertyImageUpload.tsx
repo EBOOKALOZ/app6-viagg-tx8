@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { getListingImageUrl, getMediaFallbackUrl } from '@/lib/real-estate/mediaUtils';
 import { cn } from '@/lib/utils';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
 
 // ─── Managed Image Component ─────────────────────────────
 // Handles the <img> lifecycle, fallback, and individual logs
@@ -65,7 +66,20 @@ const ManagedImage: React.FC<ManagedImageProps> = ({ id, path, initialUrl, onDel
 
   const attemptLazySync = async () => {
     try {
-      addLog("LAZY-SYNC", `Iniciando cópia para Public: ${id.slice(0,5)}...`);
+      addLog("LAZY-SYNC", `Iniciando checagem de moderação para Public: ${id.slice(0,5)}...`);
+      // Checar se a mídia foi aprovada antes de disponibilizar publicamente
+      const { data: mediaRec } = await supabase
+        .from('real_estate_media')
+        .select('moderation_status')
+        .eq('id', id)
+        .maybeSingle();
+
+      const status = mediaRec?.moderation_status;
+      if (status !== 'approved' && status !== 'approved_clean' && status !== 'approved_masked' && status !== 'manual_approved') {
+        addLog("LAZY-SYNC", `[BLOQUEADO] Mídia ${id.slice(0,5)} em análise (${status || 'pendente'}).`);
+        return;
+      }
+
       // 1. Baixa o arquivo do original
       const { data: fileBlob, error: downloadError } = await supabase.storage
         .from('real-estate-original')
@@ -320,42 +334,48 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
           continue;
         }
 
-        const { error: upErrOrig } = await supabase.storage.from('real-estate-original').upload(filePath, uploadBlob, {
-          contentType: 'image/jpeg',
-          upsert: false,
+        // Envio obrigatório pela RIDV (nenhuma imagem vai para o bucket sem aprovação)
+        addLog("RIDV", `Analisando imagem com IA: ${file.name}`);
+        const modRes = await moderatedUpload(uploadBlob, {
+          fileName: file.name,
+          mime: 'image/jpeg',
+          listingId,
+          category: 'real_estate',
+          targetBucket: 'real-estate-public',
         });
-        if (upErrOrig) throw upErrOrig;
+
+        if (modRes.status === 'blocked') {
+          addLog("RIDV-BLOCKED", `${file.name}: ${modRes.reason}`);
+          toast.error(`Imagem recusada pela IA: ${modRes.reason}`);
+          setUploadedImages(prev => prev.filter(img => img.id !== tempId));
+          continue;
+        }
+
+        const finalPath = modRes.storagePath || filePath;
+        const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
 
         const { data: mediaData, error: dbErr } = await supabase
           .from('real_estate_media' as any)
-          .insert({ listing_id: listingId, owner_user_id: user.id, original_storage_path: filePath } as any)
+          .insert({
+            listing_id: listingId,
+            owner_user_id: user.id,
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
+            moderation_status: finalStatus,
+          } as any)
           .select().single();
         if (dbErr) throw dbErr;
 
         const mediaId = (mediaData as any).id;
-
-        // ── MODERAÇÃO TEMPORARIAMENTE DESATIVADA PARA TESTES ──
-        // const { data: fnData } = await supabase.functions.invoke('viagg-tx8-sentinela-visual', { body: { media_id: mediaId } });
-        // const decision = fnData?.decision ?? 'error';
-
-        // Auto-approve: copia para bucket público e marca como aprovado
-        const { error: copyErr } = await supabase.storage
-          .from('real-estate-public')
-          .upload(filePath, uploadBlob, { upsert: true });
-        if (copyErr) console.warn('[BYPASS] Falha ao copiar para public:', copyErr.message);
-
-        await supabase
-          .from('real_estate_media' as any)
-          .update({ moderation_status: 'approved', public_masked_storage_path: filePath } as any)
-          .eq('id', mediaId);
-
-        const decision = 'approved';
         setUploadedImages(prev => prev.filter(img => img.id !== tempId));
 
-        if (decision === 'approved') {
-          const publicUrl = getListingImageUrl(filePath, 'public', Date.now());
-          setUploadedImages(prev => [{ id: mediaId, path: filePath, previewUrl: publicUrl }, ...prev]);
-          if (onUploadComplete) onUploadComplete(mediaId, filePath);
+        if (modRes.status === 'approved') {
+          const publicUrl = modRes.publicUrl || getListingImageUrl(finalPath, 'public', Date.now());
+          setUploadedImages(prev => [{ id: mediaId, path: finalPath, previewUrl: publicUrl }, ...prev]);
+          if (onUploadComplete) onUploadComplete(mediaId, finalPath);
+          toast.success("Imagem aprovada pela IA RIDV.");
+        } else {
+          toast.info("Imagem retida na quarentena para revisão manual (RIDV).");
         }
         setProgress(Math.round(((i + 1) / files.length) * 100));
       }

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Upload, CheckCircle2, AlertCircle, Loader2, X, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generatePreview, processForUpload, sanitizeFileName, formatFileSize } from '@/lib/imageCompressor';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
 
 interface VehicleImageUploadProps {
   listingId?: string;
@@ -92,34 +93,39 @@ export const VehicleImageUpload: React.FC<VehicleImageUploadProps> = ({
         const blob = processed.blob;
         console.log(`[VehicleUpload] ${file.name}: ${formatFileSize(file.size)} → ${formatFileSize(blob.size)}`);
 
-        const { error: uploadError } = await supabase.storage
-          .from('real-estate-original')
-          .upload(filePath, blob, {
-            contentType: 'image/jpeg',
-            upsert: false,
-          });
+        const modRes = await moderatedUpload(blob, {
+          fileName,
+          mime: 'image/jpeg',
+          listingId,
+          category: 'vehicles',
+          targetBucket: 'vehicles-public',
+        });
 
-        if (uploadError) throw uploadError;
+        if (modRes.status === 'blocked') {
+          toast.error(`Imagem recusada pela IA: ${modRes.reason}`);
+          continue;
+        }
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('real-estate-original')
-          .getPublicUrl(filePath);
+        const finalPath = modRes.storagePath || filePath;
+        const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
 
         const { data: mediaData, error: mediaError } = await supabase
           .from('vehicle_media' as any)
           .insert({
             listing_id: listingId,
             owner_user_id: user.id,
-            original_storage_path: filePath,
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
             media_type: 'image',
-            moderation_status: 'approved'  // TEMPORÁRIO: auto-approve para testes
+            moderation_status: finalStatus
           } as any)
           .select()
           .single();
 
         if (mediaError) throw mediaError;
 
-        const newImage = { id: (mediaData as any).id, path: publicUrl };
+        const previewUrl = modRes.publicUrl || supabase.storage.from('vehicles-public').getPublicUrl(finalPath).data.publicUrl;
+        const newImage = { id: (mediaData as any).id, path: previewUrl };
         setUploadedImages(prev => [...prev, newImage]);
         if (onUploadComplete) onUploadComplete(newImage.id, newImage.path);
 

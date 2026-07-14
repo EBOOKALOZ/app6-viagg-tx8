@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { compressImage } from '@/lib/imageCompressor';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
+import { moderatedText } from '@/lib/moderation/moderatedText';
 import {
   Car, Bike, Plus, Trash2, Pencil, Check, Camera,
   Accessibility, Star, Loader2, X,
@@ -231,14 +233,25 @@ export default function MeuVeiculo() {
     setUploadingSlot(slot);
     try {
       const compressed = await compressImage(file, { outputFormat: 'image/jpeg' });
-      const path = `${user.id}/${crypto.randomUUID()}.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from('driver-vehicles')
-        .upload(path, compressed.blob, { upsert: true, contentType: 'image/jpeg' });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from('driver-vehicles').getPublicUrl(path);
-      setForm(prev => ({ ...prev, [slot]: pub.publicUrl }));
-      toast.success('Foto enviada!');
+      const modRes = await moderatedUpload(compressed.blob, {
+        fileName: file.name,
+        mime: 'image/jpeg',
+        category: 'vehicles',
+        targetBucket: 'driver-vehicles',
+      });
+
+      if (modRes.status === 'blocked') {
+        toast.error(`Foto recusada pela IA: ${modRes.reason}`);
+        return;
+      }
+
+      const finalUrl = modRes.publicUrl || supabase.storage.from('driver-vehicles').getPublicUrl(modRes.storagePath || `${user.id}/${crypto.randomUUID()}.jpg`).data.publicUrl;
+      setForm(prev => ({ ...prev, [slot]: finalUrl }));
+      if (modRes.status === 'approved') {
+        toast.success('Foto aprovada e enviada!');
+      } else {
+        toast.info('Foto enviada e em análise de segurança.');
+      }
     } catch (err: any) {
       toast.error(`Erro ao enviar foto: ${err?.message || 'falha no upload'}`);
     } finally {
@@ -280,6 +293,21 @@ export default function MeuVeiculo() {
 
     const passengerCapacity = form.vehicle_type === 'moto' ? 1 : parseInt(form.passenger_capacity, 10);
 
+    setIsSaving(true);
+    const textMod = await moderatedText({
+      title: `${finalBrand} ${form.model.trim()}`,
+      description: form.observations.trim() || '',
+      category: 'vehicles',
+    });
+
+    if (textMod.status === 'blocked') {
+      toast.error(`Texto bloqueado pela RIDV: ${textMod.reason}`);
+      setIsSaving(false);
+      return;
+    }
+
+    const isTextApproved = textMod.status === 'approved';
+
     const payload: any = {
       driver_id: user.id,
       vehicle_type: form.vehicle_type,
@@ -297,9 +325,11 @@ export default function MeuVeiculo() {
       rear_photo: form.rear_photo || null,
       side_photo: form.side_photo || null,
       interior_photo: form.interior_photo || null,
+      moderation_status: isTextApproved ? 'approved' : 'pending_ai_analysis',
+      ai_status: isTextApproved ? 'approved' : 'queued',
+      moderation_reason: textMod.reason,
     };
 
-    setIsSaving(true);
     try {
       if (editingId) {
         const { error } = await (supabase as any)

@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { PRODUCT_CATEGORIES } from '@/lib/productCategories';
 import { processForUpload } from '@/lib/imageCompressor';
 import { generateListingDescription } from '@/lib/ai/generateDescription';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
+import { moderatedText } from '@/lib/moderation/moderatedText';
 import {
   Package as PackageIcon,
   ArrowLeft,
@@ -231,6 +233,22 @@ export const ProductForm = () => {
         if (extras.length) description += `\n\n${extras.join('\n')}`;
       }
 
+      const textMod = await moderatedText({
+        title: formData.title.trim(),
+        description: description || '',
+        category: 'products',
+        price: priceNumeric || 0,
+        listingId: currentId ?? undefined,
+      });
+
+      if (textMod.status === 'blocked') {
+        toast.error(`Texto bloqueado pela RIDV: ${textMod.reason}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const isTextApproved = textMod.status === 'approved';
+
       let listingIdResult = currentId;
 
       if (currentId) {
@@ -245,6 +263,9 @@ export const ProductForm = () => {
             has_invoice: formData.has_invoice,
             warranty: formData.warranty || null,
             listing_status: 'active',
+            moderation_status: isTextApproved ? 'approved' : 'pending_ai_analysis',
+            ai_status: isTextApproved ? 'approved' : 'queued',
+            moderation_reason: textMod.reason,
           })
           .eq('id', currentId);
         if (updateError) throw updateError;
@@ -261,6 +282,9 @@ export const ProductForm = () => {
             has_invoice: formData.has_invoice,
             warranty: formData.warranty || null,
             listing_status: 'active',
+            moderation_status: isTextApproved ? 'approved' : 'pending_ai_analysis',
+            ai_status: isTextApproved ? 'approved' : 'queued',
+            moderation_reason: textMod.reason,
           })
           .select('id')
           .single();
@@ -287,34 +311,48 @@ export const ProductForm = () => {
             failures++;
             continue;
           }
-          // Path com prefixo user.id para casar com RLS do bucket marketing-materials
-          const fileName = `${user.id}/products/${listingIdResult}/${crypto.randomUUID()}.${fileExt}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('marketing-materials')
-            .upload(fileName, uploadBlob, { contentType: 'image/jpeg' });
-          if (uploadError || !uploadData) {
-            console.error('[ProductForm] Falha no upload da foto:', uploadError);
-            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError?.message || 'erro desconhecido'}`);
+          let modRes;
+          try {
+            modRes = await moderatedUpload(uploadBlob, {
+              fileName: file.name,
+              mime: 'image/jpeg',
+              listingId: listingIdResult,
+              category: 'products',
+              targetBucket: 'marketing-materials',
+            });
+          } catch (modErr: any) {
+            console.error('[ProductForm] Falha na moderação RIDV da foto:', modErr);
+            toast.error(`Falha na análise da foto "${file.name}": ${modErr.message}`);
             failures++;
             continue;
           }
-          const { data: { publicUrl } } = supabase.storage
-            .from('marketing-materials')
-            .getPublicUrl(uploadData.path);
+
+          if (modRes.status === 'blocked') {
+            toast.error(`Foto "${file.name}" bloqueada pela IA RIDV: ${modRes.reason}`);
+            failures++;
+            continue;
+          }
+
+          const finalPath = modRes.storagePath || `${user.id}/products/${listingIdResult}/${crypto.randomUUID()}.${fileExt}`;
+          const finalUrl = modRes.publicUrl || supabase.storage.from('marketing-materials').getPublicUrl(finalPath).data.publicUrl;
+
           const { error: mediaErr } = await supabase.from('advertiser_listing_media' as any).insert({
             listing_id: listingIdResult,
-            media_url: publicUrl,
-            storage_path: uploadData.path,
-          });
+            media_url: finalUrl,
+            storage_path: finalPath,
+            moderation_status: modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis',
+          } as any);
+
           if (mediaErr) {
             console.error('[ProductForm] Falha ao registrar mídia:', mediaErr);
             toast.error(`Falha ao registrar a foto "${file.name}".`);
             failures++;
             continue;
           }
+
           if (index === 0) {
             await supabase.from('advertiser_listings' as any).update({
-              cover_image_url: publicUrl,
+              cover_image_url: finalUrl,
             }).eq('id', listingIdResult);
           }
         }

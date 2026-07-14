@@ -170,6 +170,23 @@ Deno.serve(async (req) => {
       ...(approve && publicUrl ? { storage_bucket: "marketing-materials" } : {}),
     }).eq("id", rec.id);
 
+    // Registro na tabela de aprendizado da IA (Etapa 9)
+    await svc.from("ridv_decisions_log").insert({
+      listing_id: rec.listing_id ?? null,
+      media_id: rec.id,
+      category: rec.category ?? "outro",
+      content_type: "image",
+      status: approve ? "manual_approved" : "manual_rejected",
+      confidence: rec.confidence ?? 100,
+      reason: input.notes ?? (approve ? "Aprovado manualmente" : "Rejeitado manualmente"),
+      verdict: approve ? "aprovada" : "bloqueada",
+      ai_provider: rec.provider ?? "manual",
+      user_id: rec.user_id,
+      reviewed_by: uid,
+      reviewed_at: new Date().toISOString(),
+      metadata: { record_id: rec.id, manual: true },
+    }).catch(() => {});
+
     return json({ ok: true, status: approve ? "manual_approved" : "manual_rejected", publicUrl });
   }
 
@@ -177,6 +194,7 @@ Deno.serve(async (req) => {
   const b64: string = input.image_base64 ?? "";
   const mime: string = input.mime ?? "image/jpeg";
   const fileName: string = String(input.file_name ?? "imagem.jpg").replace(/[^\w.\-]/g, "_");
+  const categoryModule: string = String(input.category ?? input.module ?? "product");
   if (!b64 || b64.length < 100) return json({ ok: false, error: "Imagem ausente" }, 400);
   if (b64.length > 9_000_000) return json({ ok: false, error: "Imagem grande demais (máx ~6MB)" }, 413);
 
@@ -189,7 +207,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     // IA indisponível → NUNCA publicar sem análise: vai para quarentena.
     verdict = {
-      decisao: "revisao", confianca: 0, categoria: "outro",
+      decisao: "revisao", confianca: 0, categoria: categoryModule,
       motivo: `IA indisponível (${String(e).slice(0, 120)}) — retida para revisão manual`,
     };
   }
@@ -205,13 +223,16 @@ Deno.serve(async (req) => {
   let storagePath: string | null = null;
   let publicUrl: string | null = null;
 
+  // Suporte a múltiplos buckets de destino dependendo do módulo (Etapa 1)
+  const targetBucket: string = input.target_bucket ?? "marketing-materials";
+
   if (finalStatus === "approved") {
-    const { error: upErr } = await svc.storage.from("marketing-materials")
+    const { error: upErr } = await svc.storage.from(targetBucket)
       .upload(path, b64ToBytes(b64), { contentType: mime, upsert: false });
     if (upErr) return json({ ok: false, error: `storage: ${upErr.message}` }, 500);
-    storageBucket = "marketing-materials";
+    storageBucket = targetBucket;
     storagePath = path;
-    publicUrl = svc.storage.from("marketing-materials").getPublicUrl(path).data.publicUrl;
+    publicUrl = svc.storage.from(targetBucket).getPublicUrl(path).data.publicUrl;
   } else if (finalStatus === "manual_review") {
     // Quarentena privada — invisível ao público até a decisão do admin
     await svc.storage.from("moderacao")
@@ -229,18 +250,33 @@ Deno.serve(async (req) => {
     storage_path: storagePath,
     status: finalStatus,
     confidence: verdict.confianca,
-    category: verdict.categoria,
+    category: verdict.categoria || categoryModule,
     reason: verdict.motivo,
     provider: providerName,
-    metadata: { mime, size_b64: b64.length },
+    metadata: { mime, size_b64: b64.length, target_bucket: targetBucket, module: categoryModule },
   }).select("id").single();
+
+  // Registro na tabela de aprendizado da IA (Etapa 9)
+  await svc.from("ridv_decisions_log").insert({
+    listing_id: input.listing_id ?? null,
+    media_id: rec?.id ?? null,
+    category: categoryModule,
+    content_type: "image",
+    status: finalStatus,
+    confidence: verdict.confianca,
+    reason: verdict.motivo,
+    verdict: verdict.decisao,
+    ai_provider: providerName,
+    user_id: uid,
+    metadata: { mime, size_b64: b64.length, record_id: rec?.id, target_bucket: targetBucket },
+  }).catch(() => {});
 
   return json({
     ok: true,
     record_id: rec?.id,
     status: finalStatus,
     confidence: verdict.confianca,
-    category: verdict.categoria,
+    category: verdict.categoria || categoryModule,
     reason: verdict.motivo,
     publicUrl,
     storagePath,

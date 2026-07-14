@@ -147,6 +147,7 @@ const menuSections: MenuSection[] = [
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
+      { title: "Publisher Control", url: "/admin/orion-publisher", icon: Inbox, badge: "IA" },
     ],
   },
   {

@@ -37,7 +37,13 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 export async function moderatedUpload(
   blob: Blob,
-  opts: { fileName: string; mime?: string; listingId?: string },
+  opts: {
+    fileName: string;
+    mime?: string;
+    listingId?: string;
+    category?: string;
+    targetBucket?: string;
+  },
 ): Promise<ModerationResult> {
   const image_base64 = await blobToBase64(blob);
 
@@ -48,6 +54,8 @@ export async function moderatedUpload(
       mime: opts.mime || blob.type || "image/jpeg",
       file_name: opts.fileName,
       listing_id: opts.listingId ?? null,
+      category: opts.category ?? "product",
+      target_bucket: opts.targetBucket ?? "marketing-materials",
     },
   });
   if (error) throw new Error(error.message);

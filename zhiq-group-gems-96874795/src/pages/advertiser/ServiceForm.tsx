@@ -10,6 +10,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { moderatedUpload } from '@/lib/moderation/moderatedUpload';
+import { moderatedText } from '@/lib/moderation/moderatedText';
 import { toast } from 'sonner';
 import {
   Briefcase,
@@ -213,6 +215,21 @@ export const ServiceForm = () => {
     try {
       setLoading(true);
 
+      const textMod = await moderatedText({
+        title: serviceData.title.trim(),
+        description: serviceData.description || '',
+        category: 'services',
+        listingId: listingId ?? undefined,
+      });
+
+      if (textMod.status === 'blocked') {
+        toast.error(`Texto bloqueado pela RIDV: ${textMod.reason}`);
+        setLoading(false);
+        return;
+      }
+
+      const isTextApproved = textMod.status === 'approved';
+
       const payload = {
         owner_user_id: user.id,
         title: serviceData.title.trim(),
@@ -226,6 +243,9 @@ export const ServiceForm = () => {
           || `${locationData.neighborhood ? locationData.neighborhood + ', ' : ''}${locationData.city}/${locationData.state}`,
         visibility_status: 'published',
         published_at: new Date().toISOString(),
+        moderation_status: isTextApproved ? 'approved' : 'pending_ai_analysis',
+        ai_status: isTextApproved ? 'approved' : 'queued',
+        moderation_reason: textMod.reason,
       };
 
       let currentListingId = listingId;
@@ -279,37 +299,44 @@ export const ServiceForm = () => {
             continue;
           }
 
-          const { error: uploadError } = await supabase.storage
-            .from('real-estate-original')
-            .upload(filePath, uploadBlob, { contentType: 'image/jpeg' });
-
-          if (uploadError) {
-            console.error('[ServiceForm] Falha no upload da foto:', uploadError);
-            toast.error(`Falha ao enviar a foto "${file.name}": ${uploadError.message}`);
+          let modRes;
+          try {
+            modRes = await moderatedUpload(uploadBlob, {
+              fileName: file.name,
+              mime: 'image/jpeg',
+              listingId: currentListingId,
+              category: 'services',
+              targetBucket: 'services-public',
+            });
+          } catch (modErr: any) {
+            console.error('[ServiceForm] Falha na moderação RIDV da foto:', modErr);
+            toast.error(`Falha na análise da foto "${file.name}": ${modErr.message}`);
             failures++;
             continue;
           }
 
-          const { data: mediaData, error: dbErr } = await supabase.from('service_media' as any).insert({
+          if (modRes.status === 'blocked') {
+            toast.error(`Foto "${file.name}" bloqueada pela IA RIDV: ${modRes.reason}`);
+            failures++;
+            continue;
+          }
+
+          const finalPath = modRes.storagePath || filePath;
+          const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
+
+          const { error: dbErr } = await supabase.from('service_media' as any).insert({
             listing_id: currentListingId,
             owner_user_id: user.id,
-            original_storage_path: filePath,
-          } as any).select().single();
+            original_storage_path: finalPath,
+            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
+            moderation_status: finalStatus,
+          } as any);
 
           if (dbErr) {
             console.error('[ServiceForm] Falha ao registrar mídia:', dbErr);
             toast.error(`Falha ao registrar a foto "${file.name}".`);
             failures++;
             continue;
-          }
-
-          if (mediaData) {
-            const { error: copyErr } = await supabase.storage.from('real-estate-public').upload(filePath, uploadBlob, { upsert: true, contentType: 'image/jpeg' });
-            if (copyErr) console.warn('[ServiceForm] Falha ao copiar para public:', copyErr.message);
-            await supabase.from('service_media' as any).update({
-              moderation_status: 'approved',
-              public_masked_storage_path: filePath,
-            } as any).eq('id', (mediaData as any).id);
           }
         }
         if (failures > 0) {
