@@ -159,7 +159,7 @@ function AIAssistant({ context }: { context: Parameters<typeof answerRideQuestio
         <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
           <img src={viaggLogo} alt="IA" className="w-full h-full object-cover" />
         </div>
-        <span className="text-xs font-bold text-indigo-300">Assistente IA VIAGG</span>
+        <span className="text-xs font-bold text-indigo-300">Assistente Viagg-TX8</span>
       </div>
       {answer && (
         <div className="text-xs text-indigo-100 mb-2 bg-indigo-800/30 rounded-xl p-2.5 leading-relaxed">{answer}</div>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { viaggAI, type AIMessage } from "@/lib/viaggAI";
 import { consultarPlataforma } from "@/lib/ai/moduleRegistry";
+import { sugerirPaginas, paginasParaContexto, type NavSugestao } from "@/lib/ai/routeCatalog";
 import { useAuth } from "@/contexts/AuthContext";
 import viaggLogo from "@/assets/logo.png";
 import { buildViaggAIAssistantContext } from "@/lib/viaggAIContext";
@@ -19,8 +20,8 @@ interface ViaggAIChatProps {
 
 export function ViaggAIChat({
   context,
-  placeholder = "Pergunte à IA Viagg-TX8...",
-  welcomeMessage = "Olá! 👋 Somos a IA Viagg-TX8. Como posso te ajudar com sua entrega?",
+  placeholder = "Pergunte ao Viagg-TX8...",
+  welcomeMessage = "Olá! 👋 Sou o Assistente da plataforma Viagg-TX8. Como posso te ajudar hoje?",
   className,
 }: ViaggAIChatProps) {
   const [open, setOpen] = useState(false);
@@ -29,7 +30,7 @@ export function ViaggAIChat({
   const [messages, setMessages] = useState<AIMessage[]>([
     { role: "assistant", content: welcomeMessage },
   ]);
-  const [acoes, setAcoes] = useState<{ label: string; path: string }[]>([]);
+  const [sugestoes, setSugestoes] = useState<NavSugestao[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const auth = useAuth();
@@ -67,7 +68,7 @@ export function ViaggAIChat({
     setInput("");
     const userMsg: AIMessage = { role: "user", content: text };
     setMessages((prev) => [...prev, userMsg]);
-    setAcoes([]);
+    setSugestoes([]);
     setLoading(true);
 
     /* Ritmo humano: cada resposta leva entre 6 e 9 segundos para aparecer
@@ -89,6 +90,15 @@ export function ViaggAIChat({
       });
     } catch { /* segue sem dados */ }
 
+    /* NAVEGAÇÃO INTELIGENTE: páginas reais relevantes para esta pergunta,
+       filtradas pelas permissões/perfis do usuário (cards "Acessar"). */
+    const sugeridas = sugerirPaginas(text, {
+      isLogged: !!auth?.user,
+      role: auth?.role ?? null,
+      activeProfile: auth?.activeProfile ?? null,
+      availableProfiles: auth?.availableProfiles ?? [],
+    }, plataforma.acoes);
+
     try {
       // Constrói o contexto inteligente da IA com os dados do usuário atual
       const aiContext = buildViaggAIAssistantContext({
@@ -105,6 +115,7 @@ export function ViaggAIChat({
         aiContext,
         context ? `[CONTEXTO ESPECÍFICO DESTA TELA]\n${context}` : "",
         plataforma.contexto,
+        paginasParaContexto(sugeridas),
       ].filter(Boolean).join("\n\n");
 
       let { content } = await viaggAI.chat([...messages, userMsg], { context: finalContext, maxTokens: 600 });
@@ -122,7 +133,7 @@ export function ViaggAIChat({
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content }]);
-      setAcoes(plataforma.acoes);
+      setSugestoes(sugeridas);
     } catch {
       await ritmoHumano();
       if (plataforma.contexto) {
@@ -136,7 +147,7 @@ export function ViaggAIChat({
           role: "assistant",
           content: dados || "Posso te mostrar saldo, ganhos, corridas, grupos, comissão, divulgações, notificações e saques. Qual desses você quer ver?",
         }]);
-        setAcoes(plataforma.acoes);
+        setSugestoes(sugeridas);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -160,7 +171,7 @@ export function ViaggAIChat({
                 <img src={viaggLogo} alt="Viagg-TX8" className="w-full h-full object-cover" />
               </div>
               <div>
-                <p className="text-white font-black text-sm leading-none">IA Viagg-TX8</p>
+                <p className="text-white font-black text-sm leading-none">Viagg-TX8</p>
                 <p className="text-orange-100 text-[10px]">Assistente inteligente completo</p>
               </div>
             </div>
@@ -206,17 +217,31 @@ export function ViaggAIChat({
                 </div>
               </div>
             )}
-            {/* Ações inteligentes (navegação sugerida pela IA) */}
-            {!loading && acoes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pl-8">
-                {acoes.map((a) => (
-                  <button
-                    key={a.path}
-                    onClick={() => { setOpen(false); navigate(a.path); }}
-                    className="inline-flex items-center gap-1 rounded-full bg-[#FF6A00] px-3 py-1.5 text-[11px] font-black text-white shadow-md transition-all hover:brightness-110 active:scale-95"
+            {/* Cards de navegação inteligente (páginas reais sugeridas pela IA) */}
+            {!loading && sugestoes.length > 0 && (
+              <div className="space-y-1.5 pl-8 pr-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Você também pode acessar
+                </p>
+                {sugestoes.map((s) => (
+                  <div
+                    key={s.path}
+                    className="flex items-center gap-2.5 rounded-2xl border border-zinc-100 bg-white p-2.5 shadow-sm transition-shadow hover:shadow-md"
                   >
-                    {a.label} <ArrowRight className="h-3 w-3" />
-                  </button>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-lg">
+                      {s.icone}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-black text-zinc-900">{s.titulo}</p>
+                      <p className="line-clamp-2 text-[10px] leading-tight text-zinc-500">{s.descricao}</p>
+                    </div>
+                    <button
+                      onClick={() => { setOpen(false); navigate(s.path); }}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FF6A00] px-3 py-1.5 text-[10px] font-black text-white shadow transition-all hover:brightness-110 active:scale-95"
+                    >
+                      Acessar <ArrowRight className="h-3 w-3" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -260,7 +285,7 @@ export function ViaggAIChat({
         ) : (
           <img
             src={viaggLogo}
-            alt="IA Viagg-TX8"
+            alt="Viagg-TX8"
             className="w-full h-full object-cover"
           />
         )}

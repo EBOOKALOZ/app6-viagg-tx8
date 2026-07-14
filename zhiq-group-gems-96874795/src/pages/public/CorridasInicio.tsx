@@ -124,7 +124,7 @@ const PROFILES: ProfileCard[] = [
     gradientTo:   "#8B5CF6",
     Icon:         BrainCircuit,
     route:        null,
-    buttonLabel:  "Falar com a IA",
+    buttonLabel:  "Falar com a Plataforma Viagg-TX8",
     registerRoute:null,
     registerLabel:"",
     callRoute:    null,
@@ -340,7 +340,7 @@ export default function CorridasInicio() {
             {/* IA badge */}
             <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-2.5 py-1">
               <BrainCircuit className="w-3 h-3 text-black/70" />
-              <span className="text-[10px] text-black/70 font-semibold">IA VIAGG</span>
+              <span className="text-[10px] text-black/70 font-semibold">Viagg-TX8</span>
             </div>
           </button>
         </div>
@@ -404,7 +404,7 @@ export default function CorridasInicio() {
           Voltar ao mercado
         </button>
       </div>
-      <ViaggAIChat welcomeMessage="Olá! 👋 Sou o Assistente IA VIAGG. Como posso te ajudar com as corridas hoje?" />
+      <ViaggAIChat welcomeMessage="Olá! 👋 Sou o Assistente da plataforma Viagg-TX8. Como posso te ajudar com as corridas hoje?" />
     </MarketLayout>
   );
 }
