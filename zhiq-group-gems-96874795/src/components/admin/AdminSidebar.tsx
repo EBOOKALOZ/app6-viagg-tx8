@@ -148,6 +148,7 @@ const menuSections: MenuSection[] = [
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
       { title: "Publisher Control", url: "/admin/orion-publisher", icon: Inbox, badge: "IA" },
+      { title: "RIDV Moderação", url: "/admin/ridv", icon: ShieldCheck, badge: "NOVO" },
     ],
   },
   {

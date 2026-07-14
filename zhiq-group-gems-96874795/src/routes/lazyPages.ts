@@ -308,6 +308,7 @@ export const AdminOrion = lazy(() => import("@/pages/admin/AdminOrion"));
 export const AdminOrionMobility = lazy(() => import("@/pages/admin/AdminOrionMobility"));
 export const AdminOrionOS = lazy(() => import("@/pages/admin/AdminOrionOS"));
 export const AdminOrionPublisher = lazy(() => import("@/pages/admin/AdminOrionPublisher"));
+export const AdminRidv = lazy(() => import("@/pages/admin/AdminRidv"));
 
 /* ── Auditoria de Categorias (segmentação por módulo) ── */
 export const AdminAuditoriaCategorias = lazy(() => import("@/pages/admin/AdminAuditoriaCategorias"));
