@@ -51,6 +51,7 @@ import {
   Radar,
   ShieldCheck,
   BadgeCheck,
+  Waypoints,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -153,6 +154,7 @@ const menuSections: MenuSection[] = [
       { title: "Package AI", url: "/admin/orion-package", icon: Package, badge: "NOVO" },
       { title: "Finance AI", url: "/admin/orion-finance", icon: Landmark, badge: "NOVO" },
       { title: "Campaign AI", url: "/admin/orion-campaign", icon: Megaphone, badge: "NOVO" },
+      { title: "Dispatcher AI", url: "/admin/orion-dispatcher", icon: Waypoints, badge: "NOVO" },
     ],
   },
   {
@@ -341,17 +343,21 @@ export function AdminSidebar() {
           )}
           {filteredSections.map((section, sectionIdx) => {
             const isGestao = section.title === "Gestão";
+            const isOrionAi = section.title === "ORION AI CENTER";
             return (
             <div
               key={section.title}
-              className={cn(isGestao && "bg-[#FFE600] rounded-xl p-2 -mx-1")}
+              className={cn(
+                isGestao && "bg-[#FFE600] rounded-xl p-2 -mx-1",
+                isOrionAi && "bg-[#E3F2FD] border border-blue-200/80 rounded-xl p-2 -mx-1"
+              )}
             >
-              {sectionIdx > 0 && !isGestao && <Separator className="mb-4" />}
+              {sectionIdx > 0 && !isGestao && !isOrionAi && <Separator className="mb-4" />}
               <div className="mb-2 px-2">
                 <span
                   className={cn(
                     "text-[10px] font-bold uppercase tracking-[0.15em] flex items-center gap-1.5",
-                    isGestao ? "text-zinc-900" : "text-zinc-900"
+                    isGestao ? "text-zinc-900" : isOrionAi ? "text-blue-900" : "text-zinc-900"
                   )}
                 >
                   {section.emoji && <span className="text-xs">{section.emoji}</span>}
@@ -371,6 +377,8 @@ export function AdminSidebar() {
                           ? "bg-primary text-primary-foreground shadow-md"
                           : isGestao
                           ? "text-zinc-800 hover:bg-yellow-300"
+                          : isOrionAi
+                          ? "text-blue-950 hover:bg-blue-200/80 hover:text-blue-900"
                           : "text-zinc-900 hover:bg-muted hover:text-black"
                       )}
                     >

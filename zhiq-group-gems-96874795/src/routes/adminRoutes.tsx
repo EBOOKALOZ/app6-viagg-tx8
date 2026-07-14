@@ -101,6 +101,7 @@ import {
   AdminOrionPackage,
   AdminOrionFinance,
   AdminOrionCampaign,
+  AdminOrionDispatcher,
   AdminAuditoriaCategorias,
   AdminCommissionIntelligence,
   AdminRadarIA,
@@ -238,6 +239,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-package" element={<AdminOrionPackage />} />
       <Route path="/admin/orion-finance" element={<AdminOrionFinance />} />
       <Route path="/admin/orion-campaign" element={<AdminOrionCampaign />} />
+      <Route path="/admin/orion-dispatcher" element={<AdminOrionDispatcher />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
       <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}
