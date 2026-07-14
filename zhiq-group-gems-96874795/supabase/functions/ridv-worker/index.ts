@@ -8,6 +8,8 @@
  *
  * É disparado por: trigger AFTER INSERT das tabelas de anúncio
  * (pg_net), cron de 5 min (backstop) e botão do painel /admin/ridv.
+ * IA: consome o ORION AI Gateway (ORION-AI-00) — nunca chama
+ * provedor direto; modelo/custo/auditoria são do gateway.
  * Fail-safe: IA indisponível (ex.: sem créditos) → manual_review.
  * Concorrência: ridv_worker_aplicar só transiciona quem ainda está
  * pendente — invocações simultâneas não duplicam decisão.
@@ -24,8 +26,6 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
-
-const MODEL = "claude-haiku-4-5-20251001";
 
 type TextVerdict = {
   decisao: "aprovada" | "revisao" | "bloqueada";
@@ -59,35 +59,35 @@ Responda APENAS JSON válido no seguinte formato:
  "categoria_violacao":"ok|golpe_fraude|ofensivo_odio|adulto|proibido|contato_indevido|preco_incompativel|ambiguo|outro",
  "motivo":"1 frase curta e clara justificando a decisão em pt-BR"}`;
 
-async function analisar(payload: string): Promise<TextVerdict> {
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!key) throw new Error("ANTHROPIC_API_KEY ausente");
-
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+async function analisar(payload: string): Promise<{ verdict: TextVerdict; modelo: string }> {
+  // ORION AI Gateway decide provedor/modelo, aplica cache/rate/retry e audita
+  const resp = await fetch(`${Deno.env.get("SUPABASE_URL")!}/functions/v1/orion-ai-gateway`, {
     method: "POST",
     headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: MODEL,
+      module: "ridv",
+      task: "moderation",
+      system: POLICY_TEXT,
+      prompt: `=== ANÚNCIO PARA ANÁLISE ===\n${payload}`,
       max_tokens: 350,
-      messages: [{
-        role: "user",
-        content: `${POLICY_TEXT}\n\n=== ANÚNCIO PARA ANÁLISE ===\n${payload}`,
-      }],
     }),
   });
-  if (!resp.ok) throw new Error(`Anthropic ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
-  const data = await resp.json();
-  const text: string = data?.content?.[0]?.text ?? "";
+  const data = await resp.json().catch(() => ({}));
+  if (!data?.ok) throw new Error(String(data?.error || `gateway ${resp.status}`));
+
+  const text: string = data.texto ?? "";
   const parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
   return {
-    decisao: ["aprovada", "revisao", "bloqueada"].includes(parsed.decisao) ? parsed.decisao : "revisao",
-    confianca: Math.max(0, Math.min(100, Number(parsed.confianca) || 0)),
-    categoria_violacao: String(parsed.categoria_violacao ?? "outro"),
-    motivo: String(parsed.motivo ?? "").slice(0, 300),
+    verdict: {
+      decisao: ["aprovada", "revisao", "bloqueada"].includes(parsed.decisao) ? parsed.decisao : "revisao",
+      confianca: Math.max(0, Math.min(100, Number(parsed.confianca) || 0)),
+      categoria_violacao: String(parsed.categoria_violacao ?? "outro"),
+      motivo: String(parsed.motivo ?? "").slice(0, 300),
+    },
+    modelo: `${data.provider}/${data.model}`,
   };
 }
 
@@ -109,6 +109,7 @@ Deno.serve(async (req) => {
   for (const item of itens) {
     const t0 = Date.now();
     let verdict: TextVerdict;
+    let modelo = "orion-ai-gateway";
 
     if (iaIndisponivel) {
       verdict = {
@@ -117,11 +118,13 @@ Deno.serve(async (req) => {
       };
     } else {
       try {
-        verdict = await analisar(
+        const r = await analisar(
           `Categoria do Módulo: ${item.tabela}\nTítulo: ${item.titulo ?? ""}\n` +
           `Descrição: ${item.descricao ?? ""}\nCidade: ${item.cidade ?? "Não informada"}\n` +
           `Preço informado: ${item.preco ?? "Não informado"}`,
         );
+        verdict = r.verdict;
+        modelo = r.modelo;
       } catch (e) {
         iaIndisponivel = true;
         verdict = {
@@ -145,7 +148,7 @@ Deno.serve(async (req) => {
       p_motivo: verdict.motivo,
       p_categoria_violacao: verdict.categoria_violacao,
       p_tempo_ms: Date.now() - t0,
-      p_modelo: `anthropic/${MODEL}`,
+      p_modelo: modelo,
     });
 
     resultados.push({

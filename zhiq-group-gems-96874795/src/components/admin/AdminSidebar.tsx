@@ -51,6 +51,7 @@ import {
   Radar,
   ShieldCheck,
   BadgeCheck,
+  BrainCircuit,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,7 @@ const menuSections: MenuSection[] = [
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
       { title: "Publisher Control", url: "/admin/orion-publisher", icon: Inbox, badge: "IA" },
       { title: "RIDV Moderação", url: "/admin/ridv", icon: ShieldCheck, badge: "NOVO" },
+      { title: "AI Gateway", url: "/admin/orion-ai", icon: BrainCircuit, badge: "NOVO" },
     ],
   },
   {
