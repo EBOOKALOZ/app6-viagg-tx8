@@ -340,11 +340,8 @@ BEGIN
   SELECT count(*), coalesce(sum(members_count),0) INTO v_grupos, v_membros
   FROM whatsapp_groups
   WHERE is_active AND coalesce(is_valid, true)
-    AND (p_cidade IS NULL OR lower(coalesce(city_name,'')) = lower(p_cidade));
-  IF v_grupos = 0 THEN
-    SELECT count(*), coalesce(sum(members_count),0) INTO v_grupos, v_membros
-    FROM whatsapp_groups WHERE is_active AND coalesce(is_valid, true);
-  END IF;
+    AND (p_cidade IS NULL
+         OR public.orion_norm(coalesce(city_name,'')) = public.orion_norm(p_cidade));
 
   v_alcance := greatest(1, round(v_membros * 0.6));
   v_janela := CASE

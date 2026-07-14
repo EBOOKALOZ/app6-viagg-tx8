@@ -51,9 +51,6 @@ import {
   Radar,
   ShieldCheck,
   BadgeCheck,
-  BrainCircuit,
-  Package,
-  Landmark,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -155,6 +152,7 @@ const menuSections: MenuSection[] = [
       { title: "AI Gateway", url: "/admin/orion-ai", icon: BrainCircuit, badge: "NOVO" },
       { title: "Package AI", url: "/admin/orion-package", icon: Package, badge: "NOVO" },
       { title: "Finance AI", url: "/admin/orion-finance", icon: Landmark, badge: "NOVO" },
+      { title: "Campaign AI", url: "/admin/orion-campaign", icon: Megaphone, badge: "NOVO" },
     ],
   },
   {
