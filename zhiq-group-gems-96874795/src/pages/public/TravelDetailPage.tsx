@@ -231,7 +231,7 @@ export default function TravelDetailPage() {
         />
       )}
 
-      <ViaggAIChat welcomeMessage="Olá! 👋 Sou a IA Viagg. Posso te ajudar com os detalhes e dúvidas desta viagem?" />
+      <ViaggAIChat welcomeMessage="Olá! 👋 Sou o Assistente da plataforma Viagg-TX8. Posso te ajudar com os detalhes e dúvidas desta viagem?" />
 
       <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
         <p className="flex items-center justify-center gap-1.5">

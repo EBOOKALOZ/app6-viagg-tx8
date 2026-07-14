@@ -340,7 +340,7 @@ export async function consultarPlataforma(
       `DADOS REAIS DA PLATAFORMA VIAGG-TX8 (consultados agora, já filtrados pelas permissões do usuário). ${perfil}${cidade}\n` +
       linhas.join('\n') +
       `\nINSTRUÇÃO: responda usando EXATAMENTE esses números reais — nunca diga que não tem acesso e não invente valores além dos fornecidos. ` +
-      `Entregue a resposta de forma natural e conversada: comente o dado com utilidade (contexto, dica ou próximo passo) e termine puxando o diálogo com UMA pergunta curta relacionada. Responda em português do Brasil.`,
+      `Entregue uma resposta completa e conversada (2 a 4 parágrafos curtos): apresente os números, explique o que eles significam na prática, dê uma dica ou próximo passo concreto dentro da plataforma, antecipe a próxima dúvida provável e termine puxando o diálogo com UMA pergunta curta relacionada. Responda em português do Brasil.`,
     acoes: acoes.slice(0, 2),
   };
 }

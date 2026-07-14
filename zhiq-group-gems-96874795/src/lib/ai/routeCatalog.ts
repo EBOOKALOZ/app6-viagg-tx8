@@ -200,10 +200,13 @@ export const ROUTE_CATALOG: CatalogEntry[] = [
   },
   {
     id: 'ganhos-pro', icone: '📈', titulo: 'Ganhos & Comissão',
-    descricao: 'Acompanhe ganhos, comissão atual e evolução por grupos.',
-    keywords: /(ganho|ganhei|comissao|faturamento|rendimento|financeiro)/,
-    path: (c) => ({ motoboy: '/motoboy/finance', mototaxi: '/mototaxi/wallet', driver: '/driver/comissao' }[perfilPro(c)]),
-    disponivel: ehPro,
+    descricao: 'Acompanhe ganhos, taxas de comissão e engajamento no painel do motoboy.',
+    keywords: /(ganho|ganhei|comissao|faturamento|rendimento|financeiro|taxa.*comissao)/,
+    path: (c) => {
+      if (c.activeProfile === 'merchant') return '/merchant/creditos';
+      return { motoboy: '/motoboy/finance', mototaxi: '/mototaxi/wallet', driver: '/driver/comissao' }[perfilPro(c)] || '/motoboy/finance';
+    },
+    disponivel: (c) => ehPro(c) || c.activeProfile === 'merchant',
   },
   {
     id: 'historico-pro', icone: '🗂️', titulo: 'Histórico de Corridas',
@@ -213,9 +216,9 @@ export const ROUTE_CATALOG: CatalogEntry[] = [
     disponivel: ehPro,
   },
   {
-    id: 'grupos-pro', icone: '👥', titulo: 'Grupos',
-    descricao: 'Cadastre grupos válidos e reduza sua comissão até 6%.',
-    keywords: /(grupo|grupos|radar)/,
+    id: 'grupos-pro', icone: '👥', titulo: 'Grupos & Engajamento',
+    descricao: 'Cadastre grupos válidos, acompanhe seu engajamento e reduza sua comissão até 6%.',
+    keywords: /(grupo|grupos|radar|engajamento|reduzir.*comissao)/,
     path: (c) => `/${perfilPro(c)}/grupos`,
     disponivel: ehPro,
   },

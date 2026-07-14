@@ -105,20 +105,35 @@ export default function PostadorDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const base = pathname.startsWith('/mototaxi')
+  const isMerchant = pathname.startsWith('/merchant') || pathname.startsWith('/lojista');
+
+  const base = isMerchant
+    ? '/merchant'
+    : pathname.startsWith('/mototaxi')
     ? '/mototaxi'
     : pathname.startsWith('/driver')
     ? '/driver'
     : '/motoboy';
 
-  const profile = pathname.startsWith('/mototaxi')
+  const profile = isMerchant
+    ? 'merchant'
+    : pathname.startsWith('/mototaxi')
     ? 'mototaxi'
     : pathname.startsWith('/driver')
     ? 'driver'
     : 'motoboy';
 
   const hub = `${base}/impulsionar`;
-  const go = (segment: string) => navigate(`${hub}/${segment}`);
+  const go = (segment: string) => {
+    if (isMerchant) {
+      if (segment === 'comissao') return navigate('/merchant/creditos');
+      if (segment === 'campanhas') return navigate('/merchant/campanhas');
+      if (segment === 'historico') return navigate('/merchant/history');
+      if (segment === 'grupos') return navigate('/merchant/settings');
+      return navigate('/merchant/dashboard');
+    }
+    navigate(`${hub}/${segment}`);
+  };
 
   const { kpis, operatorKpis, operationalBoard, loadingBoard, historyMine } =
     usePostadorPremium();

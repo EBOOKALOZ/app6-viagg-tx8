@@ -118,7 +118,7 @@ export function ViaggAIChat({
         paginasParaContexto(sugeridas),
       ].filter(Boolean).join("\n\n");
 
-      let { content } = await viaggAI.chat([...messages, userMsg], { context: finalContext, maxTokens: 600 });
+      let { content } = await viaggAI.chat([...messages, userMsg], { context: finalContext, maxTokens: 900 });
       await ritmoHumano();
 
       // [NAVEGAÇÃO INTELIGENTE] - Intercepta comando [NAVIGATE:/rota]
@@ -208,12 +208,17 @@ export function ViaggAIChat({
               </div>
             ))}
             {loading && (
-              <div className="flex justify-start">
+              <div className="flex justify-start items-center">
                 <div className="w-6 h-6 rounded-full overflow-hidden mr-2 shrink-0 mt-1">
                   <img src={viaggLogo} alt="IA" className="w-full h-full object-cover" />
                 </div>
-                <div className="bg-white shadow-sm border border-zinc-100 rounded-2xl rounded-tl-sm px-3 py-2">
-                  <Loader2 className="w-4 h-4 text-[#FF6A00] animate-spin" />
+                <div className="bg-white shadow-sm border border-zinc-100 rounded-2xl rounded-tl-sm px-3.5 py-2.5 flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-[#FF6A00] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-2 h-2 bg-[#FF6A00] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-2 h-2 bg-[#FF6A00] rounded-full animate-bounce"></span>
+                  </div>
+                  <span className="text-xs font-semibold text-zinc-500">Digitando...</span>
                 </div>
               </div>
             )}
