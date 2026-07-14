@@ -139,32 +139,42 @@ END $$;
 -- 4. Criação/Revisão de Views Públicas Protegidas (Etapa 7)
 -- ==============================================================================
 
-CREATE OR REPLACE VIEW public.public_real_estate_listings AS
+-- As views antigas têm layout de colunas diferente → DROP antes de recriar.
+-- market_all_listings depende delas: derrubar antes e recriar ao final.
+DROP VIEW IF EXISTS public.market_all_listings;
+DROP VIEW IF EXISTS public.public_real_estate_listings;
+DROP VIEW IF EXISTS public.public_vehicle_listings;
+DROP VIEW IF EXISTS public.public_travel_listings;
+DROP VIEW IF EXISTS public.public_freight_listings;
+DROP VIEW IF EXISTS public.public_service_listings;
+DROP VIEW IF EXISTS public.public_product_listings;
+
+CREATE VIEW public.public_real_estate_listings AS
 SELECT * FROM public.real_estate_listings
 WHERE visibility_status = 'published'
   AND moderation_status IN ('approved', 'approved_clean', 'approved_masked', 'manual_approved');
 
-CREATE OR REPLACE VIEW public.public_vehicle_listings AS
+CREATE VIEW public.public_vehicle_listings AS
 SELECT * FROM public.vehicle_listings
 WHERE visibility_status = 'published'
   AND moderation_status IN ('approved', 'approved_clean', 'approved_masked', 'manual_approved');
 
-CREATE OR REPLACE VIEW public.public_travel_listings AS
+CREATE VIEW public.public_travel_listings AS
 SELECT * FROM public.travel_listings
 WHERE visibility_status = 'published'
   AND moderation_status IN ('approved', 'approved_clean', 'approved_masked', 'manual_approved');
 
-CREATE OR REPLACE VIEW public.public_freight_listings AS
+CREATE VIEW public.public_freight_listings AS
 SELECT * FROM public.freight_listings
 WHERE visibility_status = 'published'
   AND moderation_status IN ('approved', 'approved_clean', 'approved_masked', 'manual_approved');
 
-CREATE OR REPLACE VIEW public.public_service_listings AS
+CREATE VIEW public.public_service_listings AS
 SELECT * FROM public.service_listings
 WHERE visibility_status = 'published'
   AND moderation_status IN ('approved', 'approved_clean', 'approved_masked', 'manual_approved');
 
-CREATE OR REPLACE VIEW public.public_product_listings AS
+CREATE VIEW public.public_product_listings AS
 SELECT * FROM public.product_listings
 WHERE status = 'active'
   AND moderation_status IN ('approved', 'approved_clean', 'approved_masked', 'manual_approved');
@@ -175,3 +185,69 @@ GRANT SELECT ON public.public_travel_listings TO anon, authenticated;
 GRANT SELECT ON public.public_freight_listings TO anon, authenticated;
 GRANT SELECT ON public.public_service_listings TO anon, authenticated;
 GRANT SELECT ON public.public_product_listings TO anon, authenticated;
+
+-- ============================================================
+-- 5. Recriação de market_all_listings (dependia das views acima)
+-- ============================================================
+CREATE VIEW public.market_all_listings AS
+ SELECT r.id,
+    'real_estate'::text AS module,
+    r.city,
+    r.state,
+    r.neighborhood,
+    NULL::timestamp with time zone AS created_at,
+    false AS is_featured,
+    r.property_type::text AS title,
+    NULL::numeric AS price,
+    NULL::text AS category
+   FROM public_real_estate_listings r
+UNION ALL
+ SELECT vl.id,
+    'vehicles'::text AS module,
+    vl.city,
+    vl.state,
+    vl.neighborhood,
+    NULL::timestamp with time zone AS created_at,
+    false AS is_featured,
+    COALESCE(vl.title, vl.brand::text) AS title,
+    NULL::numeric AS price,
+    vl.brand::text AS category
+   FROM vehicle_listings vl
+UNION ALL
+ SELECT s.id,
+    'services'::text AS module,
+    s.city,
+    s.state,
+    s.neighborhood,
+    NULL::timestamp with time zone AS created_at,
+    false AS is_featured,
+    s.title,
+    NULL::numeric AS price,
+    s.service_type::text AS category
+   FROM public_service_listings s
+UNION ALL
+ SELECT f.id,
+    'freight'::text AS module,
+    f.city,
+    f.state,
+    f.neighborhood,
+    NULL::timestamp with time zone AS created_at,
+    false AS is_featured,
+    f.title,
+    NULL::numeric AS price,
+    f.vehicle_type::text AS category
+   FROM public_freight_listings f
+UNION ALL
+ SELECT t.id,
+    'travel'::text AS module,
+    t.city,
+    t.state,
+    NULL::text AS neighborhood,
+    t.created_at,
+    t.is_featured,
+    t.title,
+    COALESCE(t.price_per_person, t.total_price) AS price,
+    t.category::text
+   FROM travel_listings t
+  WHERE t.visibility_status = 'published'::real_estate_listing_status;
+GRANT SELECT ON public.market_all_listings TO anon, authenticated;
