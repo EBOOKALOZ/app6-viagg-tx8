@@ -1,8 +1,10 @@
 import { useWeatherRich } from '@/hooks/useWeatherRich';
-import { Droplets, Wind, Thermometer, Clock } from 'lucide-react';
+import { useUserAutonomousCity } from '@/hooks/useUserAutonomousCity';
+import { Droplets, Wind, Thermometer, Clock, MapPin } from 'lucide-react';
 
 export function WeatherCard() {
-  const { weather, loading, error, minutesAgo } = useWeatherRich();
+  const { city: userCity, resolved: cityResolved } = useUserAutonomousCity();
+  const { weather, loading, error, minutesAgo } = useWeatherRich(undefined, undefined, userCity, cityResolved);
 
   if (loading && !weather) {
     return (
@@ -33,7 +35,13 @@ export function WeatherCard() {
       </span>
 
       <div className="relative z-10 space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Clima agora</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/60">Clima agora</p>
+          <div className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-bold text-white">
+            <MapPin className="h-3 w-3" />
+            <span>{weather.cityName}</span>
+          </div>
+        </div>
 
         <div className="flex items-start gap-3">
           <span className="text-5xl leading-none">{weather.icon}</span>

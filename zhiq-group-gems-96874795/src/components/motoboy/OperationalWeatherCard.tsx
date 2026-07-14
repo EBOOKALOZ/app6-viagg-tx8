@@ -52,6 +52,14 @@ export function OperationalWeatherCard({ city: cityProp, state: stateProp }: Ope
             return;
           }
         }
+        const { data: profData } = await (supabase.from('profiles') as any)
+          .select('cidade, estado')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profData?.cidade) {
+          if (!cancelled) { setCity(profData.cidade); setState(profData.estado); }
+          return;
+        }
         if (!cancelled) setResolved(true); // sem cidade cadastrada → libera fallback do hook
       } catch {
         if (!cancelled) setResolved(true);
