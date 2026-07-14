@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Droplets, Wind, MapPin, Thermometer } from 'lucide-react';
+import { Droplets, Wind, MapPin, Thermometer, X } from 'lucide-react';
 import { useWeatherRich } from '@/hooks/useWeatherRich';
 import { useUserAutonomousCity } from '@/hooks/useUserAutonomousCity';
 
@@ -9,6 +9,10 @@ import { useUserAutonomousCity } from '@/hooks/useUserAutonomousCity';
  * públicos. Reutiliza o useWeatherRich (GPS → fallback) e adapta a
  * mensagem da IA ao módulo atual (mercado/imóveis/veículos/serviços/
  * fretes/viagens) e às condições reais (chuva, vento, horário).
+ * 
+ * Atualizado com comportamento temporizado rotativo: o card começa a aparecer,
+ * exibe a dica por 8 segundos (com barra de progresso e botão fechar) e depois some
+ * convertendo-se em um mini-selo interativo para não desalinhar a barra de pesquisa.
  */
 
 type Modulo = 'mercado' | 'imoveis' | 'veiculos' | 'servicos' | 'fretes' | 'viagens';
@@ -72,6 +76,44 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
     [weather, modulo],
   );
 
+  const [expanded, setExpanded] = useState(true);
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    if (loading || !weather || !ia) return;
+
+    let interval: NodeJS.Timeout | null = null;
+    let timeout: NodeJS.Timeout | null = null;
+
+    if (expanded) {
+      // Quando visível, diminui o progresso ao longo de 8 segundos (80 passos de 100ms)
+      const duration = 8000;
+      const stepTime = 100;
+      const stepValue = 100 / (duration / stepTime);
+
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev <= stepValue) {
+            setExpanded(false);
+            return 100;
+          }
+          return prev - stepValue;
+        });
+      }, stepTime);
+    } else {
+      // Quando oculto (some), aguarda 30 segundos para aparecer automaticamente de novo (ou reabre no clique)
+      timeout = setTimeout(() => {
+        setExpanded(true);
+        setProgress(100);
+      }, 30000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [loading, weather, ia, expanded]);
+
   if (loading) {
     return (
       <div
@@ -82,11 +124,41 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
   }
   if (!weather || !ia) return null;
 
+  if (!expanded) {
+    return (
+      <div className="hhw-pill-enter w-full flex items-center justify-start py-0.5">
+        <style>{`
+          @keyframes hhwPillIn { from{opacity:0; transform:scale(0.96)} to{opacity:1; transform:scale(1)} }
+          .hhw-pill-enter { animation: hhwPillIn .3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        `}</style>
+        <button
+          onClick={() => { setExpanded(true); setProgress(100); }}
+          className="group flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black shadow-md border border-white/80 transition-all hover:scale-[1.02] active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, rgba(200,236,252,.96) 0%, rgba(160,220,248,.94) 100%)',
+            color: '#075985',
+            backdropFilter: 'blur(10px)',
+          }}
+          title="Clique para expandir a previsão e dica de IA"
+        >
+          <span className="text-sm leading-none group-hover:scale-110 transition-transform">{weather.icon}</span>
+          <span>{weather.temperature}°C</span>
+          <span className="opacity-60">•</span>
+          <span className="max-w-[140px] truncate">{weather.cityName}</span>
+          <span className="opacity-60">•</span>
+          <span className="flex items-center gap-1 text-[11px] font-extrabold text-[#075985] bg-white/80 px-2 py-0.5 rounded-full shadow-sm">
+            <span>🤖</span> Dica de IA
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   const tom = TOM_COR[ia.tom];
 
   return (
     <div
-      className="hhw-enter w-full overflow-hidden rounded-2xl"
+      className="hhw-enter w-full overflow-hidden rounded-2xl relative transition-all"
       style={{
         background: 'linear-gradient(135deg, rgba(200,236,252,.95) 0%, rgba(160,220,248,.92) 55%, rgba(104,199,242,.85) 100%)',
         backdropFilter: 'blur(14px)',
@@ -103,7 +175,7 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
       `}</style>
 
       {/* Faixa compacta (+30% sobre a slim), texto da IA SEMPRE visível */}
-      <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
+      <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5 pr-8">
         <span className="hhw-ico shrink-0 text-base leading-none">{weather.icon}</span>
         <span className="shrink-0 text-[14px] font-black leading-none text-slate-900">{weather.temperature}°C</span>
         <span className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-slate-800"
@@ -134,6 +206,23 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
           <span className="shrink-0 text-[13px] leading-none">🤖</span>
           <span className="line-clamp-2 text-[12px] font-bold leading-snug" style={{ color: tom.cor }}>{ia.texto}</span>
         </span>
+      </div>
+
+      {/* Botão de Fechar Rápido (X) */}
+      <button
+        onClick={() => setExpanded(false)}
+        className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/60 text-slate-800 shadow-sm transition-colors hover:bg-white active:scale-95"
+        title="Ocultar previsão do tempo"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+
+      {/* Barra de Progresso de Tempo (indicando que o card vai sumir suavemente) */}
+      <div className="h-[3px] w-full bg-[#075985]/15 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-[#075985] to-[#0284c7] transition-all duration-100 ease-linear"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </div>
   );

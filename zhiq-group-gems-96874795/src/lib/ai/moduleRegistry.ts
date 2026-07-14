@@ -17,6 +17,8 @@ export interface AIModuleContext {
   profile: string | null;   // motoboy | mototaxi | driver | merchant | passenger...
   cidade?: string | null;
   currentPath?: string | null;
+  /** pergunta original do usuário (para módulos que extraem cidade/parâmetros) */
+  pergunta?: string;
 }
 
 function getProPrefix(ctx: AIModuleContext): string {
@@ -309,6 +311,33 @@ export const REGISTRY: AIModule[] = [
       };
     },
   },
+  {
+    id: 'profissionais_stats',
+    titulo: 'Operação de Profissionais',
+    /* REGRA GLOBAL IA Operacional: "quantos motoboys em X?", "motoristas online",
+       "cadastros hoje", "cobertura da cidade", "aguardando aprovação"... */
+    keywords: /(quantos? (motoboys?|motoristas?|moto.?taxis?|profissionais|entregadores))|((motoboys?|motoristas?|moto.?taxis?|profissionais|entregadores).{0,30}(online|ativos?|cadastrad|existem|dispon))|(cadastros? (hoje|realizados|novos|es[st]a semana))|(cobertura (operacional|da cidade))|(aguardando aprovacao|aprovados? es[st]a semana|taxa de aprovacao|entregas (hoje|realizadas))/,
+    requerLogin: false,
+    fetch: async (ctx) => {
+      const { data } = await (supabase.rpc as any)('ia_stats_profissionais', {
+        p_pergunta: ctx.pergunta || '',
+      });
+      if (!data) return null;
+      const linhas = [
+        `Motoboys na plataforma: ${data.motoboys_total} (${data.motoboys_online} online agora).`,
+        `Motoristas/moto-táxi: ${data.motoristas_mototaxi_total} (${data.motoristas_mototaxi_online} online).`,
+        `Cadastros de profissionais hoje: ${data.cadastros_hoje}; nos últimos 7 dias: ${data.cadastros_7d}.`,
+        `Entregas concluídas hoje: ${data.entregas_hoje}.`,
+      ];
+      if (data.cidade) {
+        linhas.push(`Em ${data.cidade.cidade}: ${data.cidade.motoboys_total} motoboy(s) (${data.cidade.motoboys_online} online) e ${data.cidade.motoristas_total} motorista(s)/moto-táxi (${data.cidade.motoristas_online} online).`);
+      }
+      if (data.admin) {
+        linhas.push(`[VISÍVEL SÓ PARA ADMIN] Verificações de identidade pendentes: ${data.admin.aprovacao_pendente}; CNH vencida: ${data.admin.cnh_vencida}${data.admin.taxa_aprovacao_pct != null ? `; taxa de aprovação: ${data.admin.taxa_aprovacao_pct}%` : ''}.`);
+      }
+      return { modulo: 'Profissionais', dados: linhas.join(' ') };
+    },
+  },
 ];
 
 /* ── Descoberta: casa a pergunta com os módulos registrados ── */
@@ -337,10 +366,11 @@ export async function consultarPlataforma(
     };
   }
 
+  const ctxComPergunta: AIModuleContext = { ...ctx, pergunta };
   const resultados = await Promise.allSettled(
     mods.map(m => (m.requerLogin && !ctx.userId)
       ? Promise.resolve<AIModuleResult>({ modulo: m.titulo, dados: 'Usuário não está logado — peça para entrar na conta para ver este dado.' })
-      : m.fetch(ctx)),
+      : m.fetch(ctxComPergunta)),
   );
 
   const linhas: string[] = [];
