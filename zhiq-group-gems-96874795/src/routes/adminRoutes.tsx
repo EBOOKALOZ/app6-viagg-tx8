@@ -98,6 +98,7 @@ import {
   AdminOrionPublisher,
   AdminRidv,
   AdminOrionAi,
+  AdminOrionPackage,
   AdminAuditoriaCategorias,
   AdminCommissionIntelligence,
   AdminRadarIA,
@@ -232,6 +233,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-publisher" element={<AdminOrionPublisher />} />
       <Route path="/admin/ridv" element={<AdminRidv />} />
       <Route path="/admin/orion-ai" element={<AdminOrionAi />} />
+      <Route path="/admin/orion-package" element={<AdminOrionPackage />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
       <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}

@@ -52,6 +52,7 @@ import {
   ShieldCheck,
   BadgeCheck,
   BrainCircuit,
+  Package,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -151,6 +152,7 @@ const menuSections: MenuSection[] = [
       { title: "Publisher Control", url: "/admin/orion-publisher", icon: Inbox, badge: "IA" },
       { title: "RIDV Moderação", url: "/admin/ridv", icon: ShieldCheck, badge: "NOVO" },
       { title: "AI Gateway", url: "/admin/orion-ai", icon: BrainCircuit, badge: "NOVO" },
+      { title: "Package AI", url: "/admin/orion-package", icon: Package, badge: "NOVO" },
     ],
   },
   {
