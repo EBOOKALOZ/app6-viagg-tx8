@@ -48,9 +48,54 @@ const hojeLocal = () => {
 
 export const REGISTRY: AIModule[] = [
   {
+    id: 'visao_geral',
+    titulo: 'Visão geral da conta',
+    keywords: /(minha conta|meu perfil|meus dados|meu painel|minhas informacoes|resumo (geral|da conta)|visao geral|panorama|como (estou|esta minha conta|anda minha conta)|ve(ja|r) (a )?(minha )?conta|status da (minha )?conta|tudo sobre mim)/,
+    requerLogin: true,
+    fetch: async (ctx) => {
+      const [wal, notif, grupos, ordens, perfil] = await Promise.allSettled([
+        (supabase.from('v_wallet_overview') as any).select('*').maybeSingle(),
+        (supabase.from('user_notifications') as any)
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', ctx.userId).eq('is_read', false),
+        (supabase.from('whatsapp_groups') as any)
+          .select('id', { count: 'exact', head: true })
+          .eq('owner_user_id', ctx.userId),
+        (supabase.from('service_orders') as any)
+          .select('id, status')
+          .gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString())
+          .limit(200),
+        (supabase.from('profiles') as any)
+          .select('name, cidade, percentual_comissao_atual')
+          .eq('id', ctx.userId).maybeSingle(),
+      ]);
+      const val = (r: any) => (r.status === 'fulfilled' ? r.value : null);
+      const w = val(wal)?.data;
+      const nCount = val(notif)?.count ?? 0;
+      const gCount = val(grupos)?.count ?? 0;
+      const oRows = (val(ordens)?.data || []) as any[];
+      const ativas = oRows.filter(r =>
+        !['delivered', 'completed', 'canceled', 'cancelled', 'finished'].includes(String(r.status))).length;
+      const p = val(perfil)?.data;
+      const partes = [
+        p?.name ? `Nome no cadastro: ${p.name}${p.cidade ? ` (${p.cidade})` : ''}.` : '',
+        `Saldo disponível na carteira: ${brl(w?.available_balance || 0)}${w?.processing_balance ? ` (em processamento: ${brl(w.processing_balance)})` : ''}.`,
+        `Corridas/entregas nos últimos 7 dias: ${oRows.length} (${ativas} em andamento agora).`,
+        `Grupos cadastrados: ${gCount}.`,
+        p?.percentual_comissao_atual != null ? `Comissão atual: ${p.percentual_comissao_atual}%.` : '',
+        `Notificações não lidas: ${nCount}.`,
+      ].filter(Boolean);
+      return {
+        modulo: 'Visão geral da conta',
+        dados: partes.join(' '),
+        acao: { label: 'Abrir minha conta', path: '/minha-conta' },
+      };
+    },
+  },
+  {
     id: 'carteira',
     titulo: 'Carteira Digital',
-    keywords: /(saldo|saque|sacar|carteira|disponivel para saque|quanto tenho)/,
+    keywords: /(saldo|saque|sacar|carteira|dinheiro|extrato|pix|disponivel para saque|quanto tenho)/,
     requerLogin: true,
     fetch: async () => {
       const { data } = await (supabase.from('v_wallet_overview') as any).select('*').maybeSingle();
@@ -257,7 +302,19 @@ export async function consultarPlataforma(
   ctx: AIModuleContext,
 ): Promise<{ contexto: string; acoes: { label: string; path: string }[] }> {
   const mods = detectarModulos(pergunta);
-  if (!mods.length) return { contexto: '', acoes: [] };
+  if (!mods.length) {
+    if (!ctx.userId) return { contexto: '', acoes: [] };
+    /* Logado, mas a mensagem não pediu um dado específico: informa à IA o que
+       ela SABE consultar — assim ela nunca responde "não tenho acesso". */
+    return {
+      contexto:
+        'ACESSO À PLATAFORMA: você CONSEGUE consultar em tempo real os dados reais deste usuário logado — ' +
+        'saldo e carteira, ganhos, corridas/entregas, créditos, grupos, comissão, divulgações, notificações, saques e o resumo geral da conta ("minha conta"). ' +
+        'Nesta mensagem nenhum dado específico foi identificado. É PROIBIDO dizer que você não tem acesso à conta ou mandar procurar o suporte para ver dados. ' +
+        'Se o usuário quiser um dado, responda normalmente e pergunte qual informação ele quer ver (ex.: "seu saldo", "suas corridas de hoje", "resumo da sua conta").',
+      acoes: [],
+    };
+  }
 
   const resultados = await Promise.allSettled(
     mods.map(m => (m.requerLogin && !ctx.userId)
@@ -282,7 +339,8 @@ export async function consultarPlataforma(
     contexto:
       `DADOS REAIS DA PLATAFORMA VIAGG-TX8 (consultados agora, já filtrados pelas permissões do usuário). ${perfil}${cidade}\n` +
       linhas.join('\n') +
-      `\nINSTRUÇÃO: responda usando EXATAMENTE esses números reais. Nunca diga que não tem acesso. Não invente valores além dos fornecidos. Responda em português, curto e direto.`,
+      `\nINSTRUÇÃO: responda usando EXATAMENTE esses números reais — nunca diga que não tem acesso e não invente valores além dos fornecidos. ` +
+      `Entregue a resposta de forma natural e conversada: comente o dado com utilidade (contexto, dica ou próximo passo) e termine puxando o diálogo com UMA pergunta curta relacionada. Responda em português do Brasil.`,
     acoes: acoes.slice(0, 2),
   };
 }

@@ -45,6 +45,22 @@ export function ViaggAIChat({
     return () => window.removeEventListener("viagg-ai:open", handler);
   }, []);
 
+  // Saudação personalizada: injeta o primeiro nome do usuário logado na
+  // mensagem de boas-vindas (mantém o texto específico de cada página).
+  useEffect(() => {
+    const nome = String(auth?.displayName || auth?.user?.user_metadata?.full_name || "")
+      .trim().split(/\s+/)[0];
+    if (!nome) return;
+    setMessages((prev) => {
+      if (prev.length !== 1 || prev[0].role !== "assistant") return prev;
+      const base = welcomeMessage;
+      const comNome = /^Ol[áa]!?/.test(base)
+        ? base.replace(/^Ol[áa]!?/, `Olá, ${nome}!`)
+        : `Olá, ${nome}! ${base}`;
+      return prev[0].content === comNome ? prev : [{ role: "assistant", content: comNome }];
+    });
+  }, [auth?.displayName, auth?.user?.id, welcomeMessage]);
+
   async function handleSend() {
     const text = input.trim();
     if (!text || loading) return;
@@ -53,6 +69,15 @@ export function ViaggAIChat({
     setMessages((prev) => [...prev, userMsg]);
     setAcoes([]);
     setLoading(true);
+
+    /* Ritmo humano: cada resposta leva entre 6 e 9 segundos para aparecer
+       (o indicador de "digitando" fica visível durante a espera). */
+    const inicio = Date.now();
+    const alvoMs = 6000 + Math.random() * 3000;
+    const ritmoHumano = async () => {
+      const falta = alvoMs - (Date.now() - inicio);
+      if (falta > 0) await new Promise((r) => setTimeout(r, falta));
+    };
 
     /* MODULE REGISTRY: consulta dados REAIS da plataforma para esta pergunta
        (via sessão do usuário — o RLS garante as permissões). Best-effort. */
@@ -82,7 +107,8 @@ export function ViaggAIChat({
         plataforma.contexto,
       ].filter(Boolean).join("\n\n");
 
-      let { content } = await viaggAI.chat([...messages, userMsg], { context: finalContext, maxTokens: 400 });
+      let { content } = await viaggAI.chat([...messages, userMsg], { context: finalContext, maxTokens: 600 });
+      await ritmoHumano();
 
       // [NAVEGAÇÃO INTELIGENTE] - Intercepta comando [NAVIGATE:/rota]
       const navRegex = /\[NAVIGATE:([^\]]+)\]/i;
@@ -98,6 +124,7 @@ export function ViaggAIChat({
       setMessages((prev) => [...prev, { role: "assistant", content }]);
       setAcoes(plataforma.acoes);
     } catch {
+      await ritmoHumano();
       if (plataforma.contexto) {
         // LLM indisponível, mas TEMOS os dados reais → responde direto com eles
         const dados = plataforma.contexto
@@ -105,7 +132,10 @@ export function ViaggAIChat({
           .filter((l) => l.startsWith("•"))
           .map((l) => l.replace(/^• \[[^\]]+\] /, ""))
           .join("\n");
-        setMessages((prev) => [...prev, { role: "assistant", content: dados }]);
+        setMessages((prev) => [...prev, {
+          role: "assistant",
+          content: dados || "Posso te mostrar saldo, ganhos, corridas, grupos, comissão, divulgações, notificações e saques. Qual desses você quer ver?",
+        }]);
         setAcoes(plataforma.acoes);
       } else {
         setMessages((prev) => [
