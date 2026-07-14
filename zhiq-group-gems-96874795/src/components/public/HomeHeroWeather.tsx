@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Droplets, Wind, MapPin, Thermometer } from 'lucide-react';
 import { useWeatherRich } from '@/hooks/useWeatherRich';
+import { useUserAutonomousCity } from '@/hooks/useUserAutonomousCity';
 
 /**
  * <HomeHeroWeather /> — hero de clima + IA RIDV para o topo dos módulos
@@ -63,7 +64,8 @@ const TOM_COR: Record<string, { bg: string; cor: string }> = {
 export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
   const { pathname } = useLocation();
   const modulo = moduloFromPath(pathname);
-  const { weather, loading } = useWeatherRich();
+  const { city: userCity, resolved: cityResolved } = useUserAutonomousCity();
+  const { weather, loading } = useWeatherRich(undefined, undefined, userCity, cityResolved);
 
   const ia = useMemo(
     () => (weather ? mensagemIA(modulo, weather) : null),
@@ -104,9 +106,10 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
       <div className="flex flex-wrap items-center gap-2 px-2.5 py-1.5">
         <span className="hhw-ico shrink-0 text-base leading-none">{weather.icon}</span>
         <span className="shrink-0 text-[14px] font-black leading-none text-slate-900">{weather.temperature}°C</span>
-        <span className="hidden sm:flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-slate-600">
-          <MapPin className="h-3 w-3" style={{ color: '#075985' }} />
-          <span className="max-w-[90px] truncate">{weather.cityName}</span>
+        <span className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-slate-800"
+          style={{ background: 'rgba(255,255,255,.75)' }}>
+          <MapPin className="h-3.5 w-3.5 shrink-0" style={{ color: '#075985' }} />
+          <span className="max-w-[140px] truncate">{weather.cityName}</span>
         </span>
 
         <span className="flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-bold"
