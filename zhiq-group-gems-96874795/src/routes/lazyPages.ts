@@ -304,6 +304,7 @@ export const AdminModeracaoIA = lazy(() => import("@/pages/admin/AdminModeracaoI
 
 /* ── Fila Inteligente de Divulgações (visão admin transparente) ── */
 export const AdminFilaDivulgacoes = lazy(() => import("@/pages/admin/AdminFilaDivulgacoes"));
+export const AdminOrion = lazy(() => import("@/pages/admin/AdminOrion"));
 
 /* ── Auditoria de Categorias (segmentação por módulo) ── */
 export const AdminAuditoriaCategorias = lazy(() => import("@/pages/admin/AdminAuditoriaCategorias"));

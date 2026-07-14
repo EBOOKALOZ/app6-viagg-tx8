@@ -55,6 +55,7 @@ export const driverRoutes = (
       <Route path="/driver/campanhas" element={<MotoboyCampaignInbox />} />
       <Route path="/driver/wallet" element={<Wallet />} />
       <Route path="/driver/comissao" element={<DriverComissao />} />
+      <Route path="/driver/finance" element={<DriverComissao />} />
 
       {/* ── Hub Impulsionar driver (abas aninhadas) ── */}
       <Route path="/driver/impulsionar" element={<PostadorHub />}>

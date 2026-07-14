@@ -87,6 +87,7 @@ export function ViaggAIChat({
       plataforma = await consultarPlataforma(text, {
         userId: auth?.user?.id ?? null,
         profile: auth?.activeProfile ?? null,
+        currentPath: window.location.pathname,
       });
     } catch { /* segue sem dados */ }
 
@@ -107,7 +108,8 @@ export function ViaggAIChat({
         email: auth?.user?.email,
         role: auth?.role || undefined,
         activeProfile: auth?.activeProfile,
-        availableProfiles: auth?.availableProfiles
+        availableProfiles: auth?.availableProfiles,
+        currentPath: window.location.pathname,
       });
 
       // Contexto final: identidade + tela atual + DADOS REAIS consultados agora

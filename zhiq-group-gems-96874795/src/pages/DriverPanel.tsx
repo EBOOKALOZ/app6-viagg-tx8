@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGlobalCall } from '@/contexts/GlobalCallContext';
 import { toast } from 'sonner';
@@ -13,6 +14,7 @@ import {
 import DriverActiveCallCard from '@/components/driver/DriverActiveCallCard';
 
 export default function DriverPanel() {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const {
@@ -74,11 +76,13 @@ export default function DriverPanel() {
   return (
     <div className="flex-1 px-4 py-3 space-y-4 overflow-y-auto">
       {/* Card de comissão principal */}
-      <HeroCommissionCard
-        commissionRate={commissionRate}
-        activeGroups={activeGroups}
-        isLoading={isLoading}
-      />
+      <div onClick={() => navigate('/driver/comissao')} className="cursor-pointer transition-transform active:scale-[0.99]">
+        <HeroCommissionCard
+          commissionRate={commissionRate}
+          activeGroups={activeGroups}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* Métricas rápidas — clique para toggle online */}
       <div onClick={handleToggleOnline} className="cursor-pointer">
@@ -91,10 +95,12 @@ export default function DriverPanel() {
       </div>
 
       {/* Radar econômico */}
-      <EconomicRadarCard
-        commissionRate={commissionRate}
-        isLoading={isLoading}
-      />
+      <div onClick={() => navigate('/driver/comissao')} className="cursor-pointer transition-transform active:scale-[0.99]">
+        <EconomicRadarCard
+          commissionRate={commissionRate}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* Localização cadastrada */}
       {driverLocation && (

@@ -60,6 +60,7 @@ export const motoboyRoutes = (
       <Route path="/motoboy/history" element={<MotoboyHistoryContent />} />
       <Route path="/motoboy/historico" element={<MotoboyHistoricoContent />} />
       <Route path="/motoboy/finance" element={<MotoboyFinanceContent />} />
+      <Route path="/motoboy/comissao" element={<MotoboyFinanceContent />} />
       <Route path="/motoboy/groups" element={<MotoboyGroupsContent />} />
       <Route path="/motoboy/grupos" element={<MotoboyGroupsContent />} />
       <Route path="/motoboy/expansao" element={<MotoboyExpansaoContent />} />
@@ -116,6 +117,8 @@ export const motoboyRoutes = (
       <Route path="/mototaxi" element={<MotoboyPanelContent />} />
       <Route path="/mototaxi/history" element={<MototaxiHistory />} />
       <Route path="/mototaxi/wallet" element={<Wallet />} />
+      <Route path="/mototaxi/comissao" element={<MotoboyFinanceContent />} />
+      <Route path="/mototaxi/finance" element={<MotoboyFinanceContent />} />
       <Route path="/mototaxi/profile" element={<ProfessionalWizard />} />
       <Route path="/mototaxi/profile-classic" element={<VehicleProfileContent />} />
       <Route path="/mototaxi/meu-veiculo" element={<MeuVeiculo />} />

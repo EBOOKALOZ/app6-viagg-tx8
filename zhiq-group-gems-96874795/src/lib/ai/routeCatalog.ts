@@ -42,8 +42,13 @@ const tem = (ctx: NavCtx, ...perfis: string[]) =>
   perfis.some(p => ctx.activeProfile === p || (ctx.availableProfiles || []).includes(p));
 const ehPro = (ctx: NavCtx) => tem(ctx, 'motoboy', 'mototaxi', 'driver');
 
-/** perfil profissional preferencial (ativo > disponível) */
+/** perfil profissional preferencial (url atual > ativo > disponível) */
 const perfilPro = (ctx: NavCtx): 'motoboy' | 'mototaxi' | 'driver' => {
+  if (typeof window !== 'undefined') {
+    if (window.location.pathname.startsWith('/driver')) return 'driver';
+    if (window.location.pathname.startsWith('/mototaxi')) return 'mototaxi';
+    if (window.location.pathname.startsWith('/motoboy')) return 'motoboy';
+  }
   const ordem: Array<'motoboy' | 'mototaxi' | 'driver'> = ['motoboy', 'mototaxi', 'driver'];
   if (ordem.includes(ctx.activeProfile as any)) return ctx.activeProfile as any;
   return ordem.find(p => (ctx.availableProfiles || []).includes(p)) || 'motoboy';
@@ -200,13 +205,15 @@ export const ROUTE_CATALOG: CatalogEntry[] = [
   },
   {
     id: 'ganhos-pro', icone: '📈', titulo: 'Ganhos & Comissão',
-    descricao: 'Acompanhe ganhos, taxas de comissão e engajamento no painel do motoboy.',
+    descricao: 'Acompanhe ganhos e taxas de comissão para motoboy, moto-táxi e motorista.',
     keywords: /(ganho|ganhei|comissao|faturamento|rendimento|financeiro|taxa.*comissao)/,
     path: (c) => {
       if (c.activeProfile === 'merchant') return '/merchant/creditos';
-      return { motoboy: '/motoboy/finance', mototaxi: '/mototaxi/wallet', driver: '/driver/comissao' }[perfilPro(c)] || '/motoboy/finance';
+      const pro = perfilPro(c);
+      if (pro === 'driver') return '/driver/comissao';
+      if (pro === 'mototaxi') return '/mototaxi/comissao';
+      return '/motoboy/finance';
     },
-    disponivel: (c) => ehPro(c) || c.activeProfile === 'merchant',
   },
   {
     id: 'historico-pro', icone: '🗂️', titulo: 'Histórico de Corridas',
@@ -338,8 +345,8 @@ export function sugerirPaginas(
 export function paginasParaContexto(sugestoes: NavSugestao[]): string {
   if (!sugestoes.length) return '';
   return (
-    'PÁGINAS INTERNAS RELEVANTES (o app mostrará cards clicáveis "Acessar" logo abaixo da sua resposta — NÃO escreva URLs nem caminhos no texto):\n' +
-    sugestoes.map(s => `- ${s.titulo}: ${s.descricao}`).join('\n') +
-    '\nINSTRUÇÃO: ao responder, mencione com naturalidade o que o usuário encontra na(s) página(s) mais importante(s) (ex.: "Na Carteira você consulta saldo, extrato e pede saques") e convide-o a tocar em Acessar.'
+    'PÁGINAS INTERNAS RELEVANTES DO PERFIL DO USUÁRIO:\n' +
+    sugestoes.map(s => `- ${s.titulo}: ${s.descricao} -> Para abrir esta tela para o usuário use a tag: [NAVIGATE:${s.path}]`).join('\n') +
+    '\nINSTRUÇÃO: ao responder, mencione com naturalidade o que o usuário encontra na(s) página(s) mais importante(s) e convide-o a tocar em Acessar ou use a tag [NAVIGATE:/caminho] correspondente se ele pediu para abrir.'
   );
 }

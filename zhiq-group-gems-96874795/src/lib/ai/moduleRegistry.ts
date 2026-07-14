@@ -16,6 +16,16 @@ export interface AIModuleContext {
   userId: string | null;
   profile: string | null;   // motoboy | mototaxi | driver | merchant | passenger...
   cidade?: string | null;
+  currentPath?: string | null;
+}
+
+function getProPrefix(ctx: AIModuleContext): string {
+  if (ctx.currentPath?.startsWith('/driver')) return '/driver';
+  if (ctx.currentPath?.startsWith('/mototaxi')) return '/mototaxi';
+  if (ctx.currentPath?.startsWith('/motoboy')) return '/motoboy';
+  if (ctx.profile === 'driver') return '/driver';
+  if (ctx.profile === 'mototaxi') return '/mototaxi';
+  return '/motoboy';
 }
 
 export interface AIModuleResult {
@@ -181,7 +191,7 @@ export const REGISTRY: AIModule[] = [
       return {
         modulo: 'Grupos',
         dados: `Grupos cadastrados: ${rows.length}. Ativos e válidos para comissão: ${validos}.`,
-        acao: { label: 'Abrir grupos', path: '/motoboy/grupos' },
+        acao: { label: 'Abrir grupos', path: `${getProPrefix(ctx)}/grupos` },
       };
     },
   },
@@ -194,12 +204,23 @@ export const REGISTRY: AIModule[] = [
       const { data } = await (supabase.from('profiles') as any)
         .select('percentual_comissao_atual').eq('id', ctx.userId).maybeSingle();
       const pct = data?.percentual_comissao_atual;
+      const pathComissao =
+        ctx.profile === 'merchant' || ctx.currentPath?.startsWith('/merchant')
+          ? '/merchant/creditos'
+          : ctx.profile === 'driver' || ctx.currentPath?.startsWith('/driver')
+          ? '/driver/comissao'
+          : ctx.profile === 'mototaxi' || ctx.currentPath?.startsWith('/mototaxi')
+          ? '/mototaxi/comissao'
+          : '/motoboy/finance';
       return {
         modulo: 'Comissão',
         dados: pct != null
           ? `Sua comissão atual é ${pct}%. Ela diminui conforme você mantém mais grupos ativos (mínimo 6% com 5 grupos).`
           : 'Comissão ainda não calculada para o seu perfil (escala: 25% → 6% conforme grupos ativos).',
-        acao: { label: 'Ver comissão', path: '/motoboy/finance' },
+        acao: {
+          label: 'Ver comissão',
+          path: pathComissao,
+        },
       };
     },
   },
@@ -221,7 +242,7 @@ export const REGISTRY: AIModule[] = [
       return {
         modulo: 'Divulgações',
         dados: `Suas divulgações aguardando na fila: ${fila.count ?? 0}. Postagens confirmadas por você (como profissional): ${feitas.count ?? 0}.`,
-        acao: { label: 'Abrir Divulgações', path: '/motoboy/impulsionar/divulgacoes' },
+        acao: { label: 'Abrir Divulgações', path: `${getProPrefix(ctx)}/impulsionar/divulgacoes` },
       };
     },
   },

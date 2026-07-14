@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Satellite,
   LayoutDashboard,
   Package,
   Users,
@@ -141,6 +142,7 @@ const menuSections: MenuSection[] = [
     title: "Gestão",
     emoji: "🔶",
     items: [
+      { title: "ORION — Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Comissão Inteligente", url: "/admin/comissao-inteligente", icon: Target },
       { title: "Fila de Divulgações", url: "/admin/fila-divulgacoes", icon: Inbox, badge: "IA" },
       { title: "Auditoria de Categorias", url: "/admin/auditoria-categorias", icon: Search },

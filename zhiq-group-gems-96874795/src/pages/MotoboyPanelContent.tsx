@@ -180,11 +180,13 @@ export default function MotoboyPanelContent() {
   return (
     <div className="flex-1 px-4 py-3 space-y-4 overflow-y-auto">
       {/* Hero Commission Card */}
-      <HeroCommissionCard
-        commissionRate={commissionRate}
-        activeGroups={activeGroups}
-        isLoading={isLoading}
-      />
+      <div onClick={() => navigate(`${basePath}/comissao`)} className="cursor-pointer transition-transform active:scale-[0.99]">
+        <HeroCommissionCard
+          commissionRate={commissionRate}
+          activeGroups={activeGroups}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* Quick Metrics Row (clique para toggle online) */}
       <div onClick={handleToggleOnline} className="cursor-pointer">
@@ -197,10 +199,12 @@ export default function MotoboyPanelContent() {
       </div>
 
       {/* Radar e Tiers em grid */}
-      <EconomicRadarCard
-        commissionRate={commissionRate}
-        isLoading={isLoading}
-      />
+      <div onClick={() => navigate(`${basePath}/comissao`)} className="cursor-pointer transition-transform active:scale-[0.99]">
+        <EconomicRadarCard
+          commissionRate={commissionRate}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* Localização do Motoboy (baseada no cadastro) */}
       {motoboyLocation && (
