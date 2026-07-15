@@ -245,7 +245,7 @@ BEGIN
     UPDATE whatsapp_groups SET last_posted_at = now() WHERE id = v_it.grupo_id;
     PERFORM motor_publish_execute(v_it.request_id);
     BEGIN
-      INSERT INTO orion_aprendizado (contexto, dados)
+      INSERT INTO orion_aprendizado (evento, detalhes)
       VALUES ('dispatch_resultado', jsonb_build_object(
         'cidade', v_it.cidade, 'grupo', v_it.grupo_nome, 'canal', v_it.canal,
         'worker', v_it.worker_id, 'hora', extract(hour FROM now() AT TIME ZONE 'America/Cuiaba'),

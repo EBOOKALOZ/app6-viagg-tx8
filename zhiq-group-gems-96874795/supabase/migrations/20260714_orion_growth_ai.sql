@@ -234,7 +234,7 @@ BEGIN
   END IF;
 
   BEGIN
-    INSERT INTO orion_aprendizado (contexto, dados)
+    INSERT INTO orion_aprendizado (evento, detalhes)
     VALUES ('growth_snapshot', jsonb_build_object(
       'top_cidade', s.cidade, 'score', s.score,
       'cidades_pontuadas', (SELECT count(*) FROM orion_growth_scores)));

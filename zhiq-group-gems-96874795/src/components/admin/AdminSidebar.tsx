@@ -55,6 +55,7 @@ import {
   Rocket,
   HeartPulse,
   Crown,
+  Telescope,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -150,6 +151,7 @@ const menuSections: MenuSection[] = [
     items: [
       { title: "Command Center", url: "/admin/orion-command", icon: Crown, badge: "TOP" },
       { title: "Operations AI", url: "/admin/orion-operations", icon: Briefcase, badge: "COO" },
+      { title: "Strategy Suite", url: "/admin/orion-strategy", icon: Telescope, badge: "NOVO" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },

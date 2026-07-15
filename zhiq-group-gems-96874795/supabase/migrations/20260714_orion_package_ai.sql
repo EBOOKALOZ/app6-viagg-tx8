@@ -622,7 +622,7 @@ BEGIN
   INSERT INTO publication_metrics (request_id, pacote_id, canal, cidade, views, cliques, contatos, conversoes)
   VALUES (p_request, v_req.pacote_id, v_req.canal, v_req.cidade, p_views, p_cliques, p_contatos, p_conversoes);
   BEGIN
-    INSERT INTO orion_aprendizado (contexto, dados)
+    INSERT INTO orion_aprendizado (evento, detalhes)
     VALUES ('publicacao_resultado', jsonb_build_object(
       'canal', v_req.canal, 'cidade', v_req.cidade, 'pacote_id', v_req.pacote_id,
       'views', p_views, 'cliques', p_cliques, 'conversoes', p_conversoes,

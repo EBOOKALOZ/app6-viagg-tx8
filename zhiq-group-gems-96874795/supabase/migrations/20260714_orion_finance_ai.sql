@@ -397,7 +397,7 @@ BEGIN
   ON CONFLICT (dia) DO UPDATE SET kpis = excluded.kpis, criado_em = now();
 
   BEGIN
-    INSERT INTO orion_aprendizado (contexto, dados)
+    INSERT INTO orion_aprendizado (evento, detalhes)
     VALUES ('finance_snapshot', v_kpis || jsonb_build_object('dia', current_date));
   EXCEPTION WHEN OTHERS THEN NULL;
   END;

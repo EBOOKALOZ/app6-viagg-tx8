@@ -113,9 +113,9 @@ BEGIN
 
   -- aprendizado: melhor hora observada em publicações anteriores (se houver)
   BEGIN
-    SELECT (dados->>'hora')::int INTO v_melhor_hora_hist FROM orion_aprendizado
-    WHERE contexto = 'publicacao_resultado' AND dados->>'ctr' IS NOT NULL
-    ORDER BY (dados->>'ctr')::numeric DESC LIMIT 1;
+    SELECT (detalhes->>'hora')::int INTO v_melhor_hora_hist FROM orion_aprendizado
+    WHERE evento IN ('publicacao_resultado','dispatch_resultado') AND detalhes->>'hora' IS NOT NULL
+    ORDER BY coalesce((detalhes->>'ctr')::numeric, 0) DESC, criado_em DESC LIMIT 1;
   EXCEPTION WHEN OTHERS THEN v_melhor_hora_hist := NULL;
   END;
 
@@ -309,7 +309,7 @@ BEGIN
 
   IF v_views > 0 THEN
     BEGIN
-      INSERT INTO orion_aprendizado (contexto, dados)
+      INSERT INTO orion_aprendizado (evento, detalhes)
       VALUES ('campaign_learning', v_m || jsonb_build_object('campanha_id', p_campanha,
         'cidade', c.cidade, 'categoria', c.categoria));
     EXCEPTION WHEN OTHERS THEN NULL; END;
