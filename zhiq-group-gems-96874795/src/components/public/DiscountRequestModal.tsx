@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Percent, Store, MapPin, ShoppingBag, Loader2, CheckCircle, Shield, Tag } from "lucide-react";
 import { trackProductEvent } from "@/skills/growth/trackProductEvent";
+import { displayPriceLabel } from "@/lib/utils";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────
@@ -261,7 +262,7 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                                     </h3>
                                     {product.price_label && (
                                         <p className="text-base font-black text-gray-400 line-through mt-0.5">
-                                            R$ {product.price_label}
+                                            {displayPriceLabel(product.price_label)}
                                         </p>
                                     )}
                                 </div>

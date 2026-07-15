@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronLeft, Car, Bike, Package, BrainCircuit, UserPlus, MapPin, CheckCircle2 } from "lucide-react";
+import { ArrowRight, ChevronLeft, Car, Bike, Package, BrainCircuit, CheckCircle2 } from "lucide-react";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
@@ -7,6 +7,9 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import viaggLogo from "@/assets/logo.png";
 import motoboyHero from "@/assets/motoboy-hero.png";
+import motoTaxiHero from "@/assets/moto-taxi-hero.png";
+import motoristaHero from "@/assets/motorista-hero.png";
+
 // ─── Tipo ─────────────────────────────────────────────────────────────────────
 interface ProfileCard {
   id:             string;
@@ -14,7 +17,7 @@ interface ProfileCard {
   title:          string;
   subtitle:       string;
   description:    string;
-  benefits?:      string[];       // nova propriedade
+  benefits?:      string[];
   badge:          string;
   accent:         string;
   gradientFrom:   string;
@@ -217,37 +220,29 @@ function ProfileCardItem({
               {onRegister && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onRegister(); }}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,184,77,0.30)] font-black text-[18px] text-white transition-all duration-250 bg-[#00B84D] hover:bg-[#00D65A] active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(104,199,242,0.30)] font-black text-[18px] text-[#0A192F] transition-all duration-250 bg-[#68c7f2] hover:bg-[#54B5E0] active:scale-[0.98]"
                 >
                   {profile.registerLabel}
-                  <ArrowRight className="w-5 h-5 text-white" />
+                  <ArrowRight className="w-5 h-5 text-[#0A192F]" />
                 </button>
               )}
 
               {/* Botão Secundário (Painel) */}
               <button
                 onClick={(e) => { e.stopPropagation(); onAccess(); }}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[17px] transition-all duration-250 bg-[#FFC928] hover:bg-[#FFD447] text-[#1B1B1B] shadow-sm active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[17px] transition-all duration-250 bg-[#68c7f2] hover:bg-[#54B5E0] text-[#0A192F] shadow-sm active:scale-[0.98]"
               >
                 {profile.buttonLabel}
-              </button>
-
-              {/* Botão Chamar (Terciário) */}
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate("/meus-dados?next=" + encodeURIComponent(profile.callRoute!)); }}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-[15px] text-[#9AA3B3] border border-[#404957] bg-transparent transition-all duration-250 hover:bg-[#252A34] hover:text-[#D7DCE5] active:scale-[0.98]"
-              >
-                🚖 {profile.callLabel ?? "Chamar"}
               </button>
             </>
           ) : (
             /* Botão Único (ex: IA) */
             <button
               onClick={(e) => { e.stopPropagation(); onAccess(); }}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(0,184,77,0.30)] font-black text-[18px] text-white transition-all duration-250 bg-[#00B84D] hover:bg-[#00D65A] active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(104,199,242,0.30)] font-black text-[18px] text-[#0A192F] transition-all duration-250 bg-[#68c7f2] hover:bg-[#54B5E0] active:scale-[0.98]"
             >
               {profile.buttonLabel}
-              <ArrowRight className="w-5 h-5 text-white" />
+              <ArrowRight className="w-5 h-5 text-[#0A192F]" />
             </button>
           )}
         </div>
@@ -266,7 +261,6 @@ export default function CorridasInicio() {
 
   function handleAccess(profile: ProfileCard) {
     if (profile.id === "ia") {
-      // Abre o chat flutuante
       window.dispatchEvent(new CustomEvent("viagg-ai:open"));
       return;
     }
@@ -303,16 +297,13 @@ export default function CorridasInicio() {
 
         {/* Card de destaque — PEDIDOS DE CORRIDAS (full width) */}
         <div className="w-full max-w-3xl mb-5">
-          <button
-            onClick={() => navigate("/solicitar-corrida")}
-            className="group w-full relative overflow-hidden bg-gradient-to-br from-[#68c7f2] to-[#4aa8d8] rounded-3xl shadow-2xl shadow-sky-900/40 border border-[#68c7f2]/40 p-6 text-left hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] transition-all"
-          >
+          <div className="relative overflow-hidden bg-gradient-to-br from-[#68c7f2] to-[#4aa8d8] rounded-3xl shadow-2xl shadow-sky-900/40 border border-[#68c7f2]/40 p-6 text-left">
             {/* Badge */}
-            <span className="absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-white/20 text-black border border-white/30">
+            <span className="hidden sm:block absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-white/20 text-black border border-white/30">
               24H
             </span>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-start sm:items-center gap-4">
               {/* Ícone: foto do usuário (se tiver) → logo da plataforma */}
               <div className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 shadow-lg border border-white/20">
                 {userAvatar ? (
@@ -323,18 +314,99 @@ export default function CorridasInicio() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-2xl font-black text-black tracking-tight">PEDIDOS DE CORRIDAS</p>
-                <p className="text-base font-black text-black/80 tracking-tight">SOLICITAR AGORA</p>
-                <p className="text-sm text-black/70 mt-1 leading-snug">
+                <span className="inline-block sm:hidden text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-white/20 text-black border border-white/30 mb-1.5 w-fit">
+                  24H
+                </span>
+                <p className="text-xl sm:text-2xl font-black text-black tracking-tight leading-tight">PEDIDOS DE CORRIDAS</p>
+                <p className="text-sm sm:text-base font-black text-black/80 tracking-tight">SOLICITAR AGORA</p>
+                <p className="text-xs sm:text-sm text-black/70 mt-1.5 leading-snug">
                   Moto Táxi, Motorista, Táxi, Motoboy, Entrega Expressa ou Frete — rastreio em tempo real e pagamento pela plataforma.
                 </p>
               </div>
             </div>
 
-            {/* Botão interno */}
-            <div className="mt-5 flex items-center gap-2 bg-white/15 border border-white/20 rounded-2xl px-5 py-3 w-fit">
-              <span className="font-black text-black text-sm">🚖 Solicitar Corrida</span>
-              <ArrowRight className="w-4 h-4 text-black" />
+            {/* ENORMES CARDS DE ESCOLHA RÁPIDA */}
+            <div className="mt-6 pt-5 border-t border-black/15">
+              <p className="text-xs font-black tracking-wider uppercase text-black/90 mb-3.5 flex items-center gap-1.5">
+                ⚡ Escolha como deseja ser atendido hoje:
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* ── CARD 1: MOTOBOY / ENTREGAS ── */}
+                <button
+                  onClick={() => navigate("/solicitar-corrida?service=motoboy")}
+                  className="group relative flex flex-col justify-between bg-gradient-to-br from-[#1E293B] to-[#0F172A] border-2 border-[#EF4444]/60 hover:border-[#EF4444] rounded-2xl p-4 shadow-xl hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#EF4444]/20 transition-all text-left overflow-hidden"
+                >
+                  <div className="w-full h-36 rounded-xl overflow-hidden mb-4 relative bg-[#141820] border border-white/10 shrink-0 shadow-inner">
+                    <img src={motoboyHero} alt="Motoboy" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <div>
+                    <span className="inline-block text-[9px] font-black tracking-widest uppercase bg-[#EF4444]/20 text-[#EF4444] px-2.5 py-0.5 rounded-full border border-[#EF4444]/40 mb-1.5">
+                      ENTREGAS & PACOTES
+                    </span>
+                    <h4 className="text-xl font-black text-white tracking-tight">MOTOBOY</h4>
+                    <p className="text-xs text-[#A7B0BE] mt-1 leading-snug">
+                      Envie ou receba encomendas e documentos com agilidade total na sua região.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between w-full">
+                    <span className="text-xs font-black text-[#EF4444] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      Chamar Motoboy <ArrowRight className="w-4 h-4" />
+                    </span>
+                    <span className="text-[10px] text-white/60 font-bold">Rápido</span>
+                  </div>
+                </button>
+
+                {/* ── CARD 2: MOTO-TÁXI ── */}
+                <button
+                  onClick={() => navigate("/solicitar-corrida?service=mototaxi")}
+                  className="group relative flex flex-col justify-between bg-gradient-to-br from-[#1E293B] to-[#0F172A] border-2 border-[#FF6A00]/60 hover:border-[#FF6A00] rounded-2xl p-4 shadow-xl hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#FF6A00]/20 transition-all text-left overflow-hidden"
+                >
+                  <div className="w-full h-36 rounded-xl overflow-hidden mb-4 relative bg-[#141820] border border-white/10 shrink-0 shadow-inner">
+                    <img src={motoTaxiHero} alt="Moto-Táxi" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <div>
+                    <span className="inline-block text-[9px] font-black tracking-widest uppercase bg-[#FF6A00]/20 text-[#FF6A00] px-2.5 py-0.5 rounded-full border border-[#FF6A00]/40 mb-1.5">
+                      PASSAGEIRO 2 RODAS
+                    </span>
+                    <h4 className="text-xl font-black text-white tracking-tight">MOTO-TÁXI</h4>
+                    <p className="text-xs text-[#A7B0BE] mt-1 leading-snug">
+                      Chegue ao seu destino rapidamente fugindo do trânsito com segurança e economia.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between w-full">
+                    <span className="text-xs font-black text-[#FF6A00] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      Chamar Moto-Táxi <ArrowRight className="w-4 h-4" />
+                    </span>
+                    <span className="text-[10px] text-white/60 font-bold">Econômico</span>
+                  </div>
+                </button>
+
+                {/* ── CARD 3: CARRO / MOTORISTA ── */}
+                <button
+                  onClick={() => navigate("/solicitar-corrida?service=motorista")}
+                  className="group relative flex flex-col justify-between bg-gradient-to-br from-[#1E293B] to-[#0F172A] border-2 border-[#F59E0B]/60 hover:border-[#F59E0B] rounded-2xl p-4 shadow-xl hover:scale-[1.02] hover:shadow-2xl hover:shadow-[#F59E0B]/20 transition-all text-left overflow-hidden"
+                >
+                  <div className="w-full h-36 rounded-xl overflow-hidden mb-4 relative bg-[#141820] border border-white/10 shrink-0 shadow-inner">
+                    <img src={motoristaHero} alt="Carro" className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <div>
+                    <span className="inline-block text-[9px] font-black tracking-widest uppercase bg-[#F59E0B]/20 text-[#F59E0B] px-2.5 py-0.5 rounded-full border border-[#F59E0B]/40 mb-1.5">
+                      CONFORTO & TÁXI
+                    </span>
+                    <h4 className="text-xl font-black text-white tracking-tight">CARRO</h4>
+                    <p className="text-xs text-[#A7B0BE] mt-1 leading-snug">
+                      Viagens confortáveis em carro particular ou táxi credenciado com ar-condicionado.
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between w-full">
+                    <span className="text-xs font-black text-[#F59E0B] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                      Chamar Carro <ArrowRight className="w-4 h-4" />
+                    </span>
+                    <span className="text-[10px] text-white/60 font-bold">Conforto</span>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* IA badge */}
@@ -342,11 +414,11 @@ export default function CorridasInicio() {
               <BrainCircuit className="w-3 h-3 text-black/70" />
               <span className="text-[10px] text-black/70 font-semibold">Viagg-TX8</span>
             </div>
-          </button>
+          </div>
         </div>
 
-        {/* Grid 2×2 — demais serviços */}
-        <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Grid 2×2 — de cadastro / painel para profissionais autônomos e IA */}
+        <div className="w-full max-w-3xl grid grid-cols-1 sm:grid-cols-2 gap-5 mt-5">
           {PROFILES.map((profile) => (
             <ProfileCardItem
               key={profile.id}

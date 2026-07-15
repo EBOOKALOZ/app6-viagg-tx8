@@ -294,6 +294,7 @@ export function GlobalAudioPlayer() {
 
   const volumePercent = Math.round(settings.volume * 100);
   const isMarketPortal = portalTarget && (portalTarget.id === 'global-audio-portal-trustbar');
+  const isMutedState = settings.muted || settings.volume === 0;
 
   const componentContent = (
     <div className={cn(
@@ -305,24 +306,33 @@ export function GlobalAudioPlayer() {
         onClick={handleButtonClick}
         className={cn(
           isMarketPortal
-            ? 'w-7 h-7 rounded-md bg-[#F5E62B] text-gray-900 flex items-center justify-center hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 shadow-lg'
+            ? cn(
+                'w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-white border sm:border-2 border-white shadow-md hover:scale-105 active:scale-95 transition-all outline-none cursor-pointer select-none shrink-0',
+                isMutedState
+                  ? 'bg-[#EF4444] hover:bg-[#DC2626]'
+                  : 'bg-[#10B981] hover:bg-[#059669]'
+              )
             : portalTarget
-              ? 'w-9 h-9 rounded-full flex items-center justify-center transition-all hover:bg-white/10 text-white shadow-none active:scale-95'
-              : 'w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95',
-          !portalTarget && (
-            isPanelOpen
-              ? 'bg-primary text-primary-foreground ring-2 ring-primary/50'
-              : settings.muted
-                ? 'bg-muted text-muted-foreground hover:bg-muted/80'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-          ),
+              ? cn(
+                  'w-9 h-9 rounded-full flex items-center justify-center transition-all text-white shadow-sm active:scale-95',
+                  isMutedState
+                    ? 'bg-[#EF4444] hover:bg-[#DC2626]'
+                    : 'bg-[#10B981] hover:bg-[#059669]'
+                )
+              : cn(
+                  'w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 text-white',
+                  isPanelOpen ? 'ring-2 ring-white/50' : '',
+                  isMutedState
+                    ? 'bg-[#EF4444] hover:bg-[#DC2626]'
+                    : 'bg-[#10B981] hover:bg-[#059669]'
+                ),
           !isReady && 'opacity-50'
         )}
         title="Controle de áudio"
         aria-label="Abrir controle de volume"
         aria-expanded={isPanelOpen}
       >
-        <VolumeIcon className={cn(isMarketPortal ? 'w-3.5 h-3.5' : portalTarget ? 'w-5 h-5' : 'w-4 h-4', isPlaying && !settings.muted && 'animate-pulse')} />
+        <VolumeIcon className={cn(isMarketPortal ? 'w-4.5 sm:w-5 h-4.5 sm:h-5 text-white' : portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
       </button>
 
       {/* Painel de volume (abre para baixo) */}

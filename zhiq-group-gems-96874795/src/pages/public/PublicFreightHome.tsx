@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -15,6 +15,8 @@ import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 
 export default function PublicFreightHome() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const subcategoria = searchParams.get("subcategoria");
   const [search, setSearch] = useState("");
   const [vehicleFilter, setVehicleFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
@@ -73,6 +75,18 @@ export default function PublicFreightHome() {
 
   const filteredFreight = useMemo(() => {
     return rawFreightListings.filter((s) => {
+      if (subcategoria) {
+        if (subcategoria === "Fretes") {
+          if (s.subcategoria && s.subcategoria !== "Fretes") return false;
+        } else if (subcategoria === "Mudanças") {
+          if (s.subcategoria && s.subcategoria !== "Mudanças") {
+            const t = `${s.title || ''} ${s.description || ''}`.toLowerCase();
+            if (!t.includes("mudanç") && !t.includes("carreto")) return false;
+          }
+        } else if (s.subcategoria && s.subcategoria !== subcategoria) {
+          return false;
+        }
+      }
       if (vehicleFilter !== "all" && s.vehicle_type !== vehicleFilter) return false;
       if (cityFilter !== "all" && s.city?.trim().toLowerCase() !== cityFilter) return false;
       if (search.trim()) {
@@ -80,13 +94,14 @@ export default function PublicFreightHome() {
         if (
           !s.title?.toLowerCase().includes(q) &&
           !s.city?.toLowerCase().includes(q) &&
-          !s.neighborhood?.toLowerCase().includes(q)
+          !s.neighborhood?.toLowerCase().includes(q) &&
+          !s.subcategoria?.toLowerCase().includes(q)
         )
           return false;
       }
       return true;
     });
-  }, [rawFreightListings, vehicleFilter, cityFilter, search]);
+  }, [rawFreightListings, vehicleFilter, cityFilter, search, subcategoria]);
 
   return (
     <MarketLayout
@@ -129,11 +144,62 @@ export default function PublicFreightHome() {
               <span className="text-xs font-black text-blue-600 uppercase tracking-widest">Transportadoras & Autônomos</span>
             </div>
             <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
-              FRETES <span className="text-orange-500">&</span> MUDANÇAS
+              {subcategoria === "Fretes" ? "FRETES & CARGAS" : subcategoria === "Mudanças" ? "MUDANÇAS RESIDENCIAIS & COMERCIAIS" : "FRETES & MUDANÇAS"}
             </h1>
             <p className="text-zinc-500 font-medium max-w-xl text-center">
-              Mudanças, móveis, eletrodomésticos e cargas grandes — peça orçamento direto.
+              {subcategoria === "Mudanças"
+                ? "Mudanças residenciais e comerciais com montagem, desmontagem e embalagem — peça orçamento direto."
+                : subcategoria === "Fretes"
+                ? "Fretes urbanos, empresariais e cargas em utilitários ou caminhões — negocie direto com o motorista."
+                : "Mudanças, móveis, eletrodomésticos e cargas grandes — peça orçamento direto."}
             </p>
+          </div>
+
+          {/* Subcategoria Header Indicator / Switcher */}
+          <div className="px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-zinc-200/80 max-w-4xl mx-auto">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate("/fretes")}
+                className="flex items-center gap-1.5 text-xs font-black text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-2 rounded-xl transition-all"
+              >
+                ← Voltar à seleção de modalidade
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-zinc-500">Modalidade ativa:</span>
+              <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+                <button
+                  onClick={() => setSearchParams({ subcategoria: "Fretes" })}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                    subcategoria === "Fretes"
+                      ? "bg-sky-600 text-white shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  🚚 Fretes
+                </button>
+                <button
+                  onClick={() => setSearchParams({ subcategoria: "Mudanças" })}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                    subcategoria === "Mudanças"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  📦 Mudanças
+                </button>
+                <button
+                  onClick={() => setSearchParams({})}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                    !subcategoria
+                      ? "bg-zinc-800 text-white shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  Todos
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="px-4 lg:px-6">

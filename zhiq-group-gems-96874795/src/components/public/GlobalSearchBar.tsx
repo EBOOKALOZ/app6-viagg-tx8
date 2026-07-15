@@ -9,16 +9,42 @@ interface GlobalSearchBarProps {
   initialValue?: string;
 }
 
+const PLACEHOLDERS = [
+  "Buscar produtos...",
+  "Encontre serviços...",
+  "Pesquisar imóveis...",
+  "Encontrar motoboys...",
+  "Promoções perto de você...",
+  "O que você procura hoje?"
+];
+
 export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
   const [query, setQuery] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<GlobalSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [fadePlaceholder, setFadePlaceholder] = useState(true);
   
   const debouncedQuery = useDebounce(query, 300);
   const navigate = useNavigate();
   const location = useLocation();
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Efeito rotativo de placeholders inteligentes com transição fade e pausa durante digitação/foco
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // Nunca trocar durante a digitação do usuário ou quando focado
+      if (isFocused || query.trim().length > 0) return;
+
+      setFadePlaceholder(false);
+      setTimeout(() => {
+        setPlaceholderIdx((prev) => (prev + 1) % PLACEHOLDERS.length);
+        setFadePlaceholder(true);
+      }, 200);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isFocused, query]);
 
   // Sync initial value if url changes
   useEffect(() => {
@@ -72,19 +98,36 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
 
   return (
     <div className="relative flex-1 min-w-0" ref={wrapperRef}>
-      <form onSubmit={handleSubmit} className="relative flex w-full">
-        <Input
-          placeholder="Buscar produtos, serviços, carros, imóveis..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onFocus={() => setIsFocused(true)}
-          className="w-full pl-4 pr-10 h-[44px] rounded-l-xl rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0 shadow-inner"
-        />
+      <form
+        onSubmit={handleSubmit}
+        className="relative flex w-full items-center h-[48px] bg-white rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#68C7F2]/60 focus-within:border-[#68C7F2] focus-within:ring-2 focus-within:ring-[#68C7F2]/80 focus-within:shadow-[0_2px_16px_rgba(104,199,242,0.3)] focus-within:scale-[1.008] transition-all duration-200 ease-out overflow-hidden"
+      >
+        <div className="relative flex-1 h-full flex items-center pl-5 pr-3">
+          {/* Placeholder inteligente animado (fade + transform) */}
+          {query.length === 0 && (
+            <span
+              className={`absolute left-5 text-gray-400 text-[15px] font-medium pointer-events-none select-none transition-all duration-200 ${
+                fadePlaceholder ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1.5"
+              }`}
+            >
+              {PLACEHOLDERS[placeholderIdx]}
+            </span>
+          )}
+          <Input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            aria-label="Campo de pesquisa global da VIAGG-TX8"
+            className="w-full h-full border-0 bg-transparent text-gray-800 text-[15px] font-medium focus-visible:ring-0 shadow-none px-0"
+          />
+        </div>
         <button 
           type="submit"
-          className="px-5 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-xl flex items-center shrink-0"
+          aria-label="Buscar"
+          className="h-[38px] px-5 mr-1.5 my-1 bg-[#FF6A00] hover:bg-[#e65c00] hover:brightness-110 hover:shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF6A00] outline-none transition-all duration-150 rounded-[20px] flex items-center justify-center gap-2 shrink-0 shadow-sm text-white font-black text-sm cursor-pointer"
         >
-          <Search className="h-5 w-5 text-white" />
+          <Search className="h-4 w-4 text-white shrink-0 transition-transform duration-150 group-hover:scale-110" />
+          <span className="hidden sm:inline">Buscar</span>
         </button>
       </form>
 

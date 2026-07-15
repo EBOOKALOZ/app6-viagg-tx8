@@ -40,7 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+import { cn, parseBRLCurrency, formatCurrencyBRL } from "@/lib/utils";
 import { trackProductEvent } from "@/skills/growth/trackProductEvent";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
 import LeadCaptureModal from "@/components/public/LeadCaptureModal";
@@ -187,6 +187,22 @@ function normalizeCategoryKey(value: string): string {
         .trim();
 }
 
+// Categorias de outros módulos/seções da plataforma que não devem se misturar na vitrine do Mercado
+const OTHER_MODULE_KEYS = new Set([
+    "imoveis", "imovel", "real estate", "propriedades", "casa", "apartamento",
+    "veiculos", "veiculo", "automoveis", "automovel", "carros", "carro", "motos", "moto",
+    "servicos", "servico", "services",
+    "fretes", "frete", "mudancas", "mudanca", "fretes & mudancas", "transportes", "transporte",
+    "viagens", "viagem", "turismo", "viagens & turismo", "tours", "pacotes",
+    "corridas", "motoboy"
+]);
+
+function isOtherModuleCategory(category: string | null | undefined): boolean {
+    if (!category) return false;
+    const key = normalizeCategoryKey(category);
+    return OTHER_MODULE_KEYS.has(key);
+}
+
 interface MarketProduct {
     id: string;
     title: string;
@@ -210,11 +226,16 @@ interface MarketProduct {
 }
 
 const formatPrice = (price: string) => {
-    const clean = price.replace(/[^\d.,]/g, "").replace(",", ".");
-    const parts = clean.split(".");
-    const integer = parts[0] || "0";
-    const decimal = (parts[1] || "00").padEnd(2, "0").substring(0, 2);
-    return { integer, decimal };
+    const num = parseBRLCurrency(price);
+    if (num <= 0) return null;
+    const formatted = formatCurrencyBRL(num).replace("R$", "").trim();
+    const lastCommaIndex = formatted.lastIndexOf(",");
+    if (lastCommaIndex !== -1) {
+        const integer = formatted.substring(0, lastCommaIndex);
+        const decimal = formatted.substring(lastCommaIndex + 1);
+        return { integer, decimal };
+    }
+    return { integer: formatted, decimal: "00" };
 };
 
 // ═══ Auction Countdown ═══
@@ -840,6 +861,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         // keeping the "best" display label seen so far for each key.
         const bucket = new Map<string, { label: string; count: number }>();
         products.forEach(p => {
+            if (productsOnly && isOtherModuleCategory(p.category)) return;
             const raw = String(p.category || "").trim();
             if (!raw) return;
             const key = normalizeCategoryKey(raw);
@@ -912,6 +934,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
     const filtered = useMemo(() => {
         return products.filter(p => {
+            if (productsOnly && isOtherModuleCategory(p.category)) return false;
             if (cityFilter !== "all" && p.city?.trim().toLowerCase() !== cityFilter) return false;
             if (categoryFilter !== "all") {
                 const pCat = (p.category || "").toLowerCase().trim();
@@ -1013,11 +1036,24 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         }
     }, [cityFilter, neighborhoodFilter, products, rawPropertyListings, rawVehicleListings]);
 
-const scrollToProducts = () => {
-        setCarouselMode(c => !c);
+    const scrollToProducts = () => {
         setTimeout(() => {
             productSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 100);
+    };
+
+    const handleMercadoNavClick = () => {
+        if (searchParams.toString() !== "") {
+            navigate("/mercado");
+        }
+        setCategoryFilter("all");
+        setCityFilter("all");
+        setNeighborhoodFilter("all");
+        setConditionFilter("all");
+        setListingTypeFilter("all");
+        setSearch("");
+        setCarouselMode(false);
+        scrollToProducts();
     };
 
     const storeCount = useMemo(() => {
@@ -1093,7 +1129,7 @@ const scrollToProducts = () => {
             headerChildren={!isAdvertiser ? (
                 <MarketNavButtons
                     onMotoboyClick={handleMotoboyClick}
-                    onMercadoClick={scrollToProducts}
+                    onMercadoClick={handleMercadoNavClick}
                 />
             ) : null}
             hideTopMotoboy={false}
@@ -1936,14 +1972,9 @@ const scrollToProducts = () => {
                                                 source: "card",
                                             });
                                         }
-                                        /* Clique no produto → SEMPRE a loja do ofertante.
-                                           StorePublicPage resolve loja real, conta de anunciante
-                                           ou user_id (vitrine via profile). */
-                                        if (product.merchant_store_id) {
-                                            navigate(`/loja/${product.merchant_store_id}`);
-                                        } else if (product._advertiser_user_id) {
-                                            navigate(`/loja/${product._advertiser_user_id}`);
-                                        } else if (product.tracking_slug) {
+                                        /* Clique no produto → página do produto (ou tracking slug).
+                                           O clique na loja no rodapé do card vai para a loja do ofertante. */
+                                        if (product.tracking_slug) {
                                             navigate(`/p/${product.tracking_slug}`);
                                         } else {
                                             navigate(`/produto/${product.id}`);
@@ -2120,7 +2151,7 @@ const scrollToProducts = () => {
                                                             quantity: 1,
                                                             productTitle: product.title,
                                                             productImageUrl: product.image_url,
-                                                            productPrice: parseFloat(String(product.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                                                            productPrice: parseBRLCurrency(product.price_label || "0"),
                                                             storeName: product.store_name || "Loja",
                                                             storeLogo: product.store_logo || null,
                                                         });

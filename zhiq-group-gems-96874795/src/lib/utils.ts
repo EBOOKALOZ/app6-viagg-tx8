@@ -44,6 +44,20 @@ export function parseBRLCurrency(value: string | number): number {
   const cleanNum = strValue.replace(/[^\d.]/g, '');
   return parseFloat(cleanNum) || 0;
 }
+
+/**
+ * Formata um rótulo de preço (price_label) para exibição consistente em todos os modais e páginas.
+ * Ex: "189.9" -> "R$ 189,90", "189,90" -> "R$ 189,90", "Consulte" -> "Consulte"
+ */
+export function displayPriceLabel(label: string | number | null | undefined): string {
+  if (label === null || label === undefined || label === '') return '';
+  const strLabel = String(label).trim();
+  if (strLabel === '0' || strLabel === '0.00' || strLabel === '0,00') return 'Sob consulta';
+  const num = parseBRLCurrency(label);
+  if (num > 0) return formatCurrencyBRL(num);
+  return strLabel.startsWith('R$') ? strLabel : strLabel;
+}
+
 export function formatBrazilianPhone(value: string): string {
   if (!value) return '';
   let clean = value.replace(/\D/g, '');

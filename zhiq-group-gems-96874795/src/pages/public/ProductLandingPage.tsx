@@ -10,6 +10,7 @@ import {
     ArrowLeft, Search, Share2, Tag, Store, Truck,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { displayPriceLabel, parseBRLCurrency } from "@/lib/utils";
 import { trackProductEvent } from "@/skills/growth/trackProductEvent";
 import LeadCaptureModal from "@/components/public/LeadCaptureModal";
 import DiscountRequestModal from "@/components/public/DiscountRequestModal";
@@ -577,7 +578,7 @@ export default function ProductLandingPage() {
                         <div className="rounded-2xl bg-white border border-zinc-200 shadow-xl p-5 md:p-6 space-y-4">
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{product.condition === "usado" ? "Usado" : "Novo"}</p>
                             {product.price_label && (
-                                <p className="text-3xl md:text-4xl font-black text-zinc-900 leading-none">R$ {product.price_label}</p>
+                                <p className="text-3xl md:text-4xl font-black text-zinc-900 leading-none">{displayPriceLabel(product.price_label)}</p>
                             )}
                             <div className="flex items-center gap-2 text-sm font-semibold text-green-600 bg-green-50 w-max px-3 py-1.5 rounded-lg"><Truck className="w-4 h-4" /> Entrega local disponível</div>
                             <div className="space-y-2.5 pt-2">
@@ -595,7 +596,7 @@ export default function ProductLandingPage() {
                                                     quantity: 1,
                                                     productTitle: product.title,
                                                     productImageUrl: product.image_url,
-                                                    productPrice: parseFloat(String(product.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                                                    productPrice: parseBRLCurrency(product.price_label || "0"),
                                                     storeName: store?.store_name || "Loja",
                                                     storeLogo: store?.logo_url || null,
                                                 });
@@ -652,7 +653,7 @@ export default function ProductLandingPage() {
                                         </div>
                                         <div className="p-3">
                                             <p className="text-sm font-bold text-zinc-900 leading-snug line-clamp-2 group-hover:text-[#FF6A00] transition-colors">{rp.title}</p>
-                                            {rp.price_label && (<p className="text-base font-black text-zinc-900 mt-1">R$ {rp.price_label}</p>)}
+                                            {rp.price_label && (<p className="text-base font-black text-zinc-900 mt-1">{displayPriceLabel(rp.price_label)}</p>)}
                                         </div>
                                     </div>
                                 );

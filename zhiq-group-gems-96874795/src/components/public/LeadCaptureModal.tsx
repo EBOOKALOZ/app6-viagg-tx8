@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Phone, Store, MapPin, ShoppingBag, MessageCircle, Loader2, CheckCircle, Shield } from "lucide-react";
 import { trackProductEvent } from "@/skills/growth/trackProductEvent";
+import { displayPriceLabel } from "@/lib/utils";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────
@@ -276,7 +277,7 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                                     </h3>
                                     {product.price_label && (
                                         <p className="text-lg font-black text-[#FF6A00] mt-0.5">
-                                            R$ {product.price_label}
+                                            {displayPriceLabel(product.price_label)}
                                         </p>
                                     )}
                                 </div>

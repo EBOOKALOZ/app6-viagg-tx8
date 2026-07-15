@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { FooterNeutral } from "@/components/FooterNeutral";
 import { StoreBottomNav } from "@/components/store/StoreBottomNav";
@@ -79,6 +79,14 @@ export function MarketLayout({
     hideTopMotoboy = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isCorridasRoute = location.pathname.startsWith('/corridas') ||
+                            location.pathname.startsWith('/motoboy') ||
+                            location.pathname.startsWith('/solicitar-corrida') ||
+                            location.pathname.startsWith('/chamar-motoboy') ||
+                            location.pathname.startsWith('/corrida/') ||
+                            location.pathname.startsWith('/mototaxi') ||
+                            location.pathname.startsWith('/motorista');
     const { user, isLoading, availableProfiles, activeProfile, signOut } = useAuth();
     const isMerchant = activeProfile === 'merchant';
 
@@ -113,19 +121,18 @@ export function MarketLayout({
     return (
         <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-[#F5E62B]")}>
             {/* ═══ TOP BAR ═══ */}
-            <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
-                <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
+            <div className={cn(
+                "sticky top-0 z-50 transition-all duration-200 border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
+                isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-gradient-to-b from-[#FAF24A] via-[#F5E62B] to-[#ECD70B]"
+            )}>
+                <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
                     {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta ── */}
                     <div className="lg:hidden pt-2 pb-1">
                         <div className="flex items-stretch gap-2">
                             {/* Card de clima (estreitado pela coluna de botões) */}
-                            {showSearch ? (
-                                <div className="min-w-0 flex-1">
-                                    <HomeHeroWeather />
-                                </div>
-                            ) : (
-                                <div className="flex-1" />
-                            )}
+                            <div className="min-w-0 flex-1">
+                                <HomeHeroWeather />
+                            </div>
 
                             {/* Coluna lateral: apenas extras (som foi p/ a linha da pesquisa) */}
                             {headerRight && (
@@ -137,19 +144,17 @@ export function MarketLayout({
                     </div>
 
                     {/* Hero Card de Clima + IA RIDV — ACIMA da pesquisa (desktop) */}
-                    {showSearch && (
-                        <div className="hidden lg:block pt-2">
-                            <HomeHeroWeather compact />
-                        </div>
-                    )}
+                    <div className="hidden lg:block pt-2 w-full">
+                        <HomeHeroWeather compact />
+                    </div>
 
                     {/* ── DESKTOP HEADER (≥ lg) ── */}
-                    <div className="hidden lg:flex items-center h-[72px] w-full gap-4">
+                    <div className="hidden lg:flex items-center h-[80px] w-full gap-6">
                         {/* Logo + título */}
-                        <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => navigate("/mercado")}>
-                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-lg object-contain" />
-                            <span className="text-xl font-black text-white tracking-tight whitespace-nowrap">
-                                Mercado Local <span className="text-yellow-200">Viagg-TX8™</span>
+                        <div className="flex items-center gap-3 cursor-pointer shrink-0 py-2 hover:opacity-95 transition-all duration-200" onClick={() => navigate("/mercado")}>
+                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-xl object-contain shadow-sm border border-black/10" />
+                            <span className="text-xl font-black text-slate-950 tracking-tight whitespace-nowrap">
+                                Mercado Local <span className="text-[#075985]">Viagg-TX8™</span>
                             </span>
                         </div>
 
@@ -160,24 +165,25 @@ export function MarketLayout({
 
 
                         {/* Direita: Cesta + headerRight */}
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-3.5 shrink-0">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                className="relative flex h-auto px-4 py-2 items-center justify-center gap-2 bg-[#F5E62B] text-gray-900 rounded-xl shadow-lg hover:brightness-95 hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none"
-                                title="Cesta"
+                                aria-label="Abrir Cesta / Carrinho"
+                                className="relative flex h-auto px-4 py-2.5 items-center justify-center gap-2.5 bg-white text-black border-2 border-[#68C7F2] rounded-[22px] shadow-[0_4px_16px_rgba(104,199,242,0.28)] hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 transition-all duration-200 ease-out outline-none cursor-pointer select-none"
+                                title="Cesta / Carrinho"
                             >
-                                <ShoppingCart className="h-5 w-5" />
+                                <ShoppingCart className="h-5 w-5 text-black shrink-0 transition-transform group-hover:scale-110" />
                                 <span className="text-sm font-black whitespace-nowrap">
                                     Cesta — {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
                                 </span>
                                 {globalCart.totalItems > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md border-2 border-[#F5E62B] animate-pulse">
+                                    <span className="absolute -top-2 -right-2 bg-[#FF6A00] text-white text-[11px] font-black rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1 shadow-md border-2 border-white animate-in zoom-in-50 fade-in duration-300">
                                         {globalCart.totalItems}
                                     </span>
                                 )}
                             </button>
 
-                            <div className="flex items-center gap-2 text-white">
+                            <div className="flex items-center gap-2 text-slate-900 font-bold">
                                 {headerRight}
                             </div>
                         </div>
@@ -185,10 +191,10 @@ export function MarketLayout({
 
                     {/* Mobile search row */}
                     {showSearch && (
-                        <div className="lg:hidden pb-2 flex items-center gap-2">
+                        <div className="lg:hidden pt-1 pb-2.5 flex items-center gap-2.5">
                             {/* Logo à esquerda da pesquisa */}
-                            <div className="flex h-[44px] w-[44px] shrink-0 cursor-pointer items-center justify-center" onClick={() => navigate("/mercado")}>
-                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[44px] w-[44px] rounded-xl object-cover shadow-sm" />
+                            <div className="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center hover:scale-105 transition-transform" onClick={() => navigate("/mercado")}>
+                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[46px] w-[46px] rounded-xl object-cover shadow-sm border border-black/10" />
                             </div>
                             
                             <GlobalSearchBar initialValue={effSearch} />
@@ -196,12 +202,13 @@ export function MarketLayout({
                             {/* Cesta à direita da pesquisa */}
                             <button
                                 onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                className="relative ml-auto flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-xl bg-[#F5E62B] text-gray-900 shadow-lg transition-all hover:brightness-95 outline-none"
-                                title="Cesta"
+                                aria-label="Abrir Cesta / Carrinho"
+                                className="relative ml-auto flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
+                                title="Cesta / Carrinho"
                             >
-                                <ShoppingCart className="h-5 w-5" />
+                                <ShoppingCart className="h-5 w-5 text-black transition-transform group-hover:scale-110" />
                                 {globalCart.totalItems > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 flex h-[20px] min-w-[20px] items-center justify-center rounded-full border-2 border-[#F5E62B] bg-[#FF6A00] px-0.5 text-[10px] font-black text-white shadow-md animate-pulse">
+                                    <span className="absolute -top-1.5 -right-1.5 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-[#FF6A00] px-1 text-[10px] font-black text-white shadow-md animate-in zoom-in-50 fade-in duration-300">
                                         {globalCart.totalItems}
                                     </span>
                                 )}
@@ -212,24 +219,34 @@ export function MarketLayout({
                     {/* Navegação principal — GLOBAL: se a página não passar nada, usa a nav padrão */}
                     {headerChildren ?? <MarketNavButtons />}
                 </div>
-            </div>
 
-            {/* ═══ TRUST BAR ═══ */}
-            <div className="bg-[#68c7f2] px-4 lg:py-1.5 py-1 flex items-center justify-center gap-4 lg:gap-6 text-[9px] lg:text-[11px] text-zinc-900">
-                <span className="flex items-center gap-1 font-medium">
-                    <Truck className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Entrega Local
-                </span>
-                <span className="flex items-center gap-1 font-medium">
-                    <Shield className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Comerciantes Verificados
-                </span>
-                <span className="flex items-center gap-1 font-medium hidden sm:flex">
-                    <Tag className="h-3 w-3 lg:h-3.5 lg:w-3.5 text-zinc-800" /> Melhores Preços
-                </span>
-                <div
-                    id="global-audio-portal-trustbar"
-                    className="flex items-center shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                />
+                {/* ═══ TRUST CHIPS BAR (PADRÃO PREMIUM - FAIXA LARANJA) ═══ */}
+                <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
+                    <div className="relative max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center w-full min-h-[44px]">
+                        {/* Grupo de Confiabilidade (Centralizado) */}
+                        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
+                            {/* Chip 1: Entrega Local */}
+                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] hover:shadow-[0_4px_16px_rgba(104,199,242,0.48)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95 transition-all duration-200 ease-out select-none cursor-default shrink-0">
+                                <span className="text-xs sm:text-sm">🛵</span>
+                                <span>Entrega Local</span>
+                            </div>
+
+                            {/* Chip 2: Comerciantes Verificados */}
+                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] hover:shadow-[0_4px_16px_rgba(104,199,242,0.48)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95 transition-all duration-200 ease-out select-none cursor-default shrink-0">
+                                <span className="text-xs sm:text-sm">🛡️</span>
+                                <span className="sm:hidden">Verificados</span>
+                                <span className="hidden sm:inline">Comerciantes Verificados</span>
+                            </div>
+                        </div>
+
+                        {/* Chip 3: Som (Portal do Botão de Áudio) - FIXO À DIREITA */}
+                        <div
+                            id="global-audio-portal-trustbar"
+                            className="absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 z-10"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                </div>
             </div>
 
 

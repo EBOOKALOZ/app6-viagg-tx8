@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -13,6 +13,8 @@ import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 
 export default function PublicTravelHome() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const subcategoria = searchParams.get("subcategoria");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
@@ -20,7 +22,7 @@ export default function PublicTravelHome() {
     queryKey: ["public-travel-home"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("travel_listings") as any)
-        .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, visibility_status, published_at, created_at")
+        .select("id, title, subcategoria, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, visibility_status, published_at, created_at")
         .eq("visibility_status", "published")
         .order("is_featured", { ascending: false })
         .order("created_at", { ascending: false });
@@ -57,14 +59,26 @@ export default function PublicTravelHome() {
 
   const filtered = useMemo(() => {
     return (listings as any[]).filter((l: any) => {
+      if (subcategoria) {
+        if (subcategoria === "Viagens") {
+          if (l.subcategoria && l.subcategoria !== "Viagens") return false;
+        } else if (subcategoria === "Turismo") {
+          if (l.subcategoria && l.subcategoria !== "Turismo") {
+            const t = `${l.title || ''} ${l.destination || ''}`.toLowerCase();
+            if (!t.includes("passeio") && !t.includes("turismo")) return false;
+          }
+        } else if (l.subcategoria && l.subcategoria !== subcategoria) {
+          return false;
+        }
+      }
       if (categoryFilter !== "all" && l.category !== categoryFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!l.title?.toLowerCase().includes(q) && !l.destination?.toLowerCase().includes(q)) return false;
+        if (!l.title?.toLowerCase().includes(q) && !l.destination?.toLowerCase().includes(q) && !l.subcategoria?.toLowerCase().includes(q)) return false;
       }
       return true;
     });
-  }, [listings, categoryFilter, search]);
+  }, [listings, categoryFilter, search, subcategoria]);
 
   return (
     <MarketLayout
@@ -109,11 +123,62 @@ export default function PublicTravelHome() {
               <span className="text-xs font-black text-sky-600 uppercase tracking-widest">Pacotes & Destinos</span>
             </div>
             <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
-              VIAGENS <span className="text-orange-500">&</span> TURISMO
+              {subcategoria === "Viagens" ? "PASSAGENS & EXCURSÕES" : subcategoria === "Turismo" ? "PASSEIOS & PACOTES TURÍSTICOS" : "VIAGENS & TURISMO"}
             </h1>
             <p className="text-zinc-500 font-medium max-w-xl text-center">
-              Pacotes completos, roteiros nacionais e internacionais — fale direto com a agência.
+              {subcategoria === "Turismo"
+                ? "Passeios ecológicos, praias, gastronomia e turismo regional — negocie com a agência."
+                : subcategoria === "Viagens"
+                ? "Excursões rodoviárias e aéreas, passagens e pacotes para todos os destinos."
+                : "Pacotes completos, roteiros nacionais e internacionais — fale direto com a agência."}
             </p>
+          </div>
+
+          {/* Subcategoria Header Indicator / Switcher */}
+          <div className="px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-zinc-200/80 max-w-4xl mx-auto">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate("/viagens")}
+                className="flex items-center gap-1.5 text-xs font-black text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-2 rounded-xl transition-all"
+              >
+                ← Voltar à seleção de modalidade
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-zinc-500">Modalidade ativa:</span>
+              <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+                <button
+                  onClick={() => setSearchParams({ subcategoria: "Viagens" })}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                    subcategoria === "Viagens"
+                      ? "bg-sky-600 text-white shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  ✈️ Viagens
+                </button>
+                <button
+                  onClick={() => setSearchParams({ subcategoria: "Turismo" })}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                    subcategoria === "Turismo"
+                      ? "bg-amber-600 text-white shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  🏖️ Turismo
+                </button>
+                <button
+                  onClick={() => setSearchParams({})}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                    !subcategoria
+                      ? "bg-zinc-800 text-white shadow-sm"
+                      : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  Todos
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* ── Faixa de categorias — fundo verde, edge-to-edge, nunca vazia ── */}

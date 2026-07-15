@@ -56,8 +56,10 @@ import {
   AuctionMarketDetailPage,
   PublicServicesHome,
   ServiceDetailPage,
+  FretesInicio,
   PublicFreightHome,
   FreightDetailPage,
+  ViagensInicio,
   PublicTravelHome,
   TravelDetailPage,
   TravelAccountPage,
@@ -115,9 +117,15 @@ export const publicRoutes = (
     <Route path="/automoveis" element={<AllVehiclesPage />} />
     <Route path="/servicos" element={<PublicServicesHome />} />
     <Route path="/servicos/:id" element={<ServiceDetailPage />} />
-    <Route path="/fretes" element={<PublicFreightHome />} />
+    <Route path="/fretes-inicio" element={<Suspense fallback={<PageFallback />}><FretesInicio /></Suspense>} />
+    <Route path="/fretes" element={<Suspense fallback={<PageFallback />}><FretesInicio /></Suspense>} />
+    <Route path="/fretes/anuncios" element={<PublicFreightHome />} />
+    <Route path="/fretes/lista" element={<PublicFreightHome />} />
     <Route path="/fretes/:id" element={<FreightDetailPage />} />
-    <Route path="/viagens" element={<PublicTravelHome />} />
+    <Route path="/viagens-inicio" element={<Suspense fallback={<PageFallback />}><ViagensInicio /></Suspense>} />
+    <Route path="/viagens" element={<Suspense fallback={<PageFallback />}><ViagensInicio /></Suspense>} />
+    <Route path="/viagens/anuncios" element={<PublicTravelHome />} />
+    <Route path="/viagens/lista" element={<PublicTravelHome />} />
     <Route path="/viagens/:id" element={<TravelDetailPage />} />
     <Route path="/viagens/minha-conta" element={<ProtectedRoute><TravelAccountPage /></ProtectedRoute>} />
 

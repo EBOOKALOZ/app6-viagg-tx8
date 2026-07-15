@@ -16,7 +16,7 @@ import { StoreCartDrawer } from "@/components/public/StoreCartDrawer";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { useStorePaymentSettings } from "@/hooks/useStorePaymentSettings";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
-import { cn } from "@/lib/utils";
+import { cn, parseBRLCurrency } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 
@@ -136,7 +136,7 @@ export default function StorePublicPage() {
                 title: p.title || "Sem título",
                 short_description: p.short_description || null,
                 image_url: p.image_url || null,
-                price: parseFloat(String(p.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                price: parseBRLCurrency(p.price_label || "0"),
                 original_price: null,
                 price_label: p.price_label || null,
                 cta_label: p.cta_label || "Comprar",
@@ -314,7 +314,7 @@ export default function StorePublicPage() {
                     title: p.title || "Sem título",
                     short_description: p.short_description || null,
                     image_url: p.image_url || null,
-                    price: parseFloat(String(p.price_label || "0").replace(",", ".").replace(/[^\d.]/g, "")) || 0,
+                    price: parseBRLCurrency(p.price_label || "0"),
                     original_price: null,
                     price_label: p.price_label || null,
                     cta_label: "Comprar",
