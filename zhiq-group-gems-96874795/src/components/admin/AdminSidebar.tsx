@@ -149,6 +149,7 @@ const menuSections: MenuSection[] = [
     emoji: "🧠",
     items: [
       { title: "Command Center", url: "/admin/orion-command", icon: Crown, badge: "TOP" },
+      { title: "Operations AI", url: "/admin/orion-operations", icon: Briefcase, badge: "COO" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
