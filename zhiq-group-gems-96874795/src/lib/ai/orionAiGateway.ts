@@ -29,9 +29,9 @@ async function invocar(body: Record<string, unknown>): Promise<OrionAiResposta> 
   return data as OrionAiResposta;
 }
 
-/** Texto livre (conversa, resposta longa). */
-export const orionAiText = (module: string, prompt: string, opts?: { system?: string; model?: string; maxTokens?: number }) =>
-  invocar({ module, task: "text", prompt, system: opts?.system, model: opts?.model, max_tokens: opts?.maxTokens });
+/** Texto livre (conversa, resposta longa). promptKey usa o Prompt Registry oficial. */
+export const orionAiText = (module: string, prompt: string, opts?: { system?: string; promptKey?: string; model?: string; maxTokens?: number }) =>
+  invocar({ module, task: "text", prompt, system: opts?.system, prompt_key: opts?.promptKey, model: opts?.model, max_tokens: opts?.maxTokens });
 
 /** Moderação de conteúdo (retorno esperado: JSON de veredito). */
 export const orionAiModeration = (module: string, prompt: string, opts?: { system?: string; model?: string }) =>

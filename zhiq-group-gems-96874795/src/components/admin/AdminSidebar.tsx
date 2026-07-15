@@ -157,6 +157,7 @@ const menuSections: MenuSection[] = [
       { title: "Campaign AI", url: "/admin/orion-campaign", icon: Megaphone, badge: "NOVO" },
       { title: "Dispatcher AI", url: "/admin/orion-dispatcher", icon: Waypoints, badge: "NOVO" },
       { title: "Growth AI", url: "/admin/orion-growth", icon: Rocket, badge: "NOVO" },
+      { title: "Performance AI", url: "/admin/orion-performance", icon: Gauge, badge: "NOVO" },
     ],
   },
   {
