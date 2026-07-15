@@ -98,23 +98,54 @@ export function GlobalAudioPlayer() {
   const location = useLocation();
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
-  // Watch for the portal container element in the DOM
+  // Watch for the portal container element in the DOM.
+  // ATENÇÃO: no MarketLayout o portal vive dentro da trust bar RETRÁTIL — ela
+  // colapsa no scroll (max-h-0 / opacity-0) mas o elemento continua no DOM.
+  // Se renderizássemos dentro dele, o controle sumiria ao rolar a página.
+  // Por isso só usamos o portal quando ele está REALMENTE visível; senão
+  // caímos no botão flutuante fixo (o controle nunca desaparece).
   useEffect(() => {
+    const isUsable = (el: HTMLElement | null): el is HTMLElement => {
+      if (!el) return false;
+      // display:none / desanexado → offsetParent null
+      if (el.offsetParent === null) return false;
+      // algum ancestral colapsado/oculto (barra retrátil) → tratar como indisponível
+      let node: HTMLElement | null = el;
+      while (node) {
+        const s = window.getComputedStyle(node);
+        if (s.display === 'none' || s.visibility === 'hidden' || parseFloat(s.opacity || '1') === 0) {
+          return false;
+        }
+        node = node.parentElement;
+      }
+      return true;
+    };
+
     const findPortal = () => {
-      const el = document.getElementById('global-audio-portal-trustbar') 
+      const el = document.getElementById('global-audio-portal-trustbar')
                  || document.getElementById('global-audio-portal');
-      setPortalTarget(el);
+      setPortalTarget(isUsable(el) ? el : null);
     };
 
     findPortal();
 
-    window.addEventListener('resize', findPortal);
+    // re-avalia no scroll (a trust bar colapsa por scroll) — throttled por rAF
+    let ticking = false;
+    const onScrollOrResize = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => { findPortal(); ticking = false; });
+    };
+    window.addEventListener('resize', onScrollOrResize, { passive: true });
+    window.addEventListener('scroll', onScrollOrResize, { passive: true });
 
+    // childList: portal entra/sai do DOM ao trocar de layout/rota
     const observer = new MutationObserver(findPortal);
     observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
-      window.removeEventListener('resize', findPortal);
+      window.removeEventListener('resize', onScrollOrResize);
+      window.removeEventListener('scroll', onScrollOrResize);
       observer.disconnect();
     };
   }, [location.pathname]);
