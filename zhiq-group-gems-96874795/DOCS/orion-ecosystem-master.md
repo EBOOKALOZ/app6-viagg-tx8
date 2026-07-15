@@ -2,7 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 18 módulos (AI-00…17) + Motor de Publicação + CORE · **221 funções** · **45 tabelas** · **32 triggers** · **14 cron jobs** · **39 prompts** no Registry · **3 modelos** de IA · **298 eventos** no barramento.
+> **Números reais do ecossistema:** 19 módulos (AI-00…18) + Motor de Publicação + CORE · **235 funções** · **46 tabelas** · **32 triggers** · **15 cron jobs** · **44 prompts** no Registry · **3 modelos** de IA · **22 dashboards**.
+>
+> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** (cérebro comercial) certificado 🟢 (score 97/100). Ver `DOCS/orion-ai-18-marketplace-certificacao.md`.
 
 ---
 
@@ -52,10 +54,11 @@
 | AI-15 | Pricing AI | `pricing` | v1.1 | 🟢 Enterprise | 98 | 2026-07-14 | Finance, Conversion, Forecast | Ativo |
 | AI-16 | Demand Forecast AI | `forecast` | v1 | 🟢 Enterprise | 90 | 2026-07-14 | pay_* (leitura), Growth | Ativo |
 | AI-17 | Support AI | `support` | v1 | 🟢 Enterprise | 97 | 2026-07-14 | support_tickets (leitura) | Ativo |
+| AI-18 | Marketplace Intelligence AI | `marketplace` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Growth, Conversion (leitura); sinais do marketplace | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 
-**Próximo número livre: AI-18** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-19** (reservado, sem funcionalidade definida — §10).
 
 ---
 
@@ -176,6 +179,14 @@
 - **Faz:** triagem por urgência/tema, fila priorizada, sugestão de resposta (via Gateway, `prompt_key: support.response` — atendente revisa), recorrências, SLA.
 - **NÃO faz:** duplicar a edge `support-ai`; mudar status/enviar resposta; tocar tickets (read-only).
 - **Saídas:** `orion_support_analises` (imutável); eventos `support_*`. **Cron:** `orion_support_tick` (25 * * * *). **Dashboard:** `/admin/orion-support`.
+
+### AI-18 — Marketplace Intelligence AI (`marketplace`, v1)
+- **Objetivo:** cérebro comercial — dados do marketplace → inteligência de negócio explicável.
+- **Faz:** tendências por vertical (30d vs 30d ant.), conversão por vertical (unlock pago), território (demanda×oferta por cidade via `orion_norm`), oportunidades (alta demanda + baixa conversão), qualidade de anúncios e sugestões a lojistas — consolidados em `orion_market_insights` (idempotente/dia, com módulos+métricas+justificativa+confiança).
+- **NÃO faz:** executar ação comercial/financeira; publicar; inventar métrica (busca sem log = **lacuna declarada**); duplicar módulos.
+- **Entradas:** advertiser_contact_intentions, marketplace_product_click_events, advertiser_listings, merchant_products, city_growth_metrics, neighborhood_product_demand, orion_growth_scores (todas **read-only**). **Saídas:** `orion_market_insights`; eventos `market_*`.
+- **Dependências:** Growth (score), Conversion (sinal), Gateway, Registry, Event Bus, orion_norm. **Consumidores:** Command/Operations/Campaign (via insights/eventos).
+- **Banco:** `orion_market_insights` (imutável p/ público, UNIQUE tipo+escopo+ref+dia). **APIs:** `market_dashboard/score/metrics/trends/territory/listings_intelligence/merchant_intelligence/search_intelligence/opportunities/generate_insights/recommendations/summary`. **Prompts:** `market.executive/opportunities/merchant/trends/summary`. **Cron:** `orion_market_tick` (40 * * * *). **Dashboard:** `/admin/orion-marketplace`. **Segurança:** read-only provado; log imutável; decisão humana.
 
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
@@ -304,7 +315,7 @@
 
 | Nº | Situação |
 |----|----------|
-| **AI-18** | Reservado para expansão futura. |
+| **AI-18** | ✅ **Marketplace Intelligence AI** — ativo (§2/§3). |
 | **AI-19** | Reservado para expansão futura. |
 | **AI-20** | Reservado para expansão futura. |
 | AI-21+ | Reservado para expansão futura. |
