@@ -1,6 +1,6 @@
-# ORION Pricing AI — Certificação Oficial (v1.0 + v1.1)
+# ORION-AI-15 — Pricing AI v1.1 — Certificação Oficial
 
-**Nota de numeração:** este spec veio rotulado "ORION-AI-09 — Pricing AI". No ecossistema já construído, **Pricing AI = ORION-AI-15** (v1.0, commit 0db2879) e **ORION-AI-09 = Conversion & Attribution** (commit 852069f). Seguindo o próprio princípio do spec ("reutilizar componentes, não duplicar lógica, não criar infraestrutura paralela"), **NÃO** foi criado um segundo módulo: o Pricing AI existente foi **estendido para v1.1** cobrindo os requisitos mais detalhados deste spec.
+**Numeração oficial (consolidada):** Pricing AI = **ORION-AI-15**. Um pedido chegou rotulado "ORION-AI-09 — Pricing", mas ORION-AI-09 é o **Conversion & Attribution** (produção). Fonte de verdade: o Prompt Registry/Gateway indexa os módulos por NOME (`pricing`, `conversion` — distintos e coexistentes); os números vivem só na documentação. Por isso este documento (antes `orion-ai-09-pricing`) foi renomeado para `orion-ai-15-pricing-v11`. Nenhum módulo de produção foi renumerado; ver `DOCS/orion-arquitetura-numeracao-oficial.md`.
 
 **Data:** 2026-07-14 · **Categoria:** Revenue Optimization · **Veredito: 🟢 PRODUÇÃO ENTERPRISE**
 
