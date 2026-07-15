@@ -97,6 +97,9 @@ export function GlobalAudioPlayer() {
   const fadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const location = useLocation();
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  // Posição do painel de volume — renderizado em document.body (fixed) para
+  // NUNCA ser cortado por um ancestral com overflow-hidden (ex.: trust bar).
+  const [panelPos, setPanelPos] = useState<{ top: number; right: number }>({ top: 0, right: 12 });
 
   // Watch for the portal container element in the DOM.
   // ATENÇÃO: no MarketLayout o portal vive dentro da trust bar RETRÁTIL — ela
@@ -242,6 +245,28 @@ export function GlobalAudioPlayer() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isPanelOpen]);
 
+  // Recalcula a posição do painel (fixed em document.body) a partir do botão.
+  // Roda ao abrir e acompanha scroll/resize enquanto aberto.
+  useEffect(() => {
+    if (!isPanelOpen) return;
+    const reposition = () => {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      setPanelPos({
+        top: Math.round(r.bottom + 8),
+        right: Math.max(8, Math.round(window.innerWidth - r.right)),
+      });
+    };
+    reposition();
+    window.addEventListener('scroll', reposition, { passive: true });
+    window.addEventListener('resize', reposition, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', reposition);
+      window.removeEventListener('resize', reposition);
+    };
+  }, [isPanelOpen]);
+
   // Inicia música com fade-in de 0 → volume salvo em 3s
   const startMusic = useCallback(() => {
     if (isAudioPlaying() || !audioRef.current) return;
@@ -327,7 +352,7 @@ export function GlobalAudioPlayer() {
   const isMarketPortal = portalTarget && (portalTarget.id === 'global-audio-portal-trustbar');
   const isMutedState = settings.muted || settings.volume === 0;
 
-  const componentContent = (
+  const buttonWrapper = (
     <div className={cn(
       portalTarget ? "relative flex items-center" : "fixed top-28 right-3 z-50"
     )}>
@@ -365,18 +390,21 @@ export function GlobalAudioPlayer() {
       >
         <VolumeIcon className={cn(isMarketPortal ? 'w-4.5 sm:w-5 h-4.5 sm:h-5 text-white' : portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
       </button>
+    </div>
+  );
 
-      {/* Painel de volume (abre para baixo) */}
-      <div
-        ref={panelRef}
-        className={cn(
-          'absolute mt-2 bg-[#0a1f16]/90 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 min-w-[220px] transition-all duration-300 ease-out origin-top-right z-[60]',
-          isMarketPortal ? 'top-9 right-0' : portalTarget ? 'top-10 right-0' : 'top-12 right-0',
-          isPanelOpen
-            ? 'opacity-100 scale-100 translate-y-0'
-            : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
-        )}
-      >
+  // Painel renderizado em document.body (fixed) → nunca cortado por overflow-hidden.
+  const panelContent = (
+    <div
+      ref={panelRef}
+      style={{ position: 'fixed', top: panelPos.top, right: panelPos.right }}
+      className={cn(
+        'bg-[#0a1f16]/90 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 min-w-[220px] transition-all duration-300 ease-out origin-top-right z-[9999]',
+        isPanelOpen
+          ? 'opacity-100 scale-100 translate-y-0'
+          : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+      )}
+    >
         <div className="relative flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-green-500/20 rounded-full ring-1 ring-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.4)]">
@@ -433,14 +461,14 @@ export function GlobalAudioPlayer() {
           )}
         </div>
       </div>
-    </div>
   );
 
-  if (portalTarget) {
-    return createPortal(componentContent, portalTarget);
-  }
-
-  return componentContent;
+  return (
+    <>
+      {portalTarget ? createPortal(buttonWrapper, portalTarget) : buttonWrapper}
+      {createPortal(panelContent, document.body)}
+    </>
+  );
 }
 
 export default GlobalAudioPlayer;
