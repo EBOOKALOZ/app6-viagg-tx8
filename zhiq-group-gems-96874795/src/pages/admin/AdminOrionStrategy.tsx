@@ -21,7 +21,7 @@ const rpc = async (fn: string, args?: Record<string, unknown>) => {
   return data;
 };
 
-type Aba = "resumo" | "knowledge" | "prediction" | "decision" | "optimization" | "simulation" | "roadmap";
+type Aba = "resumo" | "plano" | "knowledge" | "prediction" | "decision" | "optimization" | "simulation" | "roadmap";
 
 export default function AdminOrionStrategy() {
   const qc = useQueryClient();
@@ -33,7 +33,7 @@ export default function AdminOrionStrategy() {
   const [simResult, setSimResult] = useState<any>(null);
 
   const { data: dash, isLoading } = useQuery({
-    queryKey: ["orion-strategy"], queryFn: () => rpc("strategy_dashboard"), refetchInterval: 60000,
+    queryKey: ["orion-strategy"], queryFn: () => rpc("strategy_dashboard_v11"), refetchInterval: 60000,
   });
 
   const sc = dash?.score || {};
@@ -65,7 +65,8 @@ export default function AdminOrionStrategy() {
   };
 
   const ABAS: [Aba, any, string][] = [
-    ["resumo", Sparkles, "Resumo Executivo"], ["knowledge", BookOpen, "Knowledge"],
+    ["resumo", Sparkles, "Resumo Executivo"], ["plano", Scale, "Plano de Ação"],
+    ["knowledge", BookOpen, "Knowledge"],
     ["prediction", TrendingUp, "Prediction"], ["decision", Scale, "Decision"],
     ["optimization", Wrench, "Optimization"], ["simulation", FlaskConical, "Simulation"],
     ["roadmap", MapIcon, "Roadmap"],
@@ -117,6 +118,58 @@ export default function AdminOrionStrategy() {
         {isLoading && <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-indigo-500" /></div>}
 
         {/* RESUMO */}
+        {aba === "plano" && !isLoading && (
+          <div className="mt-4 space-y-4">
+            <div className="rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-black text-zinc-700">
+                  Plano de Ação consolidado ({(dash?.plano_acao?.total_iniciativas) ?? 0} iniciativas de {((dash?.plano_acao?.sinais_consolidados) || []).length} sinais)
+                </h3>
+                <button
+                  onClick={async () => { setOcupado("narr"); setNarrativa(""); try { const r = await orionAiText("strategy", `Plano: ${JSON.stringify(dash?.plano_acao)}`, { promptKey: "strategy.action_plan", maxTokens: 600 }); setNarrativa(r.ok ? String(r.texto) : `IA indisponível (${r.error}).`); } finally { setOcupado(""); } }}
+                  disabled={!!ocupado}
+                  className="flex items-center gap-1 rounded-xl bg-[#4338ca] px-3 py-1.5 text-xs font-black text-white disabled:opacity-50">
+                  <Sparkles className="h-3.5 w-3.5" /> Plano executivo (IA)
+                </button>
+              </div>
+              {narrativa && <p className="mt-2 whitespace-pre-wrap rounded-2xl bg-indigo-50 p-3 text-sm text-zinc-800">{narrativa}</p>}
+              <div className="mt-3 space-y-2">
+                {(((dash?.plano_acao?.plano_ranqueado) || []) as any[]).map((it: any, i: number) => (
+                  <div key={i} className="rounded-2xl border border-zinc-100 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-black text-white">P{it.prioridade}</span>
+                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-black text-indigo-700">{it.origem}</span>
+                      <p className="min-w-0 flex-1 text-sm font-bold">{it.iniciativa}</p>
+                      <span className="text-[10px] text-zinc-400">confiança {Math.round(Number(it.confianca || 0) * 100)}%</span>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-600">
+                      📈 impacto: {it.impacto_esperado} · 💰 custo×benefício: {it.custo_beneficio}
+                      {it.cidade ? ` · 📍 ${it.cidade}` : ""}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-zinc-400">📋 {it.justificativa}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] text-zinc-400">{dash?.plano_acao?.nota}</p>
+            </div>
+            <div className="rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">
+              <h3 className="mb-2 text-sm font-black text-zinc-700">Projeções trimestrais e anuais</h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[["Receita trimestre", dash?.projecoes?.receita?.trimestre], ["Receita ano", dash?.projecoes?.receita?.ano],
+                  ["Pedidos trimestre", dash?.projecoes?.pedidos?.trimestre], ["Pedidos ano", dash?.projecoes?.pedidos?.ano]].map(([l, v]: any) => (
+                  <div key={l} className="rounded-2xl bg-slate-50 p-3 text-center">
+                    <p className="text-[10px] font-bold uppercase text-zinc-400">{l}</p>
+                    <p className="text-sm font-black text-zinc-800">{typeof v === "number" && String(l).includes("Receita") ? Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : (v ?? "—")}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] text-zinc-400">
+                {dash?.projecoes?.metodo} · confiança {dash?.projecoes?.confianca} · {dash?.projecoes?.erro_estimado} · {dash?.projecoes?.ressalva}
+              </p>
+            </div>
+          </div>
+        )}
+
         {aba === "resumo" && !isLoading && (
           <div className="mt-4 rounded-3xl border border-indigo-200 bg-indigo-50/50 p-4 shadow-sm">
             <div className="flex flex-wrap gap-2">
