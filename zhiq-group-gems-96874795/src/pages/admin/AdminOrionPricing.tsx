@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { orionAiText } from "@/lib/ai/orionAiGateway";
 import {
   Tag, Loader2, Sparkles, FlaskConical, ShieldCheck, History as HistoryIcon, RotateCcw, Send,
+  BrainCircuit, AlertTriangle, Map as MapIcon,
 } from "lucide-react";
 
 const rpc = async (fn: string, args?: Record<string, unknown>) => {
@@ -22,7 +23,7 @@ const rpc = async (fn: string, args?: Record<string, unknown>) => {
 };
 const fmt = (v: any) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-type Aba = "central" | "recomendacoes" | "simulacao" | "catalogo" | "politicas" | "historico";
+type Aba = "central" | "decisao" | "recomendacoes" | "anomalias" | "simulacao" | "heatmap" | "catalogo" | "politicas" | "historico";
 
 export default function AdminOrionPricing() {
   const qc = useQueryClient();
@@ -34,7 +35,7 @@ export default function AdminOrionPricing() {
   const [simResult, setSimResult] = useState<any>(null);
 
   const { data: dash, isLoading } = useQuery({
-    queryKey: ["orion-pricing"], queryFn: () => rpc("pricing_dashboard"), refetchInterval: 60000,
+    queryKey: ["orion-pricing"], queryFn: () => rpc("pricing_dashboard_v11"), refetchInterval: 60000,
   });
   const refresh = () => qc.invalidateQueries({ queryKey: ["orion-pricing"] });
 
@@ -80,9 +81,21 @@ export default function AdminOrionPricing() {
     finally { setOcupado(""); }
   };
 
+  const [decisao, setDecisao] = useState<any>(null);
+  const [anomalias, setAnomalias] = useState<any>(null);
+  const [heatmap, setHeatmap] = useState<any>(null);
+  const carregar = async (setter: any, fn: string, args?: any) => {
+    setOcupado(fn);
+    try { setter(await rpc(fn, args)); }
+    catch (e: any) { alert("Erro: " + e.message); }
+    finally { setOcupado(""); }
+  };
+
   const ABAS: [Aba, any, string][] = [
-    ["central", Sparkles, "Central"], ["recomendacoes", Tag, "Recomendações"],
-    ["simulacao", FlaskConical, "Simulação"], ["catalogo", ShieldCheck, "Catálogo & Aplicar"],
+    ["central", Sparkles, "Central"], ["decisao", BrainCircuit, "Motor de Decisão"],
+    ["recomendacoes", Tag, "Recomendações"], ["anomalias", AlertTriangle, "Anomalias"],
+    ["simulacao", FlaskConical, "Simulação"], ["heatmap", MapIcon, "Heatmap"],
+    ["catalogo", ShieldCheck, "Catálogo & Aplicar"],
     ["politicas", ShieldCheck, "Políticas"], ["historico", HistoryIcon, "Histórico"],
   ];
 
@@ -207,6 +220,92 @@ export default function AdminOrionPricing() {
                 {narrativa && aba === "simulacao" && <p className="mt-2 whitespace-pre-wrap rounded-xl bg-orange-50 p-3 text-sm text-zinc-800">{narrativa}</p>}
               </div>
             )}
+          </div>
+        )}
+
+        {/* MOTOR DE DECISÃO */}
+        {aba === "decisao" && (
+          <div className="mt-4 rounded-3xl border border-orange-200 bg-orange-50/40 p-4 shadow-sm">
+            <button onClick={() => carregar(setDecisao, "pricing_decision", { p_pacote: null })} disabled={!!ocupado}
+              className="flex items-center gap-2 rounded-xl bg-[#7c3a00] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">
+              {ocupado === "pricing_decision" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />}
+              Calcular Preço Inteligente
+            </button>
+            {decisao && (
+              <div className="mt-4">
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <p className="text-sm font-bold text-zinc-700">{decisao.pacote}</p>
+                  <p className="text-2xl font-black text-zinc-800">{fmt(decisao.preco_atual)} → <span className="text-orange-700">{fmt(decisao.preco_inteligente)}</span></p>
+                  <span className="rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-black text-orange-700">
+                    ajuste {decisao.ajuste_pct}% · confiança {Math.round(Number(decisao.confianca) * 100)}%
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-zinc-600">{decisao.explicacao}</p>
+                <div className="mt-3 space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Fatores que pesaram (auditável)</p>
+                  {(decisao.fatores || []).map((f: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 rounded-xl bg-white p-2 ring-1 ring-orange-100">
+                      <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-black text-white">{f.peso}</span>
+                      <span className="min-w-0 flex-1 text-xs font-semibold text-zinc-700">{f.fator.replaceAll("_", " ")}</span>
+                      <span className="text-[10px] text-zinc-400">valor {f.valor} · {f.fonte}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-zinc-500">{decisao.decisao}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ANOMALIAS */}
+        {aba === "anomalias" && (
+          <div className="mt-4 rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">
+            <button onClick={() => carregar(setAnomalias, "pricing_anomalies")} disabled={!!ocupado}
+              className="flex items-center gap-2 rounded-xl bg-[#7c3a00] px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">
+              {ocupado === "pricing_anomalies" ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              Detectar anomalias de preço
+            </button>
+            {anomalias && (!anomalias.anomalias?.length ? (
+              <p className="mt-4 p-6 text-center text-sm text-zinc-400">✅ Nenhuma anomalia — preços dentro da política e sem outliers.</p>
+            ) : (anomalias.anomalias || []).map((a: any, i: number) => (
+              <div key={i} className="mt-2 flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-100 p-3">
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${a.severidade === "alta" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{a.severidade}</span>
+                <span className="text-sm font-bold text-zinc-700">{a.tipo.replaceAll("_", " ")}</span>
+                <span className="text-xs text-zinc-500">{JSON.stringify(a)}</span>
+              </div>
+            )))}
+            {anomalias && <p className="mt-2 text-[10px] text-zinc-400">{anomalias.nota}</p>}
+          </div>
+        )}
+
+        {/* HEATMAP */}
+        {aba === "heatmap" && (
+          <div className="mt-4 rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap gap-2">
+              {["nacional", "estadual", "municipal"].map((n) => (
+                <button key={n} onClick={() => carregar(setHeatmap, "pricing_heatmap", { p_nivel: n })} disabled={!!ocupado}
+                  className="rounded-full bg-white px-3 py-1.5 text-xs font-bold capitalize text-zinc-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:opacity-50">
+                  {n}
+                </button>
+              ))}
+            </div>
+            {heatmap && (Array.isArray(heatmap) ? (
+              <div className="mt-3 space-y-1">
+                {heatmap.map((c: any, i: number) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate text-xs font-bold capitalize text-zinc-700">
+                      {c.cidade ? `📍 ${c.cidade}${c.uf ? ` — ${c.uf}` : ""}` : `🗺️ ${c.uf}`}
+                    </p>
+                    <span className="text-[10px] text-zinc-400">score {c.score ?? c.score_medio}{c.cidades ? ` · ${c.cidades} cidades` : ""}</span>
+                    {c.intensidade && (
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${c.intensidade === "quente" ? "bg-red-100 text-red-700" : c.intensidade === "morno" ? "bg-amber-100 text-amber-700" : "bg-sky-100 text-sky-700"}`}>{c.intensidade}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 text-xs text-zinc-700">{JSON.stringify(heatmap, null, 1)}</pre>
+            ))}
           </div>
         )}
 
