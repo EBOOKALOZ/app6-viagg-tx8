@@ -1,6 +1,6 @@
-# ORION Strategy AI — Certificação (cumpre o spec "ORION-AI-17")
+# ORION-AI-14 — Strategic Intelligence Suite v1.1 — Certificação
 
-**Decisão de arquitetura (consolidada):** Strategy AI JÁ EXISTE = **ORION-AI-14 — Strategic Intelligence Suite** (chave `strategy`, commit 5eefc17). Conforme `DOCS/orion-arquitetura-numeracao-oficial.md` (numeração congelada) e o princípio do próprio spec ("não duplicar, não criar infra paralela, reutilizar exclusivamente"), **NÃO** foi criado um AI-17 duplicado. A AI-14 foi **estendida para v1.1** cumprindo o que este spec enfatiza. **AI-17 permanece RESERVADO** para um módulo genuinamente novo.
+**Numeração oficial:** Strategy AI = **ORION-AI-14** (chave `strategy`, commit 5eefc17). Um pedido chegou rotulado "ORION-AI-17 — Strategy", mas o número AI-17 pertence ao **Support AI**. Conforme `DOCS/orion-ecosystem-master.md` e `orion-arquitetura-numeracao-oficial.md` (numeração congelada) e o princípio "não duplicar / reutilizar", a AI-14 foi **estendida para v1.1** — nenhum AI-17 duplicado. Por isso este documento (antes `orion-ai-17-strategy`) foi renomeado para `orion-ai-14-strategy-v11`.
 
 **Data:** 2026-07-14 · **Categoria:** Strategic Intelligence · **Veredito: 🟢 PRODUÇÃO ENTERPRISE**
 
