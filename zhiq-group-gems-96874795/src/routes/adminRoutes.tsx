@@ -105,6 +105,7 @@ import {
   AdminOrionGrowth,
   AdminOrionPerformance,
   AdminOrionHealth,
+  AdminOrionCommand,
   AdminAuditoriaCategorias,
   AdminCommissionIntelligence,
   AdminRadarIA,
@@ -246,6 +247,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-growth" element={<AdminOrionGrowth />} />
       <Route path="/admin/orion-performance" element={<AdminOrionPerformance />} />
       <Route path="/admin/orion-health" element={<AdminOrionHealth />} />
+      <Route path="/admin/orion-command" element={<AdminOrionCommand />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
       <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}

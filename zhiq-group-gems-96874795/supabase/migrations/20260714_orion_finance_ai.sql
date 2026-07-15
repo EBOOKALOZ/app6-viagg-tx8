@@ -269,7 +269,7 @@ BEGIN
                         FROM pay_financial_accounts GROUP BY 1) w),
     'saques', jsonb_build_object(
       'solicitados', (SELECT count(*) FROM pay_payout_requests),
-      'pendentes',   (SELECT count(*) FROM pay_payout_requests WHERE status NOT IN ('paid','completed','rejected','cancelled'))),
+      'pendentes',   (SELECT count(*) FROM pay_payout_requests WHERE status::text NOT IN ('paid','completed','rejected','cancelled'))),
     'serie_30d', (SELECT coalesce(jsonb_agg(jsonb_build_object('dia',d,'receita',t,'ordens',n) ORDER BY d),'[]')
                   FROM (SELECT paid_at::date d, sum(amount) t, count(*) n FROM pay_payment_orders
                         WHERE status='paid' AND paid_at > now() - interval '30 days' GROUP BY 1) s30),

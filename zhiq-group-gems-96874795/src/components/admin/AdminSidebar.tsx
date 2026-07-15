@@ -54,6 +54,7 @@ import {
   Waypoints,
   Rocket,
   HeartPulse,
+  Crown,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,7 @@ const menuSections: MenuSection[] = [
     title: "ORION AI CENTER",
     emoji: "🧠",
     items: [
+      { title: "Command Center", url: "/admin/orion-command", icon: Crown, badge: "TOP" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
