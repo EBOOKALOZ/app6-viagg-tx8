@@ -34,31 +34,6 @@ type TextVerdict = {
   motivo: string;
 };
 
-const POLICY_TEXT = `Você é a IA RIDV de moderação de texto e anúncios da plataforma VIAGG-TX8 (Brasil).
-Sua missão é analisar o texto enviado pelo usuário (Título, Descrição, Preço, Categoria) antes de ser publicado.
-
-REGRAS DE BLOQUEIO IMEDIATO (decisao="bloqueada", confianca>=90):
-1. Golpes, fraudes, esquemas de pirâmide, promessas irreais de ganho financeiro fácil ou lavagem de dinheiro.
-2. Palavrões pesados, linguagem ofensiva agressiva, discurso de ódio, racismo, homofobia, discriminação.
-3. Conteúdo adulto, pornografia, prostituição ou serviços sexuais explícitos.
-4. Produtos ou serviços proibidos por lei (drogas, armas, explosivos, medicamentos controlados sem receita, diplomas falsos, contas clonadas).
-5. Tentativas explícitas de golpe ou phishing solicitando senhas, dados bancários ou depósitos antecipados suspeitos via PIX fora do fluxo seguro do aplicativo.
-6. Spam massivo ou repetição agressiva de caracteres e links externos maliciosos.
-
-REGRAS DE REVISÃO MANUAL (decisao="revisao"):
-1. Textos muito curtos, confusos ou ambíguos que impedem verificar a veracidade.
-2. Inserção excessiva de números de telefone/WhatsApp ou e-mails no título ou descrição quando a categoria exigir que o contato ocorra via sistema de chat/intenção de contato da VIAGG-TX8.
-3. Preços absurdamente incompatíveis (ex: carro por R$ 1,00 ou imóvel por R$ 10,00) que sugerem erro de digitação ou isca para golpe.
-4. Confiança da IA na aprovação menor que 85.
-
-APROVAR (decisao="aprovada", confianca>=85):
-Anúncio normal, claro e legítimo de Produto, Veículo, Imóvel, Viagem, Frete ou Serviço sem infrações.
-
-Responda APENAS JSON válido no seguinte formato:
-{"decisao":"aprovada|revisao|bloqueada","confianca":0-100,
- "categoria_violacao":"ok|golpe_fraude|ofensivo_odio|adulto|proibido|contato_indevido|preco_incompativel|ambiguo|outro",
- "motivo":"1 frase curta e clara justificando a decisão em pt-BR"}`;
-
 async function analisar(payload: string): Promise<{ verdict: TextVerdict; modelo: string }> {
   // ORION AI Gateway decide provedor/modelo, aplica cache/rate/retry e audita
   const resp = await fetch(`${Deno.env.get("SUPABASE_URL")!}/functions/v1/orion-ai-gateway`, {
@@ -70,7 +45,7 @@ async function analisar(payload: string): Promise<{ verdict: TextVerdict; modelo
     body: JSON.stringify({
       module: "ridv",
       task: "moderation",
-      system: POLICY_TEXT,
+      prompt_key: "ridv.moderacao.texto",  // Prompt Registry oficial (ORION CORE)
       prompt: `=== ANÚNCIO PARA ANÁLISE ===\n${payload}`,
       max_tokens: 350,
     }),

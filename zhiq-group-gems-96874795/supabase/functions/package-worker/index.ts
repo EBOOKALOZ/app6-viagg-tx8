@@ -30,20 +30,6 @@ const ROTA: Record<string, string> = {
   auction_listings: "/mercado/leiloes/", advertiser_listings: "/produto/",
 };
 
-const SYSTEM_PROMPT = `Você é a ORION Package AI da plataforma VIAGG-TX8 (Brasil).
-Transforme o anúncio em conteúdo de divulgação SEM alterar o significado, sem clickbait e sem inventar dados.
-PROIBIDO em qualquer texto: telefone, WhatsApp, PIX, e-mail, endereço completo, links externos.
-O único link permitido é o marcador {LINK} (a plataforma substitui pelo link oficial).
-Responda APENAS JSON válido:
-{"titulo":"título otimizado curto",
- "whatsapp":"mensagem p/ grupos WhatsApp, 3-6 linhas, emojis moderados, termina com CTA + {LINK}",
- "feed":"texto p/ feed interno, 2-4 linhas, termina com {LINK}",
- "marketplace":"descrição curta p/ vitrine, 1-2 linhas",
- "push":"notificação push, máx 90 caracteres",
- "hashtags":["3 a 6 hashtags relevantes sem espaços"],
- "emojis":["2 a 4 emojis da categoria"],
- "cta":"chamada para ação curta apontando para a VIAGG-TX8"}`;
-
 // IA de qualidade — LGPD e higiene (defesa em profundidade além do prompt)
 function qualidade(conteudo: any, link: string): { ok: boolean; problemas: string[] } {
   const problemas: string[] = [];
@@ -88,7 +74,7 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${svcKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           module: "package", task: "generate",
-          system: SYSTEM_PROMPT,
+          prompt_key: "package.montagem",  // Prompt Registry oficial (ORION CORE)
           prompt: `Anúncio aprovado:\nTítulo: ${item.titulo ?? ""}\nDescrição: ${item.descricao ?? ""}\n` +
                   `Cidade: ${item.cidade ?? "—"}\nPreço: ${item.preco ?? "—"}\nMódulo: ${item.tabela}`,
           max_tokens: 700,

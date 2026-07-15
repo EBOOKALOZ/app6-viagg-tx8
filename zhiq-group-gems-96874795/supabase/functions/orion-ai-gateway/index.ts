@@ -123,8 +123,23 @@ Deno.serve(async (req) => {
   const module = String(input.module || "desconhecido").slice(0, 40);
   const task = String(input.task || "text").slice(0, 30);
   const prompt = String(input.prompt || "");
-  const system = input.system ? String(input.system) : null;
+  let system = input.system ? String(input.system) : null;
   if (!prompt) return json({ ok: false, error: "prompt vazio" }, 400);
+
+  // Prompt Registry oficial (ORION CORE): prompt_key resolve o system
+  // versionado no banco — módulos não embutem mais prompt.
+  if (input.prompt_key) {
+    const { data: pText } = await svc.rpc("orion_ai_prompt_get", {
+      p_chave: String(input.prompt_key),
+    });
+    if (!pText) {
+      return json({
+        ok: false, error: `prompt_key '${input.prompt_key}' sem versão ativa no registry`,
+        fallback: "manual_review",
+      }, 400);
+    }
+    system = String(pText);
+  }
 
   // identifica usuário (para rate por usuário; service_role → null)
   let userId: string | null = null;
