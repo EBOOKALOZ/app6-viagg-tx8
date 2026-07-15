@@ -322,6 +322,7 @@ export const AdminOrionOperations = lazy(() => import("@/pages/admin/AdminOrionO
 export const AdminOrionStrategy = lazy(() => import("@/pages/admin/AdminOrionStrategy"));
 export const AdminOrionConversion = lazy(() => import("@/pages/admin/AdminOrionConversion"));
 export const AdminOrionExecution = lazy(() => import("@/pages/admin/AdminOrionExecution"));
+export const AdminOrionPricing = lazy(() => import("@/pages/admin/AdminOrionPricing"));
 
 /* ── Auditoria de Categorias (segmentação por módulo) ── */
 export const AdminAuditoriaCategorias = lazy(() => import("@/pages/admin/AdminAuditoriaCategorias"));
