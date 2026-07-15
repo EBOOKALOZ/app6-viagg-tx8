@@ -53,6 +53,7 @@ import {
   BadgeCheck,
   Waypoints,
   Rocket,
+  HeartPulse,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -158,6 +159,7 @@ const menuSections: MenuSection[] = [
       { title: "Dispatcher AI", url: "/admin/orion-dispatcher", icon: Waypoints, badge: "NOVO" },
       { title: "Growth AI", url: "/admin/orion-growth", icon: Rocket, badge: "NOVO" },
       { title: "Performance AI", url: "/admin/orion-performance", icon: Gauge, badge: "NOVO" },
+      { title: "Health Center", url: "/admin/orion-health", icon: HeartPulse, badge: "NOVO" },
     ],
   },
   {
