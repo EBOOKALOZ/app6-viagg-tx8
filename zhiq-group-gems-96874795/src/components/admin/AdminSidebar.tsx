@@ -56,6 +56,7 @@ import {
   HeartPulse,
   Crown,
   Telescope,
+  Workflow,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -153,6 +154,7 @@ const menuSections: MenuSection[] = [
       { title: "Operations AI", url: "/admin/orion-operations", icon: Briefcase, badge: "COO" },
       { title: "Strategy Suite", url: "/admin/orion-strategy", icon: Telescope, badge: "NOVO" },
       { title: "Conversion AI", url: "/admin/orion-conversion", icon: Coins, badge: "ROI" },
+      { title: "Execution Orchestrator", url: "/admin/orion-execution", icon: Workflow, badge: "AUTO" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },
