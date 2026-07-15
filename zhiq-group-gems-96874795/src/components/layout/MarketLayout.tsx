@@ -112,6 +112,58 @@ export function MarketLayout({
         else navigate('/mercado');
     });
 
+    // ── CABEÇALHO INTELIGENTE RETRÁTIL (EXPANDIDO vs RECOLHIDO) ──
+    const [headerCollapsed, setHeaderCollapsed] = useState(false);
+    const [userOverride, setUserOverride] = useState<'expanded' | 'collapsed' | null>(null);
+
+    useEffect(() => {
+        let ticking = false;
+        const handleScroll = () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const currentScrollY = window.scrollY;
+                    const isTop = currentScrollY <= 30;
+
+                    setUserOverride((prevOverride) => {
+                        if (prevOverride === 'collapsed') {
+                            setHeaderCollapsed((prev) => (prev ? prev : true));
+                            return prevOverride;
+                        }
+                        if (prevOverride === 'expanded') {
+                            if (isTop) {
+                                setHeaderCollapsed((prev) => (prev ? prev : false));
+                                return null;
+                            }
+                            setHeaderCollapsed((prev) => (prev ? prev : false));
+                            return prevOverride;
+                        }
+                        if (isTop) {
+                            setHeaderCollapsed((prev) => (prev ? prev : false));
+                        } else if (currentScrollY > 80) {
+                            setHeaderCollapsed((prev) => (prev ? prev : true));
+                        }
+                        return prevOverride;
+                    });
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    const handleToggleHeader = () => {
+        if (headerCollapsed) {
+            setHeaderCollapsed(false);
+            setUserOverride(window.scrollY <= 30 ? null : 'expanded');
+        } else {
+            setHeaderCollapsed(true);
+            setUserOverride('collapsed');
+        }
+    };
+
     useEffect(() => {
         const handleOpenCart = () => setCartOpen(true);
         window.addEventListener("vtx8-cart-add-action", handleOpenCart);
@@ -120,21 +172,24 @@ export function MarketLayout({
 
     return (
         <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-[#F5E62B]")}>
-            {/* ═══ TOP BAR ═══ */}
+            {/* ═══ TOP BAR (STICKY HEADER WITH RETRACTABLE TRANSITIONS) ═══ */}
             <div className={cn(
-                "sticky top-0 z-50 transition-all duration-200 border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
+                "sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] relative",
                 isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-gradient-to-b from-[#FAF24A] via-[#F5E62B] to-[#ECD70B]"
             )}>
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
-                    {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta ── */}
-                    <div className="lg:hidden pt-2 pb-1">
+                    {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta (RETRÁTIL) ── */}
+                    <div className={cn(
+                        "lg:hidden transition-all duration-300 ease-in-out overflow-hidden",
+                        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0 pb-0" : "max-h-[300px] opacity-100 translate-y-0 pt-2 pb-1"
+                    )}>
                         <div className="flex items-stretch gap-2">
                             {/* Card de clima (estreitado pela coluna de botões) */}
                             <div className="min-w-0 flex-1">
                                 <HomeHeroWeather />
                             </div>
 
-                            {/* Coluna lateral: apenas extras (som foi p/ a linha da pesquisa) */}
+                            {/* Coluna lateral: apenas extras */}
                             {headerRight && (
                                 <div className="flex shrink-0 flex-col items-center justify-center gap-1.5">
                                     {headerRight}
@@ -143,12 +198,15 @@ export function MarketLayout({
                         </div>
                     </div>
 
-                    {/* Hero Card de Clima + IA RIDV — ACIMA da pesquisa (desktop) */}
-                    <div className="hidden lg:block pt-2 w-full">
+                    {/* Hero Card de Clima + IA RIDV — ACIMA da pesquisa (desktop - RETRÁTIL) */}
+                    <div className={cn(
+                        "hidden lg:block w-full transition-all duration-300 ease-in-out overflow-hidden",
+                        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0" : "max-h-[300px] opacity-100 translate-y-0 pt-2"
+                    )}>
                         <HomeHeroWeather compact />
                     </div>
 
-                    {/* ── DESKTOP HEADER (≥ lg) ── */}
+                    {/* ── DESKTOP HEADER (≥ lg) - SEMPRE VISÍVEL NO ESTADO RECOLHIDO ── */}
                     <div className="hidden lg:flex items-center h-[80px] w-full gap-6">
                         {/* Logo + título */}
                         <div className="flex items-center gap-3 cursor-pointer shrink-0 py-2 hover:opacity-95 transition-all duration-200" onClick={() => navigate("/mercado")}>
@@ -189,7 +247,7 @@ export function MarketLayout({
                         </div>
                     </div>
 
-                    {/* Mobile search row */}
+                    {/* Mobile search row - SEMPRE VISÍVEL NO ESTADO RECOLHIDO */}
                     {showSearch && (
                         <div className="lg:hidden pt-1 pb-2.5 flex items-center gap-2.5">
                             {/* Logo à esquerda da pesquisa */}
@@ -216,12 +274,20 @@ export function MarketLayout({
                         </div>
                     )}
 
-                    {/* Navegação principal — GLOBAL: se a página não passar nada, usa a nav padrão */}
-                    {headerChildren ?? <MarketNavButtons />}
+                    {/* Navegação principal — GLOBAL (RETRÁTIL) */}
+                    <div className={cn(
+                        "transition-all duration-300 ease-in-out overflow-hidden",
+                        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none" : "max-h-[250px] opacity-100 translate-y-0"
+                    )}>
+                        {headerChildren ?? <MarketNavButtons />}
+                    </div>
                 </div>
 
-                {/* ═══ TRUST CHIPS BAR (PADRÃO PREMIUM - FAIXA LARANJA) ═══ */}
-                <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
+                {/* ═══ TRUST CHIPS BAR (PADRÃO PREMIUM - FAIXA LARANJA - RETRÁTIL) ═══ */}
+                <div className={cn(
+                    "w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md transition-all duration-300 ease-in-out overflow-hidden",
+                    headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none border-t-0" : "max-h-[80px] opacity-100 translate-y-0"
+                )}>
                     <div className="relative max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center w-full min-h-[44px]">
                         {/* Grupo de Confiabilidade (Centralizado) */}
                         <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
@@ -246,6 +312,30 @@ export function MarketLayout({
                             onClick={(e) => e.stopPropagation()}
                         />
                     </div>
+                </div>
+
+                {/* ═══ SETA CENTRAL DE CONTROLE RETRÁTIL (▼ / ▲) ═══ */}
+                <div className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-7 z-50 flex items-center justify-center pointer-events-auto">
+                    <button
+                        type="button"
+                        onClick={handleToggleHeader}
+                        aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+                        aria-expanded={!headerCollapsed}
+                        className={cn(
+                            "flex items-center gap-1 sm:gap-1.5 px-3.5 sm:px-4.5 py-1 rounded-b-xl sm:rounded-b-2xl font-black text-[11px] sm:text-xs shadow-[0_4px_12px_rgba(0,0,0,0.18)] border border-t-0 border-black/15 transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-black/40 hover:scale-105 active:scale-95 cursor-pointer select-none",
+                            isCorridasRoute
+                                ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white hover:brightness-110"
+                                : "bg-[#FAF24A] text-slate-950 hover:bg-[#F5E62B]"
+                        )}
+                        title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+                    >
+                        <span className="text-[10px] sm:text-xs transition-transform duration-300">
+                            {headerCollapsed ? "▼" : "▲"}
+                        </span>
+                        <span className="tracking-tight font-black">
+                            {headerCollapsed ? "Expandir" : "Recolher"}
+                        </span>
+                    </button>
                 </div>
             </div>
 
