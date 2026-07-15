@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 19 módulos (AI-00…18) + Motor de Publicação + CORE · **235 funções** · **46 tabelas** · **32 triggers** · **15 cron jobs** · **44 prompts** no Registry · **3 modelos** de IA · **22 dashboards**.
+> **Números reais do ecossistema:** 20 módulos (AI-00…19) + Motor de Publicação + CORE · **250 funções** · **49 tabelas** · **32 triggers** · **16 cron jobs** · **48 prompts** no Registry · **3 modelos** de IA · **23 dashboards**.
 >
-> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** (cérebro comercial) certificado 🟢 (score 97/100). Ver `DOCS/orion-ai-18-marketplace-certificacao.md`.
+> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** (cérebro comercial) 🟢 97/100 (`orion-ai-18-marketplace-certificacao.md`); ORION-AI-19 — **Personalization AI** (experiência adaptativa por usuário, com privacidade) 🟢 97/100 (`orion-ai-19-personalization-certificacao.md`).
 
 ---
 
@@ -55,10 +55,11 @@
 | AI-16 | Demand Forecast AI | `forecast` | v1 | 🟢 Enterprise | 90 | 2026-07-14 | pay_* (leitura), Growth | Ativo |
 | AI-17 | Support AI | `support` | v1 | 🟢 Enterprise | 97 | 2026-07-14 | support_tickets (leitura) | Ativo |
 | AI-18 | Marketplace Intelligence AI | `marketplace` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Growth, Conversion (leitura); sinais do marketplace | Ativo |
+| AI-19 | Personalization AI | `personalization` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace AI-18, Growth (leitura); sinais por usuário | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 
-**Próximo número livre: AI-19** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-20** (reservado, sem funcionalidade definida — §10).
 
 ---
 
@@ -188,6 +189,14 @@
 - **Dependências:** Growth (score), Conversion (sinal), Gateway, Registry, Event Bus, orion_norm. **Consumidores:** Command/Operations/Campaign (via insights/eventos).
 - **Banco:** `orion_market_insights` (imutável p/ público, UNIQUE tipo+escopo+ref+dia). **APIs:** `market_dashboard/score/metrics/trends/territory/listings_intelligence/merchant_intelligence/search_intelligence/opportunities/generate_insights/recommendations/summary`. **Prompts:** `market.executive/opportunities/merchant/trends/summary`. **Cron:** `orion_market_tick` (40 * * * *). **Dashboard:** `/admin/orion-marketplace`. **Segurança:** read-only provado; log imutável; decisão humana.
 
+### AI-19 — Personalization AI (`personalization`, v1)
+- **Objetivo:** experiência adaptativa por usuário — Home inteligente, recomendações e descoberta, explicáveis e com privacidade.
+- **Faz:** deriva perfil (afinidade de lojas/produtos, cidade, horários) de sinais comportamentais autorizados; gera recomendações (descoberta de lojas, produtos regionais, tendência AI-18) com score+fatores+motivo; Home em blocos ordenados; melhor horário de notificação.
+- **NÃO faz:** usar atributos sensíveis (cpf/nascimento); decidir dinheiro; publicar; duplicar módulos. Opt-out apaga o perfil.
+- **Entradas:** marketplace_product_click_events, store_carts, profiles (SÓ cidade), orion_market_insights (AI-18), orion_growth_scores — **read-only**. **Saídas:** `orion_perso_profiles`, `orion_perso_recommendations`; eventos `perso_*`.
+- **Dependências:** Marketplace AI-18, Growth, Gateway, Registry, Event Bus, orion_norm. **Consumidores:** front (Home/recomendações por usuário), Campaign (futuro).
+- **Banco:** `orion_perso_profiles` (upsert/user), `orion_perso_recommendations` (imutável, UNIQUE user+tipo+ref+dia), `orion_perso_optout`. **APIs:** `perso_home/profile/recommend_products/recommend_stores/best_notification_time/set_optout/generate/score/metrics/summary/dashboard`. **Prompts:** `perso.executive/home/discovery/summary`. **Cron:** `orion_perso_tick` (33 * * * *). **Dashboard:** `/admin/orion-personalization`. **Privacidade:** minimização + opt-out real + RLS por usuário + só sinais comportamentais.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -316,7 +325,7 @@
 | Nº | Situação |
 |----|----------|
 | **AI-18** | ✅ **Marketplace Intelligence AI** — ativo (§2/§3). |
-| **AI-19** | Reservado para expansão futura. |
+| **AI-19** | ✅ **Personalization AI** — ativo (§2/§3). |
 | **AI-20** | Reservado para expansão futura. |
 | AI-21+ | Reservado para expansão futura. |
 
