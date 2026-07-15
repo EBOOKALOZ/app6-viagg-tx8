@@ -323,9 +323,11 @@ export function MarketLayout({
                         aria-expanded={!headerCollapsed}
                         className={cn(
                             "flex items-center gap-1 sm:gap-1.5 px-3.5 sm:px-4.5 py-1 rounded-b-xl sm:rounded-b-2xl font-black text-[11px] sm:text-xs shadow-[0_4px_12px_rgba(0,0,0,0.18)] border border-t-0 border-black/15 transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-black/40 hover:scale-105 active:scale-95 cursor-pointer select-none",
-                            isCorridasRoute
-                                ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white hover:brightness-110"
-                                : "bg-[#FAF24A] text-slate-950 hover:bg-[#F5E62B]"
+                            !headerCollapsed
+                                ? "bg-[#EF4444] text-white hover:bg-[#DC2626]"
+                                : isCorridasRoute
+                                    ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white hover:brightness-110"
+                                    : "bg-[#FAF24A] text-slate-950 hover:bg-[#F5E62B]"
                         )}
                         title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
                     >
