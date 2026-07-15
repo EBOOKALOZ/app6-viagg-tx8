@@ -158,6 +158,7 @@ const menuSections: MenuSection[] = [
       { title: "Execution Orchestrator", url: "/admin/orion-execution", icon: Workflow, badge: "AUTO" },
       { title: "Pricing AI", url: "/admin/orion-pricing", icon: Tag, badge: "NOVO" },
       { title: "Demand Forecast", url: "/admin/orion-forecast", icon: TrendingUp, badge: "NOVO" },
+      { title: "Support AI", url: "/admin/orion-support", icon: Headphones, badge: "NOVO" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
       { title: "ORION OS", url: "/admin/orion-os", icon: Cpu, badge: "NOVO" },

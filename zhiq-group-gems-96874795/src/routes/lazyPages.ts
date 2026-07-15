@@ -115,8 +115,10 @@ export const VehicleDetailPage = lazy(() => import("@/pages/public/VehicleDetail
 export const AllVehiclesPage = lazy(() => import("@/pages/public/AllVehiclesPage"));
 export const PublicServicesHome = lazy(() => import("@/pages/public/PublicServicesHome"));
 export const ServiceDetailPage = lazy(() => import("@/pages/public/ServiceDetailPage"));
+export const FretesInicio = lazy(() => import("@/pages/public/FretesInicio"));
 export const PublicFreightHome = lazy(() => import("@/pages/public/PublicFreightHome"));
 export const FreightDetailPage = lazy(() => import("@/pages/public/FreightDetailPage"));
+export const ViagensInicio = lazy(() => import("@/pages/public/ViagensInicio"));
 export const PublicTravelHome = lazy(() => import("@/pages/public/PublicTravelHome"));
 export const TravelDetailPage = lazy(() => import("@/pages/public/TravelDetailPage"));
 export const TravelAccountPage = lazy(() => import("@/pages/public/TravelAccountPage"));
@@ -322,6 +324,7 @@ export const AdminOrionOperations = lazy(() => import("@/pages/admin/AdminOrionO
 export const AdminOrionStrategy = lazy(() => import("@/pages/admin/AdminOrionStrategy"));
 export const AdminOrionConversion = lazy(() => import("@/pages/admin/AdminOrionConversion"));
 export const AdminOrionExecution = lazy(() => import("@/pages/admin/AdminOrionExecution"));
+export const AdminOrionSupport = lazy(() => import("@/pages/admin/AdminOrionSupport"));
 export const AdminOrionPricing = lazy(() => import("@/pages/admin/AdminOrionPricing"));
 export const AdminOrionForecast = lazy(() => import("@/pages/admin/AdminOrionForecast"));
 
