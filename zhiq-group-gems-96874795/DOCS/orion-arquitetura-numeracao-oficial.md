@@ -39,6 +39,8 @@
 | **AI-28** | **Sustainability AI** | `sustainability` | v1 | 🟢 Enterprise | 97 | 07-15 | BI, Logistics, Growth, Customer Success (leitura) |
 | **AI-29** | **Innovation AI** | `innovation` | v1 | 🟢 Enterprise | 97 | 07-15 | todos (gaps+oportunidades, leitura) |
 | **AI-30** | **Executive AI · CEO Copilot** | `executive_copilot` | v1 | 🟢 Enterprise | 98 | 07-15 | TODOS os módulos (scores, leitura) |
+| AI-31 | Knowledge & Learning AI | `knowledge` | — | ⚪ NÃO CONSTRUÍDO | — | — | (reservado — o `orion_knowledge`/`knowledge_engine` é do AI-14, não deste) |
+| **AI-32** | **Search & Discovery AI** | `search_discovery` | v1 | 🟢 Enterprise | 97 | 07-16 | Marketplace/Trust/BI/Marketing/Sales/Customer/Innovation/Executive (leitura) |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 07-14 | — (porta única) |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 07-14 | todos |
 
@@ -51,7 +53,7 @@
 
 ## Regra de nomenclatura (congelada)
 
-Módulos novos recebem o **próximo número livre** (agora a partir de **AI-31**; AI-30 = Executive AI/CEO Copilot, chave `executive_copilot` — distinta de AI-12 `executive`) e uma **chave única de módulo** no Gateway/Registry. O número é rótulo humano; a chave é a identidade técnica. Documentos de certificação seguem `DOCS/orion-ai-NN-<slug>-certificacao.md` onde NN e slug batem com a chave. Roadmap 2.x: AI-17+ (benchmark competitivo de preços, feriados no Forecast, migração das 6 edges legadas ao Gateway).
+Módulos novos recebem o **próximo número livre**. **AI-32 = Search & Discovery AI** (chave `search_discovery`) abre o **ORION DISCOVERY ECOSYSTEM** (fase AI-33..AI-40). **AI-31 (Knowledge & Learning AI) segue EM ABERTO/não construído** — o número foi pulado a pedido; quando for feito, usa a chave `knowledge` (não confundir com o motor `knowledge_engine` interno do AI-14). AI-30 = Executive AI/CEO Copilot, chave `executive_copilot` — distinta de AI-12 `executive`. e uma **chave única de módulo** no Gateway/Registry. O número é rótulo humano; a chave é a identidade técnica. Documentos de certificação seguem `DOCS/orion-ai-NN-<slug>-certificacao.md` onde NN e slug batem com a chave. Roadmap 2.x: AI-17+ (benchmark competitivo de preços, feriados no Forecast, migração das 6 edges legadas ao Gateway).
 
 ---
 

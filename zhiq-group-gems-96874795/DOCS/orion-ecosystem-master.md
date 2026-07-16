@@ -5,6 +5,7 @@
 > **Números reais do ecossistema:** 31 módulos (AI-00…30) + Motor de Publicação + CORE + **OCE** · **410 funções** · **72 tabelas** · **32 triggers** · **28 cron jobs** · **117 prompts** no Registry · **3 modelos** de IA · **35 dashboards**.
 >
 > **Atualização 2026-07-15:** AI-18…29 certificados 🟢; AI-30 **Executive AI (CEO Copilot)** — cérebro executivo que consulta todos os módulos; **Executive Score + CEO Intelligence Index (CII)** + Decision Matrix + Executive Chat 🟢 98/100 (`orion-ai-30-executive-certificacao.md`); **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
+> **Atualização 2026-07-16:** abre o **ORION DISCOVERY ECOSYSTEM** com **AI-32 Search & Discovery AI** — VIAGG Discovery Engine (4 scores explicáveis por anúncio + plano de otimização), gap detection e busca semântica 🟢 97/100 (`orion-ai-32-search-discovery-certificacao.md`). **AI-31 (Knowledge & Learning) segue EM ABERTO** — pulado a pedido. Próximo livre: AI-33.
 
 ---
 
@@ -67,11 +68,13 @@
 | AI-28 | Sustainability AI | `sustainability` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | BI, Logistics, Growth, Customer Success (leitura) | Ativo |
 | AI-29 | Innovation AI | `innovation` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | todos (gaps+oportunidades, leitura) | Ativo |
 | AI-30 | Executive AI · CEO Copilot | `executive_copilot` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | TODOS os módulos (scores, leitura) | Ativo |
+| AI-31 | Knowledge & Learning AI | `knowledge` | — | ⚪ NÃO CONSTRUÍDO | — | — | (reservado; não confundir com o motor `knowledge_engine` do AI-14) | Em aberto |
+| AI-32 | Search & Discovery AI | `search_discovery` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | Marketplace/Trust/BI/Marketing/Sales/Customer/Innovation/Executive (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-31** (reservado — roadmap: Knowledge & Learning AI, o último do roadmap). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-33** (abre a sequência do **ORION DISCOVERY ECOSYSTEM**, AI-33..AI-40). **AI-31 (Knowledge & Learning AI) segue EM ABERTO** — pulado a pedido; usa a chave `knowledge` quando construído. **AI-32 = Search & Discovery AI**, primeiro do Discovery Ecosystem. **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -444,7 +447,8 @@
 | **AI-28** | ✅ **Sustainability AI** — ativo (§2/§3). |
 | **AI-29** | ✅ **Innovation AI** — ativo (§2/§3). |
 | **AI-30** | ✅ **Executive AI · CEO Copilot** — ativo (§2/§3). |
-| AI-31 | Reservado (Knowledge & Learning — último do roadmap). |
+| AI-31 | ⚪ EM ABERTO — Knowledge & Learning AI (pulado a pedido; chave `knowledge`). |
+| **AI-32** | ✅ **Search & Discovery AI** — ativo. Abre o ORION Discovery Ecosystem (§`orion-ai-32-search-discovery-certificacao.md`). |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
