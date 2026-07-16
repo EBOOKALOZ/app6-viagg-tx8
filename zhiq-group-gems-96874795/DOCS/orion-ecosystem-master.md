@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 30 módulos (AI-00…29) + Motor de Publicação + CORE + **OCE** · **393 funções** · **70 tabelas** · **32 triggers** · **27 cron jobs** · **105 prompts** no Registry · **3 modelos** de IA · **34 dashboards**.
+> **Números reais do ecossistema:** 31 módulos (AI-00…30) + Motor de Publicação + CORE + **OCE** · **410 funções** · **72 tabelas** · **32 triggers** · **28 cron jobs** · **117 prompts** no Registry · **3 modelos** de IA · **35 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 **Marketplace** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **BI** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales** 🟢 97; AI-26 **Customer Success** 🟢 97; AI-27 **Logistics** 🟢 97; AI-28 **Sustainability** (VIAGG Impact Index) 🟢 97; AI-29 **Innovation** (Portfolio + IOM + Roadmap Advisor) 🟢 97; **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
+> **Atualização 2026-07-15:** AI-18…29 certificados 🟢; AI-30 **Executive AI (CEO Copilot)** — cérebro executivo que consulta todos os módulos; **Executive Score + CEO Intelligence Index (CII)** + Decision Matrix + Executive Chat 🟢 98/100 (`orion-ai-30-executive-certificacao.md`); **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
 
 ---
 
@@ -66,11 +66,12 @@
 | AI-27 | Logistics AI | `logistics` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Dispatcher, Forecast, Pricing, Growth (leitura) | Ativo |
 | AI-28 | Sustainability AI | `sustainability` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | BI, Logistics, Growth, Customer Success (leitura) | Ativo |
 | AI-29 | Innovation AI | `innovation` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | todos (gaps+oportunidades, leitura) | Ativo |
+| AI-30 | Executive AI · CEO Copilot | `executive_copilot` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | TODOS os módulos (scores, leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-30** (reservado — roadmap sugerido: Executive AI / CEO Copilot). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-31** (reservado — roadmap: Knowledge & Learning AI, o último do roadmap). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -295,6 +296,14 @@
 - **Dependências:** BI, Marketplace, Marketing, Sales, Customer Success, Logistics, Sustainability, OCE (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; futuro AI-30 Executive/CEO Copilot.
 - **Banco:** `orion_innovation_opportunities` (Portfolio, UNIQUE chave+dia), `orion_innovation_scores` (índice/categoria). **APIs:** `innovation_dashboard/discover/portfolio/matrix/roadmap/opportunities/score/metrics/summary`. **Prompts:** `innovation.opportunity/feature/market/strategy/summary`. **Cron:** `orion_innovation_tick` (53 * * * *). **Dashboard:** `/admin/orion-innovation`. **Segurança:** read-only; nunca implementa.
 
+### AI-30 — Executive AI · CEO Copilot (`executive_copilot`, v1)
+- **Objetivo:** cérebro executivo (CEO Digital 24/7) — consolida TODOS os módulos em decisões estratégicas. **Analisa/prioriza; nunca executa.**
+- **Faz:** Data Fusion (consulta scores de 12+ módulos); Executive Score (13 componentes ponderados); **CEO Intelligence Index (CII)** proprietário; CEO Daily Brief; Decision Matrix (🔴/🟠/🟡/🟢); Risk/Opportunity Center; ROI; Simulator (declara); Executive Chat.
+- **NÃO faz:** executar/aprovar/alterar; duplicar AI-12 (tempo real) nem AI-22 (BI por domínio); inventar (declara lacunas: saúde operacional, série histórica).
+- **Entradas (read-only):** orion_growth/trust/customer_health/logistics/sustainability/innovation_scores + sales_opportunities + market_insights + pay_payment_orders + advertiser_contact_intentions + orion_security_alerts + orion_ai_log. **Saídas:** `orion_executive_snapshots` (Executive Memory), `orion_executive_decisions`; eventos `executive.summary/priority/alert/risk/opportunity/brief`.
+- **Dependências:** TODOS os módulos (leitura), Gateway, Registry, Event Bus. **Consumidores:** administração; futuro AI-31 Knowledge.
+- **Banco:** `orion_executive_snapshots`, `orion_executive_decisions`. **APIs:** `executive_dashboard/generate/fusion/score/cii/brief/decisions/risks/opportunities/roi/simulator/history/metrics/summary`. **Prompts:** `executive.summary/briefing/strategy/priority/risk/opportunity/forecast/roi/chat/daily/weekly/monthly`. **Cron:** `orion_executive_tick` (5 * * * *). **Dashboard:** `/admin/orion-executive` (badge CEO). **Segurança:** read-only; nunca executa. Chave `executive_copilot` (distinta de AI-12 `executive`).
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -434,7 +443,8 @@
 | **AI-27** | ✅ **Logistics AI** — ativo (§2/§3). |
 | **AI-28** | ✅ **Sustainability AI** — ativo (§2/§3). |
 | **AI-29** | ✅ **Innovation AI** — ativo (§2/§3). |
-| AI-30+ | Reservado (Executive/CEO Copilot, Knowledge & Learning). |
+| **AI-30** | ✅ **Executive AI · CEO Copilot** — ativo (§2/§3). |
+| AI-31 | Reservado (Knowledge & Learning — último do roadmap). |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 

@@ -60,6 +60,7 @@ import {
   Rocket,
   HeartPulse,
   Crown,
+  Gem,
   Telescope,
   Workflow,
   Tag,
@@ -156,6 +157,7 @@ const menuSections: MenuSection[] = [
     title: "ORION AI CENTER",
     emoji: "🧠",
     items: [
+      { title: "Executive AI · CEO Copilot", url: "/admin/orion-executive", icon: Gem, badge: "CEO" },
       { title: "Command Center", url: "/admin/orion-command", icon: Crown, badge: "TOP" },
       { title: "Operations AI", url: "/admin/orion-operations", icon: Briefcase, badge: "COO" },
       { title: "Strategy Suite", url: "/admin/orion-strategy", icon: Telescope, badge: "NOVO" },
