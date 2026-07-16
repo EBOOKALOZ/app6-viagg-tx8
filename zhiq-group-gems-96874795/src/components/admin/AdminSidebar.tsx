@@ -178,6 +178,7 @@ const menuSections: MenuSection[] = [
       { title: "Sustainability AI", url: "/admin/orion-sustainability", icon: Leaf, badge: "NOVO" },
       { title: "Innovation AI", url: "/admin/orion-innovation", icon: Lightbulb, badge: "NOVO" },
       { title: "Security AI", url: "/admin/orion-security", icon: ShieldAlert, badge: "NOVO" },
+      { title: "Search & Discovery AI", url: "/admin/orion-search-discovery", icon: Search, badge: "BUSCA" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
