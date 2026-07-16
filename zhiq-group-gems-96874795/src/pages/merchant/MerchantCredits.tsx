@@ -29,6 +29,7 @@ import { BalanceCard } from "@/components/wallet/BalanceCard";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 import logoImage from '@/assets/logo.png';
+import { PromotionPlansGrid } from "@/components/promotion/PromotionPlansGrid";
 
 // ─── Helpers ────────────────────────────
 function formatCurrency(cents: number): string {
@@ -984,6 +985,17 @@ export default function MerchantCredits() {
               </div>
             </div>
           )}
+
+          {/* ═══ Pacotes de Anúncios e Impulsionamento (Mercado) ═══ */}
+          <div className="bg-gradient-to-br from-[#1B1F24] to-[#14171B] rounded-2xl p-6 border border-[#FF6A00]/30 shadow-2xl">
+            <PromotionPlansGrid
+              profileType="produtos"
+              listingModule="marketplace"
+              inline={true}
+              showHeader={true}
+              title="Pacotes de Anúncios e Impulsionamento (Mercado)"
+            />
+          </div>
 
           {/* Savings comparison table */}
           <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100">

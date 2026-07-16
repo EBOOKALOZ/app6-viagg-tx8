@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Logo } from "@/components/Logo";
-import { Loader2, Store } from "lucide-react";
+import { Loader2, Store, Camera } from "lucide-react";
 import { brazilianStates } from "@/lib/brazilianStates";
 import { cn } from "@/lib/utils";
 import { CategoriaAutocomplete } from "@/components/merchant/CategoriaAutocomplete";
@@ -20,6 +20,7 @@ export default function MerchantOnboarding() {
   const { toast } = useToast();
 
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [form, setForm] = useState({
     nome_loja: "",
     categoria_id: "",
@@ -28,6 +29,7 @@ export default function MerchantOnboarding() {
     cidade: "",
     estado: "",
     endereco: "",
+    logo_url: "",
   });
 
   const update = (key: string, value: string) => setForm((f) => ({ ...f, [key]: value }));
@@ -38,7 +40,37 @@ export default function MerchantOnboarding() {
     form.whatsapp.length >= 10 &&
     form.cidade.trim().length >= 2 &&
     form.estado.length === 2 &&
-    form.endereco.trim().length >= 5;
+    form.endereco.trim().length >= 5 &&
+    form.logo_url.trim().length > 0;
+
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: "Imagem inválida", description: "Selecione um arquivo de imagem válido.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "A foto deve ter no máximo 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const fileName = `logos/${user.id}/logo-${Date.now()}.${ext}`;
+      
+      const { error } = await supabase.storage.from('logos_lojas').upload(fileName, file, { upsert: true });
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage.from('logos_lojas').getPublicUrl(fileName);
+      update("logo_url", publicUrl);
+      toast({ title: "Foto enviada!", description: "Sua foto de perfil/logo foi carregada com sucesso." });
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar foto", description: err?.message || "Não foi possível carregar a imagem.", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!user || !isValid || saving) return;
@@ -54,6 +86,7 @@ export default function MerchantOnboarding() {
           cidade: form.cidade.trim(),
           estado: form.estado,
           endereco_formatado: form.endereco.trim(),
+          logo_url: form.logo_url.trim(),
         })
         .eq("user_id", user.id);
 
@@ -66,6 +99,8 @@ export default function MerchantOnboarding() {
           cidade: form.cidade.trim(),
           estado: form.estado,
           whatsapp: form.whatsapp.trim(),
+          avatar_url: form.logo_url.trim(),
+          logo_url: form.logo_url.trim(),
         })
         .eq("id", user.id);
 
@@ -105,6 +140,46 @@ export default function MerchantOnboarding() {
           </div>
 
           <div className="space-y-4 rounded-xl border border-white/10 bg-black/30 p-5">
+            {/* Upload Foto do Vendedor / Logo (Obrigatório) */}
+            <div className="flex flex-col items-center justify-center space-y-3 pb-4 border-b border-white/10">
+              <Label className="text-white/90 text-sm font-semibold flex items-center gap-1.5">
+                Foto do Vendedor ou Logo da Loja <span className="text-emerald-400 font-bold">*</span>
+              </Label>
+              <div className="relative group cursor-pointer">
+                <label htmlFor="seller-photo-upload" className="cursor-pointer block">
+                  <div className={cn(
+                    "w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all",
+                    form.logo_url ? "border-emerald-500/80 bg-black/40 ring-2 ring-emerald-500/30" : "border-white/30 bg-white/5 hover:border-emerald-400 hover:bg-white/10"
+                  )}>
+                    {form.logo_url ? (
+                      <img src={form.logo_url} alt="Foto do Vendedor" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-2 text-center text-white/60">
+                        <Camera className="h-6 w-6 mb-1 text-emerald-400" />
+                        <span className="text-[10px] leading-tight font-medium">Adicionar Foto</span>
+                      </div>
+                    )}
+                    {uploadingLogo && (
+                      <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                      </div>
+                    )}
+                  </div>
+                </label>
+                <input
+                  id="seller-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingLogo || saving}
+                  className="hidden"
+                />
+              </div>
+              <p className="text-[11px] text-white/50 text-center max-w-[260px]">
+                {form.logo_url ? "Foto carregada! Clique para substituir se desejar." : "Obrigatório para completar o cadastro."}
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-white/80">Nome da Loja</Label>
               <Input

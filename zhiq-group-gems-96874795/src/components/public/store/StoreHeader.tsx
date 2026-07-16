@@ -24,12 +24,12 @@ interface StoreInfo {
 
 interface StoreHeaderProps {
     store: StoreInfo;
-    stats: { average: string, count: number } | null;
-    productsCount: number;
-    whatsappNumber: string | null;
-    onShare: () => void;
-    logoUrl: string | null;
-    bannerUrl: string | null;
+    stats?: { average: string, count: number } | null;
+    productsCount?: number;
+    whatsappNumber?: string | null;
+    onShare?: () => void;
+    logoUrl?: string | null;
+    bannerUrl?: string | null;
     compact?: boolean;
     sidebarMode?: boolean;
 }
@@ -37,6 +37,7 @@ interface StoreHeaderProps {
 export function StoreHeader({ store, stats, productsCount, whatsappNumber, onShare, logoUrl, bannerUrl, compact = false, sidebarMode = false }: StoreHeaderProps) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const effectiveLogoUrl = logoUrl || store?.logo_url || (store as any)?.avatar_url || null;
 
     // Chave única por loja
     const storeKey = (store.store_name || "default").trim().toLowerCase();
@@ -171,8 +172,8 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                         {/* Logo Avatar */}
                         <div className={cn("relative group shrink-0")}>
                             <div className={cn("bg-white shadow-xl ring-white/40 relative overflow-hidden", sidebarMode ? "w-16 h-16 rounded-2xl p-1 ring-2" : compact ? "w-16 h-16 lg:w-20 lg:h-20 rounded-[14px] lg:rounded-2xl p-1 lg:p-1.5 ring-1 lg:ring-2" : "w-28 h-28 lg:w-40 lg:h-40 rounded-3xl lg:rounded-[32px] p-1.5 ring-2 lg:ring-4")}>
-                                {logoUrl ? (
-                                    <img src={logoUrl} className={cn("w-full h-full object-cover", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")} alt="Logo" />
+                                {effectiveLogoUrl ? (
+                                    <img src={effectiveLogoUrl} className={cn("w-full h-full object-cover", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")} alt="Logo" />
                                 ) : (
                                     <div className={cn("w-full h-full bg-gradient-to-br from-white/90 to-white/60 flex items-center justify-center", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")}>
                                         <Store className={cn("text-[#68c7f2]", compact ? "w-6 h-6 lg:w-8 lg:h-8" : "w-10 h-10 lg:w-16 lg:h-16")} />

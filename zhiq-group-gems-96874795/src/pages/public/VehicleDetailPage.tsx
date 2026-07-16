@@ -147,7 +147,7 @@ export const VehicleDetailPage = () => {
           pData?.nome_loja ||
           storeData?.store_name ||
           'Vendedor Particular',
-        logo_url: storeData?.logo_url || pData?.logo_url,
+        logo_url: storeData?.logo_url || pData?.logo_url || pData?.avatar_url || null,
         city: storeData?.cidade || pData?.cidade || storeData?.city,
         region: storeData?.estado || pData?.estado || storeData?.region,
         bairro: storeData?.bairro || storeData?.neighborhood || pData?.bairro,

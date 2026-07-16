@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Car, Bike } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import { Footer } from '@/components/Footer';
+import { FooterNeutral } from '@/components/FooterNeutral';
 import { supabase } from '@/integrations/supabase/client';
 import { getProfileRoute } from '@/lib/profileTypes';
 import { z } from 'zod';
@@ -234,7 +234,8 @@ export default function CompleteProfile() {
           Você pode alterar essas informações a qualquer momento nas configurações
         </p>
       </div>
-      <Footer />
+      <FooterNeutral />
     </div>
   );
 }
+

@@ -53,6 +53,7 @@ import { VehicleCreditReportCard } from "@/components/vehicle/VehicleCreditRepor
 import { ServiceCreditReportCard } from "@/components/services/ServiceCreditReportCard";
 import { FreightCreditReportCard } from "@/components/freight/FreightCreditReportCard";
 import { TravelCreditReportCard } from "@/components/travel/TravelCreditReportCard";
+import { PromotionPlansGrid, PROFILE_MODULE } from "@/components/promotion/PromotionPlansGrid";
 
 // ── Per-segment metadata ─────────────────────────────────────────────────────
 const SEGMENT_META: Record<string, { label: string; icon: any; color: string; bgColor: string; borderColor: string }> = {
@@ -847,17 +848,29 @@ export default function AdvertiserCreditsPage() {
         </div>
       ) : (
         <div className="space-y-24">
+          {/* 1. Pacotes de Serviços (Créditos de Comunicação e Desbloqueio) */}
           {isImoveis
-            ? renderSection("Pacotes de Imóveis", "Plano mensal — renove todo mês", null, Building2, realEstatePkgs, true)
+            ? renderSection("1. Pacotes de Serviços (Imóveis)", "Plano mensal — renove todo mês", null, Building2, realEstatePkgs, true)
             : isVeiculos
-              ? renderSection("Pacotes de Veículos", "Compre quando precisar", null, CarFront, vehiclePkgs, false)
+              ? renderSection("1. Pacotes de Serviços (Veículos)", "Compre quando precisar", null, CarFront, vehiclePkgs, false)
               : isServicos
-                ? renderSection("Pacotes de Serviços", "Compre quando precisar", null, Briefcase, servicePkgs, false)
+                ? renderSection("1. Pacotes de Serviços (Serviços)", "Compre quando precisar", null, Briefcase, servicePkgs, false)
                 : isFretes
-                  ? renderSection("Mudanças & Fretes", "Compre quando precisar", null, Truck, freightPkgs, false)
+                  ? renderSection("1. Pacotes de Serviços (Fretes)", "Compre quando precisar", null, Truck, freightPkgs, false)
                   : isViagens
-                    ? renderSection("Pacotes de Viagens & Turismo", "Compre quando precisar", null, Plane, travelPkgs, false)
-                    : renderSection("Pacotes Mercado", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
+                    ? renderSection("1. Pacotes de Serviços (Viagens)", "Compre quando precisar", null, Plane, travelPkgs, false)
+                    : renderSection("1. Pacotes de Serviços (Mercado)", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
+
+          {/* 2. Pacotes de Anúncios (Promoção e Impulsionamento) */}
+          <div className="pt-12 border-t border-[#2A3038]/80">
+            <PromotionPlansGrid
+              profileType={segKey === "mercado" ? "produtos" : segKey as any}
+              listingModule={PROFILE_MODULE[segKey === "mercado" ? "produtos" : segKey] || "travel"}
+              inline={true}
+              showHeader={true}
+              title="2. Pacotes de Anúncios e Impulsionamento"
+            />
+          </div>
         </div>
       )}
 

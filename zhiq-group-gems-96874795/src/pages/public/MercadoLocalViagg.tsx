@@ -1591,7 +1591,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                 return (
                                     <div
                                         key={auction.id}
-                                        className="rounded-2xl overflow-hidden bg-white border-2 border-orange-200 shadow-lg hover:shadow-xl transition-all cursor-pointer group flex flex-col h-full"
+                                        className="rounded-[24px] overflow-hidden bg-white border border-orange-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] transition-all duration-300 cursor-pointer group flex flex-col h-full"
                                         onClick={() => { setSelectedAuction(auction); setAuctionModalOpen(true); }}
                                     >
                                         {/* Image + type badge */}
@@ -1954,7 +1954,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                             return (
                                 <div key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
-                                    className={`rounded-lg overflow-hidden cursor-pointer lg:hover:shadow-lg lg:hover:-translate-y-0.5 transition-all duration-200 bg-white border border-gray-100 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
+                                    className={`rounded-[24px] overflow-hidden cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.05)] lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] lg:hover:-translate-y-0.5 transition-all duration-300 bg-white border border-zinc-100/80 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
                                     onClick={() => {
                                         trackProductEvent({
                                             product_id: product.id,

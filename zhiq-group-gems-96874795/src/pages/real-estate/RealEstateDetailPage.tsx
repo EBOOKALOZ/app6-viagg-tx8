@@ -127,7 +127,7 @@ export const RealEstateDetailPage = () => {
       return {
           ...storeData,
           store_name: storeData?.nome_loja || pData?.nome_loja || storeData?.store_name || "Imobiliária / Corretor",
-          logo_url: storeData?.logo_url || pData?.logo_url,
+          logo_url: storeData?.logo_url || pData?.logo_url || pData?.avatar_url || null,
           city: storeData?.cidade || pData?.cidade || storeData?.city,
           region: storeData?.estado || pData?.estado || storeData?.region,
           bairro: storeData?.bairro || storeData?.neighborhood || pData?.bairro,

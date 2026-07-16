@@ -116,7 +116,7 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                         store_name: data.store_name || profileData.nome_loja || product.store_name || "Loja",
                         city: data.city || profileData.cidade || product.city || null,
                         bairro: data.bairro || profileData.bairro || null,
-                        logo_url: data.logo_url || profileData.logo_url || null,
+                        logo_url: data.logo_url || profileData.logo_url || profileData.avatar_url || null,
                     });
                 }
             } catch { /* ignore */ }

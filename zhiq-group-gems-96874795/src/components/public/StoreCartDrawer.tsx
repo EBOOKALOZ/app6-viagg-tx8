@@ -98,7 +98,7 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
             .eq("id", s.user_id).single();
           if (prof) {
             phone = prof.telefone || null;
-            if (!logoUrl) logoUrl = prof.logo_url || null;
+            if (!logoUrl) logoUrl = prof.logo_url || prof.avatar_url || null;
             if (!rua) rua = prof.rua || null;
             if (!numero) numero = prof.numero || null;
             if (!bairro) bairro = prof.bairro || null;

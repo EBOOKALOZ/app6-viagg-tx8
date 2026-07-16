@@ -52,11 +52,19 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
     const soldCount = Math.floor(Math.random() * 50) + 1;
     const rating = (Math.random() * 1 + 4.0).toFixed(1);
 
+    const formattedPrice = formatCurrencyBRL(product.price);
+    const priceLength = formattedPrice.length;
+    const priceSizeClass = priceLength >= 16 
+        ? "text-xs sm:text-sm md:text-base" 
+        : priceLength >= 13 
+            ? "text-sm sm:text-base md:text-lg" 
+            : "text-xl sm:text-2xl";
+
     return (
         <div 
             onClick={() => onClick(product)}
             className={cn(
-                "group bg-white rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer flex flex-col shadow-sm hover:shadow-2xl border border-zinc-100 hover:border-[#FF6A00]/20",
+                "group bg-white rounded-[24px] overflow-hidden transition-all duration-300 cursor-pointer flex flex-col shadow-[0_4px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] border border-zinc-100/80 hover:border-zinc-200/90",
                 product.is_featured && "ring-2 ring-[#FF6A00]/20 shadow-[#FF6A00]/5"
             )}
         >
@@ -116,22 +124,22 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     {product.title}
                 </h3>
 
-                <div className="mt-auto space-y-1">
+                <div className="mt-auto space-y-1 min-w-0">
                     {hasDiscount ? (
-                        <div className="space-y-0.5">
-                        <p className="text-[10px] text-zinc-400 line-through">R$ {product.original_price?.toFixed(2)}</p>
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight leading-none italic">
-                                {formatCurrencyBRL(product.price)}
+                        <div className="space-y-0.5 min-w-0">
+                        <p className="text-[10px] text-zinc-400 line-through truncate">R$ {product.original_price?.toFixed(2)}</p>
+                        <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap min-w-0">
+                            <span className={cn("font-bold text-zinc-900 tracking-tight leading-tight italic break-words", priceSizeClass)}>
+                                {formattedPrice}
                             </span>
-                            <Badge className="bg-emerald-50 text-emerald-600 border-none text-[9px] h-4 font-black px-1.5">
+                            <Badge className="bg-emerald-50 text-emerald-600 border-none text-[9px] h-4 font-black px-1.5 shrink-0">
                                 OFF
                             </Badge>
                         </div>
                         </div>
                     ) : (
-                        <span className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight leading-none italic block mt-2">
-                            {formatCurrencyBRL(product.price)}
+                        <span className={cn("font-bold text-zinc-900 tracking-tight leading-tight italic block mt-2 break-words", priceSizeClass)}>
+                            {formattedPrice}
                         </span>
                     )}
                 </div>

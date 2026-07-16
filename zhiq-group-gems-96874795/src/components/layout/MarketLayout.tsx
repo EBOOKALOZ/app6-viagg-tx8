@@ -283,22 +283,19 @@ export function MarketLayout({
                     </div>
                 </div>
 
-                {/* ═══ TRUST CHIPS BAR (PADRÃO PREMIUM - FAIXA LARANJA - RETRÁTIL) ═══ */}
-                <div className={cn(
-                    "w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md transition-all duration-300 ease-in-out overflow-hidden",
-                    headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none border-t-0" : "max-h-[80px] opacity-100 translate-y-0"
-                )}>
+                {/* ═══ TRUST CHIPS BAR (PADRÃO PREMIUM - FAIXA LARANJA - FIXO / SEMPRE VISÍVEL) ═══ */}
+                <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
                     <div className="relative max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center w-full min-h-[44px]">
-                        {/* Grupo de Confiabilidade (Centralizado) */}
+                        {/* Grupo de Confiabilidade (Centralizado - FIXO) */}
                         <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
                             {/* Chip 1: Entrega Local */}
-                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] hover:shadow-[0_4px_16px_rgba(104,199,242,0.48)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95 transition-all duration-200 ease-out select-none cursor-default shrink-0">
+                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] select-none cursor-default shrink-0">
                                 <span className="text-xs sm:text-sm">🛵</span>
                                 <span>Entrega Local</span>
                             </div>
 
                             {/* Chip 2: Comerciantes Verificados */}
-                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] hover:shadow-[0_4px_16px_rgba(104,199,242,0.48)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95 transition-all duration-200 ease-out select-none cursor-default shrink-0">
+                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] select-none cursor-default shrink-0">
                                 <span className="text-xs sm:text-sm">🛡️</span>
                                 <span className="sm:hidden">Verificados</span>
                                 <span className="hidden sm:inline">Comerciantes Verificados</span>
@@ -325,9 +322,7 @@ export function MarketLayout({
                             "flex items-center gap-1 sm:gap-1.5 px-3.5 sm:px-4.5 py-1 rounded-b-xl sm:rounded-b-2xl font-black text-[11px] sm:text-xs shadow-[0_4px_12px_rgba(0,0,0,0.18)] border border-t-0 border-black/15 transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-black/40 hover:scale-105 active:scale-95 cursor-pointer select-none",
                             !headerCollapsed
                                 ? "bg-[#EF4444] text-white hover:bg-[#DC2626]"
-                                : isCorridasRoute
-                                    ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white hover:brightness-110"
-                                    : "bg-[#FAF24A] text-slate-950 hover:bg-[#F5E62B]"
+                                : "bg-[#22C55E] text-white hover:bg-[#16A34A] shadow-[0_4px_14px_rgba(34,197,94,0.4)]"
                         )}
                         title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
                     >

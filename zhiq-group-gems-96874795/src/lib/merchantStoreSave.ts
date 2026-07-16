@@ -108,6 +108,17 @@ export async function saveMerchantStore(
 
   const result = typeof data === 'object' ? data : (() => { try { return JSON.parse(data); } catch { return data; } })();
 
+  if (result?.success !== false && safePayload.logo_url) {
+    try {
+      await supabase.from('profiles').update({
+        avatar_url: safePayload.logo_url,
+        logo_url: safePayload.logo_url,
+      }).eq('id', uid);
+    } catch (e) {
+      console.warn('[merchantStoreSave] Erro ao sincronizar logo com profiles:', e);
+    }
+  }
+
   // Formato 1: RPC retorna {success: true, ...}
   if (result?.success === true) {
     console.log('[merchantStoreSave] ✅ Loja salva (formato RPC):', result);

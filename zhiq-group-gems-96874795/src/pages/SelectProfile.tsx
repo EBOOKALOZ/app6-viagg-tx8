@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { LogOut, Loader2, CarFront, Car, Briefcase, Truck, Plane, Camera, Trash2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { FooterNeutralPublic } from "@/components/FooterNeutralPublic";
+import { FooterNeutral } from "@/components/FooterNeutral";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
 import { cn } from "@/lib/utils";
 import { requestAudioAndNotificationPermissions } from "@/lib/audioUnlock";
@@ -939,8 +939,8 @@ export default function SelectProfile() {
           </button>
 
           <Button
-            variant="ghost"
-            className="w-full text-white/40"
+            type="button"
+            className="w-full bg-red-600/90 hover:bg-red-600 text-white font-semibold transition-all h-12 rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.25)] border border-red-500/40"
             onClick={async () => {
               await signOut();
               window.location.replace("/auth");
@@ -952,7 +952,8 @@ export default function SelectProfile() {
         </div>
       </div>
 
-      <FooterNeutralPublic />
+      <FooterNeutral />
     </div>
   );
 }
+

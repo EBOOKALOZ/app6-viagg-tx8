@@ -11,8 +11,9 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
+import { FooterNeutral } from "@/components/FooterNeutral";
 import {
-  ShoppingBag, Minus, Plus, Trash2, MapPin, X, Loader2,
+  ShoppingBag, ShoppingCart, Minus, Plus, Trash2, MapPin, X, Loader2,
   ChevronDown, CheckCircle, Store as StoreIcon, Send, PartyPopper,
 } from "lucide-react";
 import { useGlobalCart, StoreGroup, GlobalCartItem, MultiSubmitResult } from "@/hooks/useGlobalCart";
@@ -20,6 +21,10 @@ import { VisitorMiniSignup } from "@/components/public/VisitorMiniSignup";
 import { useVisitorProfile } from "@/hooks/useVisitorProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
+import { GlobalSearchBar } from "@/components/public/GlobalSearchBar";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 interface Props {
   open: boolean;
@@ -91,21 +96,23 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
   if (totalItems === 0 && step !== "success" && open) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-white flex flex-col">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-[#F5E62B] flex flex-col">
           <SheetHeader className="sr-only"><SheetTitle>Cesta Vazia</SheetTitle></SheetHeader>
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-            <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center">
-              <ShoppingBag className="h-10 w-10 text-gray-200" />
+          <DrawerIntelligentHeader onClose={handleClose} />
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 pt-10">
+            <div className="w-20 h-20 rounded-full bg-white shadow-sm border border-black/10 flex items-center justify-center">
+              <ShoppingBag className="h-10 w-10 text-slate-700" />
             </div>
-            <h3 className="text-lg font-bold text-gray-700">Sua cesta está vazia</h3>
-            <p className="text-sm text-gray-400 text-center">
+            <h3 className="text-lg font-black text-slate-950">Sua cesta está vazia</h3>
+            <p className="text-sm text-slate-900/80 font-medium text-center">
               Adicione produtos das lojas do mercado para começar.
             </p>
             <button onClick={handleClose}
-              className="px-6 py-3 bg-[#FF6A00] text-white font-bold rounded-xl text-sm">
+              className="px-6 py-3 bg-[#FF6A00] text-white font-bold rounded-xl text-sm shadow-md hover:scale-105 active:scale-95 transition-all">
               Explorar Produtos
             </button>
           </div>
+          <FooterNeutral label="🛒 Cesta de Compras" />
         </SheetContent>
       </Sheet>
     );
@@ -115,39 +122,22 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
     <>
       {open && <SessionSafetyFlash key={String(open)} />}
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-gray-50 flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-[#F5E62B] flex flex-col">
         <SheetHeader className="sr-only"><SheetTitle>Cesta de Compras</SheetTitle></SheetHeader>
 
-        {/* ═══ HEADER ═══ */}
-        <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] px-5 py-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <ShoppingBag className="h-6 w-6 text-white" />
-            <div>
-              <h2 className="text-white font-black text-lg">
-                {step === "success" ? "Pedido Enviado" : "Cesta de Compras"}
-              </h2>
-              {step === "cart" && (
-                <p className="text-white/70 text-xs font-medium">
-                  {totalItems} {totalItems === 1 ? "item" : "itens"} • {totalStores} {totalStores === 1 ? "loja" : "lojas"} • R$ {totalSubtotal.toFixed(2).replace(".", ",")}
-                </p>
-              )}
-              {step === "signup" && (
-                <p className="text-white/70 text-xs font-medium">Complete seus dados</p>
-              )}
-            </div>
-          </div>
-          <button onClick={handleClose} className="text-white/60 hover:text-white transition-colors">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        {/* ═══ CABEÇALHO INTELIGENTE COMPLETO ═══ */}
+        <DrawerIntelligentHeader onClose={handleClose} />
 
         {/* ═══ STEP: CART REVIEW ═══ */}
         {step === "cart" && (
           <>
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {/* Info banner */}
-              <div className="bg-amber-50/70 border border-amber-100 rounded-xl px-4 py-2.5 text-center">
-                <p className="text-[11px] text-amber-700 font-medium">
+            <div className="flex-1 overflow-y-auto px-4 py-4 pt-8 space-y-4">
+              {/* Title & Info banner */}
+              <div className="bg-white/95 border border-black/15 shadow-sm rounded-xl px-4 py-2.5 text-center space-y-1">
+                <h2 className="text-sm font-black text-slate-950">
+                  🛒 Cesta de Compras • {totalItems} {totalItems === 1 ? "item" : "itens"} • R$ {totalSubtotal.toFixed(2).replace(".", ",")}
+                </h2>
+                <p className="text-[11px] text-slate-800 font-bold">
                   Sua intenção de compra será enviada para {totalStores} {totalStores === 1 ? "loja" : "lojas"}
                 </p>
               </div>
@@ -161,12 +151,12 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-200 bg-white px-5 py-4 space-y-3 shrink-0">
+            <div className="border-t border-black/10 bg-[#F5E62B] px-5 py-4 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">
+                <span className="text-sm font-bold text-slate-900">
                   Total ({totalItems} {totalItems === 1 ? "item" : "itens"} de {totalStores} {totalStores === 1 ? "loja" : "lojas"})
                 </span>
-                <span className="text-xl font-black text-gray-900">
+                <span className="text-xl font-black text-slate-950">
                   R$ {totalSubtotal.toFixed(2).replace(".", ",")}
                 </span>
               </div>
@@ -180,7 +170,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
                 <ShoppingBag className="h-4 w-4" />
                 Continuar Pedido
               </button>
-              <p className="text-[10px] text-gray-400 text-center">
+              <p className="text-[10px] text-slate-900/80 font-medium text-center">
                 Pagamento e condições tratados diretamente com cada loja.
               </p>
             </div>
@@ -191,29 +181,29 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
         {step === "signup" && (
           <div className="flex-1 overflow-y-auto">
             {/* Review summary */}
-            <div className="px-4 py-3 bg-white border-b border-gray-100">
-              <p className="text-[12px] text-gray-500 font-medium mb-2">
+            <div className="px-4 py-3 bg-[#F5E62B] border-b border-black/10">
+              <p className="text-[12px] text-slate-900 font-bold mb-2">
                 Revise abaixo as lojas e os produtos que receberão sua intenção:
               </p>
               {storeGroups.map(g => (
-                <div key={g.store_id} className="py-3 border-b border-gray-50 last:border-0">
+                <div key={g.store_id} className="py-3 border-b border-black/10 last:border-0">
                   <div className="flex items-center gap-3 mb-2">
                     {g.store_logo ? (
-                      <img src={g.store_logo} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+                      <img src={g.store_logo} alt="" className="h-10 w-10 rounded-full object-cover shrink-0 border border-black/10" />
                     ) : (
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center text-white text-[11px] font-black shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center text-white text-[11px] font-black shrink-0 shadow-sm">
                         {g.store_name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <span className="text-[16px] font-semibold text-gray-700 flex-1 truncate">{g.store_name}</span>
-                    <span className="text-[14px] text-gray-400 shrink-0">{g.total_items} {g.total_items === 1 ? "item" : "itens"}</span>
-                    <span className="text-[16px] font-bold text-gray-700 shrink-0">R$ {g.subtotal.toFixed(2).replace(".", ",")}</span>
+                    <span className="text-[16px] font-black text-slate-950 flex-1 truncate">{g.store_name}</span>
+                    <span className="text-[14px] text-slate-900/80 font-bold shrink-0">{g.total_items} {g.total_items === 1 ? "item" : "itens"}</span>
+                    <span className="text-[16px] font-black text-slate-950 shrink-0">R$ {g.subtotal.toFixed(2).replace(".", ",")}</span>
                   </div>
                   {/* Lista de Produtos com imagem */}
                   <div className="pl-[52px] space-y-2">
                     {(g.items || []).map((item) => (
                       <div key={item.item_id} className="flex items-center gap-3 text-[14px]">
-                        <div className="h-10 w-10 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden shrink-0 flex items-center justify-center">
+                        <div className="h-10 w-10 rounded-lg bg-white border border-black/10 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
                           {item.product_image_url ? (
                             <img
                               src={item.product_image_url}
@@ -222,22 +212,22 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
                               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                             />
                           ) : (
-                            <span className="text-gray-300 text-[10px]">📦</span>
+                            <span className="text-gray-400 text-[10px]">📦</span>
                           )}
                         </div>
-                        <span className="text-gray-600 line-clamp-1 flex-1">{item.quantity}x {item.product_title}</span>
-                        <span className="text-gray-500 font-medium shrink-0">R$ {(item.product_price * item.quantity).toFixed(2).replace(".", ",")}</span>
+                        <span className="text-slate-900 font-bold line-clamp-1 flex-1">{item.quantity}x {item.product_title}</span>
+                        <span className="text-slate-950 font-black shrink-0">R$ {(item.product_price * item.quantity).toFixed(2).replace(".", ",")}</span>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
-              <div className="flex justify-between pt-3 mt-2 border-t border-gray-100">
-                <span className="text-[16px] font-bold text-gray-500">Total Geral</span>
-                <span className="text-[18px] font-black text-gray-800">R$ {totalSubtotal.toFixed(2).replace(".", ",")}</span>
+              <div className="flex justify-between pt-3 mt-2 border-t border-black/10">
+                <span className="text-[16px] font-bold text-slate-900">Total Geral</span>
+                <span className="text-[18px] font-black text-slate-950">R$ {totalSubtotal.toFixed(2).replace(".", ",")}</span>
               </div>
               <button onClick={() => setStep("cart")}
-                className="mt-2 text-[11px] text-[#FF6A00] font-bold hover:underline">
+                className="mt-2 text-[11px] text-[#FF6A00] font-black hover:underline">
                 ← Voltar para a cesta
               </button>
             </div>
@@ -281,15 +271,15 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
         {/* ═══ STEP: SUCCESS ═══ */}
         {step === "success" && (
           <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center justify-center gap-6">
-            <div className="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center">
-              <PartyPopper className="h-10 w-10 text-emerald-500" />
+            <div className="w-20 h-20 rounded-full bg-white shadow-sm border border-black/10 flex items-center justify-center">
+              <PartyPopper className="h-10 w-10 text-emerald-600" />
             </div>
 
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-black text-gray-800">
+              <h3 className="text-xl font-black text-slate-950">
                 Já já o vendedor já fala com você
               </h3>
-              <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
+              <p className="text-sm text-slate-900/80 font-bold max-w-xs mx-auto leading-relaxed">
                 Seu pedido foi enviado. Aguarde, em instantes o vendedor entra em contato.
               </p>
             </div>
@@ -300,37 +290,35 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
                 submitResult.purchase_intentions.map((pi, i) => {
                   const group = savedGroups.find(g => g.store_id === pi.store_id);
                   return (
-                    <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3"
-                      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                        <CheckCircle className="h-5 w-5 text-emerald-500" />
+                    <div key={i} className="bg-white rounded-xl border border-black/10 p-4 flex items-center gap-3 shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                        <CheckCircle className="h-5 w-5 text-emerald-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-800 truncate">
+                        <p className="text-sm font-black text-slate-950 truncate">
                           {group?.store_name || "Loja"}
                         </p>
-                        <p className="text-[11px] text-gray-400">
+                        <p className="text-[11px] font-bold text-slate-800">
                           {pi.total_items} {pi.total_items === 1 ? "item" : "itens"} • R$ {(pi.subtotal || 0).toFixed(2).replace(".", ",")}
                         </p>
                       </div>
-                      <CheckCircle className="h-5 w-5 text-emerald-400 shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
                     </div>
                   );
                 })
               ) : (
                 savedGroups.map((g, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3"
-                    style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                      <CheckCircle className="h-5 w-5 text-emerald-500" />
+                  <div key={i} className="bg-white rounded-xl border border-black/10 p-4 flex items-center gap-3 shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                      <CheckCircle className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{g.store_name}</p>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-sm font-black text-slate-950 truncate">{g.store_name}</p>
+                      <p className="text-[11px] font-bold text-slate-800">
                         {g.total_items} {g.total_items === 1 ? "item" : "itens"} • R$ {g.subtotal.toFixed(2).replace(".", ",")}
                       </p>
                     </div>
-                    <CheckCircle className="h-5 w-5 text-emerald-400 shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
                   </div>
                 ))
               )}
@@ -351,6 +339,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
             )}
           </div>
         )}
+        <FooterNeutral label="🛒 Cesta de Compras" />
       </SheetContent>
     </Sheet>
     </>
@@ -364,27 +353,26 @@ function StoreCard({ group, onQuantityChange, onRemove }: {
   onRemove: (item: GlobalCartItem) => void;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+    <div className="bg-white rounded-2xl border border-black/10 overflow-hidden shadow-sm">
       {/* Store Header */}
-      <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 flex items-center gap-3">
+      <div className="px-4 py-3 bg-gradient-to-r from-gray-50 to-white border-b border-black/10 flex items-center gap-3">
         {group.store_logo ? (
-          <img src={group.store_logo} alt="" className="h-9 w-9 rounded-xl object-cover" />
+          <img src={group.store_logo} alt="" className="h-9 w-9 rounded-xl object-cover border border-black/10" />
         ) : (
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center text-white text-xs font-black">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C00] flex items-center justify-center text-white text-xs font-black shadow-sm">
             {group.store_name.slice(0, 2).toUpperCase()}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-gray-800 truncate">{group.store_name}</h3>
+          <h3 className="text-sm font-black text-slate-950 truncate">{group.store_name}</h3>
           {group.store_address && (
-            <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate">
+            <p className="text-[11px] font-bold text-slate-800 flex items-center gap-1 truncate">
               <MapPin className="h-3 w-3 shrink-0" /> {group.store_address}
             </p>
           )}
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs text-gray-400">{group.total_items} {group.total_items === 1 ? "item" : "itens"}</p>
+          <p className="text-xs font-bold text-slate-800">{group.total_items} {group.total_items === 1 ? "item" : "itens"}</p>
         </div>
       </div>
 
@@ -442,6 +430,91 @@ function StoreCard({ group, onQuantityChange, onRemove }: {
         <span className="text-sm font-bold text-gray-800">
           R$ {(group.subtotal || 0).toFixed(2).replace(".", ",")}
         </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Drawer Intelligent Retractable Header Component ─────────────────
+function DrawerIntelligentHeader({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate();
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
+
+  return (
+    <div className="bg-gradient-to-b from-[#FAF24A] via-[#F5E62B] to-[#ECD70B] border-b border-black/10 shadow-sm shrink-0 relative">
+      {/* Hero Card de Clima + IA RIDV (RETRÁTIL) */}
+      <div className={cn(
+        "transition-all duration-300 ease-in-out overflow-hidden px-3 pt-2",
+        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0" : "max-h-[300px] opacity-100 translate-y-0"
+      )}>
+        <HomeHeroWeather compact />
+      </div>
+
+      {/* Row: Logo + Busca + Fechar/Cesta (SEMPRE VISÍVEL NO ESTADO RECOLHIDO) */}
+      <div className="px-3 py-2 flex items-center gap-2">
+        <div 
+          className="flex h-[42px] w-[42px] shrink-0 cursor-pointer items-center justify-center hover:scale-105 transition-transform" 
+          onClick={() => { onClose(); navigate("/mercado"); }}
+        >
+          <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[42px] w-[42px] rounded-xl object-cover shadow-sm border border-black/10" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <GlobalSearchBar initialValue="" />
+        </div>
+
+        <button
+          onClick={onClose}
+          aria-label="Fechar Cesta"
+          className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
+          title="Fechar Cesta / Carrinho"
+        >
+          <X className="h-5 w-5 text-black" />
+        </button>
+      </div>
+
+      {/* Navegação principal — Categorias (RETRÁTIL) */}
+      <div className={cn(
+        "transition-all duration-300 ease-in-out overflow-hidden px-2 pb-1",
+        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pb-0" : "max-h-[250px] opacity-100 translate-y-0"
+      )}>
+        <MarketNavButtons />
+      </div>
+
+      {/* ═══ TRUST CHIPS BAR (FAIXA LARANJA DE BOTÕES FIXOS - SEMPRE VISÍVEL) ═══ */}
+      <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
+        <div className="relative px-3 py-2 flex items-center justify-center w-full min-h-[44px]">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
+            <div className="flex items-center justify-center gap-1 px-2.5 h-7 sm:h-8 rounded-[16px] bg-white border sm:border-2 border-[#68C7F2] text-[9px] sm:text-[10px] font-black text-slate-950 uppercase tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] select-none cursor-default shrink-0">
+              <span className="text-xs">🛵</span>
+              <span>Entrega Local</span>
+            </div>
+
+            <div className="flex items-center justify-center gap-1 px-2.5 h-7 sm:h-8 rounded-[16px] bg-white border sm:border-2 border-[#68C7F2] text-[9px] sm:text-[10px] font-black text-slate-950 uppercase tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] select-none cursor-default shrink-0">
+              <span className="text-xs">🛡️</span>
+              <span>Verificados</span>
+            </div>
+          </div>
+
+          <div
+            id="global-audio-portal-trustbar-drawer"
+            className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 z-10"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      </div>
+
+      {/* ═══ SETA CENTRAL DE CONTROLE RETRÁTIL (▼ / ▲) ═══ */}
+      <div className="absolute left-1/2 -translate-x-1/2 -bottom-5 z-50 flex items-center justify-center pointer-events-auto">
+        <button
+          type="button"
+          onClick={() => setHeaderCollapsed(!headerCollapsed)}
+          aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+          className="flex items-center gap-1 px-3 py-0.5 rounded-b-xl font-black text-[11px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] border border-t-0 border-black/15 transition-all duration-200 ease-out outline-none bg-[#EF4444] text-white hover:bg-[#DC2626]"
+          title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+        >
+          {headerCollapsed ? "▼ Expandir" : "▲ Recolher"}
+        </button>
       </div>
     </div>
   );

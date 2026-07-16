@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, ArrowLeft, Plus, AlertTriangle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import { Footer } from '@/components/Footer';
+import { FooterNeutral } from '@/components/FooterNeutral';
 import { PROFILE_TYPES, getProfileRoute, getProfileConfig } from '@/lib/profileTypes';
 import { isProfileRegistrationComplete, getProfileSetupRoute } from '@/lib/profileValidation';
 import { cn } from '@/lib/utils';
@@ -250,11 +250,8 @@ export default function ManageProfiles() {
         </div>
       </div>
       
-      <div className="px-4 pb-8">
-        <div className="max-w-lg mx-auto">
-          <Footer />
-        </div>
-      </div>
+      <FooterNeutral />
     </div>
   );
 }
+

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Search, Loader2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { GlobalSearchService, GlobalSearchResult } from "@/services/GlobalSearchService";
 
@@ -26,7 +25,7 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [fadePlaceholder, setFadePlaceholder] = useState(true);
   
-  const debouncedQuery = useDebounce(query, 300);
+  const debouncedQuery = useDebounce(query, 150);
   const navigate = useNavigate();
   const location = useLocation();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -58,7 +57,7 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
   useEffect(() => {
     let active = true;
 
-    if (debouncedQuery.trim().length >= 2) {
+    if (debouncedQuery.trim().length >= 1) {
       setIsLoading(true);
       GlobalSearchService.searchAll(debouncedQuery).then(results => {
         if (!active) return;
@@ -113,12 +112,13 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
               {PLACEHOLDERS[placeholderIdx]}
             </span>
           )}
-          <Input
+          <input
+            type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
             aria-label="Campo de pesquisa global da VIAGG-TX8"
-            className="w-full h-full border-0 bg-transparent text-gray-800 text-[15px] font-medium focus-visible:ring-0 shadow-none px-0"
+            className="w-full h-full border-0 bg-transparent text-gray-800 text-[15px] font-medium outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none px-0"
           />
         </div>
         <button 
@@ -147,13 +147,17 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
                   onClick={() => handleSuggestionClick(item)}
                   className="px-4 py-3 hover:bg-zinc-50 border-b border-zinc-100 last:border-0 cursor-pointer flex items-center gap-3 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-zinc-100 shrink-0 overflow-hidden">
-                    {item.thumbnail_url ? (
-                      <img src={item.thumbnail_url} className="w-full h-full object-cover" alt="" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-400">
-                        <Search className="w-4 h-4" />
-                      </div>
+                  <div className="w-10 h-10 rounded-lg bg-zinc-100 shrink-0 overflow-hidden relative flex items-center justify-center text-zinc-400">
+                    <Search className="w-4 h-4" />
+                    {item.thumbnail_url && (
+                      <img 
+                        src={item.thumbnail_url} 
+                        className="absolute inset-0 w-full h-full object-cover z-10 bg-zinc-100" 
+                        alt={item.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

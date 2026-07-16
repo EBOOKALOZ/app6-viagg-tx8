@@ -94,7 +94,7 @@ export default function SellerContactModal({ product, open, onClose }: SellerCon
                         phone: data.phone || profileData.telefone || null,
                         city: data.city || profileData.cidade || product.city || null,
                         bairro: data.bairro || profileData.bairro || null,
-                        logo_url: data.logo_url || profileData.logo_url || null,
+                        logo_url: data.logo_url || profileData.logo_url || profileData.avatar_url || null,
                         store_id: data.id,
                     });
                 }
