@@ -167,6 +167,7 @@ const menuSections: MenuSection[] = [
       { title: "Automation AI", url: "/admin/orion-automation", icon: Zap, badge: "NOVO" },
       { title: "Business Intelligence", url: "/admin/orion-business-intelligence", icon: BarChart3, badge: "EXEC" },
       { title: "Marketing AI", url: "/admin/orion-marketing", icon: Target, badge: "NOVO" },
+      { title: "Sales AI", url: "/admin/orion-sales", icon: Wallet, badge: "NOVO" },
       { title: "Security AI", url: "/admin/orion-security", icon: ShieldAlert, badge: "NOVO" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },

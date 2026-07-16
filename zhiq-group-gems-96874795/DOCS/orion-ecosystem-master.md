@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 25 módulos (AI-00…24) + Motor de Publicação + CORE + **OCE** · **332 funções** · **62 tabelas** · **32 triggers** · **22 cron jobs** · **80 prompts** no Registry · **3 modelos** de IA · **29 dashboards**.
+> **Números reais do ecossistema:** 26 módulos (AI-00…25) + Motor de Publicação + CORE + **OCE** · **345 funções** · **63 tabelas** · **32 triggers** · **23 cron jobs** · **85 prompts** no Registry · **3 modelos** de IA · **30 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 **Marketplace Intelligence** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust & Reputation** 🟢 97; AI-21 **Automation** (dupla trava financeira) 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security AI** 🟢 97; **ORION CORE — Certification Engine (OCE)** — auditor oficial read-only, nunca modifica; `oce_certify` = 100 🟢 CERTIFICADO ENTERPRISE (`orion-oce-certificacao.md`).
+> **Atualização 2026-07-15:** AI-18 **Marketplace Intelligence** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust & Reputation** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales AI** (converte interesse em venda; Sales Opportunity Score) 🟢 97; **ORION CORE — Certification Engine (OCE)** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
 
 ---
 
@@ -61,11 +61,12 @@
 | AI-22 | Business Intelligence AI | `business` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | todos (saídas, leitura) | Ativo |
 | AI-23 | Marketing AI | `marketing` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Personalization, Trust, BI, Conversion (leitura); AI-21 (execução) | Ativo |
 | AI-24 | Security AI | `security` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | auth audit, Trust, Automation, Gateway (leitura) | Ativo |
+| AI-25 | Sales AI | `sales` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Marketing, Conversion, Trust (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-25** (reservado, sem funcionalidade definida — §10). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-26** (reservado — roadmap sugerido: Customer Success). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -250,6 +251,14 @@
 - **Entradas (read-only):** pg_class/pg_proc/pg_constraint, cron.job, orion_ai_log, orion_eventos, orion_ai_prompts/models/module_prefs. **Saídas:** `orion_oce_runs/results/patches`; evento `certification.completed`.
 - **Banco:** `orion_oce_checks` (catálogo) · `orion_oce_runs` · `orion_oce_results` · `orion_oce_patches` (imutáveis). **APIs:** `oce_certify/last_run/results/patches/history/score/summary/dashboard`. **Prompts:** `certification.executive/architecture/frontend/security/performance/patch/summary/audit`. **Cron:** `orion_oce_tick` (50 * * * *). **Dashboard:** `/admin/orion-certification`. **Homologação:** score 100 · 🟢 CERTIFICADO ENTERPRISE (13 checks reais / 0 falhas / 8 declarados).
 
+### AI-25 — Sales AI (`sales`, v1)
+- **Objetivo:** Centro Inteligente de Vendas — converte interesse em venda (funil + Sales Opportunity Score + recuperação). **Recomenda; nunca fecha venda.**
+- **Faz:** funil (visitantes→interesse→intenção→conversão→compra); pontua oportunidades (Sales Opportunity Score 0-100 explicável = recência+demanda+conversão+engajamento); conversão por vertical/cidade; recuperação de carrinho.
+- **NÃO faz:** fechar/executar venda; duplicar AI-23 (atrai) nem AI-09 (atribuição); inventar (Trust do comprador por telefone e carrinho vazio declarados).
+- **Entradas (read-only):** advertiser_contact_intentions (leads pending_unlock), store_carts, pay_payment_orders, marketplace_product_click_events, orion_trust_scores, orion_perso_profiles, orion_market_insights. **Saídas:** `orion_sales_opportunities`; eventos `sales.opportunity/pipeline`.
+- **Dependências:** Marketplace, Marketing, Conversion, Trust, Personalization, Pricing, Forecast (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; Automation AI-21 (execução sob aprovação).
+- **Banco:** `orion_sales_opportunities` (Sales Opportunity Score/dia). **APIs:** `sales_dashboard/generate/funnel/opportunities/cart_recovery/conversion/score/metrics/summary`. **Prompts:** `sales.opportunity/pipeline/conversion/recovery/summary`. **Cron:** `orion_sales_tick` (43 * * * *). **Dashboard:** `/admin/orion-sales`. **Segurança:** read-only; nunca fecha venda.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -384,7 +393,9 @@
 | **AI-22** | ✅ **Business Intelligence AI** — ativo (§2/§3). |
 | **AI-23** | ✅ **Marketing AI** — ativo (§2/§3). |
 | **AI-24** | ✅ **Security AI** — ativo (§2/§3). |
-| AI-25+ | Reservado para expansão futura. |
+| **AI-25** | ✅ **Sales AI** — ativo (§2/§3). |
+| AI-26 | Reservado (sugestão: Customer Success). |
+| AI-27+ | Reservado (Logistics, Sustainability, Innovation, CEO Copilot, Knowledge & Learning). |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
