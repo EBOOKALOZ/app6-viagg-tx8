@@ -1847,7 +1847,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                 {/* ═══ CATEGORY BAR (Sticky) ═══ */}
                 {activeCategories.length > 0 && (
-                    <div className="sticky top-[60px] z-40 bg-[#F5E62B] py-2 mb-6 -mx-4 px-4 lg:mx-0 lg:px-0 shadow-sm border-b border-yellow-500/20">
+                    <div className="sticky top-[112px] sm:top-[120px] lg:top-[140px] z-40 bg-[#F5E62B] py-2 mb-6 -mx-4 px-4 lg:mx-0 lg:px-0 shadow-sm border-b border-yellow-500/20 transition-all duration-300">
                         <div className="w-full relative max-w-[1920px] mx-auto">
                             <button
                                 type="button"

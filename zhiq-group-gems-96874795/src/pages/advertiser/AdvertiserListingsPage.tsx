@@ -606,17 +606,6 @@ export default function AdvertiserListingsPage() {
       {/* ──────────────────────────────────────────────── */}
       {activeTab === 'listings' && (
         <>
-          {/* GLM IA Banner */}
-          <div className="flex items-center gap-3 bg-violet-950/40 border border-violet-700/30 rounded-2xl px-4 py-3">
-            <div className="h-9 w-9 rounded-xl bg-violet-700/30 border border-violet-600/30 flex items-center justify-center shrink-0">
-              <Brain className="h-4 w-4 text-violet-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-[13px] font-semibold text-violet-300">Gestão Inteligente — GLM IA</p>
-              <p className="text-[11px] text-violet-500">Análise de performance, precificação competitiva e previsão de demanda por categoria</p>
-            </div>
-            <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
-          </div>
 
           {/* Search + View Toggle */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -716,7 +705,6 @@ export default function AdvertiserListingsPage() {
                       <div className="text-lg font-black text-[#FF6A00] leading-none">{formatCurrencyBRL(listing.price)}</div>
                       <div className="flex items-center gap-3 text-[10px] text-[#A7B0BE] pt-1 border-t border-[#2A3038]">
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {days}d</span>
-                        <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-violet-400" />GLM: {isActive ? "Ativo" : "Inativo"}</span>
                       </div>
                       {/* Ações */}
                       <div className="flex gap-2 mt-auto pt-2">

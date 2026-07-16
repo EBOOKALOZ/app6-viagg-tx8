@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyBRL } from "@/lib/utils";
+import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { chatCompletion } from "@/lib/aiapi";
 import { toast } from "sonner";
 import {
@@ -35,6 +36,7 @@ import {
   Plane,
   Send,
   Radio,
+  LayoutGrid,
 } from "lucide-react";
 import { useGlmPostador } from "@/hooks/useGlmPostador";
 import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
@@ -84,8 +86,24 @@ const SOCIAL_NETWORKS = [
 
 function resolveImage(path: string | null, bucket = "marketing-materials"): string {
   if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  let cleanPath = path;
+  if (path.startsWith("[")) {
+    try {
+      const arr = JSON.parse(path);
+      if (Array.isArray(arr) && arr.length > 0) cleanPath = arr[0];
+    } catch {}
+  } else if (path.includes(",") && !path.startsWith("http") && !path.startsWith("data:")) {
+    cleanPath = path.split(",")[0].trim();
+  }
+  if (!cleanPath) return "";
+  if (cleanPath.startsWith("http") || cleanPath.startsWith("data:") || cleanPath.startsWith("blob:")) {
+    return cleanPath;
+  }
+  if (bucket === "real-estate-public" || bucket === "real-estate-original" || bucket === "vehicles") {
+    const url = getListingImageUrl(cleanPath, bucket === "real-estate-original" ? "original" : "public");
+    if (url) return url;
+  }
+  const { data } = supabase.storage.from(bucket).getPublicUrl(cleanPath);
   return data?.publicUrl ?? "";
 }
 
@@ -135,7 +153,7 @@ export default function AdvertiserPromotionPage() {
   // Picker state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [pickerSearch, setPickerSearch] = useState("");
-  const [pickerTab, setPickerTab] = useState<CategoryTab>("produtos");
+  const [pickerTab, setPickerTab] = useState<CategoryTab>(routeCategory ?? "produtos");
   const pickerRef = useRef<HTMLDivElement>(null);
   const autoOpenedRef = useRef(false);
 
@@ -187,7 +205,7 @@ export default function AdvertiserPromotionPage() {
     if (!user?.id) return;
     fetchAllItems(advertiserAccountId, storeInfo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, advertiserAccountId]);
+  }, [user?.id, advertiserAccountId, routeCategory]);
 
   // Os slots ficam sempre vazios ao entrar no painel — o anunciante adiciona manualmente.
 
@@ -198,7 +216,7 @@ export default function AdvertiserPromotionPage() {
     setLoading(true);
     try {
       const results: CatalogItem[] = [];
-      const onlyCategory = routeCategory; // null = busca tudo
+      const onlyCategory = routeCategory; // o seletor só oferece anúncios do perfil em uso (categoria da rota)
 
       // Produtos (Advertiser Listings + Merchant Products)
       if (!onlyCategory || onlyCategory === "produtos") {
@@ -206,22 +224,23 @@ export default function AdvertiserPromotionPage() {
         {
           const advQuery = supabase
             .from("advertiser_listings" as any)
-            .select("id, title, price, listing_status, cover_image_url, category, city, advertiser_listing_media(media_url)")
+            .select("id, title, price, listing_status, cover_image_url, category, city, advertiser_listing_media(media_url, storage_path)")
             .order("created_at", { ascending: false });
 
           const { data: advData } = accountId
-            ? await advQuery.eq("advertiser_account_id", accountId)
+            ? await advQuery.or(`advertiser_account_id.eq.${accountId},owner_user_id.eq.${user!.id}`)
             : await advQuery.eq("owner_user_id", user!.id);
 
           (advData ?? []).forEach((r: any) => {
-            const mediaFallback = r.advertiser_listing_media?.[0]?.media_url ?? null;
-            const imgUrl = r.cover_image_url || mediaFallback;
+            const m = r.advertiser_listing_media?.[0];
+            const mediaFallback = m?.media_url || m?.storage_path || null;
+            const imgUrl = resolveImage(r.cover_image_url || r.image_url || mediaFallback, "marketing-materials");
             results.push({
               id: r.id,
               title: r.title ?? "Sem título",
               price: r.price,
-              image: imgUrl,
-              bucket: undefined,
+              image: imgUrl || null,
+              bucket: "marketing-materials",
               status: r.listing_status ?? "draft",
               category: "produtos",
               extra: r.category,
@@ -234,7 +253,6 @@ export default function AdvertiserPromotionPage() {
         }
 
         // 2. Fetch Merchant Products (from old system)
-        // NOTE: tabela merchant_products não tem coluna is_active — usar apenas as colunas existentes
         const { data: merchData } = await supabase
           .from("merchant_products")
           .select("id, nome, preco, imagem_url")
@@ -242,12 +260,13 @@ export default function AdvertiserPromotionPage() {
           .order("created_at", { ascending: false });
 
         (merchData ?? []).forEach((r: any) => {
+          const imgUrl = resolveImage(r.imagem_url || r.image_url || null, "products");
           results.push({
             id: r.id,
             title: r.nome ?? "Sem título",
             price: r.preco,
-            image: r.imagem_url,
-            bucket: undefined,
+            image: imgUrl || null,
+            bucket: "products",
             status: "active",
             category: "produtos",
             extra: "Produto da Loja",
@@ -263,18 +282,20 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "imoveis") {
         const { data } = await supabase
           .from("real_estate_listings")
-          .select("id, title, price_brl, visibility_status, property_type, city, state, real_estate_media(original_storage_path, public_masked_storage_path)")
+          .select("id, title, price_brl, visibility_status, property_type, city, state, real_estate_media(original_storage_path, public_masked_storage_path), cover_image_url")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
         (data ?? []).forEach((r: any) => {
           const media = r.real_estate_media?.[0];
-          const imgPath = media?.public_masked_storage_path ?? media?.original_storage_path ?? null;
+          const hasThumb = !!media?.public_masked_storage_path && media.public_masked_storage_path !== media.original_storage_path;
+          const imgPath = hasThumb ? media.public_masked_storage_path : (media?.original_storage_path ?? r.cover_image_url ?? null);
+          const imgUrl = resolveImage(imgPath, hasThumb ? "real-estate-public" : "real-estate-original");
           results.push({
             id: r.id,
             title: r.title ?? "Sem título",
             price: r.price_brl,
-            image: imgPath,
+            image: imgUrl || null,
             bucket: "real-estate-public",
             status: r.visibility_status ?? "draft",
             category: "imoveis",
@@ -287,36 +308,35 @@ export default function AdvertiserPromotionPage() {
         });
       }
 
-      // Veículos — vehicle_listings não tem cover_image_url; usar vehicle_media join
+      // Veículos
       if (!onlyCategory || onlyCategory === "veiculos") {
         const { data } = await supabase
           .from("vehicle_listings" as any)
-          .select("id, title, price_brl, visibility_status, vehicle_type, city, state, vehicle_media(original_storage_path, public_masked_storage_path)")
+          .select("id, title, price_brl, visibility_status, vehicle_type, city, state, cover_image_url, vehicle_media(original_storage_path, public_masked_storage_path)")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
         const vehicleRows: CatalogItem[] = [];
 
         (data ?? []).forEach((r: any) => {
-          // Priority 1: vehicle_media join
           let imgUrl: string | null = null;
-
           if (r.vehicle_media?.length > 0) {
             const m = r.vehicle_media[0];
-            const path = m.public_masked_storage_path || m.original_storage_path;
+            const hasThumb = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+            const path = hasThumb ? m.public_masked_storage_path : (m.original_storage_path || r.cover_image_url);
             if (path) {
-              // VehicleForm faz upload no bucket real-estate-original
-              imgUrl = path.startsWith("http")
-                ? path
-                : supabase.storage.from("real-estate-original").getPublicUrl(path).data.publicUrl;
+              imgUrl = resolveImage(path, hasThumb ? "real-estate-public" : "real-estate-original");
             }
+          }
+          if (!imgUrl && r.cover_image_url) {
+            imgUrl = resolveImage(r.cover_image_url, "real-estate-original");
           }
 
           vehicleRows.push({
             id: r.id,
             title: r.title ?? "Sem título",
             price: r.price_brl ?? null,
-            image: imgUrl,
+            image: imgUrl || null,
             bucket: "vehicles",
             status: r.visibility_status ?? "draft",
             category: "veiculos",
@@ -328,7 +348,6 @@ export default function AdvertiserPromotionPage() {
           });
         });
 
-        // Priority 3: separate vehicle_media query for vehicles still missing an image
         const missing = vehicleRows.filter((v) => !v.image);
         if (missing.length > 0) {
           const { data: mediaRows } = await supabase
@@ -340,13 +359,10 @@ export default function AdvertiserPromotionPage() {
             const mediaMap = new Map<string, string>();
             for (const row of mediaRows as any[]) {
               if (!mediaMap.has(row.listing_id)) {
-                const p = row.public_masked_storage_path || row.original_storage_path;
+                const hasThumb = !!row.public_masked_storage_path && row.public_masked_storage_path !== row.original_storage_path;
+                const p = hasThumb ? row.public_masked_storage_path : row.original_storage_path;
                 if (p) {
-                  mediaMap.set(
-                    row.listing_id,
-                    // VehicleForm salva no bucket real-estate-original
-                    p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl,
-                  );
+                  mediaMap.set(row.listing_id, resolveImage(p, hasThumb ? "real-estate-public" : "real-estate-original"));
                 }
               }
             }
@@ -357,7 +373,6 @@ export default function AdvertiserPromotionPage() {
             }
           }
         }
-
         results.push(...vehicleRows);
       }
 
@@ -365,17 +380,39 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "servicos") {
         const { data } = await supabase
           .from("service_listings" as any)
-          .select("id, title, service_type, price_label, city, state, visibility_status")
+          .select("id, title, service_type, price_label, city, state, visibility_status, cover_image_url, image_url")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
-        (data ?? []).forEach((r: any) => {
+        const serviceRows = (data ?? []) as any[];
+        const serviceIds = serviceRows.map((r: any) => r.id);
+        const serviceMediaMap = new Map<string, string>();
+        if (serviceIds.length > 0) {
+          const { data: mediaRows } = await supabase
+            .from("service_media" as any)
+            .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+            .in("listing_id", serviceIds)
+            .order("sort_order", { ascending: true });
+
+          for (const m of (mediaRows ?? []) as any[]) {
+            if (!serviceMediaMap.has(m.listing_id)) {
+              const hasThumb = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+              const p = hasThumb ? m.public_masked_storage_path : m.original_storage_path;
+              if (p) {
+                serviceMediaMap.set(m.listing_id, resolveImage(p, hasThumb ? "real-estate-public" : "real-estate-original"));
+              }
+            }
+          }
+        }
+
+        serviceRows.forEach((r: any) => {
+          const imgUrl = serviceMediaMap.get(r.id) ?? resolveImage(r.cover_image_url || r.image_url || null, "marketing-materials");
           results.push({
             id: r.id,
             title: r.title ?? "Sem título",
             price: null,
-            image: null,
-            bucket: undefined,
+            image: imgUrl || null,
+            bucket: "marketing-materials",
             status: r.visibility_status ?? "draft",
             category: "servicos",
             extra: r.service_type ?? r.price_label,
@@ -391,17 +428,39 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "fretes") {
         const { data } = await supabase
           .from("freight_listings" as any)
-          .select("id, title, vehicle_type, price_label, price_per_km, city, state, visibility_status")
+          .select("id, title, vehicle_type, price_label, price_per_km, city, state, visibility_status, cover_image_url, image_url")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
-        (data ?? []).forEach((r: any) => {
+        const freightRows = (data ?? []) as any[];
+        const freightIds = freightRows.map((r: any) => r.id);
+        const freightMediaMap = new Map<string, string>();
+        if (freightIds.length > 0) {
+          const { data: mediaRows } = await supabase
+            .from("freight_media" as any)
+            .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+            .in("listing_id", freightIds)
+            .order("sort_order", { ascending: true });
+
+          for (const m of (mediaRows ?? []) as any[]) {
+            if (!freightMediaMap.has(m.listing_id)) {
+              const hasThumb = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+              const p = hasThumb ? m.public_masked_storage_path : m.original_storage_path;
+              if (p) {
+                freightMediaMap.set(m.listing_id, resolveImage(p, hasThumb ? "real-estate-public" : "real-estate-original"));
+              }
+            }
+          }
+        }
+
+        freightRows.forEach((r: any) => {
+          const imgUrl = freightMediaMap.get(r.id) ?? resolveImage(r.cover_image_url || r.image_url || null, "marketing-materials");
           results.push({
             id: r.id,
             title: r.title ?? "Frete",
             price: r.price_per_km ?? null,
-            image: null,
-            bucket: undefined,
+            image: imgUrl || null,
+            bucket: "marketing-materials",
             status: r.visibility_status ?? "draft",
             category: "fretes",
             extra: r.vehicle_type ?? r.price_label,
@@ -417,13 +476,12 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "viagens") {
         const { data } = await supabase
           .from("travel_listings" as any)
-          .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, visibility_status")
+          .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, visibility_status, cover_image_url, image_url")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
         const travelRows = (data ?? []) as any[];
 
-        // Buscar imagens em travel_media
         const travelIds = travelRows.map((r: any) => r.id);
         const travelMediaMap = new Map<string, string>();
         if (travelIds.length > 0) {
@@ -435,11 +493,12 @@ export default function AdvertiserPromotionPage() {
 
           for (const m of (mediaRows ?? []) as any[]) {
             if (!travelMediaMap.has(m.listing_id)) {
-              const p = m.public_masked_storage_path || m.original_storage_path;
+              const hasThumb = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+              const p = hasThumb ? m.public_masked_storage_path : m.original_storage_path;
               if (p) {
                 travelMediaMap.set(
                   m.listing_id,
-                  p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl,
+                  resolveImage(p, hasThumb ? "real-estate-public" : "real-estate-original")
                 );
               }
             }
@@ -448,12 +507,13 @@ export default function AdvertiserPromotionPage() {
 
         travelRows.forEach((r: any) => {
           const price = r.entry_price ?? r.price_per_person ?? r.total_price ?? null;
+          const imgUrl = travelMediaMap.get(r.id) ?? resolveImage(r.cover_image_url || r.image_url || null, "real-estate-original");
           results.push({
             id: r.id,
             title: r.title ?? "Viagem",
             price,
-            image: travelMediaMap.get(r.id) ?? null,
-            bucket: undefined,
+            image: imgUrl || null,
+            bucket: "real-estate-original",
             status: r.visibility_status ?? "draft",
             category: "viagens",
             extra: r.category ?? r.destination,
@@ -468,7 +528,6 @@ export default function AdvertiserPromotionPage() {
       setAllItems(results);
 
       // Restore saved slots from DB — populates both visual slots and "Ativo" badges
-      // status='active' only; order by position (Queue Module canonical ordering)
       const { data: savedSlots } = await supabase
         .from("promoted_listing_slots" as any)
         .select("listing_id, listing_type, listing_title, listing_price, listing_image, listing_city, position")
@@ -480,19 +539,28 @@ export default function AdvertiserPromotionPage() {
         const savedIds = (savedSlots as any[]).map((r) => r.listing_id);
         setPromoted(savedIds);
 
-        // Popula a fila real (queuedItems) a partir do DB.
-        // Os slots visuais (selectedItems) ficam SEMPRE vazios no load.
         const restored: CatalogItem[] = (savedSlots as any[])
           .slice(0, MAX_PROMO_SLOTS)
           .map((slot) => {
+            let fallbackBucket = "marketing-materials";
+            if (slot.listing_type === "imoveis") fallbackBucket = "real-estate-public";
+            else if (slot.listing_type === "veiculos") fallbackBucket = "vehicles";
+            else if (slot.listing_type === "viagens") fallbackBucket = "real-estate-original";
+            else if (slot.listing_type === "produtos") fallbackBucket = "products";
+
             const found = results.find((r) => r.id === slot.listing_id);
-            if (found) return found;
+            if (found) {
+              return {
+                ...found,
+                image: found.image || resolveImage(slot.listing_image, fallbackBucket) || null,
+              };
+            }
             return {
               id: slot.listing_id,
               title: slot.listing_title ?? "Anúncio",
               price: slot.listing_price ?? null,
-              image: slot.listing_image ?? null,
-              bucket: undefined,
+              image: resolveImage(slot.listing_image, fallbackBucket) || null,
+              bucket: fallbackBucket,
               status: "active",
               category: (slot.listing_type ?? "produtos") as CategoryTab,
               city: slot.listing_city ?? undefined,
@@ -517,15 +585,20 @@ export default function AdvertiserPromotionPage() {
   /* ── Picker items filtered by tab and search ── */
   const pickerItems = useMemo(() => {
     let list = allItems.filter((i) => i.category === pickerTab);
-    // Exclude items currently in the visual slots (prevent same slot duplicate)
-    const selectedIds = new Set(selectedItems.map((s) => s.id));
-    list = list.filter((i) => !selectedIds.has(i.id));
     if (pickerSearch.trim()) {
       const q = pickerSearch.toLowerCase();
       list = list.filter((i) => i.title.toLowerCase().includes(q));
     }
-    return list;
-  }, [allItems, pickerTab, pickerSearch, selectedItems]);
+    // Mostra apenas os itens cadastrados por esse perfil — tanto os já selecionados quanto os ainda não selecionados
+    const selectedIds = new Set(selectedItems.map((s) => s.id));
+    const queuedIds = new Set(queuedItems.map((q) => q.id));
+    return [...list].sort((a, b) => {
+      const aSel = selectedIds.has(a.id) || queuedIds.has(a.id);
+      const bSel = selectedIds.has(b.id) || queuedIds.has(b.id);
+      if (aSel === bSel) return 0;
+      return aSel ? 1 : -1; // não selecionados em primeiro para fácil escolha
+    });
+  }, [allItems, pickerTab, pickerSearch, selectedItems, queuedItems]);
 
   /* ── Close picker on outside click ── */
   useEffect(() => {
@@ -543,6 +616,11 @@ export default function AdvertiserPromotionPage() {
   /* ── Select item from picker + auto-save ── */
   function selectFromPicker(item: CatalogItem) {
     setSelectedItems((prev) => {
+      if (pickerSlot !== null && pickerSlot < prev.length) {
+        const copy = [...prev];
+        copy[pickerSlot] = item;
+        return copy;
+      }
       if (prev.length >= MAX_PROMO_SLOTS) return prev;
       return [...prev, item];
     });
@@ -733,9 +811,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
     { key: "fretes",    label: "Fretes",    icon: Truck },
     { key: "viagens",   label: "Viagens",   icon: Plane },
   ];
-  const pickerTabs = routeCategory
-    ? allPickerTabs.filter((t) => t.key === routeCategory)
-    : allPickerTabs;
+  const pickerTabs = allPickerTabs.filter((t) => t.key === (routeCategory ?? "produtos"));
 
   /* ─────────────────────────────────────────────
      RENDER
@@ -891,13 +967,10 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                       <button
                         title="Trocar anúncio"
                         onClick={() => {
-                          handleRemoveSlot(slot.id, slot.title);
                           const slotIdx = selectedItems.findIndex((s) => s.id === slot.id);
-                          setTimeout(() => {
-                            setPickerSlot(slotIdx >= 0 ? slotIdx : selectedItems.length);
-                            setPickerSearch("");
-                            setPickerTab(routeCategory ?? "produtos");
-                          }, 50);
+                          setPickerSlot(slotIdx >= 0 ? slotIdx : idx);
+                          setPickerSearch("");
+                          setPickerTab(routeCategory ?? "produtos");
                         }}
                         className="w-7 h-7 rounded-full bg-blue-500/90 text-white flex items-center justify-center hover:bg-blue-600 shadow-lg transition-all"
                       >
@@ -1007,7 +1080,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                       </div>
 
                       {/* Mini tabs */}
-                      <div className="flex gap-1 p-1 bg-[#1B1F24] rounded-xl">
+                      <div className={`grid ${pickerTabs.length === 1 ? "grid-cols-1" : "grid-cols-3"} gap-1 p-1 bg-[#1B1F24] rounded-xl`}>
                         {pickerTabs.map((t) => (
                           <button
                             key={t.key}
@@ -1051,14 +1124,21 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                       ) : (
                         pickerItems.map((item) => {
                           const imgUrl = resolveImage(item.image, item.bucket);
+                          const isAlreadySelected = selectedItems.some((s) => s.id === item.id) || queuedItems.some((q) => q.id === item.id);
                           return (
                             <button
                               key={item.id}
-                              onClick={() => selectFromPicker(item)}
+                              onClick={() => {
+                                if (isAlreadySelected && (pickerSlot === null || (selectedItems[pickerSlot]?.id !== item.id && queuedItems[pickerSlot]?.id !== item.id))) {
+                                  toast.info("Este item já está em sua divulgação / fila.");
+                                  return;
+                                }
+                                selectFromPicker(item);
+                              }}
                               className="w-full flex items-center gap-3 p-3 hover:bg-[#1B1F24] transition-colors border-b border-[#2A3038]/30 last:border-b-0 text-left group/pick"
                             >
                               {/* Thumbnail */}
-                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#1B1F24] shrink-0">
+                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#1B1F24] shrink-0 border border-[#2A3038]/40">
                                 {imgUrl ? (
                                   <img src={imgUrl} alt={item.title} className="w-full h-full object-cover" />
                                 ) : (
@@ -1080,9 +1160,11 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                                 <p className="text-xs font-bold text-[#F5F7FA] truncate group-hover/pick:text-[#FF6A00] transition-colors">
                                   {item.title}
                                 </p>
-                                <p className="text-xs font-black text-green-500">
-                                  {formatCurrencyBRL(item.price)}
-                                </p>
+                                {item.price !== null && item.price !== undefined && (
+                                  <p className="text-xs font-black text-green-500">
+                                    {formatCurrencyBRL(item.price)}
+                                  </p>
+                                )}
                                 {(item.city || item.state) && (
                                   <div className="flex items-center gap-1 text-[#A7B0BE] mt-0.5">
                                     <MapPin className="w-2.5 h-2.5" />
@@ -1090,10 +1172,17 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                                   </div>
                                 )}
                               </div>
-                              {/* Add icon */}
-                              <div className="w-7 h-7 rounded-lg bg-[#FF6A00]/10 flex items-center justify-center shrink-0 group-hover/pick:bg-[#FF6A00] transition-colors">
-                                <Plus className="w-3.5 h-3.5 text-[#FF6A00] group-hover/pick:text-white transition-colors" />
-                              </div>
+                              {/* Add/Status badge */}
+                              {isAlreadySelected ? (
+                                <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/15 border border-green-500/30 text-green-400 text-[10px] font-black shrink-0">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  <span>Já na Divulgação</span>
+                                </div>
+                              ) : (
+                                <div className="w-7 h-7 rounded-lg bg-[#FF6A00]/10 flex items-center justify-center shrink-0 group-hover/pick:bg-[#FF6A00] transition-colors">
+                                  <Plus className="w-3.5 h-3.5 text-[#FF6A00] group-hover/pick:text-white transition-colors" />
+                                </div>
+                              )}
                             </button>
                           );
                         })
@@ -1393,12 +1482,9 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                     <button
                       title="Trocar anúncio"
                       onClick={() => {
-                        handleRemoveSlot(item.id, item.title);
-                        setTimeout(() => {
-                          setPickerSlot(idx);
-                          setPickerSearch("");
-                          setPickerTab(item.category as CategoryTab);
-                        }, 50);
+                        setPickerSlot(idx);
+                        setPickerSearch("");
+                        setPickerTab(routeCategory ?? "produtos");
                       }}
                       className="w-7 h-7 rounded-lg bg-[#2A3038]/60 text-[#A7B0BE] flex items-center justify-center hover:bg-blue-500/20 hover:text-blue-400 transition-all"
                     >
@@ -1462,7 +1548,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
         </div>
       )}
 
-      {/* ── Botão: Enviar ao Postador de Motoboys via GLM ── */}
+      {/* ── Botão: Enviar ao Postador de Motoboys ── */}
       <div className="space-y-2">
         <Button
           onClick={async () => {
@@ -1492,7 +1578,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
             <Send className="w-4 h-4 mr-2" />
           )}
           {glmSending
-            ? "GLM organizando lotes..."
+            ? "Organizando lotes..."
             : "Enviar para Postagens"}
         </Button>
 
@@ -1500,7 +1586,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 animate-in fade-in duration-300">
             <CheckCircle2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
             <span className="text-[10px] text-violet-300 font-bold">
-              {glmResult.lotsCreated} lote(s) GLM enviado(s) ao painel do Postador
+              {glmResult.lotsCreated} lote(s) enviado(s) ao painel do Postador
               {glmResult.errors.length > 0 && ` · ${glmResult.errors.length} erro(s)`}
             </span>
           </div>

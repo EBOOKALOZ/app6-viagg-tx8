@@ -564,11 +564,11 @@ export default function ViagemForm() {
               className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-800 transition-colors"
             >
               <Sparkles className="h-3 w-3" />
-              Gerar com IA GLM
+              Gerar com IA
             </button>
           </div>
 
-          {/* Painel GLM inline */}
+          {/* Painel IA inline */}
           {glmOpen && (
             <div className="mb-2 rounded-xl border border-violet-200 bg-violet-50 p-3 space-y-2">
               <p className="text-[11px] font-bold text-violet-700">Descreva o pacote para a IA gerar o texto:</p>

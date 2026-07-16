@@ -209,17 +209,6 @@ export default function AdvertiserImoveisListingsPage() {
 
       <div className="px-4 md:px-6 space-y-5 max-w-[1400px] mx-auto">
 
-        {/* ── GLM IA Banner ── */}
-        <div className="flex items-center gap-3 bg-violet-950/40 border border-violet-700/30 rounded-2xl px-4 py-3">
-          <div className="h-9 w-9 rounded-xl bg-violet-700/30 border border-violet-600/30 flex items-center justify-center shrink-0">
-            <Brain className="h-4 w-4 text-violet-400" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[13px] font-semibold text-violet-300">Otimização de Anúncios — GLM IA</p>
-            <p className="text-[11px] text-violet-500">Análise automática de qualidade, sugestão de preço e melhores horários de publicação</p>
-          </div>
-          <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
-        </div>
 
         {/* ── Anunciar novo (categorias originais, estilo dark) ── */}
         <div className="bg-[#1B1F24] border border-[#2A3038] rounded-2xl p-4 space-y-3">
@@ -363,7 +352,6 @@ export default function AdvertiserImoveisListingsPage() {
                     {/* Indicadores */}
                     <div className="flex items-center gap-3 text-[10px] text-[#A7B0BE] pt-1 border-t border-[#2A3038]">
                       <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {days}d</span>
-                      <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3 text-violet-400" />GLM: {isActive ? "Ativo" : "Inativo"}</span>
                     </div>
 
                     {/* Ações */}

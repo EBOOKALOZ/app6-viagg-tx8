@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  MessageSquare, Phone, Clock, Package, User, Trash2, Search,
-  Star, Brain, Sparkles, TrendingUp, Activity, ShoppingBag,
-  ArrowLeft, Coins,
+  Star, Activity, ShoppingBag, ArrowLeft, Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -46,16 +44,6 @@ function getInitials(name: string): string {
   return (parts[0]?.[0] || "?").toUpperCase() + (parts[1]?.[0] || "").toUpperCase();
 }
 
-// GLM score p/ Mercado: baseado em presença de telefone, mensagem e valor
-function getMerchGLMScore(pi: PurchaseIntention): { label: string; color: string } {
-  if (pi.customer_phone && pi.customer_note && pi.total_amount > 0)
-    return { label: "Alto Interesse", color: "text-red-700 bg-red-50 border-red-200" };
-  if (pi.customer_phone && pi.total_amount > 0)
-    return { label: "Interesse Médio", color: "text-orange-700 bg-orange-50 border-orange-200" };
-  if (pi.customer_phone)
-    return { label: "Interesse Básico", color: "text-blue-700 bg-blue-50 border-blue-200" };
-  return { label: "Interesse Inicial", color: "text-gray-700 bg-gray-50 border-gray-200" };
-}
 
 // ── Component ─────────────────────────────────────────────────────────────
 export default function MerchantMessagesPage() {
@@ -239,17 +227,6 @@ export default function MerchantMessagesPage() {
           </div>
         )}
 
-        {/* GLM IA Banner */}
-        <div className="flex items-center gap-3 bg-violet-950/40 border border-violet-700/30 rounded-2xl px-4 py-3">
-          <div className="h-9 w-9 rounded-xl bg-violet-700/30 border border-violet-600/30 flex items-center justify-center shrink-0">
-            <Brain className="h-4 w-4 text-violet-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-violet-300">Análise de Intenção de Compra — GLM IA</p>
-            <p className="text-[11px] text-violet-500 mt-0.5">Classificação automática de interesse por perfil de cliente</p>
-          </div>
-          <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
-        </div>
 
         {/* Search + Filtros */}
         <div className="space-y-3">
@@ -299,7 +276,6 @@ export default function MerchantMessagesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredIntentions.map((pi) => {
               const isFav = favorites.has(pi.id);
-              const glm   = getMerchGLMScore(pi);
 
               return (
                 <div key={pi.id} className="bg-[#1B1F24] border border-[#2A3038] rounded-2xl overflow-hidden flex flex-col hover:shadow-xl hover:shadow-black/30 transition-all">
@@ -367,13 +343,6 @@ export default function MerchantMessagesPage() {
                       </div>
                     </div>
                   )}
-
-                  {/* GLM IA Score */}
-                  <div className={cn("mx-4 mb-3 flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold", glm.color)}>
-                    <Brain className="h-3.5 w-3.5 shrink-0" />
-                    <span>GLM IA: {glm.label}</span>
-                    <TrendingUp className="h-3 w-3 ml-auto" />
-                  </div>
 
                   {/* Timestamp */}
                   <div className="mx-4 mb-3 flex items-center gap-1.5 text-[10px] text-[#A7B0BE]/50 font-mono">

@@ -3,8 +3,7 @@ import { useState, useMemo } from "react";
 import {
   MessageSquare, ArrowLeft, Loader2, Building2, Car, Package,
   User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2,
-  Briefcase, Truck, Plane, Search, Star, Brain, Sparkles,
-  TrendingUp, Activity, Eye, FileText,
+  Briefcase, Truck, Plane, Search, Star, Activity, Eye, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +26,6 @@ const SE_UNLOCK_DEFAULT  = 12;
 const FR_UNLOCK_DEFAULT  = 12;
 const TR_UNLOCK_DEFAULT  = 12;
 
-// ── Análise de interesse GLM IA ────────────────────────────────────────────
-const GLM_SCORE: Record<string, { label: string; color: string }> = {
-  proposal:        { label: "Proposta Comercial", color: "text-red-700 bg-red-50 border-red-200"         },
-  whatsapp_click:  { label: "Alto Interesse",     color: "text-orange-700 bg-orange-50 border-orange-200" },
-  message_request: { label: "Interesse Médio",    color: "text-blue-700 bg-blue-50 border-blue-200"       },
-  view_contact:    { label: "Interesse Inicial",  color: "text-gray-700 bg-gray-50 border-gray-200"       },
-};
 
 const INTEREST_ICON: Record<string, React.ElementType> = {
   proposal:        FileText,
@@ -463,17 +455,6 @@ export default function AdvertiserMessagesPage() {
           </div>
         )}
 
-        {/* ── GLM IA Banner ── */}
-        <div className="flex items-center gap-3 bg-violet-950/40 border border-violet-700/30 rounded-2xl px-4 py-3">
-          <div className="h-9 w-9 rounded-xl bg-violet-700/30 border border-violet-600/30 flex items-center justify-center shrink-0">
-            <Brain className="h-4 w-4 text-violet-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-violet-300">Análise de Interesse — GLM IA</p>
-            <p className="text-[11px] text-violet-500 mt-0.5">Classificação automática de intenção de negócio para cada lead</p>
-          </div>
-          <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
-        </div>
 
         {/* ── Search + Filtros ── */}
         <div className="space-y-3">
@@ -531,7 +512,6 @@ export default function AdvertiserMessagesPage() {
               const leadCost   = costForLead(lead);
               const hasEnough  = creditBalance >= leadCost;
               const isFav      = favorites.has(lead.id);
-              const glm        = GLM_SCORE[lead.interest_type] || GLM_SCORE.view_contact;
               const ITypeIcon  = INTEREST_ICON[lead.interest_type] || MessageSquare;
 
               const ModuleIcon = lead.listing_module === "real_estate" ? Building2
@@ -653,12 +633,6 @@ export default function AdvertiserMessagesPage() {
                     </p>
                   ) : null}
 
-                  {/* GLM IA Score */}
-                  <div className={cn("mx-4 mb-3 flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold", glm.color)}>
-                    <Brain className="h-3.5 w-3.5 shrink-0" />
-                    <span>GLM IA: {glm.label}</span>
-                    <TrendingUp className="h-3 w-3 ml-auto" />
-                  </div>
 
                   {/* Balance indicator */}
                   <div className={cn("mx-4 mb-3 flex items-center justify-between px-3 py-2.5 rounded-xl border", hasEnough ? "bg-emerald-950/30 border-emerald-700/30" : "bg-red-950/30 border-red-700/30")}>

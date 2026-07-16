@@ -174,7 +174,7 @@ export function MarketLayout({
         <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-[#F5E62B]")}>
             {/* ═══ TOP BAR (STICKY HEADER WITH RETRACTABLE TRANSITIONS) ═══ */}
             <div className={cn(
-                "sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] relative",
+                "sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
                 isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-gradient-to-b from-[#FAF24A] via-[#F5E62B] to-[#ECD70B]"
             )}>
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
