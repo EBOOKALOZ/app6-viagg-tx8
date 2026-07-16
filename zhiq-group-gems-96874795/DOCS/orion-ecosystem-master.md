@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 20 módulos (AI-00…19) + Motor de Publicação + CORE · **250 funções** · **49 tabelas** · **32 triggers** · **16 cron jobs** · **48 prompts** no Registry · **3 modelos** de IA · **23 dashboards**.
+> **Números reais do ecossistema:** 21 módulos (AI-00…20) + Motor de Publicação + CORE · **261 funções** · **51 tabelas** · **32 triggers** · **17 cron jobs** · **52 prompts** no Registry · **3 modelos** de IA · **24 dashboards**.
 >
-> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** (cérebro comercial) 🟢 97/100 (`orion-ai-18-marketplace-certificacao.md`); ORION-AI-19 — **Personalization AI** (experiência adaptativa por usuário, com privacidade) 🟢 97/100 (`orion-ai-19-personalization-certificacao.md`).
+> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** 🟢 97/100; ORION-AI-19 — **Personalization AI** (com privacidade) 🟢 97/100; ORION-AI-20 — **Trust & Reputation AI** (confiança explicável, recomenda nunca bloqueia) 🟢 97/100 (`orion-ai-20-trust-certificacao.md`).
 
 ---
 
@@ -56,10 +56,11 @@
 | AI-17 | Support AI | `support` | v1 | 🟢 Enterprise | 97 | 2026-07-14 | support_tickets (leitura) | Ativo |
 | AI-18 | Marketplace Intelligence AI | `marketplace` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Growth, Conversion (leitura); sinais do marketplace | Ativo |
 | AI-19 | Personalization AI | `personalization` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace AI-18, Growth (leitura); sinais por usuário | Ativo |
+| AI-20 | Trust & Reputation AI | `trust` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Finance, Conversion, Publisher, RIDV (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 
-**Próximo número livre: AI-20** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-21** (reservado, sem funcionalidade definida — §10).
 
 ---
 
@@ -197,6 +198,14 @@
 - **Dependências:** Marketplace AI-18, Growth, Gateway, Registry, Event Bus, orion_norm. **Consumidores:** front (Home/recomendações por usuário), Campaign (futuro).
 - **Banco:** `orion_perso_profiles` (upsert/user), `orion_perso_recommendations` (imutável, UNIQUE user+tipo+ref+dia), `orion_perso_optout`. **APIs:** `perso_home/profile/recommend_products/recommend_stores/best_notification_time/set_optout/generate/score/metrics/summary/dashboard`. **Prompts:** `perso.executive/home/discovery/summary`. **Cron:** `orion_perso_tick` (33 * * * *). **Dashboard:** `/admin/orion-personalization`. **Privacidade:** minimização + opt-out real + RLS por usuário + só sinais comportamentais.
 
+### AI-20 — Trust & Reputation AI (`trust`, v1)
+- **Objetivo:** camada oficial de confiança — Trust Score explicável por entidade + alertas de risco + API reutilizável.
+- **Faz:** calcula Trust Score (soma ponderada de fatores reais) para buyer/account/merchant/listing; snapshot diário (histórico/evolução); detecta risco (anomalia de pagamento, baixa credibilidade) e alerta; expõe `trust_get(tipo,id)` para os demais módulos.
+- **NÃO faz:** bloquear/suspender automaticamente (só recomenda); mover dinheiro; permitir que outro módulo altere o score (só o motor). Avaliações/denúncias e entregas declaradas quando ausentes.
+- **Entradas:** pay_payment_orders, merchant_stores, advertiser_contact_intentions, advertiser_listings, delivery_orders — **read-only**. **Saídas:** `orion_trust_scores`, `orion_trust_alerts`; eventos `trust.updated/trust.alert`.
+- **Dependências:** Finance/Conversion/Publisher/RIDV (leitura), Gateway, Registry, Event Bus. **Consumidores:** Marketplace, Personalization, Campaign, Support, Operations, Growth, Pricing (via `trust_get`).
+- **Banco:** `orion_trust_scores` (snapshot/dia, UNIQUE ent_tipo+ent_id+dia), `orion_trust_alerts` (imutável). **APIs:** `trust_get/generate/ranking/alerts/score/metrics/timeline/summary/dashboard`. **Prompts:** `trust.executive/alerts/entity/summary`. **Cron:** `orion_trust_tick` (48 * * * *). **Dashboard:** `/admin/orion-trust`. **Segurança:** read-only provado; só o motor atualiza; recomenda, nunca bloqueia.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -326,7 +335,7 @@
 |----|----------|
 | **AI-18** | ✅ **Marketplace Intelligence AI** — ativo (§2/§3). |
 | **AI-19** | ✅ **Personalization AI** — ativo (§2/§3). |
-| **AI-20** | Reservado para expansão futura. |
+| **AI-20** | ✅ **Trust & Reputation AI** — ativo (§2/§3). |
 | AI-21+ | Reservado para expansão futura. |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
