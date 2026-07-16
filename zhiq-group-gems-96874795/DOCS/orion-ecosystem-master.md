@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 28 módulos (AI-00…27) + Motor de Publicação + CORE + **OCE** · **369 funções** · **66 tabelas** · **32 triggers** · **25 cron jobs** · **95 prompts** no Registry · **3 modelos** de IA · **32 dashboards**.
+> **Números reais do ecossistema:** 29 módulos (AI-00…28) + Motor de Publicação + CORE + **OCE** · **381 funções** · **68 tabelas** · **32 triggers** · **26 cron jobs** · **100 prompts** no Registry · **3 modelos** de IA · **33 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 **Marketplace** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **BI** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales** 🟢 97; AI-26 **Customer Success** 🟢 97; AI-27 **Logistics** (Logistics Opportunity Score/cidade) 🟢 97; **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
+> **Atualização 2026-07-15:** AI-18 **Marketplace** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **BI** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales** 🟢 97; AI-26 **Customer Success** 🟢 97; AI-27 **Logistics** 🟢 97; AI-28 **Sustainability** (3 pilares + VIAGG Impact Index) 🟢 97; **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
 
 ---
 
@@ -64,11 +64,12 @@
 | AI-25 | Sales AI | `sales` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Marketing, Conversion, Trust (leitura) | Ativo |
 | AI-26 | Customer Success AI | `customer_success` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Personalization, Trust, Sales, BI (leitura) | Ativo |
 | AI-27 | Logistics AI | `logistics` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Dispatcher, Forecast, Pricing, Growth (leitura) | Ativo |
+| AI-28 | Sustainability AI | `sustainability` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | BI, Logistics, Growth, Customer Success (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-28** (reservado — roadmap sugerido: Sustainability). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-29** (reservado — roadmap sugerido: Innovation). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -277,6 +278,14 @@
 - **Dependências:** Dispatcher, Forecast, Pricing, BI, Marketplace, Growth, Trust (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; Marketing (captação) / Automation (sob aprovação).
 - **Banco:** `orion_logistics_scores`, `orion_logistics_recommendations` (idempotentes/dia). **APIs:** `logistics_dashboard/generate/scores/coverage/motoboys/heatmap/freight_travel/recommendations/score/metrics/summary`. **Prompts:** `logistics.coverage/forecast/balance/recommendation/summary`. **Cron:** `orion_logistics_tick` (27 * * * *). **Dashboard:** `/admin/orion-logistics`. **Segurança:** read-only; nunca despacha.
 
+### AI-28 — Sustainability AI (`sustainability`, v1)
+- **Objetivo:** Centro de Sustentabilidade em 3 pilares (Ambiental/Econômico/Social) — Sustainability Score + VIAGG Impact Index (VII) por cidade. **Mede/recomenda; nunca executa.**
+- **Faz:** mede impacto real por pilar (receita/IA/automação; empreendedores/retenção; eficiência logística); Sustainability Score (Amb 30% + Eco 40% + Soc 30%); VII + Opportunity por cidade.
+- **NÃO faz:** inventar indicador (declara lacunas: renda_motoboys, km_otimizados); executar/alterar operações/preços/entregas; criar infra paralela.
+- **Entradas (read-only):** pay_payment_orders, orion_ai_log, orion_automation_requests, advertiser_contact_intentions/clicks, merchant_stores, orion_customer_health, orion_logistics_scores, freight/travel_listings, public_rides, orion_growth_scores. **Saídas:** `orion_sustainability_indicators/scores`; eventos `sustainability.score/updated`.
+- **Dependências:** BI, Logistics, Marketplace, Growth, Customer Success, Trust (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; decisões de expansão.
+- **Banco:** `orion_sustainability_indicators` (real|declarado), `orion_sustainability_scores` (Score+VII/escopo/dia). **APIs:** `sustainability_dashboard/generate/environment/economic/social/cities/indicators/score/metrics/summary`. **Prompts:** `sustainability.environment/economic/social/score/summary`. **Cron:** `orion_sustainability_tick` (31 * * * *). **Dashboard:** `/admin/orion-sustainability`. **Segurança:** read-only; nunca inventa; nunca executa.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -414,7 +423,8 @@
 | **AI-25** | ✅ **Sales AI** — ativo (§2/§3). |
 | **AI-26** | ✅ **Customer Success AI** — ativo (§2/§3). |
 | **AI-27** | ✅ **Logistics AI** — ativo (§2/§3). |
-| AI-28+ | Reservado (Sustainability, Innovation, CEO Copilot, Knowledge & Learning). |
+| **AI-28** | ✅ **Sustainability AI** — ativo (§2/§3). |
+| AI-29+ | Reservado (Innovation, CEO Copilot, Knowledge & Learning). |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 

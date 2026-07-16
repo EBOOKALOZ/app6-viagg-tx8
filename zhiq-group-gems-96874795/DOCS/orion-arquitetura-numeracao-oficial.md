@@ -36,6 +36,7 @@
 | **AI-25** | **Sales AI** | `sales` | v1 | 🟢 Enterprise | 97 | 07-15 | Marketplace, Marketing, Conversion, Trust (leitura) |
 | **AI-26** | **Customer Success AI** | `customer_success` | v1 | 🟢 Enterprise | 97 | 07-15 | Personalization, Trust, Sales, BI (leitura) |
 | **AI-27** | **Logistics AI** | `logistics` | v1 | 🟢 Enterprise | 97 | 07-15 | Dispatcher, Forecast, Pricing, Growth (leitura) |
+| **AI-28** | **Sustainability AI** | `sustainability` | v1 | 🟢 Enterprise | 97 | 07-15 | BI, Logistics, Growth, Customer Success (leitura) |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 07-14 | — (porta única) |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 07-14 | todos |
 
@@ -48,7 +49,7 @@
 
 ## Regra de nomenclatura (congelada)
 
-Módulos novos recebem o **próximo número livre** (agora a partir de **AI-28**; AI-27 = Logistics AI) e uma **chave única de módulo** no Gateway/Registry. O número é rótulo humano; a chave é a identidade técnica. Documentos de certificação seguem `DOCS/orion-ai-NN-<slug>-certificacao.md` onde NN e slug batem com a chave. Roadmap 2.x: AI-17+ (benchmark competitivo de preços, feriados no Forecast, migração das 6 edges legadas ao Gateway).
+Módulos novos recebem o **próximo número livre** (agora a partir de **AI-29**; AI-28 = Sustainability AI) e uma **chave única de módulo** no Gateway/Registry. O número é rótulo humano; a chave é a identidade técnica. Documentos de certificação seguem `DOCS/orion-ai-NN-<slug>-certificacao.md` onde NN e slug batem com a chave. Roadmap 2.x: AI-17+ (benchmark competitivo de preços, feriados no Forecast, migração das 6 edges legadas ao Gateway).
 
 ---
 
