@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 22 módulos (AI-00…21) + Motor de Publicação + CORE · **278 funções** · **53 tabelas** · **32 triggers** · **18 cron jobs** · **57 prompts** no Registry · **3 modelos** de IA · **25 dashboards**.
+> **Números reais do ecossistema:** 23 módulos (AI-00…22) + Motor de Publicação + CORE · **291 funções** · **54 tabelas** · **32 triggers** · **19 cron jobs** · **62 prompts** no Registry · **3 modelos** de IA · **26 dashboards**.
 >
-> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** 🟢 97; ORION-AI-19 — **Personalization AI** (privacidade) 🟢 97; ORION-AI-20 — **Trust & Reputation AI** (recomenda, nunca bloqueia) 🟢 97; ORION-AI-21 — **Automation AI** (executa, nunca decide; dupla trava financeira) 🟢 97/100 (`orion-ai-21-automation-certificacao.md`).
+> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** 🟢 97; AI-19 — **Personalization AI** (privacidade) 🟢 97; AI-20 — **Trust & Reputation AI** (recomenda, nunca bloqueia) 🟢 97; AI-21 — **Automation AI** (executa, nunca decide; dupla trava financeira) 🟢 97; AI-22 — **Business Intelligence AI** (Centro Executivo, só leitura, 6 lentes) 🟢 98/100 (`orion-ai-22-business-intelligence-certificacao.md`).
 
 ---
 
@@ -58,10 +58,11 @@
 | AI-19 | Personalization AI | `personalization` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace AI-18, Growth (leitura); sinais por usuário | Ativo |
 | AI-20 | Trust & Reputation AI | `trust` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Finance, Conversion, Publisher, RIDV (leitura) | Ativo |
 | AI-21 | Automation AI | `automation` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | todos (recomendações); AI-08 (delega) | Ativo |
+| AI-22 | Business Intelligence AI | `business` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | todos (saídas, leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 
-**Próximo número livre: AI-22** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-23** (reservado, sem funcionalidade definida — §10).
 
 ---
 
@@ -215,6 +216,14 @@
 - **Dependências:** todos (recomendações), AI-08 (delega), Gateway, Registry, Event Bus, RPCs seguras. **Consumidores:** admin/painel; módulos donos (delegação).
 - **Banco:** `orion_automation_policies` (política/ação, configurável), `orion_automation_requests` (auditoria, UNIQUE idempotency_key). **APIs:** `automation_request/execute/approve/reject/rollback/policies/set_policy/queue/score/metrics/history/summary/dashboard`. **Prompts:** `automation.plan/validate/execute/audit/summary`. **Cron:** `orion_automation_tick` (16 * * * *). **Dashboard:** `/admin/orion-automation`. **Segurança:** dupla trava financeira provada; read-only em dinheiro; só o motor atualiza.
 
+### AI-22 — Business Intelligence AI (`business`, v1)
+- **Objetivo:** Centro Executivo — consolida saídas de todos os módulos em KPIs estratégicos, evolução histórica e narrativa. **Exclusivamente analítico.**
+- **Faz:** 6 lentes (executivo/financeiro/comercial/operacional/inteligência/IA); snapshot diário de KPIs (`orion_bi_kpis`) com explicabilidade (origem/módulos/metodologia/confiança); evolução histórica; narrativa executiva citando os módulos-fonte.
+- **NÃO faz:** executar ações; mover dinheiro; alterar dados; recalcular regra de outro módulo; duplicar o AI-12 (Command, tempo real).
+- **Entradas (read-only):** pay_payment_orders, advertiser_listings/contact_intentions, marketplace_product_click_events, delivery_orders, freight_listings, orion_trust_scores/market_insights/growth_scores/perso_profiles/finance_snapshots/ai_log. **Saídas:** `orion_bi_kpis`; eventos `business.kpi.updated/business.summary.created/business.alert`.
+- **Dependências:** todos (leitura), Gateway, Registry, Event Bus. **Consumidores:** administração executiva.
+- **Banco:** `orion_bi_kpis` (snapshot/dia, UNIQUE dominio+chave+dia). **APIs:** `bi_dashboard/executive/financial/commercial/operational/intelligence/ia/generate/evolution/score/summary`. **Prompts:** `business.summary/analysis/executive/kpi/forecast`. **Cron:** `orion_bi_tick` (9 * * * *). **Dashboard:** `/admin/orion-business-intelligence`. **Segurança:** read-only total; só escreve a própria tabela de KPI.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -346,7 +355,8 @@
 | **AI-19** | ✅ **Personalization AI** — ativo (§2/§3). |
 | **AI-20** | ✅ **Trust & Reputation AI** — ativo (§2/§3). |
 | **AI-21** | ✅ **Automation AI** — ativo (§2/§3). |
-| AI-22+ | Reservado para expansão futura. |
+| **AI-22** | ✅ **Business Intelligence AI** — ativo (§2/§3). |
+| AI-23+ | Reservado para expansão futura. |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
