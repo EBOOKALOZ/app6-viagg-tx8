@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 26 módulos (AI-00…25) + Motor de Publicação + CORE + **OCE** · **345 funções** · **63 tabelas** · **32 triggers** · **23 cron jobs** · **85 prompts** no Registry · **3 modelos** de IA · **30 dashboards**.
+> **Números reais do ecossistema:** 27 módulos (AI-00…26) + Motor de Publicação + CORE + **OCE** · **356 funções** · **64 tabelas** · **32 triggers** · **24 cron jobs** · **90 prompts** no Registry · **3 modelos** de IA · **31 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 **Marketplace Intelligence** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust & Reputation** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales AI** (converte interesse em venda; Sales Opportunity Score) 🟢 97; **ORION CORE — Certification Engine (OCE)** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
+> **Atualização 2026-07-15:** AI-18 **Marketplace** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales** (Sales Opportunity Score) 🟢 97; AI-26 **Customer Success** (Customer Health Score + churn risk) 🟢 97; **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
 
 ---
 
@@ -62,11 +62,12 @@
 | AI-23 | Marketing AI | `marketing` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Personalization, Trust, BI, Conversion (leitura); AI-21 (execução) | Ativo |
 | AI-24 | Security AI | `security` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | auth audit, Trust, Automation, Gateway (leitura) | Ativo |
 | AI-25 | Sales AI | `sales` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Marketing, Conversion, Trust (leitura) | Ativo |
+| AI-26 | Customer Success AI | `customer_success` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Personalization, Trust, Sales, BI (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-26** (reservado — roadmap sugerido: Customer Success). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-27** (reservado — roadmap sugerido: Logistics). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -259,6 +260,14 @@
 - **Dependências:** Marketplace, Marketing, Conversion, Trust, Personalization, Pricing, Forecast (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; Automation AI-21 (execução sob aprovação).
 - **Banco:** `orion_sales_opportunities` (Sales Opportunity Score/dia). **APIs:** `sales_dashboard/generate/funnel/opportunities/cart_recovery/conversion/score/metrics/summary`. **Prompts:** `sales.opportunity/pipeline/conversion/recovery/summary`. **Cron:** `orion_sales_tick` (43 * * * *). **Dashboard:** `/admin/orion-sales`. **Segurança:** read-only; nunca fecha venda.
 
+### AI-26 — Customer Success AI (`customer_success`, v1)
+- **Objetivo:** reter/engajar após a conversão — Customer Health Score + churn risk + reengajamento. **Recomenda; nunca executa.**
+- **Faz:** calcula Customer Health Score (0-100 explicável = recência+frequência+compras+vendedor+trust) e Churn Risk (muito_baixo→crítico) por usuário; detecta em risco/inativos/vendedores sem anúncio; recorrência.
+- **NÃO faz:** alterar dados do usuário; executar retenção (via AI-21 sob aprovação); inventar (satisfação/histórico de suporte declarados).
+- **Entradas (read-only):** marketplace_product_click_events, pay_payment_orders, store_carts, merchant_stores, orion_trust_scores. **Saídas:** `orion_customer_health`; eventos `customer.health.updated/churn.detected`.
+- **Dependências:** Personalization, Trust, Sales, BI, Marketing (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; usuário (próprio health via RLS); Automation AI-21 (execução sob aprovação).
+- **Banco:** `orion_customer_health` (Health Score/dia, RLS por usuário). **APIs:** `cs_dashboard/generate/health/at_risk/reengagement/recurrence/score/metrics/summary`. **Prompts:** `customer.health/churn/retention/reengagement/summary`. **Cron:** `orion_customer_success_tick` (19 * * * *). **Dashboard:** `/admin/orion-customer-success`. **Segurança:** read-only; RLS por usuário; nunca altera dados.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -394,7 +403,7 @@
 | **AI-23** | ✅ **Marketing AI** — ativo (§2/§3). |
 | **AI-24** | ✅ **Security AI** — ativo (§2/§3). |
 | **AI-25** | ✅ **Sales AI** — ativo (§2/§3). |
-| AI-26 | Reservado (sugestão: Customer Success). |
+| **AI-26** | ✅ **Customer Success AI** — ativo (§2/§3). |
 | AI-27+ | Reservado (Logistics, Sustainability, Innovation, CEO Copilot, Knowledge & Learning). |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
