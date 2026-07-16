@@ -5,7 +5,7 @@
 > **Números reais do ecossistema:** 31 módulos (AI-00…30) + Motor de Publicação + CORE + **OCE** · **410 funções** · **72 tabelas** · **32 triggers** · **28 cron jobs** · **117 prompts** no Registry · **3 modelos** de IA · **35 dashboards**.
 >
 > **Atualização 2026-07-15:** AI-18…29 certificados 🟢; AI-30 **Executive AI (CEO Copilot)** — cérebro executivo que consulta todos os módulos; **Executive Score + CEO Intelligence Index (CII)** + Decision Matrix + Executive Chat 🟢 98/100 (`orion-ai-30-executive-certificacao.md`); **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
-> **Atualização 2026-07-16:** abre o **ORION DISCOVERY ECOSYSTEM** com **AI-32 Search & Discovery AI** — VIAGG Discovery Engine (4 scores explicáveis por anúncio + plano de otimização), gap detection e busca semântica 🟢 97/100 (`orion-ai-32-search-discovery-certificacao.md`); e **AI-33 GEO Optimization AI** — dados estruturados reais (JSON-LD/Open Graph/Twitter Cards) + FAQ + contexto semântico + **VIAGG GEO Index (VGI: Platinum/Gold/Silver/Bronze)** reutilizando os scores do AI-32 🟢 97/100 (`orion-ai-33-geo-optimization-certificacao.md`). **AI-31 (Knowledge & Learning) segue EM ABERTO** — pulado a pedido. Próximo livre: **AI-34 Knowledge Graph AI**.
+> **Atualização 2026-07-16:** abre o **ORION DISCOVERY ECOSYSTEM** com **AI-32 Search & Discovery AI** — VIAGG Discovery Engine (4 scores explicáveis por anúncio + plano de otimização), gap detection e busca semântica 🟢 97/100 (`orion-ai-32-search-discovery-certificacao.md`); e **AI-33 GEO Optimization AI** — dados estruturados reais (JSON-LD/Open Graph/Twitter Cards) + FAQ + contexto semântico + **VIAGG GEO Index (VGI: Platinum/Gold/Silver/Bronze)** reutilizando os scores do AI-32 🟢 97/100 (`orion-ai-33-geo-optimization-certificacao.md`); e **AI-34 Knowledge Graph AI** — grafo de entidades/relações **com evidência** (nunca inventa) + **VIAGG Knowledge Index (VKI)** reutilizando AI-32/AI-33 🟢 97/100 (`orion-ai-34-knowledge-graph-certificacao.md`). **AI-31 (Knowledge & Learning) segue EM ABERTO** — pulado a pedido. Próximo livre: **AI-35**.
 
 ---
 
@@ -71,11 +71,12 @@
 | AI-31 | Knowledge & Learning AI | `knowledge` | — | ⚪ NÃO CONSTRUÍDO | — | — | (reservado; não confundir com o motor `knowledge_engine` do AI-14) | Em aberto |
 | AI-32 | Search & Discovery AI | `search_discovery` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | Marketplace/Trust/BI/Marketing/Sales/Customer/Innovation/Executive (leitura) | Ativo |
 | AI-33 | GEO Optimization AI | `geo_optimization` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | AI-32 (Discovery/Semantic), Marketplace/Marketing/Sales/BI/Publisher (leitura) | Ativo |
+| AI-34 | Knowledge Graph AI | `knowledge_graph` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | AI-32 + AI-33 (Discovery/GEO/Semantic), Marketplace/BI/Publisher (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-34 — Knowledge Graph AI** (usará as estruturas/relações do AI-33). **ORION DISCOVERY ECOSYSTEM** (AI-32..AI-40): AI-32 Search & Discovery + AI-33 GEO Optimization já ativos. **AI-31 (Knowledge & Learning AI) segue EM ABERTO** — pulado a pedido; chave `knowledge`. **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-35.** **ORION DISCOVERY ECOSYSTEM** (AI-32..AI-40): AI-32 Search & Discovery + AI-33 GEO Optimization + **AI-34 Knowledge Graph** (coração semântico) já ativos. **AI-31 (Knowledge & Learning AI) segue EM ABERTO** — pulado a pedido; chave `knowledge` (não confundir com AI-34 `knowledge_graph` nem com o `knowledge_engine` do AI-14). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -451,7 +452,8 @@
 | AI-31 | ⚪ EM ABERTO — Knowledge & Learning AI (pulado a pedido; chave `knowledge`). |
 | **AI-32** | ✅ **Search & Discovery AI** — ativo. Abre o ORION Discovery Ecosystem (§`orion-ai-32-search-discovery-certificacao.md`). |
 | **AI-33** | ✅ **GEO Optimization AI** — ativo. Dados estruturados (JSON-LD/OG/Twitter) + FAQ + VGI (§`orion-ai-33-geo-optimization-certificacao.md`). |
-| AI-34 | Reservado — Knowledge Graph AI (usará estruturas/relações do AI-33). |
+| **AI-34** | ✅ **Knowledge Graph AI** — ativo. Grafo de entidades/relações com evidência + VKI (§`orion-ai-34-knowledge-graph-certificacao.md`). |
+| AI-35 | Reservado — próximo do Discovery Ecosystem. |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
