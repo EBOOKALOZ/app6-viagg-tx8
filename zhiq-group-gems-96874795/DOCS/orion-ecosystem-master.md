@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 24 módulos (AI-00…23) + Motor de Publicação + CORE · **305 funções** · **56 tabelas** · **32 triggers** · **20 cron jobs** · **67 prompts** no Registry · **3 modelos** de IA · **27 dashboards**.
+> **Números reais do ecossistema:** 25 módulos (AI-00…24) + Motor de Publicação + CORE · **320 funções** · **58 tabelas** · **32 triggers** · **21 cron jobs** · **72 prompts** no Registry · **3 modelos** de IA · **28 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 — **Marketplace Intelligence** 🟢 97; AI-19 — **Personalization** (privacidade) 🟢 97; AI-20 — **Trust & Reputation** (recomenda, nunca bloqueia) 🟢 97; AI-21 — **Automation** (executa, nunca decide; dupla trava financeira) 🟢 97; AI-22 — **Business Intelligence** (Centro Executivo, 6 lentes) 🟢 98; AI-23 — **Marketing AI** (segmenta/recomenda campanhas, nunca envia) 🟢 97/100 (`orion-ai-23-marketing-certificacao.md`).
+> **Atualização 2026-07-15:** AI-18 **Marketplace Intelligence** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust & Reputation** 🟢 97; AI-21 **Automation** (dupla trava financeira) 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** (recomenda, nunca envia) 🟢 97; AI-24 **Security AI** (detecção preventiva, nunca bloqueia sozinho) 🟢 97/100 (`orion-ai-24-security-certificacao.md`).
 
 ---
 
@@ -60,10 +60,11 @@
 | AI-21 | Automation AI | `automation` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | todos (recomendações); AI-08 (delega) | Ativo |
 | AI-22 | Business Intelligence AI | `business` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | todos (saídas, leitura) | Ativo |
 | AI-23 | Marketing AI | `marketing` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Personalization, Trust, BI, Conversion (leitura); AI-21 (execução) | Ativo |
+| AI-24 | Security AI | `security` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | auth audit, Trust, Automation, Gateway (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 
-**Próximo número livre: AI-24** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-25** (reservado, sem funcionalidade definida — §10).
 
 ---
 
@@ -233,6 +234,14 @@
 - **Dependências:** Marketplace, Personalization, Trust, BI, Conversion, Growth (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; Automation AI-21 (execução sob aprovação).
 - **Banco:** `orion_marketing_segments`, `orion_marketing_recommendations` (idempotentes/dia). **APIs:** `mkt_dashboard/generate/segments/recommendations/campaigns/roi/visitor_intelligence/seo/trends/score/metrics/summary`. **Prompts:** `marketing.segment/campaign/roi/seo/strategy`. **Cron:** `orion_marketing_tick` (21 * * * *). **Dashboard:** `/admin/orion-marketing`. **Segurança:** read-only; nunca envia campanha.
 
+### AI-24 — Security AI (`security`, v1)
+- **Objetivo:** Centro de Inteligência de Segurança — detecção preventiva de anomalias/fraude/abuso + auditoria. **Nunca bloqueia sozinho.**
+- **Faz:** detecta autenticação repetida, abuso de API, ações críticas bloqueadas, picos de eventos, fraude (reuso Trust); alertas explicáveis (fator/evidência/confiança/política); config por limiar/modo.
+- **NÃO faz:** bloquear/suspender automaticamente (alerta/recomenda; aprovação via AI-21); alterar configurações críticas; inventar (IP/multi-conta declarados).
+- **Entradas (read-only):** auth.audit_log_entries, orion_eventos, orion_ai_log, orion_automation_requests, orion_trust_alerts, profiles. **Saídas:** `orion_security_alerts`; eventos `security.alert/risk/audit/summary`.
+- **Dependências:** Trust, Automation, Gateway, Registry, Event Bus, Publisher/RIDV (sinais). **Consumidores:** admin; Automation AI-21 (contenção sob aprovação).
+- **Banco:** `orion_security_alerts` (imutável), `orion_security_config` (limiares/modo). **APIs:** `sec_dashboard/generate/alerts/auth_analysis/sessions/api_abuse/critical_actions/anomalies/fraud/score/metrics/summary/config/set_config`. **Prompts:** `security.anomaly/risk/audit/summary/recommendation`. **Cron:** `orion_security_tick` (37 * * * *). **Dashboard:** `/admin/orion-security`. **Segurança:** read-only; nunca bloqueia automaticamente.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -366,7 +375,8 @@
 | **AI-21** | ✅ **Automation AI** — ativo (§2/§3). |
 | **AI-22** | ✅ **Business Intelligence AI** — ativo (§2/§3). |
 | **AI-23** | ✅ **Marketing AI** — ativo (§2/§3). |
-| AI-24+ | Reservado para expansão futura. |
+| **AI-24** | ✅ **Security AI** — ativo (§2/§3). |
+| AI-25+ | Reservado para expansão futura. |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
