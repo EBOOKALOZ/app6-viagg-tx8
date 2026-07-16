@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 27 módulos (AI-00…26) + Motor de Publicação + CORE + **OCE** · **356 funções** · **64 tabelas** · **32 triggers** · **24 cron jobs** · **90 prompts** no Registry · **3 modelos** de IA · **31 dashboards**.
+> **Números reais do ecossistema:** 28 módulos (AI-00…27) + Motor de Publicação + CORE + **OCE** · **369 funções** · **66 tabelas** · **32 triggers** · **25 cron jobs** · **95 prompts** no Registry · **3 modelos** de IA · **32 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 **Marketplace** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales** (Sales Opportunity Score) 🟢 97; AI-26 **Customer Success** (Customer Health Score + churn risk) 🟢 97; **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
+> **Atualização 2026-07-15:** AI-18 **Marketplace** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust** 🟢 97; AI-21 **Automation** 🟢 97; AI-22 **BI** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security** 🟢 97; AI-25 **Sales** 🟢 97; AI-26 **Customer Success** 🟢 97; AI-27 **Logistics** (Logistics Opportunity Score/cidade) 🟢 97; **ORION CORE — OCE** auditor read-only 100 🟢 CERTIFICADO ENTERPRISE.
 
 ---
 
@@ -63,11 +63,12 @@
 | AI-24 | Security AI | `security` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | auth audit, Trust, Automation, Gateway (leitura) | Ativo |
 | AI-25 | Sales AI | `sales` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Marketing, Conversion, Trust (leitura) | Ativo |
 | AI-26 | Customer Success AI | `customer_success` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Personalization, Trust, Sales, BI (leitura) | Ativo |
+| AI-27 | Logistics AI | `logistics` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Dispatcher, Forecast, Pricing, Growth (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-27** (reservado — roadmap sugerido: Logistics). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-28** (reservado — roadmap sugerido: Sustainability). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -268,6 +269,14 @@
 - **Dependências:** Personalization, Trust, Sales, BI, Marketing (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; usuário (próprio health via RLS); Automation AI-21 (execução sob aprovação).
 - **Banco:** `orion_customer_health` (Health Score/dia, RLS por usuário). **APIs:** `cs_dashboard/generate/health/at_risk/reengagement/recurrence/score/metrics/summary`. **Prompts:** `customer.health/churn/retention/reengagement/summary`. **Cron:** `orion_customer_success_tick` (19 * * * *). **Dashboard:** `/admin/orion-customer-success`. **Segurança:** read-only; RLS por usuário; nunca altera dados.
 
+### AI-27 — Logistics AI (`logistics`, v1)
+- **Objetivo:** Centro Inteligente de Operações Logísticas — Logistics Score + Logistics Opportunity Score por cidade, heatmap, cobertura, balanceamento. **Recomenda; nunca despacha.**
+- **Faz:** prevê demanda logística; cruza demanda (freight/travel/cliques por cidade) x oferta (motoboys online); Opportunity Score (onde captar/expandir); heatmap; recomendações estratégicas.
+- **NÃO faz:** despachar corrida/entrega/frete; substituir Dispatcher/Automation/Pricing/Forecast (reutiliza); alterar corridas/entregas/pagamentos; inventar (tempos de entrega e geo de motoboy declarados).
+- **Entradas (read-only):** advertiser_contact_intentions (freight/travel), marketplace_product_click_events, freight_listings/travel_listings, public_rides, motoboy_profiles/motoboy_presence, orion_growth_scores. **Saídas:** `orion_logistics_scores`, `orion_logistics_recommendations`; eventos `logistics.updated/coverage`.
+- **Dependências:** Dispatcher, Forecast, Pricing, BI, Marketplace, Growth, Trust (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; Marketing (captação) / Automation (sob aprovação).
+- **Banco:** `orion_logistics_scores`, `orion_logistics_recommendations` (idempotentes/dia). **APIs:** `logistics_dashboard/generate/scores/coverage/motoboys/heatmap/freight_travel/recommendations/score/metrics/summary`. **Prompts:** `logistics.coverage/forecast/balance/recommendation/summary`. **Cron:** `orion_logistics_tick` (27 * * * *). **Dashboard:** `/admin/orion-logistics`. **Segurança:** read-only; nunca despacha.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -404,7 +413,8 @@
 | **AI-24** | ✅ **Security AI** — ativo (§2/§3). |
 | **AI-25** | ✅ **Sales AI** — ativo (§2/§3). |
 | **AI-26** | ✅ **Customer Success AI** — ativo (§2/§3). |
-| AI-27+ | Reservado (Logistics, Sustainability, Innovation, CEO Copilot, Knowledge & Learning). |
+| **AI-27** | ✅ **Logistics AI** — ativo (§2/§3). |
+| AI-28+ | Reservado (Sustainability, Innovation, CEO Copilot, Knowledge & Learning). |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
