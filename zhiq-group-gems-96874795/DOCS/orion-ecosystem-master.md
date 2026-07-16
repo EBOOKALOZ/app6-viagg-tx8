@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 23 módulos (AI-00…22) + Motor de Publicação + CORE · **291 funções** · **54 tabelas** · **32 triggers** · **19 cron jobs** · **62 prompts** no Registry · **3 modelos** de IA · **26 dashboards**.
+> **Números reais do ecossistema:** 24 módulos (AI-00…23) + Motor de Publicação + CORE · **305 funções** · **56 tabelas** · **32 triggers** · **20 cron jobs** · **67 prompts** no Registry · **3 modelos** de IA · **27 dashboards**.
 >
-> **Atualização 2026-07-15:** ORION-AI-18 — **Marketplace Intelligence AI** 🟢 97; AI-19 — **Personalization AI** (privacidade) 🟢 97; AI-20 — **Trust & Reputation AI** (recomenda, nunca bloqueia) 🟢 97; AI-21 — **Automation AI** (executa, nunca decide; dupla trava financeira) 🟢 97; AI-22 — **Business Intelligence AI** (Centro Executivo, só leitura, 6 lentes) 🟢 98/100 (`orion-ai-22-business-intelligence-certificacao.md`).
+> **Atualização 2026-07-15:** AI-18 — **Marketplace Intelligence** 🟢 97; AI-19 — **Personalization** (privacidade) 🟢 97; AI-20 — **Trust & Reputation** (recomenda, nunca bloqueia) 🟢 97; AI-21 — **Automation** (executa, nunca decide; dupla trava financeira) 🟢 97; AI-22 — **Business Intelligence** (Centro Executivo, 6 lentes) 🟢 98; AI-23 — **Marketing AI** (segmenta/recomenda campanhas, nunca envia) 🟢 97/100 (`orion-ai-23-marketing-certificacao.md`).
 
 ---
 
@@ -59,10 +59,11 @@
 | AI-20 | Trust & Reputation AI | `trust` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Finance, Conversion, Publisher, RIDV (leitura) | Ativo |
 | AI-21 | Automation AI | `automation` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | todos (recomendações); AI-08 (delega) | Ativo |
 | AI-22 | Business Intelligence AI | `business` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | todos (saídas, leitura) | Ativo |
+| AI-23 | Marketing AI | `marketing` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | Marketplace, Personalization, Trust, BI, Conversion (leitura); AI-21 (execução) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 
-**Próximo número livre: AI-23** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-24** (reservado, sem funcionalidade definida — §10).
 
 ---
 
@@ -224,6 +225,14 @@
 - **Dependências:** todos (leitura), Gateway, Registry, Event Bus. **Consumidores:** administração executiva.
 - **Banco:** `orion_bi_kpis` (snapshot/dia, UNIQUE dominio+chave+dia). **APIs:** `bi_dashboard/executive/financial/commercial/operational/intelligence/ia/generate/evolution/score/summary`. **Prompts:** `business.summary/analysis/executive/kpi/forecast`. **Cron:** `orion_bi_tick` (9 * * * *). **Dashboard:** `/admin/orion-business-intelligence`. **Segurança:** read-only total; só escreve a própria tabela de KPI.
 
+### AI-23 — Marketing AI (`marketing`, v1)
+- **Objetivo:** cérebro de marketing — segmenta públicos, recomenda campanhas, mede ROI, sugere SEO, visitor intelligence. **Recomenda/analisa; nunca envia.**
+- **Faz:** segmentos automáticos (recorrentes/sem compra/alto interesse/novos/lojistas); recomendações de campanha (local/categoria/comportamento) com score+ROI estimado+público+canais+motivo; ROI por canal/categoria (reuso touchpoints); visitor intelligence; SEO por demanda.
+- **NÃO faz:** enviar/publicar campanha (execução via AI-21 sob aprovação, ou AI-05); duplicar AI-05 (ciclo da campanha) nem AI-09 (atribuição); inventar (CAC/CPC/CTR e busca interna declarados).
+- **Entradas (read-only):** orion_touchpoints, pay_payment_orders, marketplace_product_click_events, advertiser_contact_intentions, merchant_stores, orion_perso_profiles, orion_market_insights, orion_campanhas. **Saídas:** `orion_marketing_segments`, `orion_marketing_recommendations`; eventos `marketing.recommendation/segment.created/roi.updated`.
+- **Dependências:** Marketplace, Personalization, Trust, BI, Conversion, Growth (leitura), Gateway, Registry, Event Bus. **Consumidores:** admin; Automation AI-21 (execução sob aprovação).
+- **Banco:** `orion_marketing_segments`, `orion_marketing_recommendations` (idempotentes/dia). **APIs:** `mkt_dashboard/generate/segments/recommendations/campaigns/roi/visitor_intelligence/seo/trends/score/metrics/summary`. **Prompts:** `marketing.segment/campaign/roi/seo/strategy`. **Cron:** `orion_marketing_tick` (21 * * * *). **Dashboard:** `/admin/orion-marketing`. **Segurança:** read-only; nunca envia campanha.
+
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
 
@@ -356,7 +365,8 @@
 | **AI-20** | ✅ **Trust & Reputation AI** — ativo (§2/§3). |
 | **AI-21** | ✅ **Automation AI** — ativo (§2/§3). |
 | **AI-22** | ✅ **Business Intelligence AI** — ativo (§2/§3). |
-| AI-23+ | Reservado para expansão futura. |
+| **AI-23** | ✅ **Marketing AI** — ativo (§2/§3). |
+| AI-24+ | Reservado para expansão futura. |
 
 Dívida técnica priorizada (não bloqueante): migrar 6 edges legadas ao Gateway; fixar `search_path` em ~7 triggers definer; instrumentar `conversion_track()` no front (fecha CAC/LTV real); benchmark competitivo de preços; feriados/eventos no Forecast.
 
