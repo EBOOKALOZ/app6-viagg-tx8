@@ -225,9 +225,13 @@ BEGIN
       jsonb_build_object('localizacao', v_cidade, 'fonte', 'orion_market_insights', 'confianca', i.score_confianca),
       jsonb_build_array('personalization','marketplace','growth'),
       'Tendência comercial relevante para a sua cidade (via Marketplace Intelligence AI).'
-    FROM orion_market_insights i
-    WHERE i.tipo = 'territorio' AND orion_norm(i.escopo_ref) = orion_norm(v_cidade)
-      AND i.dia > (now() AT TIME ZONE 'America/Cuiaba')::date - 7
+    -- DISTINCT ON (escopo_ref): market_insights acumula 1 linha/dia por cidade;
+    -- sem dedupe, o mesmo escopo_ref (ref) repete entre dias e quebra o ON CONFLICT.
+    FROM (SELECT DISTINCT ON (escopo_ref) escopo_ref, titulo, score_confianca
+          FROM orion_market_insights
+          WHERE tipo = 'territorio' AND orion_norm(escopo_ref) = orion_norm(v_cidade)
+            AND dia > (now() AT TIME ZONE 'America/Cuiaba')::date - 7
+          ORDER BY escopo_ref, dia DESC) i
     ON CONFLICT (user_id, tipo, ref, dia) DO UPDATE SET
       titulo=excluded.titulo, score=excluded.score, fatores=excluded.fatores, motivo=excluded.motivo, criado_em=now();
     GET DIAGNOSTICS v_x = ROW_COUNT; v_recs := v_recs + v_x;
