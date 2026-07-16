@@ -2,9 +2,9 @@
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
-> **Números reais do ecossistema:** 25 módulos (AI-00…24) + Motor de Publicação + CORE · **320 funções** · **58 tabelas** · **32 triggers** · **21 cron jobs** · **72 prompts** no Registry · **3 modelos** de IA · **28 dashboards**.
+> **Números reais do ecossistema:** 25 módulos (AI-00…24) + Motor de Publicação + CORE + **OCE** · **332 funções** · **62 tabelas** · **32 triggers** · **22 cron jobs** · **80 prompts** no Registry · **3 modelos** de IA · **29 dashboards**.
 >
-> **Atualização 2026-07-15:** AI-18 **Marketplace Intelligence** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust & Reputation** 🟢 97; AI-21 **Automation** (dupla trava financeira) 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** (recomenda, nunca envia) 🟢 97; AI-24 **Security AI** (detecção preventiva, nunca bloqueia sozinho) 🟢 97/100 (`orion-ai-24-security-certificacao.md`).
+> **Atualização 2026-07-15:** AI-18 **Marketplace Intelligence** 🟢 97; AI-19 **Personalization** 🟢 97; AI-20 **Trust & Reputation** 🟢 97; AI-21 **Automation** (dupla trava financeira) 🟢 97; AI-22 **Business Intelligence** 🟢 98; AI-23 **Marketing** 🟢 97; AI-24 **Security AI** 🟢 97; **ORION CORE — Certification Engine (OCE)** — auditor oficial read-only, nunca modifica; `oce_certify` = 100 🟢 CERTIFICADO ENTERPRISE (`orion-oce-certificacao.md`).
 
 ---
 
@@ -63,8 +63,9 @@
 | AI-24 | Security AI | `security` | v1 | 🟢 Enterprise | 97 | 2026-07-15 | auth audit, Trust, Automation, Gateway (leitura) | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
+| — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-25** (reservado, sem funcionalidade definida — §10).
+**Próximo número livre: AI-25** (reservado, sem funcionalidade definida — §10). **OCE é CORE, não recebe número de IA.**
 
 ---
 
@@ -241,6 +242,13 @@
 - **Entradas (read-only):** auth.audit_log_entries, orion_eventos, orion_ai_log, orion_automation_requests, orion_trust_alerts, profiles. **Saídas:** `orion_security_alerts`; eventos `security.alert/risk/audit/summary`.
 - **Dependências:** Trust, Automation, Gateway, Registry, Event Bus, Publisher/RIDV (sinais). **Consumidores:** admin; Automation AI-21 (contenção sob aprovação).
 - **Banco:** `orion_security_alerts` (imutável), `orion_security_config` (limiares/modo). **APIs:** `sec_dashboard/generate/alerts/auth_analysis/sessions/api_abuse/critical_actions/anomalies/fraud/score/metrics/summary/config/set_config`. **Prompts:** `security.anomaly/risk/audit/summary/recommendation`. **Cron:** `orion_security_tick` (37 * * * *). **Dashboard:** `/admin/orion-security`. **Segurança:** read-only; nunca bloqueia automaticamente.
+
+### ORION CORE — Certification Engine / OCE (`certification`, v1)
+- **Objetivo:** auditor oficial que substitui a homologação manual por certificação automatizada. **Parte do ORION CORE — não é uma IA numerada.**
+- **Faz:** roda verificações REAIS ao vivo sobre o catálogo (RLS, idempotência, search_path, financeiro read-only, gateway, event bus, crons); emite score por dimensão + veredito; gera patches (Auto Patch Advisor) para falhas.
+- **NÃO faz:** modificar o sistema (nunca aplica patch, nunca altera RLS/permissões/dados, nunca executa SQL destrutivo, nunca move dinheiro); fingir os checks de navegador/carga (Front-End/UX/Visual/Mobile/Marketplace-E2E/Stress/Visitor/IA-Scenario ficam **declarados**).
+- **Entradas (read-only):** pg_class/pg_proc/pg_constraint, cron.job, orion_ai_log, orion_eventos, orion_ai_prompts/models/module_prefs. **Saídas:** `orion_oce_runs/results/patches`; evento `certification.completed`.
+- **Banco:** `orion_oce_checks` (catálogo) · `orion_oce_runs` · `orion_oce_results` · `orion_oce_patches` (imutáveis). **APIs:** `oce_certify/last_run/results/patches/history/score/summary/dashboard`. **Prompts:** `certification.executive/architecture/frontend/security/performance/patch/summary/audit`. **Cron:** `orion_oce_tick` (50 * * * *). **Dashboard:** `/admin/orion-certification`. **Homologação:** score 100 · 🟢 CERTIFICADO ENTERPRISE (13 checks reais / 0 falhas / 8 declarados).
 
 ### Motor de Publicação (`motor_publish_*`, v1)
 - **Objetivo:** porta única de publicação. **Faz:** `motor_publish_request/execute/status/cancel/retry`; gate LGPD; feed/marketplace imediato, whatsapp/push → dispatcher. **Banco:** `motor_publish_requests`, `pub_events` (imutável), `publication_history`, `publication_metrics`.
