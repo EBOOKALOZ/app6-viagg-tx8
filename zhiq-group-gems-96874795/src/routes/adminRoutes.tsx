@@ -123,6 +123,7 @@ import {
   AdminOrionCustomerSuccess,
   AdminOrionLogistics,
   AdminOrionSustainability,
+  AdminOrionInnovation,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -284,6 +285,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-customer-success" element={<AdminOrionCustomerSuccess />} />
       <Route path="/admin/orion-logistics" element={<AdminOrionLogistics />} />
       <Route path="/admin/orion-sustainability" element={<AdminOrionSustainability />} />
+      <Route path="/admin/orion-innovation" element={<AdminOrionInnovation />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
