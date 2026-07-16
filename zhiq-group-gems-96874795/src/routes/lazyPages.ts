@@ -341,6 +341,7 @@ export const AdminOrionInnovation = lazy(() => import("@/pages/admin/AdminOrionI
 export const AdminOrionExecutive = lazy(() => import("@/pages/admin/AdminOrionExecutive"));
 export const AdminOrionSearchDiscovery = lazy(() => import("@/pages/admin/AdminOrionSearchDiscovery"));
 export const AdminOrionGeo = lazy(() => import("@/pages/admin/AdminOrionGeo"));
+export const AdminOrionKnowledgeGraph = lazy(() => import("@/pages/admin/AdminOrionKnowledgeGraph"));
 export const AdminOrionPricing = lazy(() => import("@/pages/admin/AdminOrionPricing"));
 export const AdminOrionForecast = lazy(() => import("@/pages/admin/AdminOrionForecast"));
 
