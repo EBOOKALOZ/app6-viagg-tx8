@@ -15,7 +15,7 @@ O **AI-40 Cyber Defense** inaugura a camada de segurança do ORION e serve de **
 | **AI-46** | **Backup & Disaster Recovery** | continuidade: prova backup íntegro/restaurável + RPO/RTO (BRS/RRS/DIS/CRI; `/admin/orion-backup-recovery`) | 🟢 v1.0 (2026-07-17) |
 | AI-47 | Zero Trust | políticas adaptativas | ⚪ previsto |
 | **AI-48** | **Compliance & LGPD** | governança de privacidade: registro de tratamento + direitos do titular + retenção (CPS/LCS/DRS/PRS; `/admin/orion-compliance`) | 🟢 v1.0 (2026-07-17) |
-| AI-49 | SOC Commander | visão executiva do ecossistema | ⚪ previsto |
+| **AI-49** | **SOC Commander** | centro executivo: consolida AI-40..48, mapa de saúde, OSS/ORS/GHS/ECS, timeline global (`/admin/orion-soc`) | 🟢 v1.0 (2026-07-17) — **FECHA o ecossistema** |
 
 ## Contrato compartilhado (fundação do AI-40)
 
@@ -113,6 +113,25 @@ altera dados pessoais (execução humana registrada) nem expõe dado sensível.
 Namespace `orion_compliance_*`/`orion_lgpd_*`/`orion_data_*`/`orion_privacy_*`,
 chave `compliance_lgpd`, tick `*/15`, `compliance_selftest()` 14 checks (COMANDO
 TESTE). Detalhes: `DOCS/orion-ai-48-compliance-lgpd.md`.
+
+## AI-49 no ecossistema (2026-07-17) — o centro nervoso que FECHA a série
+
+O AI-49 é o topo do Security Ecosystem: **consolida (read-only) os 9 módulos AI-40..AI-48**
+numa visão executiva única. Lê as tabelas/estatísticas de cada módulo + `cron.job` (saúde)
++ `orion_eventos` (timeline global), e produz: **mapa de saúde** 🟢🟡🟠🔴 por IA (saúde
+operacional SEPARADA do risco de domínio — um módulo que detecta 20 críticos e está rodando
+é 🟢, não doente), **scores executivos** OSS/ORS/GHS/ECS, **analytics** MTTD/MTTR/MTTC/RPO/RTO,
+**alertas de correlação** entre módulos, **playbooks executivos** e **decisões auditáveis**.
+Agregação pura (snapshot a cada tick `*/2`); o painel lê o último snapshot. **NUNCA altera
+as decisões dos módulos especializados** — só coordena e consolida. Namespace `orion_soc_*`,
+chave `soc_commander`, `soc_selftest` 8/8. Detalhes: `DOCS/orion-ai-49-soc-commander.md`.
+
+### 🎖 ORION Security Ecosystem COMPLETO (AI-40..49)
+
+**AI-40** detecta ataques → **AI-41** fraudes → **AI-42** identidade/acesso →
+**AI-43** correlaciona ameaças → **AI-44** audita postura → **AI-45** responde a incidentes →
+**AI-46** garante continuidade → **AI-47** decide acesso (Zero Trust) →
+**AI-48** governa privacidade (LGPD) → **AI-49** comanda tudo no SOC.
 
 ## Relação AI-24 × AI-40
 

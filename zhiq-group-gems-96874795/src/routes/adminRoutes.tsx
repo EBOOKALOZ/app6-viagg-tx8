@@ -141,6 +141,7 @@ import {
   AdminOrionThreat,
   AdminOrionZeroTrust,
   AdminOrionBackup,
+  AdminOrionSoc,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -320,6 +321,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-threat-intelligence" element={<AdminOrionThreat />} />
       <Route path="/admin/orion-zero-trust" element={<AdminOrionZeroTrust />} />
       <Route path="/admin/orion-backup-recovery" element={<AdminOrionBackup />} />
+      <Route path="/admin/orion-soc" element={<AdminOrionSoc />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
