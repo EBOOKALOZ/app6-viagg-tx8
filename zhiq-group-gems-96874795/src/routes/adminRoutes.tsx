@@ -129,6 +129,7 @@ import {
   AdminOrionGeo,
   AdminOrionKnowledgeGraph,
   AdminOrionRecommendations,
+  AdminOrionAiVisibility,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -296,6 +297,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-geo" element={<AdminOrionGeo />} />
       <Route path="/admin/orion-knowledge-graph" element={<AdminOrionKnowledgeGraph />} />
       <Route path="/admin/orion-recommendations" element={<AdminOrionRecommendations />} />
+      <Route path="/admin/orion-ai-visibility" element={<AdminOrionAiVisibility />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
