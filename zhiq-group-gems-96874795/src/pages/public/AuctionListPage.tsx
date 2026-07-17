@@ -67,7 +67,7 @@ function CountdownDisplay({ endsAt }: { endsAt: string }) {
   return (
     <span className={cn(
       "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm font-mono tracking-wider",
-      isUrgent ? "bg-red-500/90 text-white animate-pulse" : "bg-black/60 text-white"
+      isUrgent ? "bg-red-500/90 text-white animate-pulse" : "bg-emerald-600/90 text-white"
     )}>
       <Timer className="h-3 w-3" />
       {isUrgent && <Flame className="h-3 w-3" />}
@@ -77,6 +77,46 @@ function CountdownDisplay({ endsAt }: { endsAt: string }) {
         <>{pad(hours)}:{pad(minutes)}:{pad(seconds)}</>
       )}
     </span>
+  );
+}
+
+// Contador regressivo PREMIUM — 4 caixas (Dias/Hrs/Min/Seg), ao vivo
+function CountdownPremium({ endsAt }: { endsAt: string }) {
+  const { days, hours, minutes, seconds, ended, total } = useCountdown(endsAt);
+  if (ended) {
+    return (
+      <div className="rounded-xl bg-gray-100 border border-gray-200 py-2.5 text-center">
+        <span className="text-xs font-black uppercase tracking-wider text-gray-500">🔒 Leilão Encerrado</span>
+      </div>
+    );
+  }
+  const urgent = total > 0 && total < 3600000; // < 1h
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const units = [
+    { v: days, l: "Dias" },
+    { v: hours, l: "Hrs" },
+    { v: minutes, l: "Min" },
+    { v: seconds, l: "Seg" },
+  ];
+  return (
+    <div className={cn(
+      "rounded-2xl p-2.5 border shadow-md",
+      urgent
+        ? "bg-gradient-to-r from-red-600 via-red-500 to-orange-500 border-red-400"
+        : "bg-gradient-to-br from-[#00a300] via-[#009200] to-[#007a00] border-[#00c400]/40"
+    )}>
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/75 text-center mb-1.5 flex items-center justify-center gap-1">
+        <Timer className="h-3 w-3" /> Encerra em {urgent && <Flame className="h-3 w-3 text-yellow-300" />}
+      </p>
+      <div className="grid grid-cols-4 gap-1.5">
+        {units.map((u) => (
+          <div key={u.l} className="rounded-lg bg-white/10 backdrop-blur-sm py-1.5 text-center ring-1 ring-white/10">
+            <p className={cn("text-xl font-black leading-none tabular-nums text-white", urgent && "animate-pulse")}>{pad(u.v)}</p>
+            <p className="text-[8px] font-bold uppercase tracking-wider text-white/60 mt-0.5">{u.l}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -138,10 +178,6 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
               </span>
             )}
           </div>
-          {/* Timer overlay — live countdown */}
-          <div className="absolute top-2 right-2">
-            <CountdownDisplay endsAt={listing.ends_at} />
-          </div>
         </div>
       ) : (
         <>
@@ -163,7 +199,6 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
                 </span>
               )}
             </div>
-            <CountdownDisplay endsAt={listing.ends_at} />
           </div>
         </>
       )}
@@ -203,6 +238,9 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
             <Eye className="h-3 w-3" /> {listing.views_count || 0}
           </span>
         </div>
+
+        {/* Contador regressivo premium */}
+        <CountdownPremium endsAt={listing.ends_at} />
 
         {/* CTA indicator - Standardized Footer */}
         <div className="mt-auto space-y-2.5">

@@ -60,7 +60,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing })
     const isUrgent = diff < 3600000; // < 1 hora
     const className = isUrgent
       ? 'bg-red-500/90 text-white animate-pulse'
-      : 'bg-black/60 text-white';
+      : 'bg-emerald-600/90 text-white';
 
     let text = '';
     if (days > 0) {
