@@ -34,6 +34,7 @@ const PROFILE_HERO_IMAGES: Record<string, string> = {
   motoboy: new URL("@/assets/motoboy-hero.png", import.meta.url).href,
   mototaxi: "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/platform-assets/moto-taxi.png",
   driver: "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/motorista-card.png/Motorista.png",
+  leiloes: "https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=500&q=70&auto=format&fit=crop",
 };
 
 const PROFILE_DESCRIPTIONS: Record<string, string> = {
@@ -46,6 +47,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   servicos: "Divulgue sua empresa e receba contatos de clientes interessados",
   freteiro: "Transporte de cargas pesadas, mudanças, móveis e mercadorias",
   viagem: "Anuncie pacotes de viagem e receba contatos de viajantes interessados",
+  leiloes: "Crie leilões dos seus produtos e receba lances em tempo real",
 };
 
 // Mosaico de 6 imagens (misturadas) usado como fundo do card de Imóveis.
@@ -118,7 +120,7 @@ const DRIVER_MOSAIC = [
 ];
 
 // Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, Fretes, Viagens e Comprador.
-const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem"];
+const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem", "leiloes"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================

@@ -1,21 +1,18 @@
 /**
  * AuctionListPage — Feed público de leilões e arremates ativos
- * Layout consistente com MercadoLocalViagg (top bar, search, cart, trust bar)
+ * Usa o MESMO MarketLayout do Mercado (cabeçalho completo: clima, logo, busca,
+ * MarketNavButtons — incluindo o botão Leilões — carrinho, áudio e rodapé).
  */
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FooterNeutral } from "@/components/FooterNeutral";
-import { Input } from "@/components/ui/input";
+import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import {
-  Gavel, Tag, Timer, MapPin, Eye, Search, Flame,
-  Loader2, ChevronLeft, ChevronRight,
-  Users, Package, ShoppingBag, Truck, Shield, Share2,
-  Store, LayoutGrid, ExternalLink,
+  Gavel, Tag, Timer, MapPin, Eye, Flame,
+  Loader2, Users, Truck, Shield, LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useGlobalCart } from "@/hooks/useGlobalCart";
-import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import type { AuctionListing } from "@/hooks/useAuctions";
 
 // ─── Helpers ────────────────────────────
@@ -24,16 +21,6 @@ function formatBRL(value: number | undefined | null) {
   if (value == null || isNaN(value)) return "R$ 0,00";
   if (value > 10000) return `R$ ${(value / 100).toFixed(2).replace(".", ",")}`;
   return `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
-}
-
-function timeLeftShort(endsAt: string) {
-  const diff = new Date(endsAt).getTime() - Date.now();
-  if (diff <= 0) return "Encerrado";
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  if (h > 24) return `${Math.floor(h / 24)}d`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}min`;
 }
 
 // ─── Live Countdown Hook ────────────────
@@ -111,19 +98,6 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
   if (!trimmed) return null;
   if (!/^https?:\/\//i.test(trimmed)) return null;
   return trimmed;
-}
-
-// ─── CountdownInline (text-only for card body) ──
-
-function CountdownInline({ endsAt }: { endsAt: string }) {
-  const { days, hours, minutes, seconds, ended } = useCountdown(endsAt);
-  if (ended) return <span>Encerrado</span>;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    <span className="font-mono tracking-wider">
-      {days > 0 ? `${days}d ${pad(hours)}:${pad(minutes)}:${pad(seconds)}` : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`}
-    </span>
-  );
 }
 
 // ─── ListingCard ─────────────────────────
@@ -230,7 +204,6 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
           </span>
         </div>
 
-
         {/* CTA indicator - Standardized Footer */}
         <div className="mt-auto space-y-2.5">
           {/* Store Location + Google Maps */}
@@ -242,7 +215,7 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
 
             <button className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-all shadow-sm group/map">
               <MapPin className="h-3.5 w-3.5" />
-              <span>📍 📍 Ver no Mapa</span>
+              <span>📍 Ver no Mapa</span>
             </button>
           </div>
 
@@ -275,10 +248,6 @@ export default function AuctionListPage() {
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState<string>("all");
 
-  // ── Cart state ──
-  const [cartOpen, setCartOpen] = useState(false);
-  const globalCart = useGlobalCart();
-
   const handleFilterChange = (newFilter: "all" | "auction" | "arremate") => {
     setFilter(newFilter);
     if (newFilter === "all") {
@@ -308,7 +277,6 @@ export default function AuctionListPage() {
             if (listing.product_image_url) return listing;
             if (!listing.product_id) return listing;
 
-            // Tentar buscar imagem de product_listings
             const { data: pl } = await supabase
               .from("product_listings" as any)
               .select("cover_image_url")
@@ -322,7 +290,6 @@ export default function AuctionListPage() {
               return { ...listing, product_image_url: imgUrl };
             }
 
-            // Tentar buscar de advertiser_listings
             const { data: al } = await supabase
               .from("advertiser_listings" as any)
               .select("cover_image_url")
@@ -336,7 +303,6 @@ export default function AuctionListPage() {
               return { ...listing, product_image_url: imgUrl };
             }
 
-            // Tentar buscar de vehicle_listings
             const { data: vl } = await supabase
               .from("vehicle_listings" as any)
               .select("cover_image_url, vehicle_media(original_storage_path, public_masked_storage_path)")
@@ -396,105 +362,15 @@ export default function AuctionListPage() {
   const arremateCount = listings.filter(l => getListingType(l) === "arremate").length;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5E62B' }}>
-      {/* ═══ TOP BAR ═══ */}
-      <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
-        <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
-          <div className="flex items-center gap-4 h-14">
-            <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={() => navigate("/mercado")}>
-              <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-9 w-9 rounded-lg object-contain" />
-              <span className="text-lg font-black text-white tracking-tight hidden sm:block">
-                Leilões <span className="text-yellow-200">Viagg-TX8</span>
-              </span>
-              <span className="text-lg font-black text-white tracking-tight sm:hidden">Leilões</span>
-            </div>
-
-            {/* Search */}
-            <div className="flex-1 max-w-2xl mx-auto">
-              <div className="relative flex">
-                <Input
-                  placeholder="Buscar leilões, arremates..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-4 pr-12 py-2 h-10 rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-sm font-medium focus-visible:ring-0"
-                />
-                <button className="px-4 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center">
-                  <Search className="h-5 w-5 text-white" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-white shrink-0">
-              <div className="hidden md:flex items-center gap-4">
-                <div className="text-center">
-                  <p className="text-xs font-black">{listings.length}</p>
-                  <p className="text-[8px] text-white/60 font-bold uppercase">Ativos</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs font-black">{auctionCount}</p>
-                  <p className="text-[8px] text-white/60 font-bold uppercase">Leilões</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs font-black">{arremateCount}</p>
-                  <p className="text-[8px] text-white/60 font-bold uppercase">Arremates</p>
-                </div>
-              </div>
-              {/* Cart */}
-              <button
-                onClick={() => setCartOpen(true)}
-                className={`relative flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                  globalCart.totalItems > 0
-                    ? "bg-white text-[#FF6A00] shadow-lg hover:shadow-xl hover:scale-105"
-                    : "bg-white/15 text-white hover:bg-white/25"
-                }`}
-              >
-                <ShoppingBag className="h-5 w-5" />
-                {globalCart.totalItems > 0 ? (
-                  <>
-                    <span className="text-[11px] font-bold hidden sm:block">
-                      {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
-                    </span>
-                    <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md">
-                      {globalCart.totalItems}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-[11px] font-bold hidden sm:block">Cesta</span>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* City filter pills + Tipo */}
-          <div className="flex items-center gap-2 pb-2 overflow-x-auto scrollbar-hide">
-            <button
-              className={cn("px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all",
-                cityFilter === "all" ? "bg-white text-[#FF6A00] shadow-sm" : "bg-white/15 text-white hover:bg-white/25")}
-              onClick={() => setCityFilter("all")}>
-              Todas Cidades
-            </button>
-            {cities.map(city => (
-              <button key={city}
-                className={cn("px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all flex items-center gap-1",
-                  cityFilter === city ? "bg-white text-[#FF6A00] shadow-sm" : "bg-white/15 text-white hover:bg-white/25")}
-                onClick={() => setCityFilter(city)}>
-                <MapPin className="h-3 w-3" /> {city}
-              </button>
-            ))}
-
-            <div className="w-px h-5 bg-white/30 shrink-0" />
-
-            {/* Back to Mercado */}
-            <button
-              onClick={() => navigate("/mercado")}
-              className="px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all flex items-center gap-1 bg-white/15 text-white hover:bg-white/25 shrink-0"
-            >
-              <Store className="h-3 w-3" /> Mercado
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <MarketLayout
+      search={search}
+      setSearch={setSearch}
+      headerChildren={<MarketNavButtons />}
+      mainClassName="flex flex-col bg-[#F5E62B]"
+      blueFooter
+      blueFooterLabel="🏷️ Leilões"
+      myAccountPath="/minha-conta"
+    >
       {/* ═══ TRUST BAR ═══ */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-6 text-[11px] text-gray-500">
@@ -510,9 +386,28 @@ export default function AuctionListPage() {
         </div>
       </div>
 
-      {/* ═══ TYPE TABS ═══ */}
+      {/* ═══ FILTROS: CIDADE + TIPO ═══ */}
       <div className="bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
+          {/* City filter pills */}
+          <div className="flex items-center gap-2 pt-3 overflow-x-auto scrollbar-hide">
+            <button
+              className={cn("px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all",
+                cityFilter === "all" ? "bg-[#FF6A00] text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-orange-50")}
+              onClick={() => setCityFilter("all")}>
+              Todas Cidades
+            </button>
+            {cities.map(city => (
+              <button key={city}
+                className={cn("px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all flex items-center gap-1",
+                  cityFilter === city ? "bg-[#FF6A00] text-white shadow-sm" : "bg-gray-100 text-gray-500 hover:bg-orange-50")}
+                onClick={() => setCityFilter(city)}>
+                <MapPin className="h-3 w-3" /> {city}
+              </button>
+            ))}
+          </div>
+
+          {/* Type tabs */}
           <div className="flex items-center gap-1 py-3 overflow-x-auto scrollbar-hide">
             {[
               { key: "all" as const, label: "Todos", icon: LayoutGrid, count: listings.length },
@@ -533,9 +428,7 @@ export default function AuctionListPage() {
                 <span className="text-[10px] font-bold whitespace-nowrap">{label}</span>
                 <span className={cn(
                   "absolute -top-1 -right-1 text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1",
-                  filter === key
-                    ? "bg-white text-[#FF6A00]"
-                    : "bg-[#FF6A00] text-white"
+                  filter === key ? "bg-white text-[#FF6A00]" : "bg-[#FF6A00] text-white"
                 )}>
                   {count}
                 </span>
@@ -584,16 +477,6 @@ export default function AuctionListPage() {
           )}
         </div>
       </div>
-
-      {/* ═══ CART DRAWER ═══ */}
-      <GlobalCartDrawer
-        open={cartOpen}
-        onOpenChange={setCartOpen}
-        globalCart={globalCart}
-      />
-
-      {/* ═══ FOOTER ═══ */}
-      <FooterNeutral compact />
-    </div>
+    </MarketLayout>
   );
 }

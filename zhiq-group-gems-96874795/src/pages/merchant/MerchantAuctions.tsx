@@ -19,10 +19,11 @@ import {
   ChevronRight, Package, Loader2, AlertCircle, Crown, Zap, Timer, Edit, Trash2,
   ShoppingBag, ImagePlus, RefreshCw, Search, ClipboardList, Coins, PauseCircle,
   Settings, Calendar, DollarSign, Shield, ArrowUpDown, Truck, MapPin,
-  ToggleLeft, ToggleRight, Save, Hash, X, PlayCircle, ExternalLink
+  ToggleLeft, ToggleRight, Save, Hash, X, PlayCircle, ExternalLink, Megaphone
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
+import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
 
 // ─── Helpers ────────────────────────────
 
@@ -546,6 +547,40 @@ function EditListingModal({
 
   const [activeSection, setActiveSection] = useState<string>("basic");
 
+  // ── ORION Leilões AI: sugestões de setup ──
+  const [aiSug, setAiSug] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const runAi = async () => {
+    if (!listing) return;
+    setAiLoading(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("orion_auction_suggest", {
+        p_owner_user_id: (listing as any).owner_user_id ?? null,
+        p_starting_bid: parseFloat(form.starting_bid) || null,
+        p_category: null,
+        p_listing_id: listing.id,
+      });
+      if (error) throw error;
+      setAiSug(data);
+    } catch (e: any) {
+      toast.error("Não foi possível gerar sugestões: " + (e?.message || ""));
+    } finally {
+      setAiLoading(false);
+    }
+  };
+  const applyAi = () => {
+    if (!aiSug) return;
+    setForm((f) => ({
+      ...f,
+      starting_bid: aiSug.preco_inicial_ideal != null ? String(aiSug.preco_inicial_ideal) : f.starting_bid,
+      minimum_increment: aiSug.incremento_recomendado != null ? String(aiSug.incremento_recomendado) : f.minimum_increment,
+      ends_at: aiSug.duracao_horas
+        ? new Date(Date.now() + aiSug.duracao_horas * 3600000).toISOString().slice(0, 16)
+        : f.ends_at,
+    }));
+    toast.success("Sugestões da IA aplicadas ao formulário");
+  };
+
   useEffect(() => {
     if (listing) {
       setForm({
@@ -638,6 +673,59 @@ function EditListingModal({
         </div>
 
         <div className="px-6 pb-6 space-y-6">
+
+          {/* ═══ ORION LEILÕES AI ═══ */}
+          <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 to-[#1B1F24] p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg">🤖</span>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-black text-violet-200 uppercase tracking-wide">ORION Leilões AI</p>
+                  <p className="text-[10px] text-violet-300/70">Sugestões de preço, incremento, duração e sucesso — você aceita ou ajusta.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={runAi}
+                disabled={aiLoading}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-violet-600 hover:bg-violet-500 text-white transition-all disabled:opacity-50"
+              >
+                {aiLoading ? "Analisando..." : "✨ Sugerir com IA"}
+              </button>
+            </div>
+
+            {aiSug && (
+              <div className="mt-3 space-y-3 animate-in fade-in duration-200">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    ["Melhor horário", String(aiSug.melhor_horario ?? "—")],
+                    ["Duração", (aiSug.duracao_horas ?? 0) + "h"],
+                    ["Preço inicial", "R$ " + (aiSug.preco_inicial_ideal ?? 0)],
+                    ["Incremento", "R$ " + (aiSug.incremento_recomendado ?? 0)],
+                    ["Participantes", "~" + (aiSug.estimativa_participantes ?? 0)],
+                    ["Valor final", "R$ " + (aiSug.estimativa_valor_final ?? 0)],
+                    ["Sucesso", (aiSug.expectativa_sucesso ?? 0) + "%"],
+                    ["Confiança", (aiSug.confianca ?? 0) + "%"],
+                  ].map(([l, v]) => (
+                    <div key={l} className="rounded-xl bg-[#0D0F12] border border-[#2A3038] p-2 text-center">
+                      <p className="text-[8px] font-black text-[#A7B0BE] uppercase tracking-wider">{l}</p>
+                      <p className="text-[12px] font-black text-white truncate">{v}</p>
+                    </div>
+                  ))}
+                </div>
+                {aiSug.evidencia?.nota && (
+                  <p className="text-[9px] text-violet-300/60 leading-snug">{aiSug.evidencia.nota}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={applyAi}
+                  className="w-full py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white transition-all"
+                >
+                  Aplicar sugestões ao formulário
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* ═══ SEÇÃO: BÁSICO ═══ */}
           {activeSection === "basic" && (
@@ -1199,9 +1287,16 @@ export default function MerchantAuctions() {
   }), [myListings, receivedOffers]);
 
   const isLoading = loadingMyListings || loadingOffers;
+  const [showPlans, setShowPlans] = useState(false);
 
   return (
     <div className="px-4 pt-4 pb-28 lg:px-10 xl:px-16 max-w-5xl w-full mx-auto space-y-6">
+      <PromotionPlansModal
+        open={showPlans}
+        onClose={() => setShowPlans(false)}
+        profileType={"leiloes" as any}
+        listingModule="auction"
+      />
       {/* ═══ HEADER ═══ */}
       <div className="flex items-center justify-between bg-[#1B1F24] border border-[#2A3038] p-6 rounded-3xl shadow-2xl shadow-black/40">
         <div className="flex items-center gap-4">
@@ -1222,6 +1317,13 @@ export default function MerchantAuctions() {
             <RefreshCw className={`h-5 w-5 text-[#A7B0BE] ${refreshing ? "animate-spin" : ""}`} />
           </button>
           <button
+            onClick={() => setShowPlans(true)}
+            className="hidden sm:flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#1B1F24] border border-violet-500/40 text-violet-200 font-black text-sm uppercase tracking-wider hover:border-violet-400 hover:text-white active:scale-95 transition-all"
+          >
+            <Megaphone className="h-5 w-5" />
+            Pacotes de Divulgação
+          </button>
+          <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-[#FF6A00]/30 hover:shadow-[#FF6A00]/50 active:scale-95 transition-all"
           >
@@ -1230,6 +1332,15 @@ export default function MerchantAuctions() {
           </button>
         </div>
       </div>
+
+      {/* Botão de pacotes visível também no mobile */}
+      <button
+        onClick={() => setShowPlans(true)}
+        className="sm:hidden w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#1B1F24] border border-violet-500/40 text-violet-200 font-black text-xs uppercase tracking-wider hover:border-violet-400 hover:text-white active:scale-95 transition-all"
+      >
+        <Megaphone className="h-4 w-4" />
+        Pacotes de Divulgação de Leilões
+      </button>
 
       {/* ═══ KPIs ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

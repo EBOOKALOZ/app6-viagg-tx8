@@ -33,6 +33,7 @@ const ALL_PROFILES: Array<{ key: ProfileType | "global" | "all"; label: string; 
   { key: "veiculos", label: "Veículos",            emoji: "🚗" },
   { key: "imoveis",  label: "Imóveis",             emoji: "🏠" },
   { key: "produtos", label: "Produtos",            emoji: "🛍️" },
+  { key: "leiloes" as any, label: "Leilões",       emoji: "🏷️" },
 ];
 
 /* ── Log type ─────────────────────────────────── */

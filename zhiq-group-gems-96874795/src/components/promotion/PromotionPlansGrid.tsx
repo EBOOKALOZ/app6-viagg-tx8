@@ -53,7 +53,8 @@ export const PROFILE_LABELS: Record<ProfileType, { label: string; emoji: string 
   veiculos: { label: "Veículos",             emoji: "🚗" },
   imoveis:  { label: "Imóveis",              emoji: "🏠" },
   produtos: { label: "Produtos",             emoji: "🛍️" },
-};
+  leiloes:  { label: "Leilões",              emoji: "🏷️" },
+} as Record<string, { label: string; emoji: string }>;
 
 /* ── Mapeamento profileType → listingModule (checkout) ─── */
 
@@ -64,6 +65,7 @@ export const PROFILE_MODULE: Record<string, string> = {
   veiculos: "vehicle",
   imoveis:  "realestate",
   produtos: "marketplace",
+  leiloes:  "auction",
 };
 
 /* ── Cor do texto sobre um fundo colorido ────────────────── */

@@ -216,6 +216,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       { name: "Minha Loja", href: "/loja/minha-loja", icon: Store },
     ] : []),
     { name: "Meus Anúncios", href: "/anunciante/meus-anuncios", icon: Package },
+    { name: "Leilões", href: "/anunciante/leiloes", icon: Gavel },
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     ...(showMerchantOnlyItems ? [

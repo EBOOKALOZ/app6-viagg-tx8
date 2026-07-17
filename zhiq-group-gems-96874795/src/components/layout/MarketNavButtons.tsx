@@ -17,6 +17,7 @@ const TOP_ROUTES: { label: string; path: string }[] = [
 const BOTTOM_ROUTES: { label: string; path: string }[] = [
   { label: "Fretes & Mudanças", path: "/fretes" },
   { label: "Viagens & Turismo", path: "/viagens" },
+  { label: "🏷️ Leilões", path: "/leiloes" },
 ];
 
 export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavButtonsProps) {
@@ -57,6 +58,9 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
     if (path === "/viagens") {
       return pathname.startsWith("/viagens");
     }
+    if (path === "/leiloes") {
+      return pathname.startsWith("/leiloes") || pathname.startsWith("/leilao/") || pathname.startsWith("/arremate/");
+    }
     return pathname === path;
   };
 
@@ -93,8 +97,8 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
         })}
       </div>
 
-      {/* Linha Inferior (Botões Horizontais Largos): Fretes & Mudanças | Viagens & Turismo */}
-      <div className="grid grid-cols-2 gap-1.5 sm:gap-2.5 w-full">
+      {/* Linha Inferior (Botões Horizontais Largos): Fretes & Mudanças | Viagens & Turismo | Leilões */}
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full">
         {BOTTOM_ROUTES.map(({ label, path }) => {
           const active = isActive(path);
           return (
