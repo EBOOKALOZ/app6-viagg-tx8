@@ -43,6 +43,7 @@
 | **AI-32** | **Search & Discovery AI** | `search_discovery` | v1 | 🟢 Enterprise | 97 | 07-16 | Marketplace/Trust/BI/Marketing/Sales/Customer/Innovation/Executive (leitura) |
 | **AI-33** | **GEO Optimization AI** | `geo_optimization` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 Search & Discovery (Discovery/Semantic), Marketplace/Marketing/Sales/BI/Publisher (leitura) |
 | **AI-34** | **Knowledge Graph AI** | `knowledge_graph` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 + AI-33 (Discovery/GEO/Semantic), Marketplace/BI/Publisher (leitura). NÃO confundir c/ `orion_knowledge`/`knowledge_engine` do AI-14 |
+| **AI-35** | **Recommendation Intelligence AI** | `recommendation_ai` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 + AI-33 + AI-34 (scores+grafo), Health/Performance/Operations. Fecha a cadeia do Discovery |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 07-14 | — (porta única) |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 07-14 | todos |
 
@@ -55,7 +56,7 @@
 
 ## Regra de nomenclatura (congelada)
 
-Módulos novos recebem o **próximo número livre** (agora **AI-35**). **ORION DISCOVERY ECOSYSTEM** (AI-32..AI-40): **AI-32 Search & Discovery** (`search_discovery`) + **AI-33 GEO Optimization** (`geo_optimization`) + **AI-34 Knowledge Graph** (`knowledge_graph`, coração semântico — distinto do `orion_knowledge`/`knowledge_engine` do AI-14). **AI-31 (Knowledge & Learning AI) segue EM ABERTO/não construído** — o número foi pulado a pedido; quando for feito, usa a chave `knowledge` (não confundir com o motor `knowledge_engine` interno do AI-14). AI-30 = Executive AI/CEO Copilot, chave `executive_copilot` — distinta de AI-12 `executive`. e uma **chave única de módulo** no Gateway/Registry. O número é rótulo humano; a chave é a identidade técnica. Documentos de certificação seguem `DOCS/orion-ai-NN-<slug>-certificacao.md` onde NN e slug batem com a chave. Roadmap 2.x: AI-17+ (benchmark competitivo de preços, feriados no Forecast, migração das 6 edges legadas ao Gateway).
+Módulos novos recebem o **próximo número livre** (agora **AI-36**). **ORION DISCOVERY ECOSYSTEM** (AI-32..AI-40): **AI-32 Search & Discovery** (`search_discovery`) + **AI-33 GEO Optimization** (`geo_optimization`) + **AI-34 Knowledge Graph** (`knowledge_graph`, coração semântico — distinto do `orion_knowledge`/`knowledge_engine` do AI-14) + **AI-35 Recommendation Intelligence** (`recommendation_ai`, fecha a cadeia recomendando com evidência). **AI-31 (Knowledge & Learning AI) segue EM ABERTO/não construído** — o número foi pulado a pedido; quando for feito, usa a chave `knowledge` (não confundir com o motor `knowledge_engine` interno do AI-14). AI-30 = Executive AI/CEO Copilot, chave `executive_copilot` — distinta de AI-12 `executive`. e uma **chave única de módulo** no Gateway/Registry. O número é rótulo humano; a chave é a identidade técnica. Documentos de certificação seguem `DOCS/orion-ai-NN-<slug>-certificacao.md` onde NN e slug batem com a chave. Roadmap 2.x: AI-17+ (benchmark competitivo de preços, feriados no Forecast, migração das 6 edges legadas ao Gateway).
 
 ---
 
