@@ -14,7 +14,7 @@ O **AI-40 Cyber Defense** inaugura a camada de segurança do ORION e serve de **
 | **AI-45** | **Incident Response** | resposta a incidentes: playbooks + timeline + rollback (IRS/ICS/RTS/Recovery; `/admin/orion-incident-response`) | 🟢 v1.0 (2026-07-17) |
 | **AI-46** | **Backup & Disaster Recovery** | continuidade: prova backup íntegro/restaurável + RPO/RTO (BRS/RRS/DIS/CRI; `/admin/orion-backup-recovery`) | 🟢 v1.0 (2026-07-17) |
 | AI-47 | Zero Trust | políticas adaptativas | ⚪ previsto |
-| AI-48 | Compliance & LGPD | conformidade | ⚪ previsto |
+| **AI-48** | **Compliance & LGPD** | governança de privacidade: registro de tratamento + direitos do titular + retenção (CPS/LCS/DRS/PRS; `/admin/orion-compliance`) | 🟢 v1.0 (2026-07-17) |
 | AI-49 | SOC Commander | visão executiva do ecossistema | ⚪ previsto |
 
 ## Contrato compartilhado (fundação do AI-40)
@@ -100,6 +100,19 @@ e faz handoff ao AI-45. **Nunca restaura produção automaticamente** (solicita�
 aprovação humana) e **nunca expõe secrets** (valida só existência). Namespace
 `orion_backup_*`, chave `backup_recovery`, tick `*/15`, `backup_selftest` 8/8.
 Detalhes: `DOCS/orion-ai-46-backup-recovery.md`.
+
+## AI-48 no ecossistema (2026-07-17) — a consciência de privacidade
+
+O AI-48 fecha a camada de governança: registro de tratamento VIVO (art.37), direitos
+do titular com ciclo auditado, retenção medida em dados reais e incidentes de
+privacidade com evidência. **Lê o AI-44** (controles de trilha/MFA — nunca recalcula),
+os sinais do AI-42 e verifica AI-45/46/47 vivos. **Honra o contrato**: incidente de
+privacidade alta/crítica vira `privacy_incident` em `orion_cyber_events` (origem
+`compliance_lgpd`) — o **AI-45** ingere como `config_insegura` e responde. NUNCA
+altera dados pessoais (execução humana registrada) nem expõe dado sensível.
+Namespace `orion_compliance_*`/`orion_lgpd_*`/`orion_data_*`/`orion_privacy_*`,
+chave `compliance_lgpd`, tick `*/15`, `compliance_selftest()` 14 checks (COMANDO
+TESTE). Detalhes: `DOCS/orion-ai-48-compliance-lgpd.md`.
 
 ## Relação AI-24 × AI-40
 

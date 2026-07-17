@@ -463,6 +463,7 @@ BEGIN
       WHEN 'fraud_detection' THEN 'fraude'
       WHEN 'identity_access' THEN 'identidade'
       WHEN 'security_audit'  THEN 'config_insegura'
+      WHEN 'compliance_lgpd' THEN 'config_insegura'  -- incidentes de privacidade (AI-48)
       ELSE 'ataque' END;
     v_dedupe := 'cyber:'||r.event_id;
     v_id := public.incident_open(v_dedupe, left(r.descricao,140), v_cat, coalesce(r.origem,'cyber_defense'),

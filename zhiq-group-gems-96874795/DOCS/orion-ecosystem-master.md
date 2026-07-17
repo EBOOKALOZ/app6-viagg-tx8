@@ -1,4 +1,4 @@
-# ORION AI ECOSYSTEM — DOCUMENTO MESTRE (Single Source of Truth)
+﻿# ORION AI ECOSYSTEM — DOCUMENTO MESTRE (Single Source of Truth)
 
 > **Este é o documento oficial e único de verdade da arquitetura ORION.** Toda auditoria, certificação, desenvolvimento ou manutenção deve usá-lo como referência principal. Inventário extraído da **produção** (`broifhfqmnzqoongtokm`) em 2026-07-14 — não de memória.
 >
@@ -83,6 +83,7 @@
 | AI-44 | Security Audit AI | `security_audit` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | pg_catalog/grants/cron/auth + AI-40/41/10 (leitura) — auditor de postura: 9 categorias, baseline+compliance, findings auto-close; SAS/COS/CIS/ACS+FRR/ACI; NUNCA altera o ambiente; namespace `orion_secaudit_*` | Ativo |
 | AI-45 | Incident Response AI | `incident_response` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | orion_cyber_events (40+41+42+44) + campanhas AI-43 — fecha o funil: incidentes classificados (IRS/ICS/RTS/Recovery), playbooks auditáveis, timeline/evidências imutáveis, rollback preserva histórico; bloqueio SÓ via RPCs guardadas dos irmãos; selftest 17 checks (COMANDO TESTE); namespace `orion_incident_*` | Ativo |
 | AI-47 | Zero Trust AI | `zero_trust` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | AI-42 (IS/ATS/sessões/dispositivos) + AI-40/41/43/44 (risco) + auth.audit (contexto) — camada central de decisão (nunca confiar, sempre verificar): ZTS/CAS/DAS/SAS→RCS→7 decisões por política; avaliação contínua tick `*/2`; decisões+cofre imutáveis, rollback lógico, exceção temporária auditada; selftest 13 checks (COMANDO TESTE); namespace `orion_zero_trust_*` | Ativo |
+| AI-48 | Compliance & LGPD AI | `compliance_lgpd` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | profiles/aceites/auth + AI-42/44/45/46/47 (leitura) — registro de tratamento vivo, direitos do titular auditados, retenção medida, incidentes de privacidade→AI-45; CPS/LCS/DRS/PRS; nunca altera dado pessoal; namespace `orion_compliance_*`/`orion_lgpd_*` | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
