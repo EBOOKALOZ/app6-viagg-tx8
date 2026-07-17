@@ -335,6 +335,7 @@ export const AdminOrionSecurity = lazy(() => import("@/pages/admin/AdminOrionSec
 export const AdminOrionCyberDefense = lazy(() => import("@/pages/admin/AdminOrionCyberDefense"));
 export const AdminOrionSecurityAudit = lazy(() => import("@/pages/admin/AdminOrionSecurityAudit"));
 export const AdminOrionIncidentResponse = lazy(() => import("@/pages/admin/AdminOrionIncidentResponse"));
+export const AdminOrionCompliance = lazy(() => import("@/pages/admin/AdminOrionCompliance"));
 export const AdminOrionCertification = lazy(() => import("@/pages/admin/AdminOrionCertification"));
 export const AdminOrionSales = lazy(() => import("@/pages/admin/AdminOrionSales"));
 export const AdminOrionCustomerSuccess = lazy(() => import("@/pages/admin/AdminOrionCustomerSuccess"));

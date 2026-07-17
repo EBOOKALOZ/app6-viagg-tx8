@@ -189,6 +189,7 @@ const menuSections: MenuSection[] = [
       { title: "Cyber Defense AI", url: "/admin/orion-cyber-defense", icon: ShieldBan, badge: "SECURITY" },
       { title: "Security Audit AI", url: "/admin/orion-security-audit", icon: ClipboardCheck, badge: "AUDIT" },
       { title: "Incident Response AI", url: "/admin/orion-incident-response", icon: Siren, badge: "INCIDENT" },
+      { title: "Compliance & LGPD AI", url: "/admin/orion-compliance", icon: Scale, badge: "COMPLIANCE" },
       { title: "Search & Discovery AI", url: "/admin/orion-search-discovery", icon: Search, badge: "BUSCA" },
       { title: "GEO Optimization AI", url: "/admin/orion-geo", icon: Globe, badge: "GEO" },
       { title: "Knowledge Graph AI", url: "/admin/orion-knowledge-graph", icon: Share2, badge: "GRAFO" },

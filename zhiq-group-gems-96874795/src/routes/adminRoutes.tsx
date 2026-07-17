@@ -121,6 +121,7 @@ import {
   AdminOrionCyberDefense,
   AdminOrionSecurityAudit,
   AdminOrionIncidentResponse,
+  AdminOrionCompliance,
   AdminOrionCertification,
   AdminOrionSales,
   AdminOrionCustomerSuccess,
@@ -299,6 +300,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-cyber-defense" element={<AdminOrionCyberDefense />} />
       <Route path="/admin/orion-security-audit" element={<AdminOrionSecurityAudit />} />
       <Route path="/admin/orion-incident-response" element={<AdminOrionIncidentResponse />} />
+      <Route path="/admin/orion-compliance" element={<AdminOrionCompliance />} />
       <Route path="/admin/orion-certification" element={<AdminOrionCertification />} />
       <Route path="/admin/orion-sales" element={<AdminOrionSales />} />
       <Route path="/admin/orion-customer-success" element={<AdminOrionCustomerSuccess />} />
