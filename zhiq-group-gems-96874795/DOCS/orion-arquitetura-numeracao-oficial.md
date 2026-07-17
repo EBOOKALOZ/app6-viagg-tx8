@@ -45,6 +45,7 @@
 | **AI-34** | **Knowledge Graph AI** | `knowledge_graph` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 + AI-33 (Discovery/GEO/Semantic), Marketplace/BI/Publisher (leitura). NÃO confundir c/ `orion_knowledge`/`knowledge_engine` do AI-14 |
 | **AI-35** | **Recommendation Intelligence AI** | `recommendation_ai` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 + AI-33 + AI-34 (scores+grafo), Health/Performance/Operations. Fecha a cadeia do Discovery |
 | **AI-36** | **AI Visibility & Answer Intelligence** | `ai_visibility` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32/33/34/35 + AI-20 Trust (leitura). Mede AIS/AQS (prontidão p/ IA) |
+| **AI-37** | **AI Cost & Intelligence Center** | `ai_center` | v1 | 🟢 Enterprise | 97 | 07-16 | Gateway (orion_ai_log/cache/models) + pay_* (leitura). FinOps: custos/ROI/KPIs/forecast/simulador |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 07-14 | — (porta única) |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 07-14 | todos |
 

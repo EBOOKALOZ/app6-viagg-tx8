@@ -74,6 +74,7 @@
 | AI-34 | Knowledge Graph AI | `knowledge_graph` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | AI-32 + AI-33 (Discovery/GEO/Semantic), Marketplace/BI/Publisher (leitura) | Ativo |
 | AI-35 | Recommendation Intelligence AI | `recommendation_ai` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | AI-32 + AI-33 + AI-34 (scores+grafo), Health/Performance/Operations | Ativo |
 | AI-36 | AI Visibility & Answer Intelligence | `ai_visibility` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | AI-32/33/34/35 + AI-20 Trust (leitura) — AIS/AQS | Ativo |
+| AI-37 | AI Cost & Intelligence Center | `ai_center` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | Gateway (orion_ai_log) + pay_* — FinOps/ROI/KPIs/forecast | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
