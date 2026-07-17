@@ -180,7 +180,7 @@ export function ImpulsionarCampaignModal({
                 Criar Nova Campanha de Divulgação
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Configure alcance, público-alvo e impulsione seus serviços com IA
+                Configure alcance, público-alvo e impulsione seus serviços com o Viagg-TX8™
               </p>
             </div>
           </div>
@@ -237,7 +237,7 @@ export function ImpulsionarCampaignModal({
                       Assistente de Criação RIDV
                     </h4>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                      Gere títulos persuasivos, descrições vendedoras e hashtags com Inteligência Artificial.
+                      Gere títulos persuasivos, descrições vendedoras e hashtags com o Viagg-TX8™.
                     </p>
                   </div>
                 </div>
@@ -248,7 +248,7 @@ export function ImpulsionarCampaignModal({
                   size="sm"
                   className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-md shrink-0 w-full sm:w-auto"
                 >
-                  {aiLoading === 'text' ? '✨ Gerando com IA...' : '✨ IA: Gerar Título & Descrição'}
+                  {aiLoading === 'text' ? '✨ Gerando com Viagg-TX8™...' : '✨ Viagg-TX8™: Gerar Título & Descrição'}
                 </Button>
               </div>
 
@@ -442,7 +442,7 @@ export function ImpulsionarCampaignModal({
               <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-300">
                   <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>Dica da IA: Horários de pico (10:30–23:30) geram +45% mais cliques na sua região.</span>
+                  <span>Dica do Viagg-TX8™: Horários de pico (10:30–23:30) geram +45% mais cliques na sua região.</span>
                 </div>
                 <Button
                   type="button"

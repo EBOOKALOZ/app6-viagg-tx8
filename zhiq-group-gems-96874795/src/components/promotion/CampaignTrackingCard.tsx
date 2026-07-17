@@ -14,6 +14,7 @@
 import { useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrencyBRL } from "@/lib/utils";
 import {
   addMinutes, addDays, differenceInDays, differenceInMinutes,
@@ -24,7 +25,7 @@ import {
   Pin, Clock, CheckCircle2, Zap, Star, Bike, Car,
   MessageCircle, BarChart2, CalendarClock, Repeat2, BrainCircuit,
   TrendingUp, Eye, MousePointerClick, Store, Sparkles, Loader2,
-  AlertCircle, Timer, Users, Shield, Package, Radio,
+  AlertCircle, Timer, Users, Shield, Package,
   ArrowRight, Globe, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -273,6 +274,9 @@ interface Props {
 export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect, selectedMode }: Props) {
   const queryClient = useQueryClient();
   const { data, isLoading } = useCampaignData(userId, category ?? null);
+  const { user: authUser, avatarUrl } = useAuth();
+  const userAvatar =
+    avatarUrl || (authUser?.user_metadata?.avatar_url as string) || (authUser?.user_metadata?.picture as string) || null;
 
   // Realtime updates
   useEffect(() => {
@@ -333,7 +337,7 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
         { label: "Relatórios Inteligentes", active: true, icon: BarChart2 },
         { label: "SmartCard Premium", active: true, icon: Package },
         { label: "Divulgação pelos Postadores", active: true, icon: Users },
-        { label: "IA GLM Prioridade Alta", active: priority >= 2, icon: BrainCircuit },
+        { label: "Prioridade Alta Viagg-TX8™", active: priority >= 2, icon: BrainCircuit },
         { label: "Todas as Redes Sociais", active: false, icon: Globe },
       ]
     : [
@@ -345,7 +349,7 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
         { label: "Produto Promovido (badge 📌)", active: false, icon: Star },
         { label: "Relatórios Avançados", active: false, icon: BarChart2 },
         { label: "Frequência Maior (a cada 60min)", active: false, icon: Repeat2 },
-        { label: "Prioridade Alta IA GLM", active: false, icon: BrainCircuit },
+        { label: "Prioridade Alta Viagg-TX8™", active: false, icon: BrainCircuit },
       ];
 
   return (
@@ -359,12 +363,12 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           {/* Icon + title */}
           <div className="flex items-center gap-3 flex-1">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden ${
               isPaid
                 ? "bg-[#FF6A00]/20 border border-[#FF6A00]/40"
                 : "bg-emerald-500/15 border border-emerald-500/30"
             }`}>
-              {isPaid ? <Sparkles className="w-6 h-6 text-[#FF6A00]" /> : <Radio className="w-6 h-6 text-emerald-400" />}
+              <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover" />
             </div>
             <div>
               <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 ${isPaid ? "text-[#FF6A00]" : "text-emerald-400"}`}>
@@ -389,15 +393,7 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
                 {formatCurrencyBRL(purchaseAmount)} investidos
               </span>
             )}
-            {!isPaid && onUpgrade && (
-              <button
-                onClick={onUpgrade}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide bg-[#EAB308] text-black hover:bg-yellow-400 transition-all"
-              >
-                <Sparkles className="w-3 h-3" />
-                Fazer Upgrade
-              </button>
-            )}
+            {/* CTA de upgrade fica só no card grande abaixo — sem duplicidade */}
           </div>
         </div>
       </div>
@@ -405,11 +401,12 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
       {/* ── CTAs grandes: escolha obrigatória ── */}
       <div className="mx-4 sm:mx-6 mb-1">
         <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#A7B0BE]/60 mb-2 text-center">
-          Escolha como deseja divulgar antes de enviar
+          {isPaid ? "Seu plano de divulgação" : "Escolha como deseja divulgar antes de enviar"}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className={`grid grid-cols-1 ${isPaid ? "" : "sm:grid-cols-2"} gap-3`}>
 
-          {/* Botão 1: Divulgar Grátis */}
+          {/* Botão 1: Divulgar Grátis — escondido para quem já tem plano pago */}
+          {!isPaid && (
           <button
             onClick={onFreeSelect}
             className={`group flex items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all active:scale-[0.98] ${
@@ -418,12 +415,12 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
                 : "border-emerald-500/40 bg-gradient-to-br from-emerald-500/8 to-[#0D0F12] hover:border-emerald-500/70 hover:from-emerald-500/16"
             }`}
           >
-            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all ${
+            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all overflow-hidden ${
               selectedMode === "free"
                 ? "bg-emerald-500/30 border-emerald-400"
                 : "bg-emerald-500/15 border-emerald-500/30 group-hover:bg-emerald-500/25"
             }`}>
-              <Radio className="w-6 h-6 text-emerald-400" />
+              <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-400 mb-0.5">
@@ -433,7 +430,7 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
                 Divulgar Grátis
               </p>
               <p className="text-[#A7B0BE] text-[11px] mt-0.5">
-                1 anúncio por dia • IA GLM distribui automaticamente
+                1 anúncio por dia • IA distribui automaticamente
               </p>
             </div>
             {selectedMode === "free"
@@ -441,8 +438,9 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
               : <div className="w-5 h-5 rounded-full border-2 border-[#2A3038] shrink-0" />
             }
           </button>
+          )}
 
-          {/* Botão 2: Upgrade */}
+          {/* Botão 2: Upgrade (sem plano) / Plano Ativo (com plano) */}
           {onUpgrade && (
             <button
               onClick={() => { onUpgrade(); }}
@@ -452,25 +450,31 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
                   : "border-[#FF6A00]/40 bg-gradient-to-br from-[#FF6A00]/8 to-[#0D0F12] hover:border-[#FF6A00]/70 hover:from-[#FF6A00]/16"
               }`}
             >
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all ${
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all overflow-hidden ${
                 selectedMode === "paid"
                   ? "bg-[#FF6A00]/30 border-[#FF6A00]"
                   : "bg-[#FF6A00]/15 border-[#FF6A00]/30 group-hover:bg-[#FF6A00]/25"
               }`}>
-                <Sparkles className="w-6 h-6 text-[#FF6A00]" />
+                {userAvatar ? (
+                  <img src={userAvatar} alt="Sua foto" className="w-full h-full object-cover" />
+                ) : (
+                  <Sparkles className="w-6 h-6 text-[#FF6A00]" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#FF6A00] mb-0.5">
-                  Plano Pago · Até 30×/dia
+                  {isPaid ? "Plano Pago · Ativo" : "Plano Pago · Até 30×/dia"}
                 </p>
                 <p className="text-[#F5F7FA] font-black text-sm leading-tight">
-                  Fazer Upgrade
+                  {isPaid ? `Plano ${planName} Ativo` : "Fazer Upgrade"}
                 </p>
                 <p className="text-[#A7B0BE] text-[11px] mt-0.5">
-                  Mais alcance, prioridade alta e relatórios completos
+                  {isPaid
+                    ? "Sua campanha está rodando — acompanhe no painel abaixo ou renove aqui"
+                    : "Mais alcance, prioridade alta e relatórios completos"}
                 </p>
               </div>
-              {selectedMode === "paid"
+              {isPaid || selectedMode === "paid"
                 ? <CheckCircle2 className="w-5 h-5 text-[#FF6A00] shrink-0" />
                 : <ArrowRight className="w-5 h-5 text-[#FF6A00] shrink-0 group-hover:translate-x-0.5 transition-transform" />
               }
@@ -478,8 +482,8 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
           )}
         </div>
 
-        {/* Aviso se nada selecionado */}
-        {!selectedMode && (
+        {/* Aviso se nada selecionado (só para quem ainda não tem plano) */}
+        {!selectedMode && !isPaid && (
           <p className="mt-2 text-center text-[11px] text-amber-400/80 font-bold">
             ⚠ Escolha uma opção acima para liberar o envio
           </p>
@@ -612,9 +616,9 @@ export function CampaignTrackingCard({ userId, category, onUpgrade, onFreeSelect
           )}
         </div>
 
-        {/* 5 — IA GLM */}
+        {/* 5 — Análise Inteligente */}
         <div className="rounded-2xl bg-[#0D0F12] border border-[#2A3038] p-4">
-          <SectionTitle icon={<BrainCircuit className="w-4 h-4 text-violet-400" />} label="🤖 IA GLM" />
+          <SectionTitle icon={<BrainCircuit className="w-4 h-4 text-violet-400" />} label="Análise Viagg-TX8™" />
           <div className="space-y-3">
             <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-3">
               <p className="text-[12px] text-[#C9D2DE] leading-relaxed italic">"{glmMsg}"</p>

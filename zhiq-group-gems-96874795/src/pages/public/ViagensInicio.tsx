@@ -82,9 +82,9 @@ const PROFILES: ProfileCard[] = [
   {
     id:           "ia",
     emoji:        "🤖",
-    title:        "ASSISTENTE IA",
+    title:        "ASSISTENTE VIAGG-TX8™",
     subtitle:     "INTELIGENTE",
-    description:  "Atendimento 24h, roteiros personalizados, sugestões de passeios e dicas turísticas com IA.",
+    description:  "Atendimento 24h, roteiros personalizados, sugestões de passeios e dicas turísticas com o Viagg-TX8™.",
     benefits:     [
       "Disponível 24 horas",
       "Dúvidas sobre roteiros e destinos",

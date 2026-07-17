@@ -335,7 +335,7 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
         }
 
         // Envio obrigatório pela RIDV (nenhuma imagem vai para o bucket sem aprovação)
-        addLog("RIDV", `Analisando imagem com IA: ${file.name}`);
+        addLog("RIDV", `Analisando imagem com o Viagg-TX8™: ${file.name}`);
         const modRes = await moderatedUpload(uploadBlob, {
           fileName: file.name,
           mime: 'image/jpeg',
@@ -346,7 +346,7 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
 
         if (modRes.status === 'blocked') {
           addLog("RIDV-BLOCKED", `${file.name}: ${modRes.reason}`);
-          toast.error(`Imagem recusada pela IA: ${modRes.reason}`);
+          toast.error(`Imagem recusada pelo Viagg-TX8™: ${modRes.reason}`);
           setUploadedImages(prev => prev.filter(img => img.id !== tempId));
           continue;
         }
@@ -373,7 +373,7 @@ export const PropertyImageUpload: React.FC<PropertyImageUploadProps> = ({
           const publicUrl = modRes.publicUrl || getListingImageUrl(finalPath, 'public', Date.now());
           setUploadedImages(prev => [{ id: mediaId, path: finalPath, previewUrl: publicUrl }, ...prev]);
           if (onUploadComplete) onUploadComplete(mediaId, finalPath);
-          toast.success("Imagem aprovada pela IA RIDV.");
+          toast.success("Imagem aprovada pelo Viagg-TX8™.");
         } else {
           toast.info("Imagem retida na quarentena para revisão manual (RIDV).");
         }

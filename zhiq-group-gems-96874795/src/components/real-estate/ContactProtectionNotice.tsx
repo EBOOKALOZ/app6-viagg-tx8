@@ -37,7 +37,7 @@ export const ContactProtectionNotice = () => {
           <div className="space-y-1 min-w-0">
             <h4 className="font-bold text-zinc-900 text-sm">Imagens Protegidas</h4>
             <p className="text-zinc-600 text-xs leading-relaxed break-words">
-              Nossa IA detecta e <strong>mascara automaticamente</strong> contatos em placas, banners ou marcas d'água nas suas fotos.
+              O Viagg-TX8™ detecta e <strong>mascara automaticamente</strong> contatos em placas, banners ou marcas d'água nas suas fotos.
             </p>
           </div>
         </div>

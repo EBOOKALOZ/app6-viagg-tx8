@@ -264,7 +264,7 @@ export default function ViagemForm() {
           }
 
           if (modRes.status === 'blocked') {
-            toast({ title: "Foto bloqueada pela IA RIDV", description: modRes.reason, variant: "destructive" });
+            toast({ title: "Foto bloqueada pelo Viagg-TX8™", description: modRes.reason, variant: "destructive" });
             continue;
           }
 
@@ -439,7 +439,7 @@ export default function ViagemForm() {
           }
 
           if (modRes.status === 'blocked') {
-            toast({ title: "Foto bloqueada pela IA RIDV", description: modRes.reason, variant: "destructive" });
+            toast({ title: "Foto bloqueada pelo Viagg-TX8™", description: modRes.reason, variant: "destructive" });
             return;
           }
 
@@ -564,14 +564,14 @@ export default function ViagemForm() {
               className="flex items-center gap-1 text-[11px] font-bold text-violet-600 hover:text-violet-800 transition-colors"
             >
               <Sparkles className="h-3 w-3" />
-              Gerar com IA
+              Gerar com Viagg-TX8™
             </button>
           </div>
 
           {/* Painel IA inline */}
           {glmOpen && (
             <div className="mb-2 rounded-xl border border-violet-200 bg-violet-50 p-3 space-y-2">
-              <p className="text-[11px] font-bold text-violet-700">Descreva o pacote para a IA gerar o texto:</p>
+              <p className="text-[11px] font-bold text-violet-700">Descreva o pacote para o Viagg-TX8™ gerar o texto:</p>
               <Textarea
                 value={glmPrompt}
                 onChange={e => setGlmPrompt(e.target.value)}

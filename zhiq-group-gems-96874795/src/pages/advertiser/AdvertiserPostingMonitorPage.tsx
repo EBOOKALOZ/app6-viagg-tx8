@@ -27,7 +27,7 @@ import { AIDecisionButton } from "@/components/monitor/AIDecisionModal";
 const STATUS_FILTERS = [
   { value: "all",       label: "Todos"       },
   { value: "queued",    label: "Na Fila"     },
-  { value: "generating",label: "Gerando IA"  },
+  { value: "generating",label: "Gerando"      },
   { value: "posting",   label: "Publicando"  },
   { value: "completed", label: "Concluídas"  },
   { value: "error",     label: "Com Erro"    },

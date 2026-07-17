@@ -55,7 +55,7 @@ export function ImpulsionarProfileContent({ profileType }: ImpulsionarProfileCon
           tips: [
             "Restaurantes e lanchonetes têm maior adesão nos horários próximos às 11h e 18h.",
             "Cada novo comércio ativado na sua região garante comissão recorrente nas 10 primeiras entregas.",
-            "Utilize as legendas geradas por Inteligência Artificial para aumentar o engajamento nos grupos."
+            "Utilize as legendas geradas pelo Viagg-TX8™ para aumentar o engajamento nos grupos."
           ]
         };
     }

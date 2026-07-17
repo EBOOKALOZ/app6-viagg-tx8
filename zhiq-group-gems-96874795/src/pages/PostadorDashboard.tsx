@@ -273,7 +273,7 @@ export default function PostadorDashboard() {
           className="px-5 py-3 rounded-2xl bg-zinc-900 hover:bg-black text-white font-black text-xs shadow-lg flex items-center gap-2 shrink-0 transition-all hover:scale-105 active:scale-95"
         >
           <Rocket className="h-4 w-4 text-orange-400" />
-          Nova Campanha (com IA)
+          Nova Campanha (com Viagg-TX8™)
         </button>
       </div>
 

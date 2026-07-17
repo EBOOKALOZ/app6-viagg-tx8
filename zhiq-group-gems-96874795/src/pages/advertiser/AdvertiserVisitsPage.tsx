@@ -50,9 +50,9 @@ const CREDIT_COSTS: Record<string, { cost: number; label: string; icon: React.El
 const PLANS = [
   { name: "Gratuito",    credits: 30,   price: 0,    priceLabel: "Grátis",    color: "#6B7280", features: ["30 créditos de boas-vindas", "Básico"] },
   { name: "Básico",      credits: 100,  price: 19.9, priceLabel: "R$ 19,90",  color: "#3B82F6", features: ["100 créditos", "Validade 30 dias", "Relatórios básicos"] },
-  { name: "Profissional",credits: 300,  price: 49.9, priceLabel: "R$ 49,90",  color: "#FF6A00", features: ["300 créditos", "Validade 60 dias", "IA analítica", "Relatórios completos"], recommended: true },
-  { name: "Premium",     credits: 600,  price: 89.9, priceLabel: "R$ 89,90",  color: "#8B5CF6", features: ["600 créditos", "Validade 90 dias", "IA avançada", "Suporte prioritário"] },
-  { name: "Empresarial", credits: 1500, price: 199,  priceLabel: "R$ 199,00", color: "#F59E0B", features: ["1500 créditos", "Validade 180 dias", "IA ilimitada", "Gerente dedicado"] },
+  { name: "Profissional",credits: 300,  price: 49.9, priceLabel: "R$ 49,90",  color: "#FF6A00", features: ["300 créditos", "Validade 60 dias", "Análise Viagg-TX8™", "Relatórios completos"], recommended: true },
+  { name: "Premium",     credits: 600,  price: 89.9, priceLabel: "R$ 89,90",  color: "#8B5CF6", features: ["600 créditos", "Validade 90 dias", "Análise Viagg-TX8™ avançada", "Suporte prioritário"] },
+  { name: "Empresarial", credits: 1500, price: 199,  priceLabel: "R$ 199,00", color: "#F59E0B", features: ["1500 créditos", "Validade 180 dias", "Análise Viagg-TX8™ ilimitada", "Gerente dedicado"] },
 ];
 
 // ── Formatadores ──────────────────────────────────────────────────────────────
@@ -383,7 +383,7 @@ Foque em: horários de pico, produtos com maior potencial, quando o saldo pode a
             { key: "overview", label: "Visão Geral",  icon: BarChart3    },
             { key: "credits",  label: "Créditos",     icon: Coins        },
             { key: "history",  label: "Histórico",    icon: Clock        },
-            { key: "ai",       label: "IA Analítica", icon: BrainCircuit },
+            { key: "ai",       label: "Análise Viagg-TX8™", icon: BrainCircuit },
           ] as const).map((t) => {
             const Icon = t.icon;
             return (
@@ -798,7 +798,7 @@ Foque em: horários de pico, produtos com maior potencial, quando o saldo pode a
                   <BrainCircuit className="w-6 h-6 text-indigo-600" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-base font-black text-gray-900">IA Analítica VIAGG</h2>
+                  <h2 className="text-base font-black text-gray-900">Análise Viagg-TX8™</h2>
                   <p className="text-sm text-gray-500 mt-0.5 mb-4">
                     Análise inteligente do comportamento da sua loja, projeção de créditos e recomendações personalizadas.
                   </p>
@@ -810,7 +810,7 @@ Foque em: horários de pico, produtos com maior potencial, quando o saldo pode a
                     >
                       {aiLoading
                         ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando dados…</>
-                        : <><Zap className="w-4 h-4" /> Gerar Insights com IA</>
+                        : <><Zap className="w-4 h-4" /> Gerar Insights com Viagg-TX8™</>
                       }
                     </button>
                   ) : (

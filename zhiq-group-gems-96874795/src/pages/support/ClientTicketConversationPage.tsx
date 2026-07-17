@@ -156,9 +156,9 @@ export default function ClientTicketConversationPage() {
         setIsRequestingAI(true);
         try {
             await supabase.functions.invoke('support-ai', { body: { ticket_id: id } });
-            toast.success('GLM IA está analisando seu chamado...');
+            toast.success('A IA está analisando seu chamado...');
         } catch {
-            toast.error('Erro ao solicitar análise da IA.');
+            toast.error('Erro ao solicitar análise do Viagg-TX8™.');
         } finally {
             setIsRequestingAI(false);
         }
@@ -278,7 +278,7 @@ export default function ClientTicketConversationPage() {
                 {/* GLM indicator */}
                 <div className="shrink-0 flex items-center gap-1 bg-white/15 rounded-full px-2 py-1">
                     <Brain className="h-3 w-3 text-white/90" />
-                    <span className="text-[10px] text-white/90 font-semibold">GLM IA</span>
+                    <span className="text-[10px] text-white/90 font-semibold">IA Viagg</span>
                 </div>
             </div>
 
@@ -299,7 +299,7 @@ export default function ClientTicketConversationPage() {
                 <div className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-3 py-2 mb-4">
                     <Sparkles className="h-3.5 w-3.5 text-violet-500 shrink-0" />
                     <p className="text-[11px] text-violet-700 font-medium">
-                        Este chamado conta com análise automática da <strong>GLM IA</strong>. Respostas podem ser geradas pela IA ou por nossa equipe.
+                        Este chamado conta com análise automática do <strong>Viagg-TX8™</strong>. Respostas podem ser geradas pelo Viagg-TX8™ ou por nossa equipe.
                     </p>
                 </div>
 
@@ -347,7 +347,7 @@ export default function ClientTicketConversationPage() {
                                                 ? 'text-left text-violet-600/80 ml-9'
                                                 : 'text-left text-muted-foreground/70 ml-9'
                                     )}>
-                                        {isClient ? 'Você' : msg.is_ai ? '✨ GLM IA' : 'Suporte'}
+                                        {isClient ? 'Você' : msg.is_ai ? '✨ IA Viagg' : 'Suporte'}
                                     </div>
                                 )}
 
@@ -387,7 +387,7 @@ export default function ClientTicketConversationPage() {
                                                 {msg.is_ai && (
                                                     <div className="flex items-center gap-1 mb-2 pb-2 border-b border-violet-200">
                                                         <Sparkles className="h-3 w-3 text-violet-500" />
-                                                        <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Resposta GLM IA</span>
+                                                        <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Resposta do Viagg-TX8™</span>
                                                     </div>
                                                 )}
 
@@ -535,7 +535,7 @@ export default function ClientTicketConversationPage() {
                                 ? <Loader2 className="h-3 w-3 animate-spin" />
                                 : <Brain className="h-3 w-3" />
                             }
-                            {isRequestingAI ? 'GLM IA analisando...' : '✨ Solicitar análise da GLM IA'}
+                            {isRequestingAI ? 'Viagg-TX8™ analisando...' : '✨ Solicitar análise do Viagg-TX8™'}
                         </button>
 
                         <div className="relative flex items-center justify-center gap-2 w-full">

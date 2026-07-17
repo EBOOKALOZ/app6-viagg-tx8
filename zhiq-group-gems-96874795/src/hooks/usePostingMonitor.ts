@@ -130,7 +130,7 @@ export const MONITOR_STATUS_CONFIG: Record<string, {
 
 export const PIPELINE_STAGES = [
   { key: "queued",            label: "Na Fila",         icon: "list-ordered" },
-  { key: "in_analysis",       label: "Análise da IA",   icon: "brain"        },
+  { key: "in_analysis",       label: "Análise Viagg-TX8™", icon: "brain"     },
   { key: "approved",          label: "Aprovado",        icon: "check"        },
   { key: "scheduling",        label: "Scheduler",       icon: "clock"        },
   { key: "sent_to_postador",  label: "Enviado",         icon: "send"         },

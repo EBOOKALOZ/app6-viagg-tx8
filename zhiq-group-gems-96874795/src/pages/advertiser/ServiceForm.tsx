@@ -90,7 +90,7 @@ export const ServiceForm = () => {
   const [generatingDesc, setGeneratingDesc] = useState(false);
   const handleGenerateDescription = async () => {
     if (!serviceData.title.trim()) {
-      toast.error('Preencha o título antes de gerar a descrição com IA.');
+      toast.error('Preencha o título antes de gerar a descrição com o Viagg-TX8™.');
       return;
     }
     setGeneratingDesc(true);
@@ -101,9 +101,9 @@ export const ServiceForm = () => {
         'Valor': serviceData.price_label,
       });
       setServiceData(prev => ({ ...prev, description: desc }));
-      toast.success('Descrição gerada com IA!');
+      toast.success('Descrição gerada com o Viagg-TX8™!');
     } catch (err: any) {
-      toast.error(err.message || 'Falha ao gerar descrição com IA.');
+      toast.error(err.message || 'Falha ao gerar descrição com o Viagg-TX8™.');
     } finally {
       setGeneratingDesc(false);
     }
@@ -316,7 +316,7 @@ export const ServiceForm = () => {
           }
 
           if (modRes.status === 'blocked') {
-            toast.error(`Foto "${file.name}" bloqueada pela IA RIDV: ${modRes.reason}`);
+            toast.error(`Foto "${file.name}" bloqueada pelo Viagg-TX8™: ${modRes.reason}`);
             failures++;
             continue;
           }
@@ -483,7 +483,7 @@ export const ServiceForm = () => {
                     className="rounded-xl gap-1.5 text-xs h-8 shrink-0 bg-orange-500 hover:bg-orange-600 text-white border-0"
                   >
                     {generatingDesc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {generatingDesc ? 'Gerando...' : 'Gerar com IA'}
+                    {generatingDesc ? 'Gerando...' : 'Gerar com Viagg-TX8™'}
                   </Button>
                 </div>
                 <Textarea

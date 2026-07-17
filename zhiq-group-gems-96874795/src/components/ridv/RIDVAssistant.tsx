@@ -93,7 +93,7 @@ export function RIDVAssistant({ message = DEFAULT_MESSAGE, compact = false }: RI
           <div className="flex items-center gap-2">
             <Radio className="h-3.5 w-3.5 text-[#A7B0BE]/35" />
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#A7B0BE]/35">
-              Sugestões da IA
+              Sugestões do Viagg-TX8™
             </p>
           </div>
 

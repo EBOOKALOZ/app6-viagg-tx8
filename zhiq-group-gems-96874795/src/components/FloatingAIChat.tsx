@@ -166,7 +166,7 @@ export function FloatingAIChat() {
               'bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700',
               'text-white'
             )}
-            aria-label="Abrir chat com IA"
+            aria-label="Abrir chat Viagg-TX8™"
           >
             <Sparkles className="h-6 w-6" />
             {/* Notification badge */}
@@ -209,7 +209,7 @@ export function FloatingAIChat() {
                   <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-purple-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Viagg IA</h3>
+                  <h3 className="text-sm font-semibold text-white">Viagg-TX8™</h3>
                   <p className="text-[11px] text-white/70">Assistente virtual • Online</p>
                 </div>
               </div>
@@ -332,7 +332,7 @@ export function FloatingAIChat() {
                 </button>
               </div>
               <p className="mt-2 text-center text-[10px] text-slate-600">
-                Powered by <span className="text-violet-400/80">AIAPI.world</span> • Viagg IA
+                Viagg-TX8™
               </p>
             </div>
           </motion.div>

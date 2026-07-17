@@ -609,7 +609,7 @@ export function PromotionActiveDashboard({ userId }: Props) {
         {/* 9 — IA GLM */}
         <SectionCard
           icon={<BrainCircuit className="w-4 h-4 text-violet-400" />}
-          title="🤖 IA GLM — Análise da Campanha"
+          title="Análise Viagg-TX8™ da Campanha"
         >
           <div className="rounded-xl bg-violet-500/10 border border-violet-500/20 p-3 space-y-2">
             <p className="text-[12px] text-[#C9D2DE] leading-relaxed">

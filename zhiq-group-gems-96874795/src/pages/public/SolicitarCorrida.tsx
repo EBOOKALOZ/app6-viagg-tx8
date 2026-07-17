@@ -909,7 +909,7 @@ export default function SolicitarCorrida() {
               <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 border border-indigo-500/20 rounded-2xl p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <BrainCircuit className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-xs font-bold text-indigo-300">Fale com a IA — para onde?</span>
+                  <span className="text-xs font-bold text-indigo-300">Fale com o Viagg-TX8™ — para onde?</span>
                 </div>
                 <div className="flex gap-2">
                   <input value={aiSearch} onChange={(e) => setAiSearch(e.target.value)}

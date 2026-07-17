@@ -102,7 +102,7 @@ export const VehicleImageUpload: React.FC<VehicleImageUploadProps> = ({
         });
 
         if (modRes.status === 'blocked') {
-          toast.error(`Imagem recusada pela IA: ${modRes.reason}`);
+          toast.error(`Imagem recusada pelo Viagg-TX8™: ${modRes.reason}`);
           continue;
         }
 

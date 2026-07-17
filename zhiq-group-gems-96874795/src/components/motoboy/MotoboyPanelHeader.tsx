@@ -175,7 +175,7 @@ export function MotoboyPanelHeader({
 
               <nav className="flex flex-col gap-1 px-4">
                 <button
-                  onClick={() => { setMenuOpen(false); window.location.href = "/support"; }}
+                  onClick={() => { setMenuOpen(false); window.location.href = "/suporte"; }}
                   className="flex items-center gap-3 py-3.5 px-3 rounded-lg text-white font-medium transition-colors hover:bg-white/10 cursor-pointer"
                 >
                   <HelpCircle className="h-5 w-5 text-white/80" />

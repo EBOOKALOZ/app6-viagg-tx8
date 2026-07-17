@@ -105,7 +105,7 @@ export default function AdvertiserNewListingPage() {
             </div>
             <div className="space-y-0.5">
               <h4 className="text-lg font-black text-zinc-900 uppercase tracking-tight leading-none">Venda Inteligente</h4>
-              <p className="text-zinc-500 text-sm font-medium">Nossa IA ajuda a analisar as fotos e sugerir preços.</p>
+              <p className="text-zinc-500 text-sm font-medium">O Viagg-TX8™ ajuda a analisar as fotos e sugerir preços.</p>
             </div>
          </div>
          <Button variant="outline" className="h-14 px-8 rounded-2xl border-emerald-200 bg-white text-emerald-600 font-black uppercase text-xs tracking-widest hover:bg-emerald-600 hover:text-white transition-all">

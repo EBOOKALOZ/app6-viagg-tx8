@@ -76,7 +76,7 @@ export function PanelHeader({ icon: Icon, label, children, className }: PanelHea
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            onClick={() => navigate('/support')}
+            onClick={() => navigate('/suporte')}
             title="Suporte"
           >
             <HelpCircle className="h-3 w-3" />

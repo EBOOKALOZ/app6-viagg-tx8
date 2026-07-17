@@ -202,7 +202,7 @@ Mantenha o texto bem formatado e fácil de ler.`;
             setShowPreview(true);
         } catch (error) {
             console.error("Erro ao gerar texto:", error);
-            toast.error("Erro ao gerar texto com IA. Tente novamente.");
+            toast.error("Erro ao gerar texto com o Viagg-TX8™. Tente novamente.");
             setPreviewText(buildLotMessage(lot));
             setShowPreview(true);
         } finally {
@@ -379,7 +379,7 @@ Mantenha o texto bem formatado e fácil de ler.`;
                             disabled={isGenerating || isActing}
                         >
                             {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                            {isGenerating ? "Gerando IA..." : "Gerar com IA"}
+                            {isGenerating ? "Gerando..." : "Gerar com Viagg-TX8™"}
                         </Button>
                         {/* Confirmar no sistema */}
                         <Button

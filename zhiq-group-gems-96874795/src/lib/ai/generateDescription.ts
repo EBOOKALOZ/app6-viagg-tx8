@@ -44,12 +44,12 @@ export async function generateListingDescription(
     },
   });
 
-  if (error) throw new Error(error.message || "Falha ao gerar descrição com IA.");
-  if ((data as any)?.ok === false) throw new Error((data as any)?.error || "Erro da API de IA.");
+  if (error) throw new Error(error.message || "Falha ao gerar descrição com o Viagg-TX8™.");
+  if ((data as any)?.ok === false) throw new Error((data as any)?.error || "Erro do Viagg-TX8™.");
 
   const content = (data as any)?.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string" || !content.trim()) {
-    throw new Error("A IA não retornou uma descrição válida.");
+    throw new Error("O Viagg-TX8™ não retornou uma descrição válida.");
   }
   return content.trim();
 }

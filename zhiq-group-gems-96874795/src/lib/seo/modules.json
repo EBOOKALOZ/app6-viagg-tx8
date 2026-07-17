@@ -170,7 +170,7 @@
     },
     {
       "slug": "postador-inteligente",
-      "nome": "Postador Inteligente (GLM)",
+      "nome": "Postador Inteligente",
       "categoria": "Inteligência Artificial",
       "publico": true,
       "rota": "/admin/postador",

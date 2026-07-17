@@ -124,7 +124,8 @@ type FilterType = 'all' | 'abertos' | 'em_atendimento' | 'respondidos' | 'resolv
 // ── Component ────────────────────────────────────────────────────────────────
 export default function ClientSupportTicketsPage() {
     const navigate = useNavigate();
-    const { user, activeProfile } = useAuth();
+    const { user, activeProfile, avatarUrl } = useAuth();
+    const userAvatar = avatarUrl || (user?.user_metadata?.avatar_url as string) || (user?.user_metadata?.picture as string) || null;
 
     const isMotoboy   = activeProfile === 'motoboy';
     const isMototaxi  = activeProfile === 'mototaxi';
@@ -301,13 +302,17 @@ export default function ClientSupportTicketsPage() {
                         Abrir Novo Chamado
                     </Button>
 
-                    {/* ── GLM AI Banner ── */}
+                    {/* ── Viagg-TX8 Banner ── */}
                     <div className="flex items-center gap-3 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-2xl px-4 py-3">
-                        <div className="h-9 w-9 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0">
-                            <Brain className="h-4 w-4 text-violet-600" />
+                        <div className="h-9 w-9 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center shrink-0 overflow-hidden">
+                            {userAvatar ? (
+                                <img src={userAvatar} alt="Você" className="h-full w-full object-cover" />
+                            ) : (
+                                <Brain className="h-4 w-4 text-violet-600" />
+                            )}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-semibold text-violet-800 leading-tight">Atendimento com GLM IA</p>
+                            <p className="text-[13px] font-semibold text-violet-800 leading-tight">Atendimento com Viagg-TX8™</p>
                             <p className="text-[11px] text-violet-600 mt-0.5">Respostas automáticas disponíveis 24h por dia</p>
                         </div>
                         <Sparkles className="h-4 w-4 text-violet-400 shrink-0" />

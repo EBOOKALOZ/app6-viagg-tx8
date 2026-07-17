@@ -23,7 +23,6 @@ import {
   ExternalLink,
   Store,
   Plus,
-  Save,
   RefreshCw,
   Trash2,
   ListOrdered,
@@ -37,6 +36,8 @@ import {
   Send,
   Radio,
   LayoutGrid,
+  Pause,
+  Play,
 } from "lucide-react";
 import { useGlmPostador } from "@/hooks/useGlmPostador";
 import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
@@ -79,6 +80,8 @@ const SOCIAL_NETWORKS = [
   { id: "telegram",  label: "Telegram",  emoji: "📲", color: "#0088CC" },
   { id: "twitter",   label: "X / Twitter", emoji: "🐦", color: "#1DA1F2" },
 ];
+
+const DEFAULT_NETWORKS = ["whatsapp", "instagram"];
 
 /* ─────────────────────────────────────────────
    Helpers
@@ -138,6 +141,8 @@ export default function AdvertiserPromotionPage() {
   const [queuedItems, setQueuedItems] = useState<CatalogItem[]>([]);    // itens salvos no DB (fila real)
   const [submitting, setSubmitting] = useState(false);
   const [promoted, setPromoted] = useState<string[]>([]);
+  const [pausedIds, setPausedIds] = useState<string[]>([]);           // anúncios da fila com divulgação pausada
+  const [slotNetworks, setSlotNetworks] = useState<Record<string, string[]>>({}); // redes escolhidas por anúncio
   const [savingSlot, setSavingSlot] = useState<string | null>(null); // itemId being saved
 
   // AI Generation State
@@ -282,14 +287,14 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "imoveis") {
         const { data } = await supabase
           .from("real_estate_listings")
-          .select("id, title, price_brl, visibility_status, property_type, city, state, real_estate_media(original_storage_path, public_masked_storage_path), cover_image_url")
+          .select("id, title, price_brl, visibility_status, property_type, city, state, real_estate_media(original_storage_path, public_masked_storage_path)")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
         (data ?? []).forEach((r: any) => {
           const media = r.real_estate_media?.[0];
           const hasThumb = !!media?.public_masked_storage_path && media.public_masked_storage_path !== media.original_storage_path;
-          const imgPath = hasThumb ? media.public_masked_storage_path : (media?.original_storage_path ?? r.cover_image_url ?? null);
+          const imgPath = hasThumb ? media.public_masked_storage_path : (media?.original_storage_path ?? null);
           const imgUrl = resolveImage(imgPath, hasThumb ? "real-estate-public" : "real-estate-original");
           results.push({
             id: r.id,
@@ -312,7 +317,7 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "veiculos") {
         const { data } = await supabase
           .from("vehicle_listings" as any)
-          .select("id, title, price_brl, visibility_status, vehicle_type, city, state, cover_image_url, vehicle_media(original_storage_path, public_masked_storage_path)")
+          .select("id, title, price_brl, visibility_status, vehicle_type, city, state, vehicle_media(original_storage_path, public_masked_storage_path)")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
@@ -323,13 +328,10 @@ export default function AdvertiserPromotionPage() {
           if (r.vehicle_media?.length > 0) {
             const m = r.vehicle_media[0];
             const hasThumb = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
-            const path = hasThumb ? m.public_masked_storage_path : (m.original_storage_path || r.cover_image_url);
+            const path = hasThumb ? m.public_masked_storage_path : m.original_storage_path;
             if (path) {
               imgUrl = resolveImage(path, hasThumb ? "real-estate-public" : "real-estate-original");
             }
-          }
-          if (!imgUrl && r.cover_image_url) {
-            imgUrl = resolveImage(r.cover_image_url, "real-estate-original");
           }
 
           vehicleRows.push({
@@ -380,7 +382,7 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "servicos") {
         const { data } = await supabase
           .from("service_listings" as any)
-          .select("id, title, service_type, price_label, city, state, visibility_status, cover_image_url, image_url")
+          .select("id, title, service_type, price_label, city, state, visibility_status")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
@@ -406,7 +408,7 @@ export default function AdvertiserPromotionPage() {
         }
 
         serviceRows.forEach((r: any) => {
-          const imgUrl = serviceMediaMap.get(r.id) ?? resolveImage(r.cover_image_url || r.image_url || null, "marketing-materials");
+          const imgUrl = serviceMediaMap.get(r.id) ?? null;
           results.push({
             id: r.id,
             title: r.title ?? "Sem título",
@@ -428,7 +430,7 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "fretes") {
         const { data } = await supabase
           .from("freight_listings" as any)
-          .select("id, title, vehicle_type, price_label, price_per_km, city, state, visibility_status, cover_image_url, image_url")
+          .select("id, title, vehicle_type, price_label, price_per_km, city, state, visibility_status")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
@@ -454,7 +456,7 @@ export default function AdvertiserPromotionPage() {
         }
 
         freightRows.forEach((r: any) => {
-          const imgUrl = freightMediaMap.get(r.id) ?? resolveImage(r.cover_image_url || r.image_url || null, "marketing-materials");
+          const imgUrl = freightMediaMap.get(r.id) ?? null;
           results.push({
             id: r.id,
             title: r.title ?? "Frete",
@@ -476,7 +478,7 @@ export default function AdvertiserPromotionPage() {
       if (!onlyCategory || onlyCategory === "viagens") {
         const { data } = await supabase
           .from("travel_listings" as any)
-          .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, visibility_status, cover_image_url, image_url")
+          .select("id, title, category, destination, city, state, price_per_person, total_price, entry_price, visibility_status")
           .eq("owner_user_id", user!.id)
           .order("created_at", { ascending: false });
 
@@ -507,7 +509,7 @@ export default function AdvertiserPromotionPage() {
 
         travelRows.forEach((r: any) => {
           const price = r.entry_price ?? r.price_per_person ?? r.total_price ?? null;
-          const imgUrl = travelMediaMap.get(r.id) ?? resolveImage(r.cover_image_url || r.image_url || null, "real-estate-original");
+          const imgUrl = travelMediaMap.get(r.id) ?? null;
           results.push({
             id: r.id,
             title: r.title ?? "Viagem",
@@ -527,20 +529,21 @@ export default function AdvertiserPromotionPage() {
 
       setAllItems(results);
 
-      // Restore saved slots from DB — populates both visual slots and "Ativo" badges
+      // Restore saved slots from DB — fila real (ativos + pausados) + redes por anúncio
       const { data: savedSlots } = await supabase
         .from("promoted_listing_slots" as any)
-        .select("listing_id, listing_type, listing_title, listing_price, listing_image, listing_city, position")
+        .select("listing_id, listing_type, listing_title, listing_price, listing_image, listing_city, status, networks")
         .eq("user_id", user!.id)
-        .eq("status", "active")
-        .order("position", { ascending: true });
+        .in("status", ["active", "paused"])
+        .order("created_at", { ascending: true });
 
       if (savedSlots && savedSlots.length > 0) {
-        const savedIds = (savedSlots as any[]).map((r) => r.listing_id);
-        setPromoted(savedIds);
+        const rows = savedSlots as any[];
+        setPromoted(rows.filter((r) => r.status === "active").map((r) => r.listing_id));
+        setPausedIds(rows.filter((r) => r.status === "paused").map((r) => r.listing_id));
+        setSlotNetworks(Object.fromEntries(rows.map((r) => [r.listing_id, r.networks ?? [...DEFAULT_NETWORKS]])));
 
-        const restored: CatalogItem[] = (savedSlots as any[])
-          .slice(0, MAX_PROMO_SLOTS)
+        const restored: CatalogItem[] = rows
           .map((slot) => {
             let fallbackBucket = "marketing-materials";
             if (slot.listing_type === "imoveis") fallbackBucket = "real-estate-public";
@@ -573,6 +576,8 @@ export default function AdvertiserPromotionPage() {
         // NÃO popula selectedItems — slots visuais começam vazios
       } else {
         setQueuedItems([]);
+        setPromoted([]);
+        setPausedIds([]);
       }
     } catch (err) {
       console.error(err);
@@ -600,6 +605,13 @@ export default function AdvertiserPromotionPage() {
     });
   }, [allItems, pickerTab, pickerSearch, selectedItems, queuedItems]);
 
+  /* ── Fila visível — só os anúncios do perfil em uso (a fila real é da conta toda) ── */
+  const visibleQueue = useMemo(
+    () => queuedItems.filter((i) => i.category === (routeCategory ?? "produtos")),
+    [queuedItems, routeCategory]
+  );
+  const visibleActiveCount = visibleQueue.filter((i) => promoted.includes(i.id)).length;
+
   /* ── Close picker on outside click ── */
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -626,8 +638,7 @@ export default function AdvertiserPromotionPage() {
     });
     setPickerSlot(null);
     setPickerSearch("");
-    // Auto-save immediately so data persists even if user leaves
-    handleSaveSlot(item);
+    // O anúncio só vai para o banco quando o lojista clicar em "Enviar para a Fila"
   }
 
   /* ── Remove from slot + DB (soft delete via update_slot_status RPC — Regra #1) ── */
@@ -635,6 +646,7 @@ export default function AdvertiserPromotionPage() {
     setSelectedItems((prev) => prev.filter((p) => p.id !== itemId));
     setQueuedItems((prev) => prev.filter((p) => p.id !== itemId));
     setPromoted((prev) => prev.filter((id) => id !== itemId));
+    setPausedIds((prev) => prev.filter((id) => id !== itemId));
 
     const { data: slotRow } = await supabase
       .from("promoted_listing_slots" as any)
@@ -659,7 +671,7 @@ export default function AdvertiserPromotionPage() {
   }
 
   /* ── Save single slot → promoted_listing_slots ── */
-  async function handleSaveSlot(item: CatalogItem) {
+  async function handleSaveSlot(item: CatalogItem): Promise<boolean> {
     setSavingSlot(item.id);
     try {
       const resolvedImage = resolveImage(item.image ?? null, item.bucket);
@@ -673,20 +685,83 @@ export default function AdvertiserPromotionPage() {
           listing_price: item.price,
           listing_image: resolvedImage || item.image || null,
           listing_city:  item.city || null,
+          status:        "active",
+          networks:      slotNetworks[item.id] ?? DEFAULT_NETWORKS,
         }, { onConflict: "user_id,listing_id" });
 
       if (error) throw error;
 
       setPromoted((prev) => prev.includes(item.id) ? prev : [...prev, item.id]);
-      toast.success(`"${item.title}" salvo para divulgação!`, {
-        description: "Já já estará sendo divulgado Gratuitamente",
+      toast.success(`"${item.title}" enviado para a fila!`, {
+        description: "Ele aparece na Fila de Publicação logo abaixo.",
       });
+      return true;
     } catch (err: any) {
       console.error(err);
       toast.error(`Erro ao salvar: ${err.message}`);
+      return false;
     } finally {
       setSavingSlot(null);
     }
+  }
+
+  /* ── Enviar slot para a fila — salva no banco e move para a Fila de Publicação ── */
+  async function handleSendToQueue(item: CatalogItem) {
+    const ok = await handleSaveSlot(item);
+    if (!ok) return;
+    setQueuedItems((prev) => (prev.some((p) => p.id === item.id) ? prev : [...prev, item]));
+    setSelectedItems((prev) => prev.filter((p) => p.id !== item.id));
+    setPausedIds((prev) => prev.filter((id) => id !== item.id));
+    setSlotNetworks((prev) => ({ ...prev, [item.id]: prev[item.id] ?? [...DEFAULT_NETWORKS] }));
+  }
+
+  /* ── Pausar/retomar divulgação de um anúncio da fila (RPC update_slot_status) ── */
+  async function handleTogglePause(item: CatalogItem) {
+    const willPause = !pausedIds.includes(item.id);
+    const { data: slotRow } = await supabase
+      .from("promoted_listing_slots" as any)
+      .select("id")
+      .eq("user_id", user!.id)
+      .eq("listing_id", item.id)
+      .maybeSingle();
+    if (!slotRow?.id) {
+      toast.error("Anúncio não encontrado na fila.");
+      return;
+    }
+    const { error } = await supabase.rpc("update_slot_status" as any, {
+      p_slot_id: slotRow.id,
+      p_status:  willPause ? "paused" : "active",
+    });
+    if (error) {
+      toast.error(willPause ? "Erro ao pausar a divulgação." : "Erro ao retomar a divulgação.");
+      return;
+    }
+    setPausedIds((prev) => (willPause ? [...prev, item.id] : prev.filter((id) => id !== item.id)));
+    setPromoted((prev) => (willPause ? prev.filter((id) => id !== item.id) : [...new Set([...prev, item.id])]));
+    toast(willPause ? `"${item.title}" pausado` : `"${item.title}" reativado`, {
+      description: willPause
+        ? "O anúncio fica na fila, mas não será divulgado até você retomar."
+        : "O anúncio voltou a ser divulgado.",
+    });
+  }
+
+  /* ── Redes escolhidas por anúncio — persistidas no slot (RPC update_slot_networks) ── */
+  async function handleToggleItemNetwork(itemId: string, netId: string) {
+    const current = slotNetworks[itemId] ?? [...DEFAULT_NETWORKS];
+    const next = current.includes(netId) ? current.filter((n) => n !== netId) : [...current, netId];
+    setSlotNetworks((prev) => ({ ...prev, [itemId]: next }));
+    const { data: slotRow } = await supabase
+      .from("promoted_listing_slots" as any)
+      .select("id")
+      .eq("user_id", user!.id)
+      .eq("listing_id", itemId)
+      .maybeSingle();
+    if (!slotRow?.id) return;
+    const { error } = await supabase.rpc("update_slot_networks" as any, {
+      p_slot_id:  slotRow.id,
+      p_networks: next,
+    });
+    if (error) toast.error("Erro ao salvar as redes deste anúncio.");
   }
 
   /* ── Submit all filled slots at once → promoted_listing_slots ── */
@@ -694,7 +769,7 @@ export default function AdvertiserPromotionPage() {
     if (selectedItems.length === 0) return;
     setSubmitting(true);
     try {
-      const rows = selectedItems.map((item, idx) => ({
+      const rows = selectedItems.map((item) => ({
         user_id:       user!.id,
         listing_type:  item.category,
         listing_id:    item.id,
@@ -702,6 +777,8 @@ export default function AdvertiserPromotionPage() {
         listing_price: item.price,
         listing_image: resolveImage(item.image ?? null, item.bucket) || item.image || null,
         listing_city:  item.city || null,
+        status:        "active",
+        networks:      slotNetworks[item.id] ?? DEFAULT_NETWORKS,
       }));
       const { error } = await supabase
         .from("promoted_listing_slots" as any)
@@ -776,7 +853,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
       toast.success(`Textos gerados para ${selectedNetworks.length} rede(s)!`);
     } catch (err: any) {
       console.error("Erro ao gerar textos:", err);
-      toast.error("Não foi possível gerar os textos com a IA.");
+      toast.error("Não foi possível gerar os textos com o Viagg-TX8™.");
     } finally {
       setGeneratingPromoText(false);
     }
@@ -1006,22 +1083,16 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                         </span>
                       </div>
                     )}
-                    {/* Save button per slot */}
+                    {/* Enviar para a Fila — botão por slot */}
                     <button
-                      onClick={() => handleSaveSlot(slot)}
+                      onClick={() => handleSendToQueue(slot)}
                       disabled={savingSlot === slot.id}
-                      className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all ${
-                        promoted.includes(slot.id)
-                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 cursor-default"
-                          : "bg-[#FF6A00]/15 text-[#FF6A00] border border-[#FF6A00]/25 hover:bg-[#FF6A00]/25 hover:shadow-lg hover:shadow-[#FF6A00]/10"
-                      }`}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all bg-[#FF6A00]/15 text-[#FF6A00] border border-[#FF6A00]/25 hover:bg-[#FF6A00]/25 hover:shadow-lg hover:shadow-[#FF6A00]/10"
                     >
                       {savingSlot === slot.id ? (
-                        <><Loader2 className="w-3 h-3 animate-spin" /> Salvando...</>
-                      ) : promoted.includes(slot.id) ? (
-                        <><CheckCircle2 className="w-3 h-3" /> Ativo</>
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Enviando...</>
                       ) : (
-                        <><Save className="w-3 h-3" /> Salvar Anúncio</>
+                        <><Send className="w-3 h-3" /> Enviar para a Fila</>
                       )}
                     </button>
                   </div>
@@ -1279,7 +1350,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
             <details className="group">
               <summary className="cursor-pointer list-none flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#A7B0BE]/60 hover:text-[#A7B0BE] transition-colors select-none">
                 <Bot className="w-3.5 h-3.5" />
-                Gerar texto com IA para redes sociais
+                Gerar texto com Viagg-TX8™ para redes sociais
                 <span className="ml-auto text-[10px] group-open:hidden">▼</span>
                 <span className="ml-auto text-[10px] hidden group-open:inline">▲</span>
               </summary>
@@ -1297,7 +1368,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                   )}
                   {generatingPromoText
                     ? `Gerando para ${selectedNetworks.length} rede(s)...`
-                    : `Postador IA — Gerar para ${selectedNetworks.length} Rede(s)`}
+                    : `Postador Viagg-TX8™ — Gerar para ${selectedNetworks.length} Rede(s)`}
                 </Button>
               </div>
             </details>
@@ -1311,7 +1382,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                     <Sparkles className="w-3.5 h-3.5 text-[#FF6A00]" />
                   </div>
                   <span className="text-xs font-black text-white uppercase tracking-wider flex-1">
-                    Textos gerados pelo Postador IA
+                    Textos gerados pelo Postador Viagg-TX8™
                   </span>
                   <span className="text-[10px] text-[#A7B0BE]/60">{Object.keys(networkTexts).length} rede(s)</span>
                 </div>
@@ -1370,7 +1441,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
           FILA DE PUBLICAÇÃO — lista editável dos
           anúncios que estão nos slots
       ═══════════════════════════════════════════ */}
-      {queuedItems.length > 0 && (
+      {visibleQueue.length > 0 && (
         <div className="bg-[#0D0F12] rounded-3xl border border-[#2A3038]/60 overflow-hidden">
 
           {/* Header */}
@@ -1384,7 +1455,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               <div>
                 <p className="text-white font-black text-sm uppercase tracking-wider">Fila de Publicação</p>
                 <p className="text-[#A7B0BE]/60 text-[10px] mt-0.5">
-                  {queuedItems.length} anúncio{queuedItems.length > 1 ? "s" : ""} na fila · publicados pelos divulgadores
+                  {visibleQueue.length} anúncio{visibleQueue.length > 1 ? "s" : ""} deste perfil na fila · publicados pelos divulgadores
                 </p>
               </div>
             </div>
@@ -1392,16 +1463,18 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.20)" }}>
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">
-                {promoted.length}/{queuedItems.length} ativos
+                {visibleActiveCount}/{visibleQueue.length} ativos
               </span>
             </div>
           </div>
 
           {/* List of queued items */}
           <div className="divide-y divide-[#2A3038]/30">
-            {queuedItems.map((item, idx) => {
+            {visibleQueue.map((item, idx) => {
               const imgUrl = resolveImage(item.image, item.bucket);
               const isActive = promoted.includes(item.id);
+              const isPaused = pausedIds.includes(item.id);
+              const itemNets = slotNetworks[item.id] ?? DEFAULT_NETWORKS;
               const categoryIcon =
                 item.category === "imoveis"  ? Building2
                 : item.category === "veiculos" ? Car
@@ -1414,8 +1487,9 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
               return (
                 <div
                   key={item.id}
-                  className="flex items-center gap-3 px-4 sm:px-6 py-3 hover:bg-[#1B1F24]/60 transition-colors group/row"
+                  className="px-4 sm:px-6 py-3 hover:bg-[#1B1F24]/60 transition-colors group/row"
                 >
+                  <div className="flex items-center gap-3">
                   {/* Posição */}
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black"
                     style={{
@@ -1467,10 +1541,14 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                   <div className="shrink-0 hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide"
                     style={isActive
                       ? { background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.20)", color: "#10b981" }
+                      : isPaused
+                      ? { background: "rgba(148,163,184,0.10)", border: "1px solid rgba(148,163,184,0.20)", color: "#94a3b8" }
                       : { background: "rgba(245,158,11,0.10)", border: "1px solid rgba(245,158,11,0.20)", color: "#f59e0b" }
                     }>
                     {isActive ? (
                       <><CheckCircle2 className="w-2.5 h-2.5" /> Ativo</>
+                    ) : isPaused ? (
+                      <><Pause className="w-2.5 h-2.5" /> Pausado</>
                     ) : (
                       <><Clock className="w-2.5 h-2.5" /> Aguardando</>
                     )}
@@ -1490,14 +1568,48 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                     >
                       <RefreshCw className="w-3 h-3" />
                     </button>
-                    {/* Remover */}
+                    {/* Pausar / Retomar */}
                     <button
-                      title="Remover da fila"
+                      title={isPaused ? "Retomar divulgação" : "Pausar divulgação"}
+                      onClick={() => handleTogglePause(item)}
+                      className="w-7 h-7 rounded-lg bg-[#2A3038]/60 text-[#A7B0BE] flex items-center justify-center hover:bg-amber-500/20 hover:text-amber-400 transition-all"
+                    >
+                      {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+                    </button>
+                    {/* Excluir */}
+                    <button
+                      title="Excluir da fila"
                       onClick={() => handleRemoveSlot(item.id, item.title)}
                       className="w-7 h-7 rounded-lg bg-[#2A3038]/60 text-[#A7B0BE] flex items-center justify-center hover:bg-red-500/20 hover:text-red-400 transition-all"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
+                  </div>
+                  </div>
+
+                  {/* Redes onde este anúncio será divulgado */}
+                  <div className="mt-2 sm:pl-10 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#A7B0BE]/50 mr-1">
+                      Divulgar em:
+                    </span>
+                    {SOCIAL_NETWORKS.map((net) => {
+                      const netActive = itemNets.includes(net.id);
+                      return (
+                        <button
+                          key={net.id}
+                          onClick={() => handleToggleItemNetwork(item.id, net.id)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all border ${
+                            netActive
+                              ? "text-white border-transparent"
+                              : "bg-transparent text-[#A7B0BE]/60 border-[#2A3038] hover:border-[#A7B0BE]/40"
+                          }`}
+                          style={netActive ? { backgroundColor: net.color + "33", borderColor: net.color + "66", color: net.color } : {}}
+                        >
+                          <span>{net.emoji}</span>
+                          {net.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );

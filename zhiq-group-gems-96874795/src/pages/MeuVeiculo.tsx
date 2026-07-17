@@ -241,7 +241,7 @@ export default function MeuVeiculo() {
       });
 
       if (modRes.status === 'blocked') {
-        toast.error(`Foto recusada pela IA: ${modRes.reason}`);
+        toast.error(`Foto recusada pelo Viagg-TX8™: ${modRes.reason}`);
         return;
       }
 

@@ -19,7 +19,7 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'n-1',
     type: 'performance',
-    title: '🔥 Pico de Engajamento Detectado pela IA',
+    title: '🔥 Pico de Engajamento Detectado pelo Viagg-TX8™',
     msg: 'Sua campanha "Entregas Express 15min" atingiu 12.5% de CTR hoje! Recomendamos manter o orçamento diário para aproveitar o tráfego da sexta-feira.',
     time: 'Há 15 minutos',
     read: false,

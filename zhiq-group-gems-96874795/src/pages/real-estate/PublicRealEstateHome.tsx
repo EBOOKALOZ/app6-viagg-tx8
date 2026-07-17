@@ -318,9 +318,9 @@ export const PublicRealEstateHome = () => {
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-2xl font-black tracking-tight uppercase">IA Sentinela Visual</h4>
+                <h4 className="text-2xl font-black tracking-tight uppercase">Viagg-TX8™ Sentinela Visual</h4>
                 <p className="text-zinc-500 font-medium leading-relaxed">
-                  Nossa IA inspeciona cada foto para garantir imagens limpas e profissionais, removendo poluições visuais e contatos.
+                  O Viagg-TX8™ inspeciona cada foto para garantir imagens limpas e profissionais, removendo poluições visuais e contatos.
                 </p>
               </div>
             </div>
