@@ -119,6 +119,7 @@ import {
   AdminOrionMarketing,
   AdminOrionSecurity,
   AdminOrionCyberDefense,
+  AdminOrionSecurityAudit,
   AdminOrionCertification,
   AdminOrionSales,
   AdminOrionCustomerSuccess,
@@ -134,6 +135,8 @@ import {
   AdminOrionAiCenter,
   AdminOrionAiGovernance,
   AdminOrionFraud,
+  AdminOrionIdentity,
+  AdminOrionThreat,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -291,6 +294,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-marketing" element={<AdminOrionMarketing />} />
       <Route path="/admin/orion-security" element={<AdminOrionSecurity />} />
       <Route path="/admin/orion-cyber-defense" element={<AdminOrionCyberDefense />} />
+      <Route path="/admin/orion-security-audit" element={<AdminOrionSecurityAudit />} />
       <Route path="/admin/orion-certification" element={<AdminOrionCertification />} />
       <Route path="/admin/orion-sales" element={<AdminOrionSales />} />
       <Route path="/admin/orion-customer-success" element={<AdminOrionCustomerSuccess />} />
@@ -306,6 +310,8 @@ export const adminRoutes = (
       <Route path="/admin/orion-ai-center" element={<AdminOrionAiCenter />} />
       <Route path="/admin/orion-ai-governance" element={<AdminOrionAiGovernance />} />
       <Route path="/admin/orion-fraud" element={<AdminOrionFraud />} />
+      <Route path="/admin/orion-identity" element={<AdminOrionIdentity />} />
+      <Route path="/admin/orion-threat-intelligence" element={<AdminOrionThreat />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}

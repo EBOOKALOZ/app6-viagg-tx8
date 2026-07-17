@@ -9,7 +9,7 @@ O **AI-40 Cyber Defense** inaugura a camada de segurança do ORION e serve de **
 | **AI-40** | **Cyber Defense** | detecção e resposta inicial (base do ecossistema) | 🟢 v1.0 (2026-07-17) |
 | **AI-41** | **Fraud Detection** | fraudes operacionais e financeiras (17 detectores com evidência; FS/FR/FT/FC; `/admin/orion-fraud`) | 🟢 v1.0 (2026-07-17) |
 | AI-42 | Identity & Access | identidade e privilégios | ⚪ previsto |
-| AI-43 | Threat Intelligence | correlação de ameaças | ⚪ previsto |
+| **AI-43** | **Threat Intelligence** | núcleo analítico: grafo de ameaças, campanhas, vulnerabilidades (TIS/CS/CRS/VIS; `/admin/orion-threat-intelligence`) | 🟢 v1.0 (2026-07-17) |
 | AI-44 | Security Audit | auditoria contínua | ⚪ previsto |
 | AI-45 | Incident Response | coordenação de incidentes | ⚪ previsto |
 | AI-46 | Backup & Disaster Recovery | continuidade | ⚪ previsto |
@@ -43,6 +43,17 @@ chave `fraud_detection`, tick `*/2`) e **honra o contrato compartilhado** via
 `fraud_bridge_cyber()`: todo caso **alta/crítica** ativo é espelhado em
 `orion_cyber_events` (origem `fraud_detection`, dedupe `fraud:<id>`, idempotente e
 defensivo). Detalhes: `DOCS/orion-ai-41-fraud-detection.md`.
+
+## AI-43 no ecossistema (2026-07-17) — camada de inteligência
+
+O AI-43 é o **núcleo analítico**: não gera eventos, **correlaciona** os que o AI-40
+(ataques), AI-41 (fraude) e AI-42 (identidade) já colocam no barramento comum
+`orion_cyber_events`, mais `auth.audit_log_entries`. Constrói o **grafo de ameaças**
+(`orion_security_graph` nós + `orion_threat_correlations` arestas, sempre com evidência),
+detecta **campanhas** (`orion_threat_campaigns`), correlaciona **vulnerabilidades**
+(`orion_vulnerability_events`) e prepara o encaminhamento ao **AI-45 (Incident Response)**
+e ao **AI-49 (SOC Commander)**. Scores TIS/CS/CRS/VIS + MTTC/TRR; namespace `orion_threat_*`,
+chave `threat_intelligence`, tick `*/3`. Detalhes: `DOCS/orion-ai-43-threat-intelligence.md`.
 
 ## Relação AI-24 × AI-40
 
