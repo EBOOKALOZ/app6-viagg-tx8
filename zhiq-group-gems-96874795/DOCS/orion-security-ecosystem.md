@@ -12,7 +12,7 @@ O **AI-40 Cyber Defense** inaugura a camada de segurança do ORION e serve de **
 | **AI-43** | **Threat Intelligence** | núcleo analítico: grafo de ameaças, campanhas, vulnerabilidades (TIS/CS/CRS/VIS; `/admin/orion-threat-intelligence`) | 🟢 v1.0 (2026-07-17) |
 | **AI-44** | **Security Audit** | auditoria contínua de postura e conformidade (SAS/COS/CIS/ACS; `/admin/orion-security-audit`) | 🟢 v1.0 (2026-07-17) |
 | **AI-45** | **Incident Response** | resposta a incidentes: playbooks + timeline + rollback (IRS/ICS/RTS/Recovery; `/admin/orion-incident-response`) | 🟢 v1.0 (2026-07-17) |
-| AI-46 | Backup & Disaster Recovery | continuidade | ⚪ previsto |
+| **AI-46** | **Backup & Disaster Recovery** | continuidade: prova backup íntegro/restaurável + RPO/RTO (BRS/RRS/DIS/CRI; `/admin/orion-backup-recovery`) | 🟢 v1.0 (2026-07-17) |
 | AI-47 | Zero Trust | políticas adaptativas | ⚪ previsto |
 | AI-48 | Compliance & LGPD | conformidade | ⚪ previsto |
 | AI-49 | SOC Commander | visão executiva do ecossistema | ⚪ previsto |
@@ -87,6 +87,19 @@ Detalhes: `DOCS/orion-ai-45-incident-response.md`.
 
 Ciclo COMPLETO do ecossistema: **AI-40** detecta → **AI-41** fraudes → **AI-42**
 identidade → **AI-43** correlaciona → **AI-44** audita → **AI-45 responde**.
+
+## AI-46 no ecossistema (2026-07-17) — o guardião da continuidade
+
+O AI-46 protege o que todos os outros produzem: prova continuamente que a plataforma
+tem backup **íntegro e restaurável**. Combina o estado real da **Management API**
+(WAL-G contínuo, PITR, snapshots) com um **manifesto de schema DB-native** (checksums
+md5 por categoria → detecção de drift). Valida restauração de forma **não-destrutiva**,
+calcula **BRS/RRS/DIS/CRI + RPO/RTO** e alerta desvios (PITR off, sem snapshot, drift).
+Espelha risco crítico em `orion_cyber_events` (`config_risk`, correlacionado pelo AI-43)
+e faz handoff ao AI-45. **Nunca restaura produção automaticamente** (solicitação +
+aprovação humana) e **nunca expõe secrets** (valida só existência). Namespace
+`orion_backup_*`, chave `backup_recovery`, tick `*/15`, `backup_selftest` 8/8.
+Detalhes: `DOCS/orion-ai-46-backup-recovery.md`.
 
 ## Relação AI-24 × AI-40
 
