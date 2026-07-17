@@ -185,6 +185,7 @@ const menuSections: MenuSection[] = [
       { title: "Knowledge Graph AI", url: "/admin/orion-knowledge-graph", icon: Share2, badge: "GRAFO" },
       { title: "Recommendation AI", url: "/admin/orion-recommendations", icon: Wand2, badge: "REC" },
       { title: "AI Visibility & Answer", url: "/admin/orion-ai-visibility", icon: Radar, badge: "VISIB" },
+      { title: "AI Cost & Intelligence Center", url: "/admin/orion-ai-center", icon: Coins, badge: "AI CENTER" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
