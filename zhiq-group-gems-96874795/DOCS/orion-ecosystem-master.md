@@ -76,11 +76,14 @@
 | AI-36 | AI Visibility & Answer Intelligence | `ai_visibility` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | AI-32/33/34/35 + AI-20 Trust (leitura) — AIS/AQS | Ativo |
 | AI-37 | AI Cost & Intelligence Center | `ai_center` | v1 | 🟢 Enterprise | 97 | 2026-07-16 | Gateway (orion_ai_log) + pay_* — FinOps/ROI/KPIs/forecast | Ativo |
 | AI-38 | AI Governance Center | `ai_governance` | v1 | 🟢 Enterprise | 98 | 2026-07-16 | AI-37 (custos) + Gateway — orçamentos/políticas/perfis/auditoria/rollback (GCS) | Ativo |
+| AI-39 | Visitor Intelligence AI | `visitor_intelligence` | v1 | 🟢 Enterprise | — | 2026-07-16 | marketplace_product_click_events (leitura) — comportamento/predição de visitantes sem PII | Ativo |
+| AI-40 | Cyber Defense AI | `cyber_defense` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | Gateway/auth audit/client_errors/eventos/Trust (leitura) — **abre o Security Ecosystem**; namespace `orion_cyber_*` (não colide com AI-24) | Ativo |
+| AI-41 | Fraud Detection AI | `fraud_detection` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | pay_*/credit_purchases/clicks/aci (leitura) — 17 detectores com evidência; espelha alta/crítica em `orion_cyber_events` (ponte AI-40); namespace `orion_fraud_*` | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
 
-**Próximo número livre: AI-37** (camada de aprendizado autônomo prevista). **ORION DISCOVERY ECOSYSTEM** (AI-32..AI-40): AI-32 Search & Discovery + AI-33 GEO Optimization + **AI-34 Knowledge Graph** + **AI-35 Recommendation Intelligence** + **AI-36 AI Visibility & Answer Intelligence** (descobrir→otimizar→conhecer→recomendar→medir visibilidade p/ IA) já ativos. **AI-31 (Knowledge & Learning AI) segue EM ABERTO** — pulado a pedido; chave `knowledge` (não confundir com AI-34 `knowledge_graph` nem com o `knowledge_engine` do AI-14). **OCE é CORE, não recebe número de IA.**
+**Próximo número livre: AI-42.** **ORION SECURITY ECOSYSTEM** (AI-40..AI-49) inaugurado em 2026-07-17: **AI-40 Cyber Defense** (`cyber_defense`, base comum de eventos/scores/políticas/auditoria — namespace `orion_cyber_*`, não colide com AI-24 `security`) + **AI-41 Fraud Detection** (`fraud_detection`, espelha alta/crítica na base do AI-40). **ORION DISCOVERY ECOSYSTEM** (AI-32..AI-36): AI-32 Search & Discovery + AI-33 GEO Optimization + **AI-34 Knowledge Graph** + **AI-35 Recommendation Intelligence** + **AI-36 AI Visibility & Answer Intelligence** (descobrir→otimizar→conhecer→recomendar→medir visibilidade p/ IA) já ativos. **AI-31 (Knowledge & Learning AI) segue EM ABERTO** — pulado a pedido; chave `knowledge` (não confundir com AI-34 `knowledge_graph` nem com o `knowledge_engine` do AI-14). **OCE é CORE, não recebe número de IA.**
 
 ---
 
