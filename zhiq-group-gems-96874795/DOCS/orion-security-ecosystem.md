@@ -8,9 +8,9 @@ O **AI-40 Cyber Defense** inaugura a camada de segurança do ORION e serve de **
 |---|---|---|---|
 | **AI-40** | **Cyber Defense** | detecção e resposta inicial (base do ecossistema) | 🟢 v1.0 (2026-07-17) |
 | **AI-41** | **Fraud Detection** | fraudes operacionais e financeiras (17 detectores com evidência; FS/FR/FT/FC; `/admin/orion-fraud`) | 🟢 v1.0 (2026-07-17) |
-| AI-42 | Identity & Access | identidade e privilégios | ⚪ previsto |
+| **AI-42** | **Identity & Access** | identidade, sessões, dispositivos e políticas (IS/ATS/SRS/DCS; `/admin/orion-identity`) | 🟢 v1.0 (2026-07-17) |
 | **AI-43** | **Threat Intelligence** | núcleo analítico: grafo de ameaças, campanhas, vulnerabilidades (TIS/CS/CRS/VIS; `/admin/orion-threat-intelligence`) | 🟢 v1.0 (2026-07-17) |
-| AI-44 | Security Audit | auditoria contínua | ⚪ previsto |
+| **AI-44** | **Security Audit** | auditoria contínua de postura e conformidade (SAS/COS/CIS/ACS; `/admin/orion-security-audit`) | 🟢 v1.0 (2026-07-17) |
 | AI-45 | Incident Response | coordenação de incidentes | ⚪ previsto |
 | AI-46 | Backup & Disaster Recovery | continuidade | ⚪ previsto |
 | AI-47 | Zero Trust | políticas adaptativas | ⚪ previsto |
@@ -54,6 +54,23 @@ detecta **campanhas** (`orion_threat_campaigns`), correlaciona **vulnerabilidade
 (`orion_vulnerability_events`) e prepara o encaminhamento ao **AI-45 (Incident Response)**
 e ao **AI-49 (SOC Commander)**. Scores TIS/CS/CRS/VIS + MTTC/TRR; namespace `orion_threat_*`,
 chave `threat_intelligence`, tick `*/3`. Detalhes: `DOCS/orion-ai-43-threat-intelligence.md`.
+
+## AI-44 no ecossistema (2026-07-17) — o auditor da postura
+
+O AI-44 fecha o ciclo: **audita continuamente a postura de segurança** que os outros
+produzem e a configuração da plataforma (RLS, grants, funções, cron, identidade)
+contra **baseline aprovada** + **compliance**. Namespace próprio (`orion_secaudit_*`,
+funções `secaudit_*`/`run_security_audit`, chave `security_audit`, tick `*/15`) e
+**honra o contrato compartilhado**: todo finding crítico/alto é espelhado em
+`orion_cyber_events` (origem `security_audit`, tipo `config_risk`, dedupe
+`secaudit:<key>:<dia>`) — que o **AI-43 correlaciona** e o futuro **AI-45** consumirá
+(handoff já emitido no barramento como `secaudit.handoff_ai45`). Findings fecham
+sozinhos quando a evidência some (FRR real). **NUNCA altera o ambiente.**
+Detalhes: `DOCS/orion-ai-44-security-audit.md`.
+
+Ciclo completo do ecossistema: **AI-40** detecta ataques → **AI-41** detecta fraudes →
+**AI-42** controla identidade/acesso → **AI-43** correlaciona ameaças e campanhas →
+**AI-44** audita a postura e a conformidade de tudo.
 
 ## Relação AI-24 × AI-40
 

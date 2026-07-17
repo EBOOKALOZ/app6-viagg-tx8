@@ -80,6 +80,7 @@
 | AI-40 | Cyber Defense AI | `cyber_defense` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | Gateway/auth audit/client_errors/eventos/Trust (leitura) — **abre o Security Ecosystem**; namespace `orion_cyber_*` (não colide com AI-24) | Ativo |
 | AI-41 | Fraud Detection AI | `fraud_detection` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | pay_*/credit_purchases/clicks/aci (leitura) — 17 detectores com evidência; espelha alta/crítica em `orion_cyber_events` (ponte AI-40); namespace `orion_fraud_*` | Ativo |
 | AI-42 | Identity & Access AI | `identity_access` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | auth.users/sessions/audit/mfa + profiles/user_roles + AI-40/41 (leitura) — IS/ATS/SRS/DCS + MAR + III; políticas adaptativas auditadas; espelha alta/crítica na base AI-40; namespace `orion_identity_*`/`orion_access_*`/`orion_devices` | Ativo |
+| AI-44 | Security Audit AI | `security_audit` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | pg_catalog/grants/cron/auth + AI-40/41/10 (leitura) — auditor de postura: 9 categorias, baseline+compliance, findings auto-close; SAS/COS/CIS/ACS+FRR/ACI; NUNCA altera o ambiente; namespace `orion_secaudit_*` | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |

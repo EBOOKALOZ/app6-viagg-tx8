@@ -72,6 +72,11 @@ verify_jwt = false
 [functions.cyber-defense-engine]
 verify_jwt = false
 
+# ORION-AI-44 Security Audit: auditoria incremental de postura (cron 15 min).
+# Sem JWT (disparado por scheduler); usa service role e RPC guardada.
+[functions.security-audit-engine]
+verify_jwt = false
+
 # IA proxy: JWT obrigatório (verify_jwt = true por padrão). Mantém a chave
 # secreta da AIAPI no servidor e exige usuário autenticado.
 [functions.ai-chat]

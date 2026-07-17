@@ -24,8 +24,10 @@
 --     funcoes secaudit_* + run_security_audit(), cron orion_secaudit_tick (a cada
 --     15 min), painel /admin/orion-security-audit (badge AUDIT), edge
 --     security-audit-engine.
---   AI-42 (Identity & Access) e AI-43 (Threat Intelligence) NAO EXISTEM ainda
---     (numeros reservados, como o AI-31) — integracao declarada, pronta p/ chegada.
+--   AI-42 (Identity & Access, orion_identity_*) e AI-43 (Threat Intelligence,
+--     orion_threat_*) nasceram EM PARALELO no mesmo dia (sessao irma). Integracao
+--     ja viva pela base comum: os findings criticos deste auditor viram eventos
+--     'config_risk' em orion_cyber_events — exatamente o que o AI-43 correlaciona.
 --   AI-45 (Incident Response) NAO EXISTE — handoff registrado no barramento
 --     (orion_eventos tipo 'secaudit.handoff_ai45') como fila futura, DECLARADO.
 --
