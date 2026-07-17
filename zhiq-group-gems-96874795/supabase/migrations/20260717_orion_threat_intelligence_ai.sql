@@ -313,7 +313,7 @@ BEGIN
     (dedupe_key, nome, tipo, severidade, confidence, crs, eventos, entidades, evidencias, primeira_ocorrencia, ultima_ocorrencia, trace)
   SELECT 'camp:rep:'||tipo, 'Repeticao de '||tipo, 'repeticao_ataque', max(sev),
     least(50+count(*)*8,100), least(max(w.peso)+count(*)*8,100), count(*),
-    to_jsonb(array_agg(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL)),
+    coalesce(to_jsonb(array_agg(DISTINCT user_id) FILTER (WHERE user_id IS NOT NULL)), '[]'::jsonb),
     jsonb_build_object('ocorrencias',count(*),'usuarios',count(DISTINCT user_id),'criterio','>=2 ocorrencias do mesmo tipo em 30d'),
     min(ts), max(ts), v_trace
   FROM _ev JOIN _sevw w USING (sev) GROUP BY tipo HAVING count(*) >= 2
