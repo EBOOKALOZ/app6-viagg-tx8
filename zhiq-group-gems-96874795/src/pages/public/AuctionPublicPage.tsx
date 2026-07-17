@@ -5,7 +5,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FooterNeutral } from "@/components/FooterNeutral";
+import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -164,6 +165,7 @@ export default function AuctionPublicPage() {
   // Cart
   const [cartOpen, setCartOpen] = useState(false);
   const globalCart = useGlobalCart();
+  const [q, setQ] = useState("");
 
   // Offer modal state
   const [showOfertaModal, setShowOfertaModal] = useState(false);
@@ -262,25 +264,25 @@ export default function AuctionPublicPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <TopBar navigate={navigate} globalCart={globalCart} cartOpen={cartOpen} setCartOpen={setCartOpen} />
-        <div className="flex items-center justify-center flex-1 bg-gray-50">
+      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />}
+        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Leilões" myAccountPath="/minha-conta">
+        <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
         </div>
-      </div>
+      </MarketLayout>
     );
   }
 
   if (!listing) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <TopBar navigate={navigate} globalCart={globalCart} cartOpen={cartOpen} setCartOpen={setCartOpen} />
-        <div className="flex flex-col items-center justify-center flex-1 bg-gray-50 gap-4">
-          <AlertTriangle className="h-12 w-12 text-gray-300" />
-          <p className="text-gray-500 font-medium">Leilão não encontrado</p>
+      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />}
+        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Leilões" myAccountPath="/minha-conta">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+          <AlertTriangle className="h-12 w-12 text-gray-400" />
+          <p className="text-gray-600 font-medium">Leilão não encontrado</p>
           <Button variant="outline" onClick={() => navigate("/leiloes")}>Ver todos</Button>
         </div>
-      </div>
+      </MarketLayout>
     );
   }
 
@@ -288,10 +290,15 @@ export default function AuctionPublicPage() {
   const totalBids = listing.total_bids || 0;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5E62B' }}>
-      {/* ═══ TOP BAR ═══ */}
-      <TopBar navigate={navigate} globalCart={globalCart} cartOpen={cartOpen} setCartOpen={setCartOpen} />
-
+    <MarketLayout
+      search={q}
+      setSearch={setQ}
+      headerChildren={<MarketNavButtons />}
+      mainClassName="flex flex-col bg-[#F5E62B]"
+      blueFooter
+      blueFooterLabel="🏷️ Leilões"
+      myAccountPath="/minha-conta"
+    >
       {/* ── HERO — Decision Block ── */}
       <div className="relative overflow-hidden">
         <div className="relative max-w-lg mx-auto px-4 pt-6 pb-8">
@@ -525,12 +532,6 @@ export default function AuctionPublicPage() {
         </Button>
       </div>
 
-      <GlobalCartDrawer
-        open={cartOpen}
-        onOpenChange={setCartOpen}
-        globalCart={globalCart}
-      />
-
       {/* ═══ OFERTA RÁPIDA MODAL ═══ */}
       {listing && (
         <OfertaRapidaModal
@@ -545,9 +546,7 @@ export default function AuctionPublicPage() {
         />
       )}
 
-      {/* ═══ FOOTER ═══ */}
       <InstitutionalSafetyBanner />
-      <FooterNeutral compact />
-    </div>
+    </MarketLayout>
   );
 }
