@@ -142,6 +142,7 @@ import {
   AdminOrionZeroTrust,
   AdminOrionBackup,
   AdminOrionSoc,
+  AdminOrionObservability,
   AdminOrionCostOptimization,
   AdminOrionPricing,
   AdminOrionForecast,
@@ -323,6 +324,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-zero-trust" element={<AdminOrionZeroTrust />} />
       <Route path="/admin/orion-backup-recovery" element={<AdminOrionBackup />} />
       <Route path="/admin/orion-soc" element={<AdminOrionSoc />} />
+      <Route path="/admin/orion-observability" element={<AdminOrionObservability />} />
       <Route path="/admin/orion-cost-optimization" element={<AdminOrionCostOptimization />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />

@@ -204,6 +204,7 @@ const menuSections: MenuSection[] = [
       { title: "Zero Trust AI", url: "/admin/orion-zero-trust", icon: Lock, badge: "ZERO TRUST" },
       { title: "Backup & Recovery AI", url: "/admin/orion-backup-recovery", icon: DatabaseBackup, badge: "BACKUP" },
       { title: "SOC Commander AI", url: "/admin/orion-soc", icon: ShieldHalf, badge: "SOC COMMANDER" },
+      { title: "Observability AI", url: "/admin/orion-observability", icon: Activity, badge: "OBSERVABILITY" },
       { title: "Cost Optimization AI", url: "/admin/orion-cost-optimization", icon: Coins, badge: "COST" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },

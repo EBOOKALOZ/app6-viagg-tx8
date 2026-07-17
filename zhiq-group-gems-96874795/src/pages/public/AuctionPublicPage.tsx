@@ -339,22 +339,32 @@ export default function AuctionPublicPage() {
             </div>
 
             {/* Countdown */}
-            <div className={`text-center py-4 rounded-2xl border shadow-md ${
-              urgency === "critical"
-                ? "bg-red-50 border-red-300"
-                : urgency === "warning"
-                ? "bg-amber-50 border-amber-300"
-                : "bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200"
-            }`}>
-              <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 flex items-center justify-center gap-1">
+            {(() => {
+              const isCrit = urgency === "critical";
+              const isWarn = urgency === "warning";
+              const isNormal = !isCrit && !isWarn;
+              return (
+            <div
+              className={`text-center py-4 rounded-2xl border shadow-md ${
+                isCrit ? "bg-red-50 border-red-300"
+                : isWarn ? "bg-amber-50 border-amber-300"
+                : "border-transparent"
+              }`}
+              style={isNormal ? { backgroundColor: "#00a300" } : undefined}
+            >
+              <p className={`text-[10px] uppercase tracking-widest mb-1 flex items-center justify-center gap-1 ${
+                isNormal ? "text-white/85" : "text-gray-500"
+              }`}>
                 <Timer className="h-3 w-3" /> Encerra em
               </p>
               <p className={`text-4xl md:text-5xl font-black tracking-tight ${
-                urgency === "critical" ? "text-red-600 animate-pulse" : urgency === "warning" ? "text-amber-600" : "text-gray-900"
+                isCrit ? "text-red-600 animate-pulse" : isWarn ? "text-amber-600" : "text-white"
               }`}>
                 {timeLeft}
               </p>
             </div>
+              );
+            })()}
 
             {/* Current price */}
             <div className="text-center space-y-1">

@@ -24,6 +24,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
 import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
+import { PromotionPlansGrid } from "@/components/promotion/PromotionPlansGrid";
 
 // ─── Helpers ────────────────────────────
 
@@ -1333,15 +1334,6 @@ export default function MerchantAuctions() {
         </div>
       </div>
 
-      {/* Botão de pacotes visível também no mobile */}
-      <button
-        onClick={() => setShowPlans(true)}
-        className="sm:hidden w-full flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[#1B1F24] border border-violet-500/40 text-violet-200 font-black text-xs uppercase tracking-wider hover:border-violet-400 hover:text-white active:scale-95 transition-all"
-      >
-        <Megaphone className="h-4 w-4" />
-        Pacotes de Divulgação de Leilões
-      </button>
-
       {/* ═══ KPIs ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -1360,6 +1352,18 @@ export default function MerchantAuctions() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ═══ PACOTES DE DIVULGAÇÃO DE LEILÕES ═══ */}
+      <div className="bg-[#1B1F24] border border-violet-500/30 rounded-3xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Megaphone className="h-5 w-5 text-violet-400 shrink-0" />
+          <div>
+            <h2 className="text-sm font-black text-[#F5F7FA] uppercase tracking-widest">Pacotes de Divulgação de Leilões</h2>
+            <p className="text-[11px] text-[#A7B0BE]">Contrate um plano para divulgar seus leilões nos grupos e receber mais lances.</p>
+          </div>
+        </div>
+        <PromotionPlansGrid profileType={"leiloes" as any} listingModule="auction" inline showHeader={false} />
       </div>
 
       {/* ═══ FILTROS ═══ */}
