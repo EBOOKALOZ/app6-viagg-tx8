@@ -11,7 +11,7 @@ O **AI-40 Cyber Defense** inaugura a camada de segurança do ORION e serve de **
 | **AI-42** | **Identity & Access** | identidade, sessões, dispositivos e políticas (IS/ATS/SRS/DCS; `/admin/orion-identity`) | 🟢 v1.0 (2026-07-17) |
 | **AI-43** | **Threat Intelligence** | núcleo analítico: grafo de ameaças, campanhas, vulnerabilidades (TIS/CS/CRS/VIS; `/admin/orion-threat-intelligence`) | 🟢 v1.0 (2026-07-17) |
 | **AI-44** | **Security Audit** | auditoria contínua de postura e conformidade (SAS/COS/CIS/ACS; `/admin/orion-security-audit`) | 🟢 v1.0 (2026-07-17) |
-| AI-45 | Incident Response | coordenação de incidentes | ⚪ previsto |
+| **AI-45** | **Incident Response** | resposta a incidentes: playbooks + timeline + rollback (IRS/ICS/RTS/Recovery; `/admin/orion-incident-response`) | 🟢 v1.0 (2026-07-17) |
 | AI-46 | Backup & Disaster Recovery | continuidade | ⚪ previsto |
 | AI-47 | Zero Trust | políticas adaptativas | ⚪ previsto |
 | AI-48 | Compliance & LGPD | conformidade | ⚪ previsto |
@@ -71,6 +71,22 @@ Detalhes: `DOCS/orion-ai-44-security-audit.md`.
 Ciclo completo do ecossistema: **AI-40** detecta ataques → **AI-41** detecta fraudes →
 **AI-42** controla identidade/acesso → **AI-43** correlaciona ameaças e campanhas →
 **AI-44** audita a postura e a conformidade de tudo.
+
+## AI-45 no ecossistema (2026-07-17) — a resposta que fecha o funil
+
+O AI-45 consome a **base comum** (`orion_cyber_events`, com espelhos dos AI-41/42/44)
+e as **campanhas** do AI-43, e transforma cada sinal alto/crítico em **incidente**
+com classificação explicável, playbook auditável, timeline e evidências imutáveis.
+Namespace próprio (`orion_incident_*`, chave `incident_response`, tick `*/2`).
+**Honra o contrato**: nunca bloqueia por conta própria — invoca `cyber_block_entity`
+(AI-40) e `identity_device_block` (AI-42), cujas políticas decidem; negado →
+`aguardando_humano`. Rollback lógico reverte pela RPC do módulo dono e preserva o
+histórico. Fecha sozinho quando a fonte resolve; reincidência reabre. Suite
+`incident_selftest()` (17 checks) = entrada oficial do COMANDO TESTE.
+Detalhes: `DOCS/orion-ai-45-incident-response.md`.
+
+Ciclo COMPLETO do ecossistema: **AI-40** detecta → **AI-41** fraudes → **AI-42**
+identidade → **AI-43** correlaciona → **AI-44** audita → **AI-45 responde**.
 
 ## Relação AI-24 × AI-40
 
