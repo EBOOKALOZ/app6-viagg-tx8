@@ -81,6 +81,7 @@ import {
   Workflow,
   Tag,
   Gavel,
+  GraduationCap,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -126,7 +127,6 @@ const menuSections: MenuSection[] = [
       { title: "Expansão", url: "/admin/expansao", icon: Gauge },
       { title: "Comando Leilão", url: "/admin/comando-leilao", icon: Tag, badge: "LEILÃO" },
       { title: "Auction Intelligence", url: "/admin/auction-intelligence", icon: Sparkles, badge: "IA" },
-      { title: "Leilão · Comissões 6%", url: "/admin/leilao-comissoes", icon: Coins, badge: "COMISSÃO" },
     ],
   },
   {
@@ -211,6 +211,7 @@ const menuSections: MenuSection[] = [
       { title: "AI Governance Center", url: "/admin/orion-ai-governance", icon: ShieldCheck, badge: "GOVERN" },
       { title: "Visitor Intelligence AI", url: "/admin/orion-visitors", icon: Users, badge: "VISITOR" },
       { title: "Auction Intelligence & Analytics", url: "/admin/orion-auction-intelligence", icon: Gavel, badge: "LEILÃO BI" },
+      { title: "Knowledge & Learning AI", url: "/admin/orion-knowledge-learning", icon: GraduationCap, badge: "LEARNING" },
       { title: "Auction Orchestrator", url: "/admin/orion-auction-orchestrator", icon: Workflow, badge: "ORQUESTRADOR" },
       { title: "Fraud Detection AI", url: "/admin/orion-fraud", icon: ShieldAlert, badge: "FRAUD" },
       { title: "Identity & Access AI", url: "/admin/orion-identity", icon: Fingerprint, badge: "IDENTITY" },

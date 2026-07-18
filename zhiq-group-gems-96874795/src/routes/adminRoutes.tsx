@@ -14,7 +14,6 @@ const DashboardShell = lazy(() => import("@/dashboards/shell/DashboardShell"));
 const AdminComandoLeilao = lazy(() => import("@/pages/admin/AdminComandoLeilao"));
 // ORION Auction Intelligence — consolida AI-65/67/71/73 (lazy local)
 const AdminAuctionIntelligence = lazy(() => import("@/pages/admin/AdminAuctionIntelligence"));
-const AdminAuctionCommission = lazy(() => import("@/pages/admin/AdminAuctionCommission"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -143,6 +142,7 @@ import {
   AdminOrionAiGovernance,
   AdminOrionVisitors,
   AdminOrionAuctionIntelligence,
+  AdminOrionKnowledgeLearning,
   AdminOrionFraud,
   AdminOrionIdentity,
   AdminOrionThreat,
@@ -198,7 +198,6 @@ export const adminRoutes = (
       <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
       <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />
       <Route path="/admin/auction-intelligence" element={<AdminAuctionIntelligence />} />
-      <Route path="/admin/leilao-comissoes" element={<AdminAuctionCommission />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
@@ -344,6 +343,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-ai-governance" element={<AdminOrionAiGovernance />} />
       <Route path="/admin/orion-visitors" element={<AdminOrionVisitors />} />
       <Route path="/admin/orion-auction-intelligence" element={<AdminOrionAuctionIntelligence />} />
+      <Route path="/admin/orion-knowledge-learning" element={<AdminOrionKnowledgeLearning />} />
       <Route path="/admin/orion-fraud" element={<AdminOrionFraud />} />
       <Route path="/admin/orion-identity" element={<AdminOrionIdentity />} />
       <Route path="/admin/orion-threat-intelligence" element={<AdminOrionThreat />} />
