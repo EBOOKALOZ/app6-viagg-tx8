@@ -206,6 +206,8 @@ const menuSections: MenuSection[] = [
       { title: "SOC Commander AI", url: "/admin/orion-soc", icon: ShieldHalf, badge: "SOC COMMANDER" },
       { title: "Observability AI", url: "/admin/orion-observability", icon: Activity, badge: "OBSERVABILITY" },
       { title: "Cost Optimization AI", url: "/admin/orion-cost-optimization", icon: Coins, badge: "COST" },
+      { title: "AI Operations · AIOps", url: "/admin/orion-aiops", icon: Monitor, badge: "AIOPS" },
+      { title: "BI Warehouse AI (54)", url: "/admin/orion-bi", icon: BarChart3, badge: "BI DW" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },

@@ -87,6 +87,7 @@
 | AI-50 | Governance AI | `governance` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | prefs/cron/prompts/log (leitura) — Governador: registro auto-descoberto de 53 modulos, saude/certs/deps/lifecycle; GS/LS/CS/DEPS/OHS; namespace `orion_gov_*` | Ativo |
 | AI-51 | Observability AI | `observability` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | cron.job_run_details/pg_stat_statements/client_errors/orion_ai_log/orion_eventos + AI-10/11 (leitura) — Centro de Observabilidade: metricas/logs/traces/health/SLI/SLO+RCA; OHS/PHS/DAS/LQS/TPS/SLO Compliance; sanitiza secrets; tick `*/1`; selftest 12; NAO duplica AI-10/11; namespace `orion_obs_*` | Ativo |
 | AI-52 | Cost Optimization AI | `cost_optimization` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | pg/storage/cron + AI-37 (leitura) — custo tecnico: uso real x preco declarado, orcamentos, forecasts, anomalias, recomendacoes; COS/CES/RIS/FAS/BCS; namespace `orion_cost_*` | Ativo |
+| AI-54 | Business Intelligence AI (DW) | `business_intelligence` | v1 | 🟢 Enterprise | 97 | 2026-07-17 | pay/promo/leiloes/clicks/auth + AI-22+AI-52 (leitura) — DW executivo: facts/KPIs/insights/forecasts, so dados reais, lacunas declaradas; namespace `orion_biz_*`; painel /admin/orion-bi | Ativo |
 | — | Motor de Publicação | `motor_publish_*` | v1 | 🟢 Enterprise | 100 | 2026-07-14 | — (porta única) | Ativo |
 | — | ORION CORE Consolidation | — | v1 | 🟢 Certificado | 99 | 2026-07-14 | todos | Fundação |
 | — | **OCE — Certification Engine** | `certification` | v1 | 🟢 Enterprise | 98 | 2026-07-15 | catálogo (read-only) | CORE / auditor |
