@@ -12,6 +12,7 @@ const GovernanceDashboard = lazy(() => import("@/dashboards/pages/governance/Gov
 const DashboardShell = lazy(() => import("@/dashboards/shell/DashboardShell"));
 // COMANDO LEILÃO — Auction Command Center (lazy local p/ não colidir com lazyPages)
 const AdminComandoLeilao = lazy(() => import("@/pages/admin/AdminComandoLeilao"));
+const AdminAuctionCommission = lazy(() => import("@/pages/admin/AdminAuctionCommission"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -189,6 +190,7 @@ export const adminRoutes = (
       <Route path="/admin/viagens" element={<AdminViagemOverview />} />
       <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
       <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />
+      <Route path="/admin/leilao-comissoes" element={<AdminAuctionCommission />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />

@@ -123,6 +123,7 @@ const menuSections: MenuSection[] = [
       { title: "Centro de Crescimento", url: "/admin/centro-crescimento", icon: TrendingUp },
       { title: "Expansão", url: "/admin/expansao", icon: Gauge },
       { title: "Comando Leilão", url: "/admin/comando-leilao", icon: Tag, badge: "LEILÃO" },
+      { title: "Leilão · Comissões 6%", url: "/admin/leilao-comissoes", icon: Coins, badge: "COMISSÃO" },
     ],
   },
   {
