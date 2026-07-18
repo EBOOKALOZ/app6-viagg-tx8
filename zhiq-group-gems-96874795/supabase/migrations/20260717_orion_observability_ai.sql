@@ -429,14 +429,16 @@ CREATE OR REPLACE FUNCTION public.obs_health_refresh()
 RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE r record; v_n int := 0; v_estado text; v_disp numeric; v_err numeric; v_lat numeric;
 BEGIN
-  -- 7.1 cada job de cron = um servico ORION (disponibilidade = taxa de sucesso 24h)
+  -- 7.1 cada job de cron VIVO = um servico ORION (disponibilidade = taxa de sucesso 24h).
+  --     INNER JOIN em cron.job: jobs desagendados (jobid orfao apos unschedule/reschedule)
+  --     NAO sao servicos ativos — evita falso "critico" de job morto (DECLARADO).
   FOR r IN
-    SELECT coalesce(j.jobname,'job:'||d.jobid) jobname,
+    SELECT j.jobname jobname,
            round(100.0*count(*) FILTER (WHERE d.status='succeeded')/nullif(count(*),0),2) disp,
            round(100.0*count(*) FILTER (WHERE d.status='failed')/nullif(count(*),0),2) err,
            round(avg(extract(epoch FROM (d.end_time-d.start_time))*1000)::numeric,0) lat,
            max(d.start_time) ult
-    FROM cron.job_run_details d LEFT JOIN cron.job j ON j.jobid=d.jobid
+    FROM cron.job_run_details d JOIN cron.job j ON j.jobid=d.jobid
     WHERE d.start_time > now()-interval '24 hours' AND d.end_time IS NOT NULL
     GROUP BY 1
   LOOP

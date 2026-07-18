@@ -58,8 +58,22 @@ CREATE TABLE IF NOT EXISTS public.orion_aiops_anomalies (
   detectada_em timestamptz NOT NULL DEFAULT now(),
   resolvida_em timestamptz,
   updated_at  timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT aiops_anom_uq UNIQUE (dedupe_key, detectada_em)
+  CONSTRAINT aiops_anom_uq UNIQUE (dedupe_key)
 );
+-- fix idempotencia p/ instalacoes criadas com a constraint antiga (dedupe_key, detectada_em):
+-- limpa acoes que referenciam as anomalias duplicadas mais antigas (FK) antes de deduplicar
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='orion_aiops_actions') THEN
+    DELETE FROM public.orion_aiops_actions WHERE anomaly_id IN (
+      SELECT a.anomaly_id FROM public.orion_aiops_anomalies a JOIN public.orion_aiops_anomalies b
+        ON a.dedupe_key=b.dedupe_key AND a.anomaly_id < b.anomaly_id);
+  END IF;
+END$$;
+DELETE FROM public.orion_aiops_anomalies a USING public.orion_aiops_anomalies b
+  WHERE a.dedupe_key=b.dedupe_key AND a.anomaly_id < b.anomaly_id;
+ALTER TABLE public.orion_aiops_anomalies DROP CONSTRAINT IF EXISTS aiops_anom_uq;
+ALTER TABLE public.orion_aiops_anomalies ADD CONSTRAINT aiops_anom_uq UNIQUE (dedupe_key);
 COMMENT ON TABLE public.orion_aiops_anomalies IS 'ORION-AI-53: anomalias operacionais com evidencia. Fecham quando o sinal normaliza.';
 CREATE INDEX IF NOT EXISTS ix_aiops_anom_status ON public.orion_aiops_anomalies (status, severidade);
 
@@ -76,8 +90,12 @@ CREATE TABLE IF NOT EXISTS public.orion_aiops_predictions (
   evidencias   jsonb       NOT NULL DEFAULT '{}'::jsonb,
   realizado    boolean,                          -- validacao previsto x realizado
   criada_em    timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT aiops_pred_uq UNIQUE (dedupe_key, criada_em)
+  CONSTRAINT aiops_pred_uq UNIQUE (dedupe_key)
 );
+DELETE FROM public.orion_aiops_predictions a USING public.orion_aiops_predictions b
+  WHERE a.dedupe_key=b.dedupe_key AND a.prediction_id < b.prediction_id;
+ALTER TABLE public.orion_aiops_predictions DROP CONSTRAINT IF EXISTS aiops_pred_uq;
+ALTER TABLE public.orion_aiops_predictions ADD CONSTRAINT aiops_pred_uq UNIQUE (dedupe_key);
 COMMENT ON TABLE public.orion_aiops_predictions IS 'ORION-AI-53: predicoes de falha (prob/impacto/confianca/justificativa) a partir de tendencia real.';
 
 CREATE TABLE IF NOT EXISTS public.orion_aiops_actions (
@@ -208,15 +226,15 @@ END$$;
 CREATE OR REPLACE FUNCTION public.aiops_register_anomaly(
   p_tipo text, p_categoria text, p_alvo text, p_sev text, p_desc text, p_evid jsonb, p_dedupe text)
 RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_id bigint;
+DECLARE v_id bigint; v_new boolean;
 BEGIN
   INSERT INTO public.orion_aiops_anomalies (dedupe_key, tipo, categoria, alvo, severidade, descricao, evidencias)
   VALUES (p_dedupe, p_tipo, p_categoria, p_alvo, p_sev, p_desc, coalesce(p_evid,'{}'::jsonb))
-  ON CONFLICT (dedupe_key, detectada_em) DO NOTHING
-  RETURNING anomaly_id INTO v_id;
-  IF v_id IS NULL THEN
-    SELECT anomaly_id INTO v_id FROM public.orion_aiops_anomalies WHERE dedupe_key=p_dedupe ORDER BY anomaly_id DESC LIMIT 1;
-  ELSE
+  ON CONFLICT (dedupe_key) DO UPDATE SET severidade=excluded.severidade, descricao=excluded.descricao,
+    evidencias=excluded.evidencias, updated_at=now(),
+    status=CASE WHEN orion_aiops_anomalies.status='resolvida' THEN 'aberta' ELSE orion_aiops_anomalies.status END
+  RETURNING anomaly_id, (xmax = 0) INTO v_id, v_new;
+  IF v_new THEN  -- so grava evidencia (imutavel) na PRIMEIRA deteccao
     INSERT INTO public.orion_aiops_evidence (ref_tipo, ref_id, conteudo) VALUES ('anomaly', v_id::text, coalesce(p_evid,'{}'::jsonb));
   END IF;
   RETURN v_id;
@@ -395,7 +413,8 @@ BEGIN
         least(50 + r.fails*5, 95), '2h',
         'Job '||r.jn||' falhou '||r.fails||'/'||r.total||' nas ultimas 3h — tende a continuar ate correcao',
         jsonb_build_object('falhas',r.fails,'total',r.total))
-      ON CONFLICT (dedupe_key, criada_em) DO NOTHING;
+      ON CONFLICT (dedupe_key) DO UPDATE SET probabilidade=excluded.probabilidade, confianca=excluded.confianca,
+        justificativa=excluded.justificativa, evidencias=excluded.evidencias, criada_em=now();
       v_n := v_n+1;
     END LOOP;
   EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -409,7 +428,8 @@ BEGIN
       VALUES ('pred_degrad:'||current_date, 'degradacao', 'plataforma', least(40+v_open*10,100), 'medio', least(50+v_open*8,95), '4h',
         v_open||' anomalias alta/critica abertas — risco de degradacao operacional acumulada',
         jsonb_build_object('anomalias_criticas_abertas',v_open))
-      ON CONFLICT (dedupe_key, criada_em) DO NOTHING;
+      ON CONFLICT (dedupe_key) DO UPDATE SET probabilidade=excluded.probabilidade, confianca=excluded.confianca,
+        justificativa=excluded.justificativa, evidencias=excluded.evidencias, criada_em=now();
       v_n := v_n+1;
     END IF;
   END;
