@@ -148,7 +148,9 @@ import {
   AdminOrionCostOptimization,
   AdminOrionBi,
   AdminOrionPredictive,
+  AdminOrionDigitalTwin,
   AdminOrionAiops,
+  AdminOrionKgraph,
   AdminOrionAutonomousOps,
   AdminOrionPricing,
   AdminOrionForecast,
@@ -335,7 +337,9 @@ export const adminRoutes = (
       <Route path="/admin/orion-cost-optimization" element={<AdminOrionCostOptimization />} />
       <Route path="/admin/orion-bi" element={<AdminOrionBi />} />
       <Route path="/admin/orion-predictive" element={<AdminOrionPredictive />} />
+      <Route path="/admin/orion-digital-twin" element={<AdminOrionDigitalTwin />} />
       <Route path="/admin/orion-aiops" element={<AdminOrionAiops />} />
+      <Route path="/admin/orion-kgraph" element={<AdminOrionKgraph />} />
       <Route path="/admin/orion-autonomous-ops" element={<AdminOrionAutonomousOps />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
