@@ -28,6 +28,7 @@ import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
 import { GlobalSearchBar } from "@/components/public/GlobalSearchBar";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
+import { PremiumQuickAccessBar } from "@/components/layout/PremiumQuickAccessBar";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -283,31 +284,12 @@ export function MarketLayout({
                     </div>
                 </div>
 
-                {/* ═══ TRUST CHIPS BAR (PADRÃO PREMIUM - FAIXA LARANJA - FIXO / SEMPRE VISÍVEL) ═══ */}
+                {/* ═══ BARRA PREMIUM DE ACESSO RÁPIDO (UI-01 · FAIXA LARANJA · FIXA / SEMPRE VISÍVEL) ═══
+                    Entrega Local · Verificados · 👤 Minha Conta · Favoritos · Notificações · Som.
+                    O portal de áudio (#global-audio-portal-trustbar) vive dentro do componente. */}
                 <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
-                    <div className="relative max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center w-full min-h-[44px]">
-                        {/* Grupo de Confiabilidade (Centralizado - FIXO) */}
-                        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
-                            {/* Chip 1: Entrega Local */}
-                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] select-none cursor-default shrink-0">
-                                <span className="text-xs sm:text-sm">🛵</span>
-                                <span>Entrega Local</span>
-                            </div>
-
-                            {/* Chip 2: Comerciantes Verificados */}
-                            <div className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 h-7 sm:h-9 rounded-[16px] sm:rounded-[20px] bg-white border sm:border-2 border-[#68C7F2] text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black text-slate-950 uppercase tracking-tighter sm:tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] sm:shadow-[0_4px_16px_rgba(104,199,242,0.28)] select-none cursor-default shrink-0">
-                                <span className="text-xs sm:text-sm">🛡️</span>
-                                <span className="sm:hidden">Verificados</span>
-                                <span className="hidden sm:inline">Comerciantes Verificados</span>
-                            </div>
-                        </div>
-
-                        {/* Chip 3: Som (Portal do Botão de Áudio) - FIXO À DIREITA */}
-                        <div
-                            id="global-audio-portal-trustbar"
-                            className="absolute right-4 lg:right-6 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 z-10"
-                            onClick={(e) => e.stopPropagation()}
-                        />
+                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 w-full min-h-[44px]">
+                        <PremiumQuickAccessBar />
                     </div>
                 </div>
 

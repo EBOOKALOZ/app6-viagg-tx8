@@ -6,6 +6,8 @@ import { Route, Navigate } from "react-router-dom";
 
 // Rota de diagnóstico do Payment Brick (teste técnico, sem link no app).
 const TesteBrick = lazy(() => import("@/pages/dev/TesteBrick"));
+// Painel do Comprador — Meus Lances (lazy local p/ não colidir com lazyPages)
+const MeusLances = lazy(() => import("@/pages/public/MeusLances"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
@@ -107,6 +109,7 @@ export const publicRoutes = (
     <Route path="/real-estate/checkout/:listingId" element={<RealEstateCheckoutPage />} />
     <Route path="/loja/:storeId" element={<StorePublicPage />} />
     <Route path="/leiloes" element={<AuctionListPage />} />
+    <Route path="/meus-lances" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeusLances /></Suspense></ProtectedRoute>} />
     <Route path="/leilao/:id" element={<AuctionPublicPage />} />
     <Route path="/arremate/:id" element={<ArrematePublicPage />} />
     <Route path="/imoveis" element={<PublicRealEstateHome />} />

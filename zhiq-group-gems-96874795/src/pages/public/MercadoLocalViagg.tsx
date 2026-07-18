@@ -60,6 +60,7 @@ import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
+import { MercadoAuctionsSection } from "@/components/public/MercadoAuctionsSection";
 
 // ─── Helpers ────────────────────────────
 const STORAGE_BUCKET_CANDIDATES = ['marketing-materials', 'merchant-products', 'product-images', 'merchant-marketing'];
@@ -1146,6 +1147,9 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             ) : (
                 <>
 <InstitutionalSafetyBanner />
+
+            {/* ═══ LEILÕES — vitrine (só quando há leilões ativos) ═══ */}
+            <MercadoAuctionsSection />
 
             {/* CTA para anunciantes */}
             <div className="w-full px-4 lg:px-6 pb-4 pt-6 lg:pt-8">

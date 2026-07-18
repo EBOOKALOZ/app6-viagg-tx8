@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2, Sparkles, CheckCircle2, User, Phone, X, Tag, Gavel,
-  DollarSign, Send, ShieldCheck,
+  DollarSign, Send, ShieldCheck, LogIn,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface OfertaRapidaModalProps {
@@ -56,6 +58,9 @@ export function OfertaRapidaModal({
   context = "arremate",
   onSuccess,
 }: OfertaRapidaModalProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAuction = context === "auction";
   const [nome, setNome] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [amount, setAmount] = useState("");
@@ -83,21 +88,53 @@ export function OfertaRapidaModal({
   }, [open, defaultAmount]);
 
   const handleSubmit = async () => {
-    if (!nome.trim()) { setError("Preencha seu nome"); return; }
-    const digits = whatsapp.replace(/\D/g, "");
-    if (digits.length < 10) { setError("WhatsApp obrigatório — sem ele, a loja não consegue entrar em contato"); return; }
     const parsedAmount = parseFloat(amount);
     if (!parsedAmount || parsedAmount <= 0) { setError("Informe um valor válido"); return; }
 
     setSending(true);
     setError("");
+    const amountCents = Math.round(parsedAmount * 100);
+
+    // ═══ LEILÃO: grava LANCE REAL em auction_bids (conta única via auth.uid()) ═══
+    // Antes ia para arremate_offers (lead) e o lance NÃO ficava na conta do usuário.
+    if (isAuction) {
+      if (!user?.id) {
+        setError("Entre na sua conta para dar lance.");
+        setSending(false);
+        return;
+      }
+      try {
+        const { data, error: bidError } = await supabase.rpc("place_auction_bid", {
+          p_listing_id: listingId,
+          p_amount_cents: amountCents,
+        });
+        if (bidError) { setError(bidError.message); setSending(false); return; }
+        const result = data as any;
+        if (result && result.success === false) {
+          setError(result.error || "Não foi possível registrar o lance");
+          setSending(false);
+          return;
+        }
+        setSent(true);
+        toast.success("Lance registrado! 🔥 Acompanhe em Meus Lances.");
+        onSuccess?.();
+      } catch {
+        setError("Erro ao registrar o lance. Tente novamente.");
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    // ═══ ARREMATE: lead (nome + WhatsApp) → arremate_offers ═══
+    if (!nome.trim()) { setError("Preencha seu nome"); setSending(false); return; }
+    const digits = whatsapp.replace(/\D/g, "");
+    if (digits.length < 10) { setError("WhatsApp obrigatório — sem ele, a loja não consegue entrar em contato"); setSending(false); return; }
 
     try {
       // Save name/whatsapp for next time
       localStorage.setItem(NAME_KEY, nome.trim());
       localStorage.setItem(WHATSAPP_KEY, formatPhone(whatsapp));
-
-      const amountCents = Math.round(parsedAmount * 100);
 
       const { data, error: rpcError } = await supabase.rpc("submit_arremate_offer", {
         p_listing_id: listingId,
@@ -198,25 +235,39 @@ export function OfertaRapidaModal({
                 <CheckCircle2 className="h-8 w-8 text-emerald-500" />
               </div>
               <div>
-                <p className="text-base font-bold text-gray-800">Sua oferta foi registrada!</p>
+                <p className="text-base font-bold text-gray-800">{isAuction ? "Lance registrado! 🔥" : "Sua oferta foi registrada!"}</p>
                 <p className="text-sm text-gray-500 mt-1">
-                  O lojista receberá sua proposta e, se aceita, entrará em contato pelo WhatsApp informado.
+                  {isAuction
+                    ? "Você está participando do leilão. Acompanhe seus lances na sua conta, em Meus Lances."
+                    : "O lojista receberá sua proposta e, se aceita, entrará em contato pelo WhatsApp informado."}
                 </p>
               </div>
               <div className={`rounded-xl ${accentBg} border ${accentBorder} p-3`}>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Valor da oferta</span>
+                  <span className="text-gray-600">{isAuction ? "Seu lance" : "Valor da oferta"}</span>
                   <span className="font-black text-gray-900">{formatBRL(parseFloat(amount) || 0)}</span>
                 </div>
-                <div className="flex items-center justify-between text-sm mt-1">
-                  <span className="text-gray-600">WhatsApp</span>
-                  <span className="font-bold text-gray-800">{formatPhone(whatsapp)}</span>
+                {!isAuction && (
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-gray-600">WhatsApp</span>
+                    <span className="font-bold text-gray-800">{formatPhone(whatsapp)}</span>
+                  </div>
+                )}
+              </div>
+              {isAuction ? (
+                <Button
+                  onClick={() => { onClose(); navigate("/meus-lances"); }}
+                  variant="outline"
+                  className="w-full h-10 text-sm font-bold rounded-xl border-orange-300 text-orange-700 hover:bg-orange-50"
+                >
+                  <Gavel className="h-4 w-4 mr-2" /> Ver Meus Lances
+                </Button>
+              ) : (
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400">
+                  <ShieldCheck className="h-3 w-3" />
+                  Seus dados são compartilhados apenas com a loja
                 </div>
-              </div>
-              <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400">
-                <ShieldCheck className="h-3 w-3" />
-                Seus dados são compartilhados apenas com a loja
-              </div>
+              )}
               <div className="text-[9px] text-gray-400/80 text-center leading-relaxed mt-1 px-2">
                 A plataforma atua apenas como intermediadora de produtos locais, facilitando o acesso entre consumidores e lojas da região. Não nos envolvemos nem nos responsabilizamos pelas transações realizadas entre as partes.
               </div>
@@ -256,34 +307,58 @@ export function OfertaRapidaModal({
                 )}
               </div>
 
-              {/* Nome */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5" /> Seu nome <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  placeholder="Como quer ser chamado(a)"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  className="h-11 rounded-xl"
-                />
-              </div>
+              {isAuction ? (
+                /* ═══ LEILÃO: identidade pela conta (sem nome/WhatsApp) ═══ */
+                user ? (
+                  <div className="flex items-center gap-2.5 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
+                    <User className="h-4 w-4 text-orange-500 shrink-0" />
+                    <p className="text-xs text-gray-600 leading-snug">
+                      Dando lance como <b className="text-gray-900">{user.email || "sua conta"}</b> — fica registrado em <b>Meus Lances</b>.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-center space-y-2.5">
+                    <p className="text-xs font-semibold text-gray-700">Entre na sua conta para dar lance no leilão.</p>
+                    <Button
+                      onClick={() => { onClose(); navigate("/auth"); }}
+                      className="w-full h-10 text-sm font-bold bg-[#FF6A00] hover:bg-[#e85f00] text-white rounded-xl"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" /> Entrar
+                    </Button>
+                  </div>
+                )
+              ) : (
+                <>
+                  {/* Nome */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5" /> Seu nome <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      placeholder="Como quer ser chamado(a)"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      className="h-11 rounded-xl"
+                    />
+                  </div>
 
-              {/* WhatsApp (obrigatório) */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" /> WhatsApp
-                  <span className="text-red-500">*</span>
-                  <span className="ml-auto text-[9px] font-semibold text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full">obrigatório</span>
-                </Label>
-                <Input
-                  placeholder="(11) 99999-9999"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
-                  className="h-11 rounded-xl"
-                />
-                <p className="text-[10px] text-gray-400">Sem WhatsApp, a loja não consegue entrar em contato</p>
-              </div>
+                  {/* WhatsApp (obrigatório) */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5" /> WhatsApp
+                      <span className="text-red-500">*</span>
+                      <span className="ml-auto text-[9px] font-semibold text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full">obrigatório</span>
+                    </Label>
+                    <Input
+                      placeholder="(11) 99999-9999"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
+                      className="h-11 rounded-xl"
+                    />
+                    <p className="text-[10px] text-gray-400">Sem WhatsApp, a loja não consegue entrar em contato</p>
+                  </div>
+                </>
+              )}
 
               {/* Error */}
               {error && (
@@ -292,27 +367,35 @@ export function OfertaRapidaModal({
                 </div>
               )}
 
-              {/* Submit */}
-              <Button
-                onClick={handleSubmit}
-                disabled={sending || !nome.trim() || whatsapp.replace(/\D/g, "").length < 10 || (!amount && !defaultAmount)}
-                className={`w-full h-12 text-sm font-bold bg-gradient-to-r ${accentFrom} ${accentTo} hover:opacity-90 text-white rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {sending ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Enviar {isArremate ? "Oferta" : "Lance"}
-                  </>
-                )}
-              </Button>
+              {/* Submit (leilão deslogado mostra só o botão Entrar acima) */}
+              {!(isAuction && !user) && (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={
+                    sending ||
+                    (!amount && !defaultAmount) ||
+                    (!isAuction && (!nome.trim() || whatsapp.replace(/\D/g, "").length < 10))
+                  }
+                  className={`w-full h-12 text-sm font-bold bg-gradient-to-r ${accentFrom} ${accentTo} hover:opacity-90 text-white rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {sending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      {isArremate ? <Send className="h-4 w-4 mr-2" /> : <Gavel className="h-4 w-4 mr-2" />}
+                      {isArremate ? "Enviar Oferta" : "Dar Lance"}
+                    </>
+                  )}
+                </Button>
+              )}
 
               {/* Info */}
               <div className="flex items-start gap-2 text-[10px] text-gray-400 leading-relaxed">
                 <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-300" />
                 <p>
-                  Sem cadastro necessário. A loja receberá sua oferta e, se aceita, entrará em contato pelo WhatsApp informado.
+                  {isAuction
+                    ? "Seu lance fica registrado na sua conta única Viagg-TX8™ e aparece em Meus Lances. O maior lance ao encerramento vence."
+                    : "Sem cadastro necessário. A loja receberá sua oferta e, se aceita, entrará em contato pelo WhatsApp informado."}
                 </p>
               </div>
               <div className="text-[9px] text-gray-400/70 leading-relaxed px-1 border-t border-gray-100 pt-2">

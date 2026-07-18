@@ -13,7 +13,7 @@ import { goToMiniLogin } from "@/lib/auth/miniReturn";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  User, Wallet, Users, LogOut, LogIn, ChevronRight, ShieldCheck,
+  User, Wallet, Users, LogOut, LogIn, ChevronRight, ShieldCheck, Gavel,
 } from "lucide-react";
 
 interface HubItem {
@@ -33,6 +33,13 @@ const ITEMS: HubItem[] = [
     to: "/meus-dados",
     accent: "bg-white text-[#2563eb] border-white shadow-md",
     showUserAvatar: true,
+  },
+  {
+    icon: Gavel,
+    title: "Meus Lances",
+    desc: "Acompanhe todos os leilões em que você deu lance",
+    to: "/meus-lances",
+    accent: "bg-[#FF6A00] text-white border-[#FF6A00] shadow-md",
   },
   {
     icon: Wallet,
