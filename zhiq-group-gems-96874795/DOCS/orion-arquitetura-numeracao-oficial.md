@@ -39,7 +39,7 @@
 | **AI-28** | **Sustainability AI** | `sustainability` | v1 | 🟢 Enterprise | 97 | 07-15 | BI, Logistics, Growth, Customer Success (leitura) |
 | **AI-29** | **Innovation AI** | `innovation` | v1 | 🟢 Enterprise | 97 | 07-15 | todos (gaps+oportunidades, leitura) |
 | **AI-30** | **Executive AI · CEO Copilot** | `executive_copilot` | v1 | 🟢 Enterprise | 98 | 07-15 | TODOS os módulos (scores, leitura) |
-| AI-31 | Knowledge & Learning AI | `knowledge` | — | ⚪ NÃO CONSTRUÍDO | — | — | (reservado — o `orion_knowledge`/`knowledge_engine` é do AI-14, não deste) |
+| **AI-31** | **Knowledge & Learning AI** | `knowledge_learning` | v1 | 🟢 Enterprise | 96 | 07-18 | orion_eventos (event bus de TODOS os módulos, leitura). Aprendizado consolidado: Learning Score + base de conhecimento (lições c/ evidência) + padrões. Namespace `orion_learning_*`, prompts `learning.*` (NÃO usa `knowledge`/`knowledge.*` do AI-34, nem `orion_knowledge`/`knowledge_engine` do AI-14) |
 | **AI-32** | **Search & Discovery AI** | `search_discovery` | v1 | 🟢 Enterprise | 97 | 07-16 | Marketplace/Trust/BI/Marketing/Sales/Customer/Innovation/Executive (leitura) |
 | **AI-33** | **GEO Optimization AI** | `geo_optimization` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 Search & Discovery (Discovery/Semantic), Marketplace/Marketing/Sales/BI/Publisher (leitura) |
 | **AI-34** | **Knowledge Graph AI** | `knowledge_graph` | v1 | 🟢 Enterprise | 97 | 07-16 | AI-32 + AI-33 (Discovery/GEO/Semantic), Marketplace/BI/Publisher (leitura). NÃO confundir c/ `orion_knowledge`/`knowledge_engine` do AI-14 |
