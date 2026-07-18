@@ -208,6 +208,7 @@ const menuSections: MenuSection[] = [
       { title: "Observability AI", url: "/admin/orion-observability", icon: Activity, badge: "OBSERVABILITY" },
       { title: "Cost Optimization AI", url: "/admin/orion-cost-optimization", icon: Coins, badge: "COST" },
       { title: "AI Operations · AIOps", url: "/admin/orion-aiops", icon: Monitor, badge: "AIOPS" },
+      { title: "Autonomous Operations · AOC", url: "/admin/orion-autonomous-ops", icon: Cpu, badge: "AUTO OPS" },
       { title: "BI Warehouse AI (54)", url: "/admin/orion-bi", icon: BarChart3, badge: "BI DW" },
       { title: "Predictive Intelligence AI", url: "/admin/orion-predictive", icon: Gauge, badge: "PREDICTIVE" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },

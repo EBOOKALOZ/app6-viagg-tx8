@@ -149,6 +149,7 @@ import {
   AdminOrionBi,
   AdminOrionPredictive,
   AdminOrionAiops,
+  AdminOrionAutonomousOps,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -335,6 +336,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-bi" element={<AdminOrionBi />} />
       <Route path="/admin/orion-predictive" element={<AdminOrionPredictive />} />
       <Route path="/admin/orion-aiops" element={<AdminOrionAiops />} />
+      <Route path="/admin/orion-autonomous-ops" element={<AdminOrionAutonomousOps />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
