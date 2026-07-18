@@ -373,6 +373,7 @@ export const AdminOrionAuctionGrowth = lazy(() => import("@/pages/admin/AdminOri
 export const AdminOrionAutonomousOps = lazy(() => import("@/pages/admin/AdminOrionAutonomousOps"));
 export const AdminOrionExecutiveStrategy = lazy(() => import("@/pages/admin/AdminOrionExecutiveStrategy"));
 export const AdminOrionCreativeLayout = lazy(() => import("@/pages/admin/AdminOrionCreativeLayout"));
+export const AdminOrionAuctionOrchestrator = lazy(() => import("@/pages/admin/AdminOrionAuctionOrchestrator"));
 export const AdminOrionPricing = lazy(() => import("@/pages/admin/AdminOrionPricing"));
 export const AdminOrionForecast = lazy(() => import("@/pages/admin/AdminOrionForecast"));
 

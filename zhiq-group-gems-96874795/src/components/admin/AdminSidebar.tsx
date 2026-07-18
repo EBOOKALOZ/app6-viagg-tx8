@@ -209,6 +209,7 @@ const menuSections: MenuSection[] = [
       { title: "AI Governance Center", url: "/admin/orion-ai-governance", icon: ShieldCheck, badge: "GOVERN" },
       { title: "Visitor Intelligence AI", url: "/admin/orion-visitors", icon: Users, badge: "VISITOR" },
       { title: "Auction Intelligence & Analytics", url: "/admin/orion-auction-intelligence", icon: Gavel, badge: "LEILÃO BI" },
+      { title: "Auction Orchestrator", url: "/admin/orion-auction-orchestrator", icon: Workflow, badge: "ORQUESTRADOR" },
       { title: "Fraud Detection AI", url: "/admin/orion-fraud", icon: ShieldAlert, badge: "FRAUD" },
       { title: "Identity & Access AI", url: "/admin/orion-identity", icon: Fingerprint, badge: "IDENTITY" },
       { title: "Threat Intelligence AI", url: "/admin/orion-threat-intelligence", icon: Waypoints, badge: "THREAT" },
