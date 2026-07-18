@@ -245,7 +245,22 @@ BEGIN
       'contatos_liberados', (SELECT count(*) FROM public.orion_auction_commissions WHERE contato_liberado),
       'creditos_arrecadados', (SELECT coalesce(sum(creditos_debitados),0) FROM public.orion_auction_commissions),
       'comissao_brl_total', (SELECT coalesce(sum(comissao_brl) FILTER (WHERE status='paga'),0) FROM public.orion_auction_commissions),
-      'comissao_brl_pendente', (SELECT coalesce(sum(comissao_brl) FILTER (WHERE status='aguardando_pagamento'),0) FROM public.orion_auction_commissions)),
+      'comissao_brl_pendente', (SELECT coalesce(sum(comissao_brl) FILTER (WHERE status='aguardando_pagamento'),0) FROM public.orion_auction_commissions),
+      -- visao dos leiloes REAIS (mesmo antes de existir comissao)
+      'leiloes_ativos', (SELECT count(*) FROM public.auction_listings WHERE status='active' AND ends_at > now()),
+      'leiloes_encerrados', (SELECT count(*) FROM public.auction_listings WHERE status='ended' OR ends_at <= now()),
+      'comissao_projetada_ativos_brl', (SELECT coalesce(round(sum(current_bid)*(SELECT pct FROM public.orion_auction_commission_config WHERE id)/100.0,2),0)
+         FROM public.auction_listings WHERE status='active' AND ends_at > now() AND current_bid > 0)),
+    -- LEILOES AO VIVO com comissao projetada + estado (painel nunca fica vazio tendo leilao)
+    'leiloes', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.ends_at DESC),'[]'::jsonb) FROM (
+       SELECT al.id AS listing_id, al.title AS titulo, al.status, al.city, al.current_bid AS arremate_brl,
+         al.winner_user_id IS NOT NULL AS tem_vencedor, al.ends_at, (al.ends_at <= now()) AS encerrado,
+         (public.orion_auction_commission_compute(al.current_bid)->>'comissao_brl')::numeric AS comissao_projetada_brl,
+         (public.orion_auction_commission_compute(al.current_bid)->>'creditos')::int AS creditos_projetados,
+         c.status AS comissao_status, c.contato_liberado
+       FROM public.auction_listings al
+       LEFT JOIN public.orion_auction_commissions c ON c.listing_id = al.id
+       ORDER BY al.ends_at DESC LIMIT 50) x),
     'recentes', (SELECT coalesce(jsonb_agg(to_jsonb(x) ORDER BY x.criado_em DESC),'[]'::jsonb)
        FROM (SELECT listing_id, owner_user_id, arremate_brl, comissao_brl, creditos_devidos, creditos_debitados, status, contato_liberado, criado_em
              FROM public.orion_auction_commissions ORDER BY criado_em DESC LIMIT 30) x),
