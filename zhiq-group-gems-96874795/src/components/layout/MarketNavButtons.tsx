@@ -73,7 +73,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
   };
 
   return (
-    <div className="pb-2.5 pt-1.5 flex flex-col gap-1.5 sm:gap-2 justify-center items-center px-1 sm:px-0 w-full" role="navigation" aria-label="Categorias da plataforma">
+    <div className="pb-1 pt-0.5 flex flex-col gap-1 sm:gap-1.5 justify-center items-center px-1 sm:px-0 w-full" role="navigation" aria-label="Categorias da plataforma">
       {/* Linha Superior: Corridas, Mercado, Imóveis, Veículos, Serviços */}
       <div className="flex flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2.5 justify-center items-center w-full">
         {TOP_ROUTES.map(({ label, path }) => {
@@ -85,7 +85,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
               aria-label={`Categoria ${label}`}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex-1 sm:flex-none sm:px-5 flex items-center justify-center h-8 sm:h-9 rounded-[18px] font-black text-[10px] sm:text-xs uppercase tracking-tight select-none transition-all duration-200 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 outline-none",
+                "flex-1 sm:flex-none sm:px-5 flex items-center justify-center h-7 sm:h-8 rounded-[16px] font-black text-[10px] sm:text-xs uppercase tracking-tight select-none transition-all duration-200 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 outline-none",
                 active
                   ? "bg-[#68C7F2] text-slate-950 border-2 border-[#FFC107] shadow-[0_0_18px_rgba(255,193,7,0.5)] scale-[1.03] z-10 font-black"
                   : "bg-[#68C7F2] text-slate-950 shadow-[0_2px_8px_rgba(0,0,0,0.1)] hover:bg-[#5bbdee] hover:-translate-y-0.5 hover:shadow-[0_4px_14px_rgba(0,0,0,0.16)] hover:scale-[1.03] active:scale-95 active:translate-y-0"
@@ -108,7 +108,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
               aria-label={`Categoria ${label}`}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "w-full flex items-center justify-center h-8 sm:h-9 rounded-[18px] font-black text-[10px] sm:text-xs uppercase tracking-tight select-none transition-all duration-200 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 outline-none",
+                "w-full flex items-center justify-center h-7 sm:h-8 rounded-[16px] font-black text-[10px] sm:text-xs uppercase tracking-tight select-none transition-all duration-200 ease-out cursor-pointer focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 outline-none",
                 active
                   ? "bg-[#68C7F2] text-slate-950 border-2 border-[#FFC107] shadow-[0_0_18px_rgba(255,193,7,0.5)] scale-[1.03] z-10 font-black"
                   : "bg-[#68C7F2] text-slate-950 shadow-[0_2px_8px_rgba(0,0,0,0.1)] hover:bg-[#5bbdee] hover:-translate-y-0.5 hover:shadow-[0_4px_14px_rgba(0,0,0,0.16)] hover:scale-[1.03] active:scale-95 active:translate-y-0"

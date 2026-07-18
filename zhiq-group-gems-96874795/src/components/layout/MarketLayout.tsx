@@ -250,7 +250,7 @@ export function MarketLayout({
 
                     {/* Mobile search row - SEMPRE VISÍVEL NO ESTADO RECOLHIDO */}
                     {showSearch && (
-                        <div className="lg:hidden pt-1 pb-2.5 flex items-center gap-2.5">
+                        <div className="lg:hidden pt-0.5 pb-1 flex items-center gap-2.5">
                             {/* Logo à esquerda da pesquisa */}
                             <div className="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center hover:scale-105 transition-transform" onClick={() => navigate("/mercado")}>
                                 <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[46px] w-[46px] rounded-xl object-cover shadow-sm border border-black/10" />
