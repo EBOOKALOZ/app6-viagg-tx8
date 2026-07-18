@@ -49,10 +49,10 @@ const ACCOUNT_MENU: { emoji: string; label: string; to: string }[] = [
   { emoji: "⚙️", label: "Configurações", to: "/conta" },
 ];
 
-// Pílula base do atalho (cantos arredondados, toque ≥44px, microinterações).
+// Pílula base do atalho (cantos arredondados, toque acessível, microinterações).
 const pillBase =
-  "flex items-center justify-center gap-1 sm:gap-1.5 h-9 min-h-[36px] px-2.5 sm:px-4 rounded-[16px] sm:rounded-[20px] " +
-  "text-[8.5px] min-[360px]:text-[9px] sm:text-xs font-black uppercase tracking-tighter sm:tracking-tight " +
+  "flex items-center justify-center gap-1 sm:gap-1.5 h-6 sm:h-7 px-2 sm:px-3 rounded-full " +
+  "text-[9px] min-[360px]:text-[10px] sm:text-[11px] font-black uppercase tracking-tighter sm:tracking-tight " +
   "whitespace-nowrap shrink-0 select-none transition-all duration-200 ease-out outline-none " +
   "focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF6A00]";
 
@@ -82,25 +82,8 @@ export function PremiumQuickAccessBar() {
     <div
       role="navigation"
       aria-label="Acesso rápido — Minha Conta"
-      className="flex items-center gap-1.5 sm:gap-2.5 w-full overflow-x-auto scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] py-0.5"
+      className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 w-full"
     >
-      {/* 🚚 Entrega Local (informativo) */}
-      <span
-        className={cn(pillBase, "bg-white text-slate-950 border sm:border-2 border-[#68C7F2] cursor-default shadow-[0_2px_8px_rgba(0,0,0,0.06)]")}
-      >
-        <span className="text-xs sm:text-sm">🛵</span>
-        <span>Entrega Local</span>
-      </span>
-
-      {/* 🛡️ Verificados (informativo) */}
-      <span
-        className={cn(pillBase, "bg-white text-slate-950 border sm:border-2 border-[#68C7F2] cursor-default shadow-[0_2px_8px_rgba(0,0,0,0.06)]")}
-      >
-        <span className="text-xs sm:text-sm">🛡️</span>
-        <span className="sm:hidden">Verificados</span>
-        <span className="hidden sm:inline">Comerciantes Verificados</span>
-      </span>
-
       {/* 👤 Minha Conta — entrada da Conta Única do Consumidor */}
       {user ? (
         <DropdownMenu>
@@ -115,15 +98,15 @@ export function PremiumQuickAccessBar() {
                   : "bg-[#075985] text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)] hover:brightness-110"
               )}
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/15 text-[10px] font-black ring-1 ring-white/40">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/15 text-[9px] font-black ring-1 ring-white/40">
                 {userAvatar ? (
                   <img src={userAvatar} alt="" className="h-full w-full object-cover" />
                 ) : (
                   initial
                 )}
               </span>
-              <span className="max-w-[72px] truncate normal-case">{displayName}</span>
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-80" />
+              <span className="max-w-[64px] truncate normal-case">{displayName}</span>
+              <ChevronDown className="h-3 w-3 shrink-0 opacity-80" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -179,7 +162,7 @@ export function PremiumQuickAccessBar() {
             "cursor-pointer bg-[#075985] text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 hover:scale-[1.03] hover:brightness-110 active:scale-95 gap-1.5"
           )}
         >
-          <LogIn className="h-3.5 w-3.5" />
+          <LogIn className="h-3 w-3" />
           <span>Entrar</span>
         </button>
       )}
@@ -193,8 +176,8 @@ export function PremiumQuickAccessBar() {
           "cursor-pointer bg-white text-slate-950 border sm:border-2 border-[#68C7F2] shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95"
         )}
       >
-        <Heart className="h-3.5 w-3.5 text-[#FF6A00]" />
-        <span>Favoritos</span>
+        <Heart className="h-3 w-3 text-[#FF6A00]" />
+        <span className="hidden sm:inline">Favoritos</span>
       </button>
 
       {/* 🔔 Notificações */}
@@ -206,14 +189,14 @@ export function PremiumQuickAccessBar() {
           "cursor-pointer bg-white text-slate-950 border sm:border-2 border-[#68C7F2] shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95"
         )}
       >
-        <Bell className="h-3.5 w-3.5 text-[#075985]" />
-        <span className="hidden min-[360px]:inline">Notificações</span>
+        <Bell className="h-3 w-3 text-[#075985]" />
+        <span className="hidden sm:inline">Notificações</span>
       </button>
 
       {/* 🔊 Som — portal do GlobalAudioPlayer (NÃO alterar o id) */}
       <div
         id="global-audio-portal-trustbar"
-        className="ml-auto flex shrink-0 items-center justify-center"
+        className="flex shrink-0 items-center justify-center"
         onClick={(e) => e.stopPropagation()}
       />
     </div>

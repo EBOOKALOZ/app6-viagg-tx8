@@ -288,7 +288,7 @@ export function MarketLayout({
                     Entrega Local · Verificados · 👤 Minha Conta · Favoritos · Notificações · Som.
                     O portal de áudio (#global-audio-portal-trustbar) vive dentro do componente. */}
                 <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
-                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 w-full min-h-[44px]">
+                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-1 w-full">
                         <PremiumQuickAccessBar />
                     </div>
                 </div>
