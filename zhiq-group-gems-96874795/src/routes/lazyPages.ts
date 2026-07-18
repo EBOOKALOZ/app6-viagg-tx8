@@ -361,9 +361,11 @@ export const AdminOrionCostOptimization = lazy(() => import("@/pages/admin/Admin
 export const AdminOrionBi = lazy(() => import("@/pages/admin/AdminOrionBi"));
 export const AdminOrionPredictive = lazy(() => import("@/pages/admin/AdminOrionPredictive"));
 export const AdminOrionDigitalTwin = lazy(() => import("@/pages/admin/AdminOrionDigitalTwin"));
+export const AdminOrionGovernance = lazy(() => import("@/pages/admin/AdminOrionGovernance"));
 export const AdminOrionAiops = lazy(() => import("@/pages/admin/AdminOrionAiops"));
 export const AdminOrionKgraph = lazy(() => import("@/pages/admin/AdminOrionKgraph"));
 export const AdminOrionAutonomousOps = lazy(() => import("@/pages/admin/AdminOrionAutonomousOps"));
+export const AdminOrionExecutiveStrategy = lazy(() => import("@/pages/admin/AdminOrionExecutiveStrategy"));
 export const AdminOrionPricing = lazy(() => import("@/pages/admin/AdminOrionPricing"));
 export const AdminOrionForecast = lazy(() => import("@/pages/admin/AdminOrionForecast"));
 
