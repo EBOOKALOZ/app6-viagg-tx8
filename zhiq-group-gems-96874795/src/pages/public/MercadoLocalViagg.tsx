@@ -1148,8 +1148,8 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                 <>
 <InstitutionalSafetyBanner />
 
-            {/* ═══ LEILÕES — vitrine (só quando há leilões ativos) ═══ */}
-            <MercadoAuctionsSection />
+            {/* ═══ LEILÕES — vitrine (ativos; ao buscar "leilão" mostra TODOS) ═══ */}
+            <MercadoAuctionsSection search={search} />
 
             {/* CTA para anunciantes */}
             <div className="w-full px-4 lg:px-6 pb-4 pt-6 lg:pt-8">

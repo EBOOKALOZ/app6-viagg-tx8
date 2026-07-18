@@ -119,19 +119,21 @@ function AuctionCard({ a, hot, onClick }: { a: AuctionRow; hot: boolean; onClick
   );
 }
 
-export function MercadoAuctionsSection() {
+export function MercadoAuctionsSection({ search = "" }: { search?: string }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState<AuctionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Busca TODOS os leilões cadastrados (exceto cancelados/removidos). O recorte
+  // "ativos" vs "todos" é feito no cliente — assim a busca por "leilão" mostra
+  // todos os cadastrados sem novo round-trip.
   const fetchRows = useCallback(async () => {
     const { data, error } = await supabase
       .from("auction_listings")
       .select("id, title, product_image_url, starting_bid, current_bid, city, ends_at, total_bids, watchers_count, status, listing_type")
-      .eq("status", "active")
-      .gte("ends_at", new Date().toISOString())
+      .not("status", "in", "(canceled,cancelled,cancelado,deleted,removed,draft)")
       .order("ends_at", { ascending: true })
-      .limit(12);
+      .limit(48);
     if (!error && data) setRows(data as AuctionRow[]);
     setLoading(false);
   }, []);
@@ -146,18 +148,46 @@ export function MercadoAuctionsSection() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchRows]);
 
+  const q = (search || "").trim().toLowerCase();
+  const isLeiloesQuery = /leil/.test(q); // "leilão", "leilões", "leilao", "leiloes"
+
+  // Leilões ativos (status vivo + ainda não encerrados) para o carrossel padrão.
+  const activeRows = useMemo(() => {
+    const now = Date.now();
+    return rows.filter(r =>
+      ["active", "ativo", "published", "live"].includes(r.status) &&
+      new Date(r.ends_at).getTime() > now
+    );
+  }, [rows]);
+
+  // Linhas a exibir: sem busca → ativos; busca "leilão" → TODOS cadastrados;
+  // busca por termo → casa por título/cidade (em todos os cadastrados).
+  const displayRows = useMemo(() => {
+    if (!q) return activeRows;
+    if (isLeiloesQuery) return rows;
+    return rows.filter(r =>
+      r.title.toLowerCase().includes(q) ||
+      (r.city || "").toLowerCase().includes(q)
+    );
+  }, [q, isLeiloesQuery, rows, activeRows]);
+
   // "Em Alta": os 3 com mais lances (e pelo menos 1 lance)
   const hotIds = useMemo(() => {
     return new Set(
-      [...rows].filter(r => (r.total_bids || 0) > 0)
+      [...displayRows].filter(r => (r.total_bids || 0) > 0)
         .sort((a, b) => (b.total_bids || 0) - (a.total_bids || 0))
         .slice(0, 3)
         .map(r => r.id)
     );
-  }, [rows]);
+  }, [displayRows]);
 
-  // Não renderiza a seção se não há leilões ativos (não polui o Mercado)
-  if (!loading && rows.length === 0) return null;
+  // Não renderiza se não há nada a mostrar (não polui o Mercado / resultados)
+  if (!loading && displayRows.length === 0) return null;
+
+  const heading = !q ? "Leilões" : isLeiloesQuery ? "Todos os Leilões" : "Leilões encontrados";
+  const countLabel = !q
+    ? `${displayRows.length} ativos`
+    : `${displayRows.length} ${displayRows.length === 1 ? "resultado" : "resultados"}`;
 
   return (
     <section className="w-full px-3 sm:px-4 py-4">
@@ -166,8 +196,8 @@ export function MercadoAuctionsSection() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">🏷️</span>
-            <h2 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">Leilões</h2>
-            <span className="text-[10px] font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full uppercase">{rows.length} ativos</span>
+            <h2 className="text-base sm:text-lg font-black text-gray-900 uppercase tracking-tight">{heading}</h2>
+            <span className="text-[10px] font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full uppercase">{countLabel}</span>
           </div>
           <button
             onClick={() => navigate("/leiloes")}
@@ -185,7 +215,7 @@ export function MercadoAuctionsSection() {
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-            {rows.map(a => (
+            {displayRows.map(a => (
               <div key={a.id} className="snap-start">
                 <AuctionCard a={a} hot={hotIds.has(a.id)} onClick={() => navigate(`/leilao/${a.id}`)} />
               </div>
