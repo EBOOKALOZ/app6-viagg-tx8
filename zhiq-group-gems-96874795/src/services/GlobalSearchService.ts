@@ -1,7 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 
-export type SearchCategory = 'mercado' | 'imoveis' | 'veiculos' | 'servicos' | 'viagens' | 'fretes';
+export type SearchCategory = 'mercado' | 'imoveis' | 'veiculos' | 'servicos' | 'viagens' | 'fretes' | 'leiloes';
+
+/* Remove acentos + minúsculas, para casar "leilão"/"leilao"/"LEILÕES" etc. */
+function normalizeTerm(s: string): string {
+  return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/* Intenção de "ver leilões": ao digitar leilão/leilões/arremate/lance,
+   mostramos TODOS os leilões ao vivo (ordenados por proximidade da finalização),
+   não uma busca por título. */
+export function isAuctionIntent(query: string): boolean {
+  const n = normalizeTerm(query);
+  if (n.length < 4) return false;
+  return n.startsWith('leil')       // leil, leilao, leiloes, leilão, leilões, leiloar
+      || n.startsWith('arremat')    // arremate, arremates
+      || n === 'lance' || n === 'lances';
+}
 
 export interface GlobalSearchResult {
   id: string;
@@ -96,6 +112,13 @@ export class GlobalSearchService {
   static async searchAll(query: string): Promise<GlobalSearchResult[]> {
     if (!query || query.trim().length < 1) return [];
     const q = query.trim();
+
+    // Intenção "leilão": mostrar TODOS os leilões ao vivo, sempre na ordem de
+    // proximidade da finalização (não é busca por título nem re-ordena por relevância).
+    if (isAuctionIntent(q)) {
+      return this.searchLeiloes(q, true);
+    }
+
     const results: GlobalSearchResult[] = [];
 
     const settled = await Promise.allSettled([
@@ -105,6 +128,7 @@ export class GlobalSearchService {
       this.searchServicos(q),
       this.searchViagens(q),
       this.searchFretes(q),
+      this.searchLeiloes(q), // leilões que casam por título/descrição também aparecem
     ]);
     settled.forEach(res => {
       if (res.status === 'fulfilled') results.push(...res.value);
@@ -351,6 +375,48 @@ export class GlobalSearchService {
         categoryLabel: 'Fretes',
         location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
         routePath: `/fretes/${item.id}`,
+      };
+    });
+  }
+
+  /**
+   * Leilões (auction_listings). Sempre ordenados por proximidade da finalização
+   * (ends_at ASC, mais perto de encerrar primeiro). Só leilões AO VIVO
+   * (status active e ainda não encerrados).
+   * @param showAll quando true (intenção "leilão"), ignora o filtro por título e
+   *        traz todos os leilões ao vivo; quando false, casa por título/descrição.
+   */
+  static async searchLeiloes(q: string, showAll = false): Promise<GlobalSearchResult[]> {
+    let query = (supabase.from('auction_listings') as any)
+      .select('id, title, description, city, state, current_bid, starting_bid, product_image_url, status, ends_at, listing_type')
+      .order('ends_at', { ascending: true, nullsFirst: false })
+      .limit(showAll ? 60 : 20);
+    if (!showAll) query = query.or(ilikeOr(q));
+
+    const { data, error } = await query;
+    if (error) { console.warn('[busca:leiloes]', error.message); return []; }
+
+    const now = Date.now();
+    const items = (data || []).filter((it: any) => {
+      const notEnded = it.ends_at ? new Date(it.ends_at).getTime() > now : true;
+      const active = it.status ? it.status === 'active' : true;
+      return active && notEnded;
+    });
+
+    return items.map((item: any) => {
+      const bid = item.current_bid ?? item.starting_bid;
+      const img = typeof item.product_image_url === 'string' && item.product_image_url.startsWith('http')
+        ? item.product_image_url : null;
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        price_brl: bid != null ? Number(bid) : undefined,
+        thumbnail_url: img,
+        category: 'leiloes' as const,
+        categoryLabel: item.listing_type === 'arremate' ? 'Arremate' : 'Leilão',
+        location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
+        routePath: `/mercado/leiloes/${item.id}`,
       };
     });
   }

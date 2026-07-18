@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Search, Loader2, Package, Home, Car, Wrench, Plane, ArrowRight } from "lucide-react";
+import { Search, Loader2, Package, Home, Car, Wrench, Plane, Gavel, ArrowRight } from "lucide-react";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { GlobalSearchService, GlobalSearchResult, SearchCategory } from "@/services/GlobalSearchService";
 import { formatCurrencyBRL } from "@/lib/utils";
@@ -35,9 +35,9 @@ export function GlobalSearchPage() {
   // Grouping results
   const groupedResults = useMemo(() => {
     const groups: Record<string, GlobalSearchResult[]> = {
-      mercado: [], imoveis: [], veiculos: [], servicos: [], viagens: [], fretes: []
+      leiloes: [], mercado: [], imoveis: [], veiculos: [], servicos: [], viagens: [], fretes: []
     };
-    results.forEach(r => groups[r.category].push(r));
+    results.forEach(r => groups[r.category]?.push(r));
     return groups;
   }, [results]);
 
@@ -50,12 +50,14 @@ export function GlobalSearchPage() {
       case 'veiculos': return <Car className="w-4 h-4" />;
       case 'servicos': return <Wrench className="w-4 h-4" />;
       case 'viagens': return <Plane className="w-4 h-4" />;
+      case 'leiloes': return <Gavel className="w-4 h-4" />;
       default: return <Search className="w-4 h-4" />;
     }
   };
 
   const tabs: { id: SearchCategory | 'all'; label: string; count: number }[] = [
     { id: 'all', label: 'Todos os resultados', count: results.length },
+    { id: 'leiloes', label: 'Leilões', count: groupedResults.leiloes.length },
     { id: 'mercado', label: 'Mercado', count: groupedResults.mercado.length },
     { id: 'imoveis', label: 'Imóveis', count: groupedResults.imoveis.length },
     { id: 'veiculos', label: 'Veículos', count: groupedResults.veiculos.length },
