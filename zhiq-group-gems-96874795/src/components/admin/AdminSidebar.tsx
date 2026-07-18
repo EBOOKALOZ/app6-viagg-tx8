@@ -234,6 +234,7 @@ const menuSections: MenuSection[] = [
       { title: "Governance AI (50)", url: "/admin/orion-governance", icon: Landmark, badge: "GOVERNANCE" },
       { title: "Smart Template AI", url: "/admin/orion-smart-template", icon: LayoutTemplate, badge: "TEMPLATE" },
       { title: "Creative Layout AI", url: "/admin/orion-creative-layout", icon: Wand2, badge: "LAYOUT" },
+      { title: "Trust & Reputation (74)", url: "/admin/orion-trust-center", icon: ShieldCheck, badge: "TRUST" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },

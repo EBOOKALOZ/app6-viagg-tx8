@@ -386,3 +386,7 @@ export const AdminMotoboyFinanceiro = lazy(() => import("@/pages/admin/AdminMoto
 export const AdminMotoTaxiFinanceiro = lazy(() => import("@/pages/admin/AdminMotoTaxiFinanceiro"));
 export const AdminMotoristaFinanceiro = lazy(() => import("@/pages/admin/AdminMotoristaFinanceiro"));
 
+
+/* ── ORION-AI-74 Trust & Reputation ── */
+export const AdminOrionTrustCenter = lazy(() => import("@/pages/admin/AdminOrionTrustCenter"));
+export const MinhaReputacao = lazy(() => import("@/pages/public/MinhaReputacao"));

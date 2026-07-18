@@ -10,6 +10,7 @@ import {
   ManageProfiles,
   Profile,
   MinhaConta,
+  MinhaReputacao,
   Groups,
   GroupsPage,
   Wallet,
@@ -24,6 +25,7 @@ export const generalRoutes = (
     <Route path="/manage-profiles" element={<ManageProfiles />} />
     <Route path="/profile" element={<Profile />} />
     <Route path="/minha-conta" element={<MinhaConta />} />
+    <Route path="/minha-reputacao" element={<MinhaReputacao />} />
     <Route path="/groups" element={<Groups />} />
     <Route path="/groups-page" element={<GroupsPage />} />
     <Route path="/wallet" element={<Wallet />} />
