@@ -10,6 +10,8 @@ const ExecutiveDashboard = lazy(() => import("@/dashboards/pages/executive/Execu
 const OperationsDashboard = lazy(() => import("@/dashboards/pages/operational/OperationsDashboard"));
 const GovernanceDashboard = lazy(() => import("@/dashboards/pages/governance/GovernanceDashboard"));
 const DashboardShell = lazy(() => import("@/dashboards/shell/DashboardShell"));
+// COMANDO LEILÃO — Auction Command Center (lazy local p/ não colidir com lazyPages)
+const AdminComandoLeilao = lazy(() => import("@/pages/admin/AdminComandoLeilao"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -145,6 +147,7 @@ import {
   AdminOrionObservability,
   AdminOrionCostOptimization,
   AdminOrionBi,
+  AdminOrionPredictive,
   AdminOrionAiops,
   AdminOrionPricing,
   AdminOrionForecast,
@@ -177,6 +180,7 @@ export const adminRoutes = (
       <Route path="/admin/fretes" element={<AdminFreightOverview />} />
       <Route path="/admin/viagens" element={<AdminViagemOverview />} />
       <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
+      <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
@@ -329,6 +333,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-observability" element={<AdminOrionObservability />} />
       <Route path="/admin/orion-cost-optimization" element={<AdminOrionCostOptimization />} />
       <Route path="/admin/orion-bi" element={<AdminOrionBi />} />
+      <Route path="/admin/orion-predictive" element={<AdminOrionPredictive />} />
       <Route path="/admin/orion-aiops" element={<AdminOrionAiops />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />

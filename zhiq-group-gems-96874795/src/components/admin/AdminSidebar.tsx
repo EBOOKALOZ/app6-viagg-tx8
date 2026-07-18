@@ -116,6 +116,7 @@ const menuSections: MenuSection[] = [
       { title: "Metas Regionais", url: "/admin/metas-regionais", icon: Target },
       { title: "Centro de Crescimento", url: "/admin/centro-crescimento", icon: TrendingUp },
       { title: "Expansão", url: "/admin/expansao", icon: Gauge },
+      { title: "Comando Leilão", url: "/admin/comando-leilao", icon: Tag, badge: "LEILÃO" },
     ],
   },
   {
@@ -208,6 +209,7 @@ const menuSections: MenuSection[] = [
       { title: "Cost Optimization AI", url: "/admin/orion-cost-optimization", icon: Coins, badge: "COST" },
       { title: "AI Operations · AIOps", url: "/admin/orion-aiops", icon: Monitor, badge: "AIOPS" },
       { title: "BI Warehouse AI (54)", url: "/admin/orion-bi", icon: BarChart3, badge: "BI DW" },
+      { title: "Predictive Intelligence AI", url: "/admin/orion-predictive", icon: Gauge, badge: "PREDICTIVE" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
