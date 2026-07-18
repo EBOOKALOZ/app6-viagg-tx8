@@ -140,6 +140,7 @@ import {
   AdminOrionAiCenter,
   AdminOrionAiGovernance,
   AdminOrionVisitors,
+  AdminOrionAuctionIntelligence,
   AdminOrionFraud,
   AdminOrionIdentity,
   AdminOrionThreat,
@@ -157,6 +158,7 @@ import {
   AdminOrionKgraph,
   AdminOrionBrand,
   AdminOrionBackground,
+  AdminOrionAuctionGrowth,
   AdminOrionAutonomousOps,
   AdminOrionExecutiveStrategy,
   AdminOrionCreativeLayout,
@@ -337,6 +339,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-ai-center" element={<AdminOrionAiCenter />} />
       <Route path="/admin/orion-ai-governance" element={<AdminOrionAiGovernance />} />
       <Route path="/admin/orion-visitors" element={<AdminOrionVisitors />} />
+      <Route path="/admin/orion-auction-intelligence" element={<AdminOrionAuctionIntelligence />} />
       <Route path="/admin/orion-fraud" element={<AdminOrionFraud />} />
       <Route path="/admin/orion-identity" element={<AdminOrionIdentity />} />
       <Route path="/admin/orion-threat-intelligence" element={<AdminOrionThreat />} />
@@ -354,6 +357,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-kgraph" element={<AdminOrionKgraph />} />
       <Route path="/admin/orion-brand" element={<AdminOrionBrand />} />
       <Route path="/admin/orion-background" element={<AdminOrionBackground />} />
+      <Route path="/admin/orion-auction-growth" element={<AdminOrionAuctionGrowth />} />
       <Route path="/admin/orion-autonomous-ops" element={<AdminOrionAutonomousOps />} />
       <Route path="/admin/orion-executive-strategy" element={<AdminOrionExecutiveStrategy />} />
       <Route path="/admin/orion-creative-layout" element={<AdminOrionCreativeLayout />} />

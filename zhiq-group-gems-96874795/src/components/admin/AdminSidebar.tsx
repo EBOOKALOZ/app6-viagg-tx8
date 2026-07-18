@@ -79,6 +79,7 @@ import {
   Telescope,
   Workflow,
   Tag,
+  Gavel,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -207,6 +208,7 @@ const menuSections: MenuSection[] = [
       { title: "AI Cost & Intelligence Center", url: "/admin/orion-ai-center", icon: Coins, badge: "AI CENTER" },
       { title: "AI Governance Center", url: "/admin/orion-ai-governance", icon: ShieldCheck, badge: "GOVERN" },
       { title: "Visitor Intelligence AI", url: "/admin/orion-visitors", icon: Users, badge: "VISITOR" },
+      { title: "Auction Intelligence & Analytics", url: "/admin/orion-auction-intelligence", icon: Gavel, badge: "LEILÃO BI" },
       { title: "Fraud Detection AI", url: "/admin/orion-fraud", icon: ShieldAlert, badge: "FRAUD" },
       { title: "Identity & Access AI", url: "/admin/orion-identity", icon: Fingerprint, badge: "IDENTITY" },
       { title: "Threat Intelligence AI", url: "/admin/orion-threat-intelligence", icon: Waypoints, badge: "THREAT" },
@@ -219,6 +221,7 @@ const menuSections: MenuSection[] = [
       { title: "Knowledge Graph (Corp)", url: "/admin/orion-kgraph", icon: Network, badge: "KGRAPH" },
       { title: "Brand Identity AI", url: "/admin/orion-brand", icon: Palette, badge: "BRAND" },
       { title: "Background Intelligence AI", url: "/admin/orion-background", icon: Images, badge: "BACKGROUND" },
+      { title: "Auction Growth & Expansion", url: "/admin/orion-auction-growth", icon: TrendingUp, badge: "GROWTH" },
       { title: "Autonomous Operations · AOC", url: "/admin/orion-autonomous-ops", icon: Cpu, badge: "AUTO OPS" },
       { title: "Executive Strategy AI", url: "/admin/orion-executive-strategy", icon: Compass, badge: "EXEC STRATEGY" },
       { title: "BI Warehouse AI (54)", url: "/admin/orion-bi", icon: BarChart3, badge: "BI DW" },
