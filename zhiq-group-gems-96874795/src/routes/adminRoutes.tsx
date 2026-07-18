@@ -154,6 +154,7 @@ import {
   AdminOrionAiops,
   AdminOrionKgraph,
   AdminOrionBrand,
+  AdminOrionBackground,
   AdminOrionAutonomousOps,
   AdminOrionExecutiveStrategy,
   AdminOrionPricing,
@@ -347,6 +348,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-aiops" element={<AdminOrionAiops />} />
       <Route path="/admin/orion-kgraph" element={<AdminOrionKgraph />} />
       <Route path="/admin/orion-brand" element={<AdminOrionBrand />} />
+      <Route path="/admin/orion-background" element={<AdminOrionBackground />} />
       <Route path="/admin/orion-autonomous-ops" element={<AdminOrionAutonomousOps />} />
       <Route path="/admin/orion-executive-strategy" element={<AdminOrionExecutiveStrategy />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
