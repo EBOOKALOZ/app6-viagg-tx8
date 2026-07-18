@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Sparkles,
   Satellite,
   Brain,
   Compass,
@@ -124,6 +125,7 @@ const menuSections: MenuSection[] = [
       { title: "Centro de Crescimento", url: "/admin/centro-crescimento", icon: TrendingUp },
       { title: "Expansão", url: "/admin/expansao", icon: Gauge },
       { title: "Comando Leilão", url: "/admin/comando-leilao", icon: Tag, badge: "LEILÃO" },
+      { title: "Auction Intelligence", url: "/admin/auction-intelligence", icon: Sparkles, badge: "IA" },
       { title: "Leilão · Comissões 6%", url: "/admin/leilao-comissoes", icon: Coins, badge: "COMISSÃO" },
     ],
   },

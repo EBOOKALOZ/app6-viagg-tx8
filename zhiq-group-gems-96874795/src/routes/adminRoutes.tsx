@@ -12,6 +12,8 @@ const GovernanceDashboard = lazy(() => import("@/dashboards/pages/governance/Gov
 const DashboardShell = lazy(() => import("@/dashboards/shell/DashboardShell"));
 // COMANDO LEILÃO — Auction Command Center (lazy local p/ não colidir com lazyPages)
 const AdminComandoLeilao = lazy(() => import("@/pages/admin/AdminComandoLeilao"));
+// ORION Auction Intelligence — consolida AI-65/67/71/73 (lazy local)
+const AdminAuctionIntelligence = lazy(() => import("@/pages/admin/AdminAuctionIntelligence"));
 const AdminAuctionCommission = lazy(() => import("@/pages/admin/AdminAuctionCommission"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
@@ -195,6 +197,7 @@ export const adminRoutes = (
       <Route path="/admin/viagens" element={<AdminViagemOverview />} />
       <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
       <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />
+      <Route path="/admin/auction-intelligence" element={<AdminAuctionIntelligence />} />
       <Route path="/admin/leilao-comissoes" element={<AdminAuctionCommission />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
