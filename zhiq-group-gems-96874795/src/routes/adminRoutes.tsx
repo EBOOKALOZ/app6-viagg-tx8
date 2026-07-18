@@ -150,6 +150,7 @@ import {
   AdminOrionPredictive,
   AdminOrionDigitalTwin,
   AdminOrionGovernance,
+  AdminOrionSmartTemplate,
   AdminOrionAiops,
   AdminOrionKgraph,
   AdminOrionBrand,
@@ -342,6 +343,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-predictive" element={<AdminOrionPredictive />} />
       <Route path="/admin/orion-digital-twin" element={<AdminOrionDigitalTwin />} />
       <Route path="/admin/orion-governance" element={<AdminOrionGovernance />} />
+      <Route path="/admin/orion-smart-template" element={<AdminOrionSmartTemplate />} />
       <Route path="/admin/orion-aiops" element={<AdminOrionAiops />} />
       <Route path="/admin/orion-kgraph" element={<AdminOrionKgraph />} />
       <Route path="/admin/orion-brand" element={<AdminOrionBrand />} />
