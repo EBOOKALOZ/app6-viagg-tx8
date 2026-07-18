@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Gavel, Timer, MapPin, Users, Eye, TrendingUp, ArrowUp,
-  ShieldCheck, Zap, Clock, AlertTriangle, Loader2, ChevronLeft,
+  Zap, Clock, AlertTriangle, Loader2, ChevronLeft,
   Heart, Share2, Store, Crown, Flame
 } from "lucide-react";
 import { toast } from "sonner";
@@ -386,32 +386,6 @@ export default function AuctionMarketDetailPage() {
                     )}
                   </div>
                 )}
-
-                {/* Credit transparency banner */}
-                <div className="bg-[#1B1F24] rounded-2xl p-5 border-l-4 border-[#FF6A00]">
-                  <h3 className="text-white font-black uppercase tracking-wider mb-3 flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-[#FF6A00]" />
-                    Transparência de Créditos
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-[#A7B0BE] text-xs uppercase">Criação</p>
-                      <p className="text-white font-black">7 CRÉDITOS</p>
-                    </div>
-                    <div>
-                      <p className="text-[#A7B0BE] text-xs uppercase">Destaque</p>
-                      <p className="text-white font-black">2-5 CRÉDITOS</p>
-                    </div>
-                    <div>
-                      <p className="text-[#A7B0BE] text-xs uppercase">Comissão</p>
-                      <p className="text-white font-black">% VARIÁVEL</p>
-                    </div>
-                    <div>
-                      <p className="text-[#A7B0BE] text-xs uppercase">Por lance</p>
-                      <p className="text-white font-black">0 CRÉDITOS</p>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Description */}
                 {listing.description && (

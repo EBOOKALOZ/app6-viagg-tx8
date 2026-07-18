@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SlidersHorizontal, Gavel, Tag, Timer, ShieldCheck, Zap, Users } from "lucide-react";
+import { SlidersHorizontal, Gavel, Tag, Timer, Zap, Users } from "lucide-react";
 import type { AuctionListing } from "@/hooks/useAuctions";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 
@@ -279,41 +279,6 @@ export default function AllAuctionsPage() {
             <div className="text-center">
               <p className="text-3xl font-black text-white">{stats.arremates}</p>
               <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Arremates</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CRÉDITOS / TRANSPARÊNCIA BANNER */}
-      <section className="bg-[#1B1F24] border-y-4 border-[#FF6A00] py-6">
-        <div className="container px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-[#FF6A00]/20 border-2 border-[#FF6A00]/30 flex items-center justify-center">
-                <ShieldCheck className="w-7 h-7 text-[#FF6A00]" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-white uppercase tracking-tight">
-                  Sistema de Créditos Transparente
-                </h3>
-                <p className="text-sm font-bold text-[#A7B0BE]">
-                  Crie leilões, destaque ofertas e pague taxas com créditos. Sem surpresas.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 flex-wrap justify-center">
-              <div className="text-center px-4">
-                <p className="text-xl font-black text-[#FF6A00]">7 CRÉDITOS</p>
-                <p className="text-[10px] font-bold text-[#A7B0BE] uppercase">por leilão criado</p>
-              </div>
-              <div className="text-center px-4">
-                <p className="text-xl font-black text-emerald-400">2-5 CRÉDITOS</p>
-                <p className="text-[10px] font-bold text-[#A7B0BE] uppercase">destaque/recursos</p>
-              </div>
-              <div className="text-center px-4">
-                <p className="text-xl font-black text-blue-400">% variável</p>
-                <p className="text-[10px] font-bold text-[#A7B0BE] uppercase">comissão convertida</p>
-              </div>
             </div>
           </div>
         </div>
