@@ -28,6 +28,7 @@ import {
   eq5From10, setGroupIn10, startAiSound, runSoundTest, detectDeviceProfile,
 } from '@/lib/orionAudioEngine';
 import { RadioMundial } from './RadioMundial';
+import { applyRadioEq } from '@/lib/radioPlayer';
 
 interface CustomPreset { id: string; nome: string; bands: { eq10?: number[]; boosters?: Partial<Boosters> }; origem: string }
 
@@ -171,6 +172,7 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
   // ── Aplicar EQ (quando AI está desligada, o usuário manda) ──
   useEffect(() => {
     if (!settings.aiSound) applyEq(settings.eq10, settings.eqEnabled);
+    applyRadioEq(settings.eq10, settings.eqEnabled); // o MESMO EQ atua na rádio (streams com CORS)
   }, [settings.eq10, settings.eqEnabled, settings.aiSound, graphReady]);
 
   useEffect(() => {

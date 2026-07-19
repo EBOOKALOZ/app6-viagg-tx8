@@ -1,10 +1,14 @@
 /**
  * radioPlayer.ts — controlador singleton do player de rádio da ORION-AUDIO X.
  *
- * Usa um <audio> dedicado (SEM crossOrigin) para máxima compatibilidade com
- * streams de terceiros (que raramente enviam CORS). O EQ do ORION Audio Center
- * atua no áudio próprio do app; streams externos tocam com controle de volume.
- * Favoritas e histórico ficam em localStorage (funciona offline / anônimo).
+ * Toca em DOIS elementos <audio>:
+ *  • plainEl  — SEM crossOrigin: máxima compatibilidade (fallback que sempre toca).
+ *  • eqEl     — crossOrigin='anonymous' roteado por um grafo Web Audio (EQ 10 bandas).
+ *
+ * O EQ do Audio Center também atua na RÁDIO: quando o EQ está ligado, tenta tocar
+ * pelo eqEl (com equalização). Streams sem CORS não podem ser lidos pelo Web Audio
+ * → cai automaticamente para o plainEl (toca, sem EQ) e marca eqActive=false.
+ * Favoritas/histórico em localStorage.
  */
 import type { RadioStation } from "./radioBrowser";
 
@@ -14,6 +18,7 @@ export interface RadioState {
   loading: boolean;
   error: string | null;
   volume: number;
+  eqActive: boolean; // a emissora atual está passando pelo EQ (stream com CORS)?
 }
 
 declare global {
@@ -26,6 +31,7 @@ declare global {
 const FAV = "viagg_radio_favs";
 const HIST = "viagg_radio_hist";
 const VOL = "viagg_radio_vol";
+const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
 const listeners = new Set<(s: RadioState) => void>();
 
@@ -40,12 +46,10 @@ function initialVolume(): number {
 
 let state: RadioState =
   (typeof window !== "undefined" && window.__viagg_radio_state__) || {
-    station: null,
-    playing: false,
-    loading: false,
-    error: null,
-    volume: initialVolume(),
+    station: null, playing: false, loading: false, error: null,
+    volume: initialVolume(), eqActive: false,
   };
+if (typeof state.eqActive !== "boolean") state.eqActive = false;
 if (typeof window !== "undefined") window.__viagg_radio_state__ = state;
 
 function emit() {
@@ -66,56 +70,166 @@ export function getRadioState(): RadioState {
   return state;
 }
 
-let lastWasHttp = false; // último stream tocado veio de http:// (site HTTPS bloqueia)
+// ── elementos + estado do EQ ──────────────────────────────────────────────────
+let activeEl: HTMLAudioElement | null = null;
+let trialing = false;          // enquanto testa um elemento, ignora o erro persistente
+let lastWasHttp = false;
 
-function getEl(): HTMLAudioElement {
+// EQ (Web Audio)
+let audioCtx: AudioContext | null = null;
+let eqEl: HTMLAudioElement | null = null;
+let eqFilters: BiquadFilterNode[] = [];
+let eqBuilt = false;
+let eqEnabledDesired = false;
+let eqValues: number[] = new Array(10).fill(0);
+
+// listeners persistentes de estado (usados nos dois elementos)
+function wire(el: HTMLAudioElement) {
+  el.addEventListener("playing", () => { if (el === activeEl) set({ playing: true, loading: false, error: null }); });
+  el.addEventListener("pause", () => { if (el === activeEl) set({ playing: false }); });
+  el.addEventListener("waiting", () => { if (el === activeEl && !trialing) set({ loading: true }); });
+  el.addEventListener("stalled", () => { if (el === activeEl && !trialing) set({ loading: true }); });
+  el.addEventListener("error", () => {
+    if (el !== activeEl || trialing) return;
+    set({
+      loading: false, playing: false,
+      error: lastWasHttp
+        ? "Emissora só em HTTP — bloqueada em site seguro (HTTPS). Tente outra."
+        : "Não foi possível tocar (stream fora do ar).",
+    });
+  });
+}
+
+function getPlain(): HTMLAudioElement {
   let el = window.__viagg_radio_audio__;
   if (!el) {
     el = new Audio();
     el.preload = "none";
     el.volume = state.volume;
-    el.addEventListener("playing", () => set({ playing: true, loading: false, error: null }));
-    el.addEventListener("pause", () => set({ playing: false }));
-    el.addEventListener("waiting", () => set({ loading: true }));
-    el.addEventListener("stalled", () => set({ loading: true }));
-    el.addEventListener("error", () =>
-      set({
-        loading: false, playing: false,
-        error: lastWasHttp
-          ? "Emissora só em HTTP — bloqueada em site seguro (HTTPS). Tente outra."
-          : "Não foi possível tocar (stream fora do ar).",
-      }),
-    );
+    wire(el);
     window.__viagg_radio_audio__ = el;
   }
   return el;
 }
 
-export async function playStation(station: RadioStation): Promise<void> {
-  const el = getEl();
-  let url = station.url_resolved || station.url;
-  if (!url) {
-    set({ error: "Estação sem URL de stream." });
-    return;
+// grafo de EQ da rádio (elemento crossOrigin → 10 filtros → destino). Só em gesto.
+function ensureEqGraph(): boolean {
+  if (eqBuilt) return true;
+  try {
+    const Ctx = window.AudioContext
+      || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return false;
+    audioCtx = new Ctx();
+    const el = new Audio();
+    el.preload = "none";
+    el.crossOrigin = "anonymous"; // necessário p/ o Web Audio ler stream cross-origin
+    el.volume = state.volume;
+    wire(el);
+    const src = audioCtx.createMediaElementSource(el);
+    let node: AudioNode = src;
+    eqFilters = EQ_FREQS.map((freq, i) => {
+      const f = audioCtx!.createBiquadFilter();
+      f.type = i === 0 ? "lowshelf" : i === EQ_FREQS.length - 1 ? "highshelf" : "peaking";
+      f.frequency.value = freq;
+      f.Q.value = 1.0;
+      f.gain.value = eqEnabledDesired ? (eqValues[i] || 0) : 0;
+      node.connect(f);
+      node = f;
+      return f;
+    });
+    node.connect(audioCtx.destination);
+    eqEl = el;
+    eqBuilt = true;
+    return true;
+  } catch {
+    eqBuilt = false;
+    return false;
   }
+}
+
+/** Aplica os valores do EQ (10 bandas) à rádio. Chamado pelos faders do Audio Center. */
+export function applyRadioEq(eq10: number[], enabled: boolean): void {
+  eqEnabledDesired = enabled;
+  eqValues = (eq10 || []).slice(0, 10);
+  if (eqBuilt) {
+    eqFilters.forEach((f, i) => { f.gain.value = enabled ? (eqValues[i] || 0) : 0; });
+  }
+}
+
+// tenta iniciar um elemento; resolve true se tocou, false se erro/timeout
+function startOn(el: HTMLAudioElement, url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(to);
+      el.removeEventListener("playing", onPlay);
+      el.removeEventListener("error", onErr);
+      resolve(ok);
+    };
+    const onPlay = () => finish(true);
+    const onErr = () => finish(false);
+    const to = setTimeout(() => finish(false), 5000);
+    el.addEventListener("playing", onPlay);
+    el.addEventListener("error", onErr);
+    try {
+      el.src = url;
+      el.volume = state.volume;
+      el.play().catch(() => finish(false));
+    } catch {
+      finish(false);
+    }
+  });
+}
+
+function stopEl(el: HTMLAudioElement | null) {
+  if (!el) return;
+  try { el.pause(); el.removeAttribute("src"); el.load(); } catch { /* ignore */ }
+}
+
+export async function playStation(station: RadioStation): Promise<void> {
+  const plainEl = getPlain();
+  let url = station.url_resolved || station.url;
+  if (!url) { set({ error: "Estação sem URL de stream." }); return; }
+
   // MIXED CONTENT: em site HTTPS o navegador bloqueia streams http:// → sobe p/ https.
-  // (http-only não toca em site seguro de qualquer forma; upgrade só ajuda.)
   const wasHttp =
     typeof location !== "undefined" && location.protocol === "https:" && url.startsWith("http://");
   if (wasHttp) url = "https://" + url.slice("http://".length);
   lastWasHttp = wasHttp;
 
-  set({ station, loading: true, error: null });
+  set({ station, loading: true, error: null, eqActive: false });
   // pausa a música de fundo do app (GlobalAudioPlayer escuta) — evita 2 áudios
   try { window.dispatchEvent(new Event("viagg:stop-bg-music")); } catch { /* ignore */ }
-  try {
-    el.src = url;
-    el.volume = state.volume;
-    await el.play();
+
+  // 1) EQ ligado → tenta tocar pelo grafo (só funciona em stream com CORS)
+  if (eqEnabledDesired && ensureEqGraph() && eqEl) {
+    trialing = true;
+    stopEl(plainEl);
+    activeEl = eqEl;
+    try { if (audioCtx && audioCtx.state === "suspended") await audioCtx.resume(); } catch { /* ignore */ }
+    applyRadioEq(eqValues, eqEnabledDesired);
+    const okEq = await startOn(eqEl, url);
+    trialing = false;
+    if (okEq) {
+      set({ playing: true, loading: false, error: null, eqActive: true });
+      pushHistory(station);
+      return;
+    }
+    // CORS bloqueou o Web Audio → cai para o modo simples (sem EQ)
+    stopEl(eqEl);
+  }
+
+  // 2) modo simples (sempre toca; sem EQ)
+  activeEl = plainEl;
+  const okPlain = await startOn(plainEl, url);
+  if (okPlain) {
+    set({ playing: true, loading: false, error: null, eqActive: false });
     pushHistory(station);
-  } catch {
+  } else {
     set({
-      loading: false, playing: false,
+      loading: false, playing: false, eqActive: false,
       error: wasHttp
         ? "Esta emissora transmite só em HTTP e o navegador bloqueia em site seguro (HTTPS). Tente outra."
         : "Falha ao iniciar (autoplay bloqueado ou stream fora do ar).",
@@ -124,25 +238,22 @@ export async function playStation(station: RadioStation): Promise<void> {
 }
 
 export function togglePlay(): void {
-  const el = getEl();
+  const el = activeEl || getPlain();
   if (!state.station) return;
   if (el.paused) el.play().catch(() => set({ error: "Falha ao retomar o áudio." }));
   else el.pause();
 }
 
 export function stopRadio(): void {
-  const el = window.__viagg_radio_audio__;
-  if (el) {
-    el.pause();
-    el.removeAttribute("src");
-    try { el.load(); } catch { /* ignore */ }
-  }
+  stopEl(activeEl);
   set({ playing: false });
 }
 
 export function setRadioVolume(v: number): void {
-  const el = getEl();
-  el.volume = v;
+  // aplica nos dois elementos p/ manter sincronizado ao alternar EQ/simples
+  const plainEl = getPlain();
+  plainEl.volume = v;
+  if (eqEl) eqEl.volume = v;
   try { localStorage.setItem(VOL, String(v)); } catch { /* ignore */ }
   set({ volume: v });
 }
