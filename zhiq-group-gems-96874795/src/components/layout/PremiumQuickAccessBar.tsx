@@ -2,8 +2,8 @@
 // COMANDO UI-01 — Barra Premium de Acesso Rápido ("Minha Conta").
 //
 // Substitui a antiga "Trust Chips Bar" (faixa laranja abaixo das categorias).
-// Ordem dos atalhos (spec): 🚚 Entrega Local · 🛡️ Verificados · 👤 Minha Conta
-//   · ❤️ Favoritos · 🔔 Notificações · 🔊 Som.
+// Ordem dos atalhos: 👤 Minha Conta/Entrar · ❤️ Favoritos · 🔔 Notificações
+//   · 🔗 Compartilhar · 🔊 Som — distribuídos em toda a largura da faixa.
 //
 // • Rolagem horizontal automática, cantos arredondados, animações ao toque,
 //   indicação do item selecionado (rota atual), alvo de toque ≥ 44px.
@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, Bell, ChevronDown, LogIn, LogOut } from "lucide-react";
+import { Heart, Bell, ChevronDown, LogIn, LogOut, Share2 } from "lucide-react";
 
 // Menu da Conta Única do Consumidor. Itens sem rota dedicada → /conta (hub).
 const ACCOUNT_MENU: { emoji: string; label: string; to: string }[] = [
@@ -78,11 +78,22 @@ export function PremiumQuickAccessBar() {
 
   const go = (to: string) => navigate(to);
 
+  // Compartilhar a plataforma: Web Share API quando disponível; fallback WhatsApp.
+  const compartilhar = () => {
+    const url = window.location.origin + "/mercado";
+    const text = "🛒 Viagg-TX8™ — Mercado Local: compre, venda e receba na sua cidade!";
+    if (navigator.share) {
+      navigator.share({ title: "Viagg-TX8™", text, url }).catch(() => {});
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(`${text}\n👉 ${url}`)}`, "_blank");
+    }
+  };
+
   return (
     <div
       role="navigation"
       aria-label="Acesso rápido — Minha Conta"
-      className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 w-full"
+      className="flex flex-wrap items-center justify-between gap-1 sm:gap-1.5 w-full"
     >
       {/* 👤 Minha Conta — entrada da Conta Única do Consumidor */}
       {user ? (
@@ -191,6 +202,19 @@ export function PremiumQuickAccessBar() {
       >
         <Bell className="h-3 w-3 text-[#075985]" />
         <span className="hidden sm:inline">Notificações</span>
+      </button>
+
+      {/* 🔗 Compartilhar */}
+      <button
+        onClick={compartilhar}
+        aria-label="Compartilhar"
+        className={cn(
+          pillBase,
+          "cursor-pointer bg-white text-slate-950 border sm:border-2 border-[#68C7F2] shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95"
+        )}
+      >
+        <Share2 className="h-3 w-3 text-[#16A34A]" />
+        <span className="hidden sm:inline">Compartilhar</span>
       </button>
 
       {/* 🔊 Som — portal do GlobalAudioPlayer (NÃO alterar o id) */}

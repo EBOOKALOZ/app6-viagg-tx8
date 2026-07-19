@@ -8,6 +8,8 @@ import { Route, Navigate } from "react-router-dom";
 const TesteBrick = lazy(() => import("@/pages/dev/TesteBrick"));
 // Painel do Comprador — Meus Lances (lazy local p/ não colidir com lazyPages)
 const MeusLances = lazy(() => import("@/pages/public/MeusLances"));
+// Painel "Meu Arremate" (FASE C — comunicação/confirmação P2P; serve comprador e vendedor)
+const MeuArremate = lazy(() => import("@/pages/public/MeuArremate"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
@@ -112,6 +114,7 @@ export const publicRoutes = (
     <Route path="/meus-lances" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeusLances /></Suspense></ProtectedRoute>} />
     <Route path="/leilao/:id" element={<AuctionPublicPage />} />
     <Route path="/arremate/:id" element={<ArrematePublicPage />} />
+    <Route path="/meu-arremate/:id" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeuArremate /></Suspense></ProtectedRoute>} />
     <Route path="/imoveis" element={<PublicRealEstateHome />} />
     <Route path="/imoveis/:id" element={<RealEstateDetailPage />} />
     <Route path="/imoveis/novo" element={<ProtectedRoute><LazyPropertyForm /></ProtectedRoute>} />
