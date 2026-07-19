@@ -34,67 +34,42 @@ type Verdict = {
   motivo: string;
 };
 
-const POLICY = `Você é a IA de moderação de imagens do marketplace VIAGG-TX8 (Brasil).
-Analise a imagem de anúncio e decida se pode ser publicada.
-
-BLOQUEAR (decisao="bloqueada") se contiver QUALQUER um:
-nudez/pornografia/conteúdo sexual ou erótico; exploração infantil (qualquer
-suspeita = bloquear com confiança máxima); violência gráfica, sangue excessivo,
-mutilação, cadáver, tortura; drogas ilícitas (uso/venda); armas de fogo,
-explosivos, munição; símbolos extremistas, ódio, terrorismo, organizações
-criminosas; documentos falsificados, golpes, fraudes; produtos ilegais ou
-proibidos; QR codes/links suspeitos de golpe; spam visual agressivo.
-
-REVISÃO (decisao="revisao") quando: ambíguo, baixa qualidade que impede
-julgamento, produto que PODE ser restrito (facas colecionáveis, suplementos,
-bebidas), documento legítimo mas sensível, ou sua confiança < 85.
-
-APROVAR (decisao="aprovada"): imagem comum de produto/serviço/veículo/imóvel,
-sem violações.
-
-Responda APENAS JSON válido:
-{"decisao":"aprovada|revisao|bloqueada","confianca":0-100,
- "categoria":"ok|conteudo_adulto|violencia|drogas|armas|odio_extremismo|fraude_golpe|documento_suspeito|produto_proibido|spam_visual|qualidade_baixa|outro",
- "motivo":"1 frase objetiva em pt-BR"}`;
-
-async function analyzeAnthropic(b64: string, mime: string): Promise<Verdict> {
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!key) throw new Error("ANTHROPIC_API_KEY ausente");
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
+/**
+ * Modera a imagem via ORION AI Gateway (multimodal). Prompt no Registry
+ * (ridv.moderacao.imagem). A edge NÃO conhece provider/modelo/API key —
+ * o Gateway escolhe, aplica cache/retry/timeout/fallback e audita custo.
+ */
+async function analisarViaGateway(b64: string, mime: string): Promise<{ verdict: Verdict; modelo: string }> {
+  const resp = await fetch(`${Deno.env.get("SUPABASE_URL")!}/functions/v1/orion-ai-gateway`, {
     method: "POST",
     headers: {
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      module: "ridv",
+      task: "moderation_image",
+      prompt_key: "ridv.moderacao.imagem",   // Prompt Registry oficial (ORION CORE)
+      prompt: "Analise a imagem deste anúncio e responda no formato JSON especificado.",
+      image_base64: b64,
+      image_mime: mime,
       max_tokens: 300,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mime, data: b64 } },
-          { type: "text", text: POLICY },
-        ],
-      }],
     }),
   });
-  if (!resp.ok) throw new Error(`Anthropic ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
-  const data = await resp.json();
-  const text: string = data?.content?.[0]?.text ?? "";
+  const data = await resp.json().catch(() => ({}));
+  if (!data?.ok) throw new Error(String(data?.error || `gateway ${resp.status}`));
+  const text: string = data.texto ?? "";
   const parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
   return {
-    decisao: ["aprovada", "revisao", "bloqueada"].includes(parsed.decisao) ? parsed.decisao : "revisao",
-    confianca: Math.max(0, Math.min(100, Number(parsed.confianca) || 0)),
-    categoria: String(parsed.categoria ?? "outro"),
-    motivo: String(parsed.motivo ?? "").slice(0, 300),
+    verdict: {
+      decisao: ["aprovada", "revisao", "bloqueada"].includes(parsed.decisao) ? parsed.decisao : "revisao",
+      confianca: Math.max(0, Math.min(100, Number(parsed.confianca) || 0)),
+      categoria: String(parsed.categoria ?? "outro"),
+      motivo: String(parsed.motivo ?? "").slice(0, 300),
+    },
+    modelo: `${data.provider ?? "gateway"}/${data.model ?? "?"}`,
   };
 }
-
-// Registro de provedores — adicionar OpenAI/Vision/Rekognition/Azure aqui.
-const PROVIDERS: Record<string, (b64: string, mime: string) => Promise<Verdict>> = {
-  anthropic: analyzeAnthropic,
-};
 
 const b64ToBytes = (b64: string) =>
   Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -198,14 +173,13 @@ Deno.serve(async (req) => {
   if (!b64 || b64.length < 100) return json({ ok: false, error: "Imagem ausente" }, 400);
   if (b64.length > 9_000_000) return json({ ok: false, error: "Imagem grande demais (máx ~6MB)" }, 413);
 
-  const providerName = Deno.env.get("MODERATION_PROVIDER") || "anthropic";
-  const analyze = PROVIDERS[providerName] ?? PROVIDERS.anthropic;
-
   let verdict: Verdict;
+  let modelo = "orion-ai-gateway";
   try {
-    verdict = await analyze(b64, mime);
+    const r = await analisarViaGateway(b64, mime);
+    verdict = r.verdict; modelo = r.modelo;
   } catch (e) {
-    // IA indisponível → NUNCA publicar sem análise: vai para quarentena.
+    // IA/Gateway indisponível → NUNCA publicar sem análise: vai para quarentena.
     verdict = {
       decisao: "revisao", confianca: 0, categoria: categoryModule,
       motivo: `IA indisponível (${String(e).slice(0, 120)}) — retida para revisão manual`,
@@ -252,7 +226,7 @@ Deno.serve(async (req) => {
     confidence: verdict.confianca,
     category: verdict.categoria || categoryModule,
     reason: verdict.motivo,
-    provider: providerName,
+    provider: modelo,
     metadata: { mime, size_b64: b64.length, target_bucket: targetBucket, module: categoryModule },
   }).select("id").single();
 
@@ -266,7 +240,7 @@ Deno.serve(async (req) => {
     confidence: verdict.confianca,
     reason: verdict.motivo,
     verdict: verdict.decisao,
-    ai_provider: providerName,
+    ai_provider: modelo,
     user_id: uid,
     metadata: { mime, size_b64: b64.length, record_id: rec?.id, target_bucket: targetBucket },
   }).catch(() => {});

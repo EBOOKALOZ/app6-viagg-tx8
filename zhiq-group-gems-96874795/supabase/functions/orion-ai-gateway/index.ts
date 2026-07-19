@@ -44,9 +44,13 @@ async function sha256(s: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Camada multimodal única: texto (default) + imagem (base64 ou URL).
+// Arquitetura pronta para áudio/vídeo/PDF (novo campo em ImgInput → novo bloco por provider).
+type ImgInput = { b64?: string; mime?: string; url?: string } | null;
+
 async function chamarProvedor(
   m: Modelo, prompt: string, system: string | null,
-  maxTokens: number, timeoutMs: number,
+  maxTokens: number, timeoutMs: number, image: ImgInput = null,
 ): Promise<{ texto: string; tokensIn: number; tokensOut: number }> {
   const key = Deno.env.get(KEY_ENV[m.provider] || "");
   if (!key) throw new Error(`chave ${KEY_ENV[m.provider]} não configurada`);
@@ -55,9 +59,16 @@ async function chamarProvedor(
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     if (m.provider === "openai") {
+      // conteúdo do usuário: string (texto) OU blocos (texto + imagem)
+      const userContent: any = image
+        ? [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: image.url || `data:${image.mime || "image/jpeg"};base64,${image.b64}` } },
+          ]
+        : prompt;
       const messages: any[] = [];
       if (system) messages.push({ role: "system", content: system });
-      messages.push({ role: "user", content: prompt });
+      messages.push({ role: "user", content: userContent });
       const r = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST", signal: ctrl.signal,
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -78,9 +89,17 @@ async function chamarProvedor(
       };
     }
     if (m.provider === "anthropic") {
+      const userContent: any = image
+        ? [
+            image.url
+              ? { type: "image", source: { type: "url", url: image.url } }
+              : { type: "image", source: { type: "base64", media_type: image.mime || "image/jpeg", data: image.b64 } },
+            { type: "text", text: prompt },
+          ]
+        : prompt;
       const body: any = {
         model: m.model_code, max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: userContent }],
       };
       if (system) body.system = system;
       const r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -126,6 +145,16 @@ Deno.serve(async (req) => {
   let system = input.system ? String(input.system) : null;
   if (!prompt) return json({ ok: false, error: "prompt vazio" }, 400);
 
+  // Multimodal: imagem por base64 (upload) ou URL. Edge nunca conhece provider/modelo.
+  const image: ImgInput = input.image_base64
+    ? { b64: String(input.image_base64), mime: String(input.image_mime || "image/jpeg") }
+    : (input.image_url || input.input?.image_url)
+    ? { url: String(input.image_url || input.input?.image_url) }
+    : null;
+  // Rastreabilidade (FASE 7): request_id por chamada; trace_id propaga entre módulos
+  const requestId = crypto.randomUUID();
+  const traceId = String(input.trace_id || requestId);
+
   // Prompt Registry oficial (ORION CORE): prompt_key resolve o system
   // versionado no banco — módulos não embutem mais prompt.
   if (input.prompt_key) {
@@ -153,7 +182,8 @@ Deno.serve(async (req) => {
   const t0 = Date.now();
   const log = async (campos: Record<string, unknown>) => {
     await svc.from("orion_ai_log").insert({
-      module, task, user_id: userId, duracao_ms: Date.now() - t0, ...campos,
+      module, task, user_id: userId, duracao_ms: Date.now() - t0,
+      request_id: requestId, trace_id: traceId, ...campos,
     });
   };
 
@@ -193,7 +223,7 @@ Deno.serve(async (req) => {
   const cacheOn = (cfg.cache_enabled ?? true) && input.cache !== false;
 
   // ── cache ──
-  const hash = await sha256(`${module}|${modeloPrincipal.model_code}|${task}|${system ?? ""}|${prompt}`);
+  const hash = await sha256(`${module}|${modeloPrincipal.model_code}|${task}|${system ?? ""}|${prompt}|${image?.b64 ?? image?.url ?? ""}`);
   if (cacheOn) {
     const { data: hit } = await svc.from("orion_ai_cache").select("resposta,hits")
       .eq("request_hash", hash).gt("expira_em", new Date().toISOString()).maybeSingle();
@@ -201,7 +231,7 @@ Deno.serve(async (req) => {
       await svc.from("orion_ai_cache").update({ hits: (hit.hits ?? 0) + 1 }).eq("request_hash", hash);
       await log({ status: "cache", cache_hit: true, request_hash: hash, custo_estimado: 0,
         provider: modeloPrincipal.provider, model: modeloPrincipal.model_code });
-      return json({ ok: true, cache: true, ...hit.resposta });
+      return json({ ok: true, cache: true, request_id: requestId, trace_id: traceId, ...hit.resposta });
     }
   }
 
@@ -216,7 +246,7 @@ Deno.serve(async (req) => {
     for (let tent = 0; tent <= retryMax; tent++) {
       tentativas++;
       try {
-        const r = await chamarProvedor(m, prompt, system, maxTokens, timeoutMs);
+        const r = await chamarProvedor(m, prompt, system, maxTokens, timeoutMs, image);
         const custo = (r.tokensIn / 1e6) * Number(m.custo_input_mtok) +
                       (r.tokensOut / 1e6) * Number(m.custo_output_mtok);
         const resposta = {
@@ -237,7 +267,7 @@ Deno.serve(async (req) => {
           custo_estimado: resposta.custo_estimado,
           retries: tentativas - 1, request_hash: hash,
         });
-        return json({ ok: true, cache: false, ...resposta });
+        return json({ ok: true, cache: false, request_id: requestId, trace_id: traceId, ...resposta });
       } catch (e) {
         ultimoErro = String(e).slice(0, 250);
         if (tent < retryMax) await new Promise((res) => setTimeout(res, 400 * Math.pow(2, tent)));
@@ -250,5 +280,5 @@ Deno.serve(async (req) => {
     status: "erro", provider: modeloPrincipal.provider, model: modeloPrincipal.model_code,
     erro: ultimoErro, retries: tentativas, request_hash: hash,
   });
-  return json({ ok: false, error: ultimoErro, fallback: "manual_review" }, 502);
+  return json({ ok: false, error: ultimoErro, fallback: "manual_review", request_id: requestId, trace_id: traceId }, 502);
 });
