@@ -324,7 +324,7 @@ export default function AdminOrionPublisher() {
         )}
 
         <p className="mt-8 text-center text-[11px] text-zinc-300">
-          ORION Publisher AI v1.0 · gatilhos automáticos em 6 módulos (novos módulos herdam a porta) · handoff real para a moderação RIDV na v1.1
+          ORION Publisher AI v1.0 · gatilhos automáticos em 6 módulos (INSERT + edição de conteúdo) · handoff para a moderação RIDV integrado (aba Revisão Manual)
         </p>
       </div>
     </div>
