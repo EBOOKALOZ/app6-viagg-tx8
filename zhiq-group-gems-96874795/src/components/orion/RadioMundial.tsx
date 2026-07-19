@@ -40,6 +40,26 @@ const CHIPS: { label: string; icon: any; run: (r: Runner) => void }[] = [
 ];
 type Runner = (p: Parameters<typeof searchStations>[0], label?: string) => void;
 
+// Catálogo curado (compartilhado) — emissoras que a plataforma tem no banco.
+// Mesclado com o radio-browser para o usuário só buscar e achar.
+async function curatedSearch(term: string): Promise<RadioStation[]> {
+  try {
+    const { data } = await supabase.rpc("audio_radio_curated_search", { p_term: term || "", p_limit: 40 });
+    return Array.isArray(data) ? (data as unknown as RadioStation[]) : [];
+  } catch { return []; }
+}
+// mescla listas deduplicando por id (curado + radio-browser da mesma emissora colapsam)
+function dedupMerge(...lists: RadioStation[][]): RadioStation[] {
+  const seen = new Set<string>();
+  const out: RadioStation[] = [];
+  for (const list of lists) for (const s of list) {
+    const key = s.stationuuid || (s.name + "|" + (s.url_resolved || s.url));
+    if (!key || seen.has(key)) continue;
+    seen.add(key); out.push(s);
+  }
+  return out;
+}
+
 function useRadio(): RadioState {
   const [st, setSt] = useState<RadioState>(getRadioState());
   useEffect(() => subscribeRadio(setSt), []);
@@ -82,14 +102,19 @@ export function RadioMundial() {
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
     try {
-      // busca por nome → tolerante (tira "rádio/fm/am", tenta o termo distintivo)
-      const r = params.name
-        ? await smartSearchStations(params.name, 60)
-        : await searchStations({ limit: 60, ...params });
-      setResults(r);
-      if (r.length === 0) {
+      // busca no catálogo curado (banco) + radio-browser, em paralelo, e mescla
+      const term = params.name || params.tag || params.state || "";
+      const [rb, cur] = await Promise.all([
+        params.name
+          ? smartSearchStations(params.name, 60)
+          : searchStations({ limit: 60, ...params }),
+        curatedSearch(term),
+      ]);
+      const merged = dedupMerge(cur, rb); // curado primeiro
+      setResults(merged);
+      if (merged.length === 0) {
         setError(label
-          ? `"${label}" não encontrada na base aberta de rádios. Tente um nome mais curto, ou busque por cidade/gênero.`
+          ? `"${label}" não encontrada. Tente um nome mais curto, ou busque por cidade/gênero.`
           : "Nenhuma rádio encontrada.");
       }
     } catch {
@@ -133,7 +158,8 @@ export function RadioMundial() {
     if (!c) return;
     setTab("buscar"); setCat(key); setLoading(true); setError(null);
     try {
-      const r = await discoverByCategory(c, 60);
+      const [rb, cur] = await Promise.all([discoverByCategory(c, 60), curatedSearch(c.key)]);
+      const r = dedupMerge(cur, rb);
       setResults(r);
       if (r.length === 0) setError(`Nenhuma rádio de "${c.label}" encontrada agora. Tente outra categoria.`);
     } catch {

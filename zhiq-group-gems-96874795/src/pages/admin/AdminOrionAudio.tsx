@@ -6,18 +6,140 @@
  * Fonte única: orion_audio_admin_stats() (SECURITY DEFINER, gated mp_is_admin).
  * Convenção ORION: dados reais com _auditoria; lacunas DECLARADAS, nunca inventadas.
  */
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AudioLines, Loader2, Sparkles, Timer, Headphones, ShieldAlert,
-  Star, Users, FlaskConical, Activity,
+  Star, Users, FlaskConical, Activity, Radio, Trash2, Plus, Search, Power,
 } from "lucide-react";
+import { RADIO_CATEGORIES } from "@/lib/radioBrowser";
 
 const rpc = async (fn: string, args?: Record<string, unknown>) => {
   const { data, error } = await (supabase.rpc as any)(fn, args);
   if (error) throw new Error(error.message);
   return data;
 };
+
+/* ── Catálogo de Rádios Curado — admin adiciona/exclui emissoras que faltam ── */
+interface CuratedRow {
+  station_uuid: string; name: string; stream_url: string; city: string; state: string;
+  category: string; frequency: string; tags: string; ativo: boolean; fonte: string;
+}
+function CuratedCatalogSection() {
+  const empty = { name: "", stream_url: "", city: "", state: "", category: "", frequency: "", homepage: "" };
+  const [form, setForm] = useState(empty);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["orion-audio-curated"], queryFn: () => rpc("audio_radio_curated_admin_list", { p_limit: 500 }),
+  });
+  const list = (Array.isArray(data) ? data : []) as CuratedRow[];
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault(); setMsg(null);
+    if (!form.name.trim() || !/^https?:\/\/.+/i.test(form.stream_url.trim())) {
+      setMsg("Informe o nome e um link de stream válido (http:// ou https://)."); return;
+    }
+    setBusy(true);
+    try {
+      await rpc("audio_radio_curated_upsert", { p: {
+        name: form.name.trim(), stream_url: form.stream_url.trim(), city: form.city.trim(),
+        state: form.state.trim(), category: form.category, frequency: form.frequency.trim(),
+        homepage: form.homepage.trim(), tags: [form.category, "curada"].filter(Boolean).join(","),
+      } });
+      setForm(empty); setMsg("✓ Emissora salva no catálogo (todos os usuários já a encontram).");
+      refetch();
+    } catch (err) { setMsg("Erro: " + (err as Error).message); }
+    finally { setBusy(false); }
+  };
+  const del = async (uuid: string, nome: string) => {
+    if (!window.confirm(`Excluir "${nome}" do catálogo? Isso remove para todos os usuários.`)) return;
+    try { await rpc("audio_radio_curated_delete", { p_station_uuid: uuid }); refetch(); }
+    catch (err) { setMsg("Erro ao excluir: " + (err as Error).message); }
+  };
+  const toggle = async (uuid: string, ativo: boolean) => {
+    try { await rpc("audio_radio_curated_set_active", { p_station_uuid: uuid, p_ativo: !ativo }); refetch(); }
+    catch (err) { setMsg("Erro: " + (err as Error).message); }
+  };
+
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    if (!t) return list;
+    return list.filter((r) => `${r.name} ${r.city} ${r.state} ${r.tags} ${r.category}`.toLowerCase().includes(t));
+  }, [list, q]);
+
+  return (
+    <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-zinc-700">
+          <Radio className="h-4 w-4 text-emerald-600" /> Catálogo de rádios (curado)
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-black text-emerald-700">{list.length}</span>
+        </h2>
+        <p className="text-[11px] font-semibold text-zinc-400">Emissoras que a plataforma tem — o usuário só busca e acha.</p>
+      </div>
+
+      {/* ADD */}
+      <form onSubmit={save} className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-emerald-50/60 p-3 ring-1 ring-emerald-100 md:grid-cols-4">
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nome (ex.: Rádio Havaí)"
+          className="col-span-2 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-400" />
+        <input value={form.stream_url} onChange={(e) => setForm({ ...form, stream_url: e.target.value })} placeholder="Link do stream (.mp3/.aac/…)"
+          className="col-span-2 rounded-lg border border-zinc-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-400" />
+        <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Cidade"
+          className="rounded-lg border border-zinc-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-400" />
+        <input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="UF"
+          className="rounded-lg border border-zinc-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-400" />
+        <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
+          className="rounded-lg border border-zinc-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-400">
+          <option value="">Categoria…</option>
+          {RADIO_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.emoji} {c.label}</option>)}
+        </select>
+        <input value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })} placeholder="Freq. (87.9 FM)"
+          className="rounded-lg border border-zinc-200 px-2 py-1.5 text-sm outline-none focus:border-emerald-400" />
+        <button type="submit" disabled={busy}
+          className="col-span-2 flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50 md:col-span-4">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Adicionar ao catálogo
+        </button>
+      </form>
+      {msg && <p className="mb-3 rounded-lg bg-zinc-50 px-3 py-2 text-[12px] font-bold text-zinc-600 ring-1 ring-zinc-200">{msg}</p>}
+
+      {/* SEARCH + LIST */}
+      <div className="relative mb-2">
+        <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar catálogo…"
+          className="w-full rounded-lg border border-zinc-200 py-1.5 pl-8 pr-2 text-sm outline-none focus:border-emerald-400" />
+      </div>
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-emerald-500" /></div>
+      ) : (
+        <div className="max-h-[420px] space-y-1 overflow-y-auto">
+          {filtered.slice(0, 300).map((r) => (
+            <div key={r.station_uuid} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm ring-1 ${r.ativo ? "bg-white ring-zinc-100" : "bg-zinc-50 ring-zinc-200 opacity-60"}`}>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold text-zinc-800">{r.name}</p>
+                <p className="truncate text-[11px] text-zinc-400">
+                  {[r.city, r.state].filter(Boolean).join(" · ")}{r.frequency ? ` · ${r.frequency}` : ""}{r.category ? ` · ${r.category}` : ""}
+                  <span className="ml-1 text-zinc-300">({r.fonte})</span>
+                </p>
+              </div>
+              <button onClick={() => toggle(r.station_uuid, r.ativo)} title={r.ativo ? "Desativar" : "Ativar"}
+                className={`flex h-7 w-7 items-center justify-center rounded-lg ${r.ativo ? "bg-emerald-100 text-emerald-600" : "bg-zinc-200 text-zinc-500"}`}>
+                <Power className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => del(r.station_uuid, r.name)} title="Excluir"
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+          {filtered.length === 0 && <p className="py-6 text-center text-sm font-semibold text-zinc-400">Nenhuma emissora no catálogo ainda.</p>}
+          {filtered.length > 300 && <p className="py-2 text-center text-[11px] text-zinc-400">Mostrando 300 de {filtered.length} — use o filtro.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const DEVICE_LABELS: Record<string, string> = {
   auto: "Auto", fone: "Fone", bluetooth: "Bluetooth", speaker: "Caixa de Som", carro: "Carro",
@@ -158,6 +280,9 @@ export default function AdminOrionAudio() {
                 </p>
               </div>
             </div>
+
+            {/* CATÁLOGO CURADO — adicionar/excluir emissoras (todos os usuários acham) */}
+            <CuratedCatalogSection />
 
             {d._auditoria?.gerado_em && (
               <p className="mt-4 text-center text-[10px] font-bold text-zinc-400">
