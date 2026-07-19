@@ -9,14 +9,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Radio, Search, MapPin, Heart, Play, Pause, Loader2, Square, Volume2,
-  Sparkles, Music2, History as HistoryIcon, Flame, Navigation, Plus, Link2,
+  Sparkles, Music2, History as HistoryIcon, Flame, Navigation,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   searchStations, smartSearchStations, topStations, stationsNearby, countClick,
-  discoverByCategory, cepToLocation, RADIO_CATEGORIES, makeCustomStation,
+  discoverByCategory, cepToLocation, RADIO_CATEGORIES,
   type RadioStation, type NearbyStation,
 } from "@/lib/radioBrowser";
 import {
@@ -94,10 +94,6 @@ export function RadioMundial() {
   const [cat, setCat] = useState<string | null>(null);     // categoria ativa (chip)
   const [cep, setCep] = useState("");                         // busca por CEP
   const [cepInfo, setCepInfo] = useState<string | null>(null);
-  const [addOpen, setAddOpen] = useState(false);              // form "adicionar por link"
-  const [addName, setAddName] = useState("");
-  const [addUrl, setAddUrl] = useState("");
-  const [addCity, setAddCity] = useState("");
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
@@ -219,22 +215,6 @@ export function RadioMundial() {
   const fav = useCallback((st: RadioStation) => { toggleFavorite(st); setTick((n) => n + 1); setFavs(getFavorites()); }, []);
   const submit = (e: React.FormEvent) => { e.preventDefault(); setTab("buscar"); setCat(null); runSearch({ name: query.trim() }, query.trim()); };
 
-  // Adicionar rádio por LINK (emissoras fora do catálogo aberto). Salva nas
-  // Favoritas (localStorage) e toca na hora — reusa o mesmo caminho de play.
-  const addCustom = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    const nome = addName.trim();
-    const link = addUrl.trim();
-    if (!nome) { setError("Dê um nome para a rádio."); return; }
-    if (!/^https?:\/\/.+/i.test(link)) { setError("Cole o link do stream (começa com http:// ou https://)."); return; }
-    const st = makeCustomStation(nome, link, { city: addCity.trim() });
-    if (!isFavorite(st.stationuuid)) toggleFavorite(st);   // salva no catálogo pessoal
-    setFavs(getFavorites());
-    setAddOpen(false); setError(null);
-    setAddName(""); setAddUrl(""); setAddCity("");
-    await listen(st);   // toca + histórico + log
-  }, [addName, addUrl, addCity, listen]);
-
   const list: (RadioStation | NearbyStation)[] = useMemo(() => (
     tab === "perto" ? nearby : tab === "favoritas" ? favs : tab === "historico" ? hist : tab === "populares" ? populares : results
   ), [tab, nearby, favs, hist, populares, results]);
@@ -252,6 +232,23 @@ export function RadioMundial() {
             <p className="truncate text-[12px] font-bold text-white">{radio.station.name?.trim() || "Rádio"}</p>
             <p className="truncate text-[9px] text-white/50">{radio.loading ? "Conectando…" : radio.error ? "Stream indisponível" : radio.playing ? (radio.eqActive ? "▶ Ao vivo · 🎚 EQ ativo" : "▶ Ao vivo · sem EQ") : "Pausado"}</p>
           </div>
+          {(() => {
+            const faved = isFavorite(radio.station.stationuuid);
+            return (
+              <button
+                onClick={() => fav(radio.station!)}
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors active:scale-95",
+                  faved ? "bg-rose-500/20 text-rose-400" : "bg-white/5 text-white/60 hover:text-rose-300"
+                )}
+                title={faved ? "Remover das favoritas" : "Salvar nas favoritas"}
+                aria-label={faved ? "Remover das favoritas" : "Salvar nas favoritas"}
+                aria-pressed={faved}
+              >
+                <Heart className={cn("h-3.5 w-3.5", faved && "fill-current")} />
+              </button>
+            );
+          })()}
           <button onClick={togglePlay} className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white">
             {radio.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : radio.playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </button>
@@ -284,36 +281,6 @@ export function RadioMundial() {
           <Search className="h-3.5 w-3.5" /> Buscar
         </button>
       </form>
-
-      {/* ADICIONAR RÁDIO POR LINK — emissoras fora do catálogo aberto (ex.: comunitárias) */}
-      <div>
-        <button type="button" onClick={() => { setAddOpen((v) => !v); setError(null); }}
-          className="flex items-center gap-1 rounded-full border border-emerald-500/25 bg-emerald-500/[0.06] px-2 py-0.5 text-[10px] font-bold text-emerald-200/80 transition-colors hover:border-emerald-400/50 hover:text-emerald-100">
-          <Plus className="h-2.5 w-2.5" /> Adicionar rádio por link
-        </button>
-        {addOpen && (
-          <form onSubmit={addCustom} className="mt-1.5 space-y-1.5 rounded-xl border border-emerald-500/20 bg-white/[0.03] p-2">
-            <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Nome (ex.: Rádio Havaí)"
-              aria-label="Nome da rádio"
-              className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-2 py-1.5 text-[12px] text-white outline-none placeholder:text-white/40 focus:border-emerald-400/60" />
-            <div className="relative">
-              <Link2 className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-emerald-400/70" />
-              <input value={addUrl} onChange={(e) => setAddUrl(e.target.value)} inputMode="url" placeholder="Link do stream (…/stream, .mp3, .aac)"
-                aria-label="Link do stream"
-                className="w-full rounded-lg border border-white/10 bg-white/[0.06] py-1.5 pl-7 pr-2 text-[12px] text-white outline-none placeholder:text-white/40 focus:border-emerald-400/60" />
-            </div>
-            <div className="flex gap-1.5">
-              <input value={addCity} onChange={(e) => setAddCity(e.target.value)} placeholder="Cidade (opcional)"
-                aria-label="Cidade"
-                className="flex-1 rounded-lg border border-white/10 bg-white/[0.06] px-2 py-1.5 text-[12px] text-white outline-none placeholder:text-white/40 focus:border-emerald-400/60" />
-              <button type="submit" className="flex items-center gap-1 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 px-3 text-[11px] font-black text-white active:scale-95">
-                <Play className="h-3 w-3" /> Adicionar e tocar
-              </button>
-            </div>
-            <p className="text-[8px] leading-tight text-white/30">O link do stream costuma estar no site oficial da rádio (botão “Ouvir ao vivo”). A rádio é salva nas suas Favoritas.</p>
-          </form>
-        )}
-      </div>
 
       {/* CHIPS (atalhos de gênero/emissora/cidade) */}
       <div className="flex flex-wrap gap-1">
