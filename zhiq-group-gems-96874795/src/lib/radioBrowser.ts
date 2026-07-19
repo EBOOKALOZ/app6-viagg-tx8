@@ -235,6 +235,44 @@ export async function discoverByCategory(cat: RadioCategory, limit = 60): Promis
   return out.slice(0, limit);
 }
 
+/**
+ * Cria uma emissora MANUAL (link direto), para rádios que não estão no catálogo
+ * aberto do radio-browser (comunitárias/locais). Compatível com playStation e
+ * com as Favoritas (stationuuid estável = "custom:" + url). Só monta o objeto;
+ * quem toca/favorita é o chamador.
+ */
+export function makeCustomStation(
+  name: string,
+  url: string,
+  opts?: { city?: string; homepage?: string; favicon?: string },
+): RadioStation {
+  const u = (url || "").trim();
+  return {
+    stationuuid: "custom:" + u,
+    name: (name || "").trim() || "Minha rádio",
+    url: u,
+    url_resolved: u,
+    homepage: opts?.homepage?.trim() || "",
+    favicon: opts?.favicon?.trim() || "",
+    tags: "personalizada",
+    country: "Brasil",
+    countrycode: "BR",
+    state: opts?.city?.trim() || "",
+    language: "portuguese",
+    codec: "",
+    bitrate: 0,
+    votes: 0,
+    clickcount: 0,
+    geo_lat: null,
+    geo_long: null,
+  };
+}
+
+/** true se a emissora foi adicionada manualmente (link direto). */
+export function isCustomStation(s: Pick<RadioStation, "stationuuid">): boolean {
+  return typeof s.stationuuid === "string" && s.stationuuid.startsWith("custom:");
+}
+
 export interface CepLocation {
   lat: number | null;
   lng: number | null;
