@@ -10,6 +10,8 @@ const TesteBrick = lazy(() => import("@/pages/dev/TesteBrick"));
 const MeusLances = lazy(() => import("@/pages/public/MeusLances"));
 // Painel "Meu Arremate" (FASE C — comunicação/confirmação P2P; serve comprador e vendedor)
 const MeuArremate = lazy(() => import("@/pages/public/MeuArremate"));
+// ORION-AUDIO X — Rádio Mundial (lazy local p/ não colidir com lazyPages)
+const RadioMundialPage = lazy(() => import("@/pages/public/RadioMundialPage"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
@@ -111,6 +113,7 @@ export const publicRoutes = (
     <Route path="/real-estate/checkout/:listingId" element={<RealEstateCheckoutPage />} />
     <Route path="/loja/:storeId" element={<StorePublicPage />} />
     <Route path="/leiloes" element={<AuctionListPage />} />
+    <Route path="/radio" element={<Suspense fallback={<PageFallback />}><RadioMundialPage /></Suspense>} />
     <Route path="/meus-lances" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeusLances /></Suspense></ProtectedRoute>} />
     <Route path="/leilao/:id" element={<AuctionPublicPage />} />
     <Route path="/arremate/:id" element={<ArrematePublicPage />} />
