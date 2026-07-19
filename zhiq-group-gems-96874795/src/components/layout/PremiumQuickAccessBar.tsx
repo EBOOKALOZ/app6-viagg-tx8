@@ -25,7 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, Bell, ChevronDown, LogIn, LogOut, Share2 } from "lucide-react";
+import { Heart, Bell, ChevronDown, LogIn, LogOut, Share2, Radio } from "lucide-react";
 
 // Menu da Conta Única do Consumidor. Itens sem rota dedicada → /conta (hub).
 const ACCOUNT_MENU: { emoji: string; label: string; to: string }[] = [
@@ -215,6 +215,19 @@ export function PremiumQuickAccessBar() {
       >
         <Share2 className="h-3 w-3 text-[#16A34A]" />
         <span className="hidden sm:inline">Compartilhar</span>
+      </button>
+
+      {/* 📻 Rádio Mundial — abre o Audio Center na aba Rádio (sem navegar) */}
+      <button
+        onClick={() => window.dispatchEvent(new Event("viagg:open-radio"))}
+        aria-label="Rádio Mundial"
+        className={cn(
+          pillBase,
+          "cursor-pointer bg-white text-slate-950 border sm:border-2 border-[#68C7F2] shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95"
+        )}
+      >
+        <Radio className="h-3 w-3 text-[#FF6A00]" />
+        <span className="hidden sm:inline">Rádio</span>
       </button>
 
       {/* 🔊 Som — portal do GlobalAudioPlayer (NÃO alterar o id) */}

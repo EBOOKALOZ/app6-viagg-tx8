@@ -92,6 +92,8 @@ export async function playStation(station: RadioStation): Promise<void> {
     return;
   }
   set({ station, loading: true, error: null });
+  // pausa a música de fundo do app (GlobalAudioPlayer escuta) — evita 2 áudios
+  try { window.dispatchEvent(new Event("viagg:stop-bg-music")); } catch { /* ignore */ }
   try {
     el.src = url;
     el.volume = state.volume;

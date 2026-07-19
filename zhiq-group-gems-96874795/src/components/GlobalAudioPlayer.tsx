@@ -3,39 +3,16 @@ import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Slider } from '@/components/ui/slider';
+import { OrionAudioCenter } from '@/components/orion/OrionAudioCenter';
+import {
+  AudioSettings, loadAudioSettings, saveAudioSettings, ensureOrionGraph,
+} from '@/lib/orionAudioEngine';
 
 const AUDIO_URL = 'https://jifnpjnffhzosxrdhvxb.supabase.co/storage/v1/object/public/aaudio/background-music.mp3';
-const STORAGE_KEY = 'global_audio_settings';
 // sessionStorage — sobrevive a window.location.href (full reload) dentro da mesma aba
 const SESSION_INTERACTED_KEY = 'viagg_audio_interacted';
 const SESSION_POSITION_KEY   = 'viagg_audio_position';
 const DEFAULT_VOLUME = 0.03;
-
-interface AudioSettings {
-  volume: number;
-  muted: boolean;
-}
-
-function loadSettings(): AudioSettings {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        volume: typeof parsed.volume === 'number' ? parsed.volume : DEFAULT_VOLUME,
-        muted: typeof parsed.muted === 'boolean' ? parsed.muted : false,
-      };
-    }
-  } catch { /* ignore */ }
-  return { volume: DEFAULT_VOLUME, muted: false };
-}
-
-function saveSettings(settings: AudioSettings) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch { /* ignore */ }
-}
 
 // Singleton via window — sobrevive ao HMR do Vite (módulo reinicia, window não)
 declare global {
@@ -77,7 +54,10 @@ export function forceStopGlobalAudio() {
 function getOrCreateAudio(volume: number): HTMLAudioElement {
   let audio = getAudio();
   if (!audio) {
-    audio = new Audio(AUDIO_URL);
+    audio = new Audio();
+    // crossOrigin ANTES do src — sem CORS o elemento fica "tainted" e o grafo WebAudio (EQ) sai mudo
+    audio.crossOrigin = 'anonymous';
+    audio.src = AUDIO_URL;
     audio.loop = true;
     audio.volume = volume;
     audio.preload = 'auto';
@@ -87,7 +67,7 @@ function getOrCreateAudio(volume: number): HTMLAudioElement {
 }
 
 export function GlobalAudioPlayer() {
-  const [settings, setSettings] = useState<AudioSettings>(loadSettings);
+  const [settings, setSettings] = useState<AudioSettings>(loadAudioSettings);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -155,8 +135,8 @@ export function GlobalAudioPlayer() {
 
   // Inicializar áudio singleton
   useEffect(() => {
-    const initSettings = { ...loadSettings(), volume: DEFAULT_VOLUME };
-    saveSettings(initSettings);
+    const initSettings = { ...loadAudioSettings(), volume: DEFAULT_VOLUME };
+    saveAudioSettings(initSettings);
     setSettings(initSettings);
 
     audioRef.current = getOrCreateAudio(DEFAULT_VOLUME);
@@ -206,12 +186,21 @@ export function GlobalAudioPlayer() {
     };
     window.addEventListener('stop-all-motoboy-audio', handleDeliveryStop);
 
+    // ORION-AUDIO X: abrir o Audio Center na aba Rádio (barra premium → sem navegar)
+    const handleOpenRadio = () => setIsPanelOpen(true);
+    window.addEventListener('viagg:open-radio', handleOpenRadio);
+    // ao tocar uma rádio, pausa a música de fundo do app (evita 2 áudios)
+    const handleStopBg = () => { forceStopGlobalAudio(); setIsPlaying(false); };
+    window.addEventListener('viagg:stop-bg-music', handleStopBg);
+
     return () => {
       audioRef.current?.removeEventListener('play', handlePlay);
       audioRef.current?.removeEventListener('pause', handlePause);
       audioRef.current?.removeEventListener('canplaythrough', handleCanPlay);
       window.removeEventListener('beforeunload', savePositionBeforeUnload);
       window.removeEventListener('stop-all-motoboy-audio', handleDeliveryStop);
+      window.removeEventListener('viagg:open-radio', handleOpenRadio);
+      window.removeEventListener('viagg:stop-bg-music', handleStopBg);
       if (fadeRef.current) clearInterval(fadeRef.current);
       // Pausa no desmonte (StrictMode/HMR), mas NÃO reseta hasInteracted
       const audio = getAudio();
@@ -219,9 +208,9 @@ export function GlobalAudioPlayer() {
     };
   }, []);
 
-  // Aplicar mute/volume ao elemento quando settings mudam
+  // Persistir + aplicar mute/volume ao elemento quando settings mudam
   useEffect(() => {
-    saveSettings(settings);
+    saveAudioSettings(settings);
     if (audioRef.current) {
       audioRef.current.muted = settings.muted;
       audioRef.current.volume = settings.volume;
@@ -267,7 +256,7 @@ export function GlobalAudioPlayer() {
     };
   }, [isPanelOpen]);
 
-  // Inicia música com fade-in de 0 → volume salvo em 3s
+  // Inicia música com fade-in de 0 → volume padrão em 3s
   const startMusic = useCallback(() => {
     if (isAudioPlaying() || !audioRef.current) return;
 
@@ -295,6 +284,23 @@ export function GlobalAudioPlayer() {
     }).catch((err) => {
       console.warn('[GlobalAudioPlayer] play() blocked:', err);
     });
+  }, []);
+
+  // Constrói o grafo do ORION Audio (EQ/boosters/analisador) no primeiro gesto.
+  // Fora de gesto o AudioContext nasce "suspended" e silenciaria a música.
+  useEffect(() => {
+    if (window.__viagg_audio_graph__) return;
+    const buildOnGesture = () => {
+      ensureOrionGraph();
+      document.removeEventListener('click', buildOnGesture, true);
+      document.removeEventListener('keydown', buildOnGesture, true);
+    };
+    document.addEventListener('click', buildOnGesture, { capture: true, passive: true });
+    document.addEventListener('keydown', buildOnGesture, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener('click', buildOnGesture, true);
+      document.removeEventListener('keydown', buildOnGesture, true);
+    };
   }, []);
 
   // Listener de primeira interação do usuário
@@ -339,6 +345,7 @@ export function GlobalAudioPlayer() {
       setInteracted(true);
       startMusic();
     }
+    ensureOrionGraph();
     setIsPanelOpen(prev => !prev);
   }, [startMusic]);
 
@@ -348,7 +355,6 @@ export function GlobalAudioPlayer() {
       ? Volume1
       : Volume2;
 
-  const volumePercent = Math.round(settings.volume * 100);
   const isMarketPortal = portalTarget && (portalTarget.id === 'global-audio-portal-trustbar');
   const isMutedState = settings.muted || settings.volume === 0;
 
@@ -384,8 +390,8 @@ export function GlobalAudioPlayer() {
                 ),
           !isReady && 'opacity-50'
         )}
-        title="Controle de áudio"
-        aria-label="Abrir controle de volume"
+        title="Viagg-TX8 Audio Center"
+        aria-label="Abrir Viagg-TX8 Audio Center"
         aria-expanded={isPanelOpen}
       >
         <VolumeIcon className={cn(isMarketPortal ? 'w-4.5 sm:w-5 h-4.5 sm:h-5 text-white' : portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
@@ -399,68 +405,21 @@ export function GlobalAudioPlayer() {
       ref={panelRef}
       style={{ position: 'fixed', top: panelPos.top, right: panelPos.right }}
       className={cn(
-        'bg-[#0a1f16]/90 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 min-w-[220px] transition-all duration-300 ease-out origin-top-right z-[9999]',
+        'bg-[#0a1f16]/95 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 w-[min(94vw,340px)] max-h-[78vh] overflow-y-auto transition-all duration-300 ease-out origin-top-right z-[9999]',
         isPanelOpen
           ? 'opacity-100 scale-100 translate-y-0'
           : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
       )}
     >
-        <div className="relative flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-green-500/20 rounded-full ring-1 ring-green-500/50 shadow-[0_0_10px_rgba(34,197,94,0.4)]">
-              <Volume2 className="w-4 h-4 text-green-400" />
-            </div>
-            <span className="text-sm font-bold text-white tracking-wide">Volume</span>
-          </div>
-          <span className="text-xs font-black text-green-300 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full shadow-inner">
-            {volumePercent}%
-          </span>
-        </div>
-
-        <div className="relative flex items-center gap-4 mb-2">
-          <button
-            onClick={toggleMute}
-            className={cn(
-              'p-2 rounded-full transition-all duration-300 ring-1',
-              settings.muted
-                ? 'bg-red-500/10 text-red-400 ring-red-500/30 hover:bg-red-500/20 hover:ring-red-500/50 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                : 'bg-green-500/10 text-green-400 ring-green-500/30 hover:bg-green-500/20 hover:ring-green-500/50 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)]'
-            )}
-          >
-            <VolumeIcon className="w-4 h-4" />
-          </button>
-
-          <Slider
-            value={[volumePercent]}
-            onValueChange={handleVolumeChange}
-            max={100}
-            step={1}
-            className="flex-1 [&_[data-radix-slider-track]]:bg-white/10 [&_[data-radix-slider-track]]:h-1.5 [&_[data-radix-slider-range]]:bg-gradient-to-r [&_[data-radix-slider-range]]:from-green-500 [&_[data-radix-slider-range]]:to-emerald-400 [&_[data-radix-slider-thumb]]:border-0 [&_[data-radix-slider-thumb]]:bg-white [&_[data-radix-slider-thumb]]:shadow-[0_0_10px_rgba(255,255,255,0.8)] [&_[data-radix-slider-thumb]]:w-4 [&_[data-radix-slider-thumb]]:h-4"
-          />
-        </div>
-
-        <div className="relative mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isPlaying ? (
-              <span className="flex items-center gap-1.5">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <span className="text-xs text-green-400 font-medium">Tocando</span>
-              </span>
-            ) : (
-              <span className="text-xs text-zinc-400 font-medium">Pausado</span>
-            )}
-          </div>
-          
-          {settings.muted && (
-            <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 uppercase tracking-wider">
-              Mudo
-            </span>
-          )}
-        </div>
-      </div>
+      <OrionAudioCenter
+        settings={settings}
+        setSettings={setSettings}
+        isPlaying={isPlaying}
+        isOpen={isPanelOpen}
+        onToggleMute={toggleMute}
+        onVolumeChange={handleVolumeChange}
+      />
+    </div>
   );
 
   return (

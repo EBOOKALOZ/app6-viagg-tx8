@@ -118,6 +118,35 @@ export async function topStations(limit = 60): Promise<RadioStation[]> {
   return cleanList(await api("/json/stations/topvote/" + limit));
 }
 
+// palavras-ruído que atrapalham o match de substring (nome exato da emissora)
+const NOISE = /\b(r[aá]dios?|fm|am|web|online|ao\s*vivo|stereo|est[eé]reo|oficial)\b/gi;
+
+/**
+ * Busca tolerante por nome: tenta o texto completo, depois sem palavras-ruído
+ * ("rádio", "fm", "am"…), depois o termo mais distintivo. Mescla e deduplica.
+ * Faz "radio jovem pan fm" achar "Jovem Pan", "band fm 96" achar "Band FM" etc.
+ */
+export async function smartSearchStations(raw: string, limit = 60): Promise<RadioStation[]> {
+  const clean = (raw || "").trim().replace(/\s+/g, " ");
+  if (!clean) return [];
+  const stripped = clean.replace(NOISE, " ").replace(/\s+/g, " ").trim();
+  const tokens = stripped.split(" ").filter((t) => t.length >= 2);
+  const longest = [...tokens].sort((a, b) => b.length - a.length)[0] || "";
+  const tries = Array.from(new Set([clean, stripped, longest].filter((s) => s && s.length >= 2)));
+
+  const seen = new Set<string>();
+  const out: RadioStation[] = [];
+  for (const name of tries) {
+    if (out.length >= 8) break; // já achou o suficiente com a estratégia anterior
+    let r: RadioStation[] = [];
+    try { r = await searchStations({ name, limit, order: "clickcount", reverse: true }); } catch { r = []; }
+    for (const s of r) {
+      if (!seen.has(s.stationuuid)) { seen.add(s.stationuuid); out.push(s); }
+    }
+  }
+  return out.slice(0, limit);
+}
+
 // distância em km (Haversine)
 export function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
