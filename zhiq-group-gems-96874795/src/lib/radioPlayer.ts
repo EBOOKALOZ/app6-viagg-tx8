@@ -79,6 +79,7 @@ let lastWasHttp = false;
 let audioCtx: AudioContext | null = null;
 let eqEl: HTMLAudioElement | null = null;
 let eqFilters: BiquadFilterNode[] = [];
+let eqGain: GainNode | null = null;   // controla o volume no caminho do EQ (el.volume é ignorado no grafo)
 let eqBuilt = false;
 let eqEnabledDesired = false;
 let eqValues: number[] = new Array(10).fill(0);
@@ -137,7 +138,12 @@ function ensureEqGraph(): boolean {
       node = f;
       return f;
     });
-    node.connect(audioCtx.destination);
+    // GainNode no fim do grafo: é ele quem controla o volume no caminho do EQ
+    // (com createMediaElementSource, o el.volume é ignorado pelo Web Audio).
+    eqGain = audioCtx.createGain();
+    eqGain.gain.value = state.volume;
+    node.connect(eqGain);
+    eqGain.connect(audioCtx.destination);
     eqEl = el;
     eqBuilt = true;
     return true;
@@ -250,12 +256,14 @@ export function stopRadio(): void {
 }
 
 export function setRadioVolume(v: number): void {
+  const vol = Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
   // aplica nos dois elementos p/ manter sincronizado ao alternar EQ/simples
   const plainEl = getPlain();
-  plainEl.volume = v;
-  if (eqEl) eqEl.volume = v;
-  try { localStorage.setItem(VOL, String(v)); } catch { /* ignore */ }
-  set({ volume: v });
+  plainEl.volume = vol;
+  if (eqEl) eqEl.volume = vol;         // caminho simples do elemento (fallback)
+  if (eqGain) eqGain.gain.value = vol; // caminho do EQ: quem realmente controla o volume no grafo
+  try { localStorage.setItem(VOL, String(vol)); } catch { /* ignore */ }
+  set({ volume: vol });
 }
 
 // ── Favoritas ────────────────────────────────────────────────────────────────

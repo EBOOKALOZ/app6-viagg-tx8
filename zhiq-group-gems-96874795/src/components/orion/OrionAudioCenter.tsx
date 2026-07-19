@@ -28,7 +28,7 @@ import {
   eq5From10, setGroupIn10, startAiSound, runSoundTest, detectDeviceProfile,
 } from '@/lib/orionAudioEngine';
 import { RadioMundial } from './RadioMundial';
-import { applyRadioEq } from '@/lib/radioPlayer';
+import { applyRadioEq, setRadioVolume } from '@/lib/radioPlayer';
 
 interface CustomPreset { id: string; nome: string; bands: { eq10?: number[]; boosters?: Partial<Boosters> }; origem: string }
 
@@ -174,6 +174,12 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
     if (!settings.aiSound) applyEq(settings.eq10, settings.eqEnabled);
     applyRadioEq(settings.eq10, settings.eqEnabled); // o MESMO EQ atua na rádio (streams com CORS)
   }, [settings.eq10, settings.eqEnabled, settings.aiSound, graphReady]);
+
+  // ── O volume MESTRE também comanda a rádio (o slider do usuário deve valer para
+  //    o que está tocando — música OU rádio). Mudo → 0. Mesma origem do slider verde. ──
+  useEffect(() => {
+    setRadioVolume(settings.muted ? 0 : settings.volume);
+  }, [settings.volume, settings.muted]);
 
   useEffect(() => {
     applyBoosters(settings.boosters);
