@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   searchStations, smartSearchStations, topStations, stationsNearby, countClick,
+  discoverByCategory, cepToLocation, RADIO_CATEGORIES,
   type RadioStation, type NearbyStation,
 } from "@/lib/radioBrowser";
 import {
@@ -24,7 +25,7 @@ import {
 } from "@/lib/radioPlayer";
 
 type Tab = "buscar" | "perto" | "favoritas" | "historico" | "populares";
-const RADIUS = [5, 10, 25, 50, 100, 250];
+const RADIUS = [5, 10, 25, 50, 100, 200, 250];
 const CHIPS: { label: string; icon: any; run: (r: Runner) => void }[] = [
   { label: "Gospel", icon: Music2, run: (r) => r({ tag: "Gospel" }, "Gospel") },
   { label: "Rock", icon: Music2, run: (r) => r({ tag: "Rock" }, "Rock") },
@@ -70,6 +71,9 @@ export function RadioMundial() {
   const [error, setError] = useState<string | null>(null);
   const [radius, setRadius] = useState(25);
   const [tick, setTick] = useState(0);
+  const [cat, setCat] = useState<string | null>(null);     // categoria ativa (chip)
+  const [cep, setCep] = useState("");                         // busca por CEP
+  const [cepInfo, setCepInfo] = useState<string | null>(null);
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
@@ -119,6 +123,46 @@ export function RadioMundial() {
     );
   }, []);
 
+  // Descoberta por categoria (comunitária, universitária, gospel, esportes…)
+  const runCategory = useCallback(async (key: string) => {
+    const c = RADIO_CATEGORIES.find((x) => x.key === key);
+    if (!c) return;
+    setTab("buscar"); setCat(key); setLoading(true); setError(null);
+    try {
+      const r = await discoverByCategory(c, 60);
+      setResults(r);
+      if (r.length === 0) setError(`Nenhuma rádio de "${c.label}" encontrada agora. Tente outra categoria.`);
+    } catch {
+      setError("Falha ao descobrir emissoras dessa categoria.");
+    } finally { setLoading(false); }
+  }, []);
+
+  // Descoberta por CEP: BrasilAPI/ViaCEP → raio (se houver coordenadas) ou UF
+  const searchByCep = useCallback(async (km: number) => {
+    const raw = cep.trim();
+    if (raw.replace(/\D/g, "").length !== 8) { setError("Digite um CEP válido (8 dígitos)."); return; }
+    setTab("perto"); setLoading(true); setError(null); setCepInfo(null); setRadius(km);
+    try {
+      const loc = await cepToLocation(raw);
+      if (!loc) { setError("CEP não encontrado nas bases públicas."); return; }
+      const onde = [loc.bairro, loc.city, loc.uf].filter(Boolean).join(" · ");
+      if (loc.lat != null && loc.lng != null) {
+        const r = await stationsNearby(loc.lat, loc.lng, km, "BR");
+        setNearby(r);
+        setCepInfo(`📍 ${onde} — ${r.length} em ${km}km`);
+        if (r.length === 0) setError(`Nenhuma rádio com geo em ${km} km de ${loc.city || "seu CEP"}.`);
+      } else {
+        // sem coordenadas no CEP → cai para busca por estado (UF)
+        const r = await searchStations({ state: loc.uf, countrycode: "BR", limit: 60 });
+        setNearby(r as NearbyStation[]);
+        setCepInfo(`📍 ${onde} — por estado (CEP sem coordenadas)`);
+        if (r.length === 0) setError(`Nenhuma rádio encontrada para ${loc.uf}.`);
+      }
+    } catch {
+      setError("Falha ao buscar por CEP.");
+    } finally { setLoading(false); }
+  }, [cep]);
+
   const onTab = (t: Tab) => {
     setTab(t); setError(null);
     if (t === "favoritas") setFavs(getFavorites());
@@ -134,7 +178,7 @@ export function RadioMundial() {
   }, []);
 
   const fav = useCallback((st: RadioStation) => { toggleFavorite(st); setTick((n) => n + 1); setFavs(getFavorites()); }, []);
-  const submit = (e: React.FormEvent) => { e.preventDefault(); setTab("buscar"); runSearch({ name: query.trim() }, query.trim()); };
+  const submit = (e: React.FormEvent) => { e.preventDefault(); setTab("buscar"); setCat(null); runSearch({ name: query.trim() }, query.trim()); };
 
   const list: (RadioStation | NearbyStation)[] = useMemo(() => (
     tab === "perto" ? nearby : tab === "favoritas" ? favs : tab === "historico" ? hist : tab === "populares" ? populares : results
@@ -151,7 +195,7 @@ export function RadioMundial() {
           <Icon src={radio.station.favicon} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12px] font-bold text-white">{radio.station.name?.trim() || "Rádio"}</p>
-            <p className="truncate text-[9px] text-white/50">{radio.loading ? "Conectando…" : radio.error ? "Stream indisponível" : radio.playing ? "▶ Ao vivo" : "Pausado"}</p>
+            <p className="truncate text-[9px] text-white/50">{radio.loading ? "Conectando…" : radio.error ? "Stream indisponível" : radio.playing ? (radio.eqActive ? "▶ Ao vivo · 🎚 EQ ativo" : "▶ Ao vivo · sem EQ") : "Pausado"}</p>
           </div>
           <button onClick={togglePlay} className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white">
             {radio.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : radio.playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -186,14 +230,30 @@ export function RadioMundial() {
         </button>
       </form>
 
-      {/* CHIPS */}
+      {/* CHIPS (atalhos de gênero/emissora/cidade) */}
       <div className="flex flex-wrap gap-1">
         {CHIPS.map((c) => (
-          <button key={c.label} onClick={() => { setTab("buscar"); c.run(runSearch); }}
+          <button key={c.label} onClick={() => { setTab("buscar"); setCat(null); c.run(runSearch); }}
             className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold text-white/60 hover:border-orange-400/40 hover:text-white">
             <c.icon className="h-2.5 w-2.5" /> {c.label}
           </button>
         ))}
+      </div>
+
+      {/* CATEGORIAS — Discovery Engine (comunitária, universitária, pública…) */}
+      <div>
+        <p className="mb-1 flex items-center gap-1 px-0.5 text-[9px] font-bold uppercase tracking-wider text-white/35">
+          <Sparkles className="h-2.5 w-2.5 text-orange-300/70" /> Categorias
+        </p>
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
+          {RADIO_CATEGORIES.map((c) => (
+            <button key={c.key} onClick={() => runCategory(c.key)}
+              className={cn("flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold transition-all",
+                cat === c.key ? "bg-gradient-to-r from-[#FF6A00] to-[#FF9A00] border-orange-300/40 text-white" : "border-white/10 bg-white/[0.04] text-white/60 hover:border-orange-400/40 hover:text-white")}>
+              <span className="text-[11px] leading-none">{c.emoji}</span> {c.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* TABS */}
@@ -207,16 +267,37 @@ export function RadioMundial() {
         ))}
       </div>
 
-      {/* RAIO */}
+      {/* PERTO — por CEP (fonte pública) ou GPS */}
       {tab === "perto" && (
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="text-[10px] font-bold text-white/40">Raio:</span>
-          {RADIUS.map((km) => (
-            <button key={km} onClick={() => near(km)}
-              className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold", radius === km ? "bg-[#FF6A00] border-orange-300/40 text-white" : "bg-white/[0.04] border-white/10 text-white/50")}>
-              {km}km
+        <div className="space-y-1.5">
+          <form onSubmit={(e) => { e.preventDefault(); searchByCep(radius); }} className="flex gap-1.5">
+            <div className="relative flex-1">
+              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-orange-300/80" />
+              <input
+                value={cep}
+                onChange={(e) => setCep(e.target.value)}
+                inputMode="numeric"
+                maxLength={9}
+                placeholder="Buscar por CEP (ex.: 89010-000)"
+                aria-label="Buscar rádios por CEP"
+                className="w-full rounded-xl border border-orange-500/30 bg-white/[0.07] py-2 pl-9 pr-2 text-[13px] font-medium text-white outline-none transition-all placeholder:text-white/40 focus:border-orange-400/70 focus:bg-white/[0.1]"
+              />
+            </div>
+            <button type="submit" className="flex items-center gap-1 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] px-3.5 text-[12px] font-black text-white active:scale-95">
+              <Search className="h-3.5 w-3.5" /> Buscar
             </button>
-          ))}
+          </form>
+          {cepInfo && <p className="rounded-lg border border-orange-400/20 bg-orange-500/5 px-2 py-1 text-[10px] font-bold text-orange-200/80">{cepInfo}</p>}
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[10px] font-bold text-white/40">Raio:</span>
+            {RADIUS.map((km) => (
+              <button key={km} onClick={() => (cep.replace(/\D/g, "").length === 8 ? searchByCep(km) : near(km))}
+                className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold", radius === km ? "bg-[#FF6A00] border-orange-300/40 text-white" : "bg-white/[0.04] border-white/10 text-white/50")}>
+                {km}km
+              </button>
+            ))}
+          </div>
+          <p className="px-0.5 text-[9px] text-white/30">Toque num raio para usar seu GPS — ou digite um CEP acima e o raio busca a partir dele.</p>
         </div>
       )}
 

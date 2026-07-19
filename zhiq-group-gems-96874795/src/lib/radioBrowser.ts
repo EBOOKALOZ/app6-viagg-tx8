@@ -182,3 +182,101 @@ export async function stationsNearby(
 export async function countClick(uuid: string): Promise<void> {
   try { await api("/json/url/" + uuid); } catch { /* ignore */ }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ORION Community Radio Discovery Engine v1.0 — Fase 1 (categorias + CEP).
+ * Camada ADITIVA sobre o Radio Mundial: nada acima é alterado. Só descoberta
+ * pública (radio-browser tags + CEP por BrasilAPI/ViaCEP). Nenhum scraping.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface RadioCategory {
+  key: string;
+  label: string;
+  emoji: string;
+  /** tags candidatas do radio-browser, tentadas em ordem e mescladas (PT + EN) */
+  tags: string[];
+  /** true = catálogo mundial (não restringe ao Brasil) */
+  global?: boolean;
+}
+
+// Categorias do spec mapeadas para tags reais do radio-browser. Como a marcação
+// de tags é irregular, cada categoria tenta várias candidatas (PT e EN) e mescla.
+export const RADIO_CATEGORIES: RadioCategory[] = [
+  { key: "fm",            label: "FM",            emoji: "📻", tags: ["fm"] },
+  { key: "am",            label: "AM",            emoji: "📻", tags: ["am"] },
+  { key: "web",           label: "Web Rádio",     emoji: "📡", tags: ["webradio", "web radio", "internet radio", "online"] },
+  { key: "comunitaria",   label: "Comunitária",   emoji: "🏘️", tags: ["comunitaria", "comunitária", "community radio", "community"] },
+  { key: "universitaria", label: "Universitária", emoji: "🎓", tags: ["universitaria", "universitária", "university radio", "college radio"] },
+  { key: "publica",       label: "Pública",       emoji: "🏛️", tags: ["publica", "pública", "public radio", "estatal"] },
+  { key: "educativa",     label: "Educativa",     emoji: "📚", tags: ["educativa", "educational", "education", "cultura"] },
+  { key: "religiosa",     label: "Religiosa",     emoji: "✝️", tags: ["gospel", "religious", "católica", "catolica", "evangélica", "evangelica", "cristã"] },
+  { key: "noticias",      label: "Notícias",      emoji: "📰", tags: ["news", "notícias", "noticias", "jornalismo", "talk"] },
+  { key: "esportes",      label: "Esportes",      emoji: "⚽", tags: ["sports", "esportes", "futebol", "esporte"] },
+  { key: "musica",        label: "Música",        emoji: "🎵", tags: ["music", "música", "musica", "pop", "mpb"] },
+  { key: "internacional", label: "Internacional", emoji: "🌎", tags: [], global: true },
+];
+
+/**
+ * Descobre emissoras de uma categoria. Restringe ao Brasil por padrão (exceto
+ * "internacional", que traz o top mundial). Mescla as tags candidatas, deduplica
+ * por stationuuid e mantém a priorização HTTPS/clickcount do cleanList.
+ */
+export async function discoverByCategory(cat: RadioCategory, limit = 60): Promise<RadioStation[]> {
+  if (cat.global) return topStations(limit);
+  const cc = "BR";
+  const seen = new Set<string>();
+  const out: RadioStation[] = [];
+  for (const tag of cat.tags) {
+    if (out.length >= limit) break;
+    let r: RadioStation[] = [];
+    try { r = await searchStations({ tag, countrycode: cc, limit, order: "clickcount", reverse: true }); } catch { r = []; }
+    for (const s of r) if (!seen.has(s.stationuuid)) { seen.add(s.stationuuid); out.push(s); }
+  }
+  return out.slice(0, limit);
+}
+
+export interface CepLocation {
+  lat: number | null;
+  lng: number | null;
+  city: string;
+  uf: string;
+  bairro: string;
+}
+
+/**
+ * Resolve um CEP brasileiro em localização, só com fontes PÚBLICAS e gratuitas:
+ * BrasilAPI v2 (traz coordenadas quando disponíveis) com fallback ViaCEP
+ * (cidade/UF/bairro). Retorna null se o CEP for inválido ou nenhuma fonte
+ * responder. Sem chave, CORS-friendly.
+ */
+export async function cepToLocation(rawCep: string): Promise<CepLocation | null> {
+  const cep = (rawCep || "").replace(/\D/g, "");
+  if (cep.length !== 8) return null;
+  // 1) BrasilAPI v2 — pode conter location.coordinates
+  try {
+    const r = await fetch(`https://brasilapi.com.br/api/cep/v2/${cep}`, { headers: { Accept: "application/json" } });
+    if (r.ok) {
+      const j = (await r.json()) as {
+        city?: string; state?: string; neighborhood?: string;
+        location?: { coordinates?: { latitude?: string | number; longitude?: string | number } };
+      };
+      const c = j.location?.coordinates ?? {};
+      return {
+        lat: c.latitude != null && c.latitude !== "" ? Number(c.latitude) : null,
+        lng: c.longitude != null && c.longitude !== "" ? Number(c.longitude) : null,
+        city: j.city ?? "",
+        uf: j.state ?? "",
+        bairro: j.neighborhood ?? "",
+      };
+    }
+  } catch { /* tenta o ViaCEP */ }
+  // 2) ViaCEP — só cidade/UF/bairro (sem coordenadas)
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { headers: { Accept: "application/json" } });
+    if (r.ok) {
+      const j = (await r.json()) as { erro?: boolean; localidade?: string; uf?: string; bairro?: string };
+      if (!j.erro) return { lat: null, lng: null, city: j.localidade ?? "", uf: j.uf ?? "", bairro: j.bairro ?? "" };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
