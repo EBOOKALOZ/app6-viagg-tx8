@@ -169,6 +169,7 @@ export default function AuctionPublicPage() {
 
   // Offer modal state
   const [showOfertaModal, setShowOfertaModal] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const [ofertaFixedAmount, setOfertaFixedAmount] = useState<number | undefined>(undefined);
   const [ofertaAllowCustom, setOfertaAllowCustom] = useState(true);
 
@@ -337,6 +338,23 @@ export default function AuctionPublicPage() {
                 </span>
               )}
             </div>
+
+            {/* Description */}
+            {listing.description && (
+              <div className="text-center">
+                <p className={`text-sm text-gray-600 whitespace-pre-wrap ${descExpanded ? "" : "line-clamp-3"}`}>
+                  {listing.description}
+                </p>
+                {(listing.description.length > 120 || listing.description.split("\n").length > 3) && (
+                  <button
+                    onClick={() => setDescExpanded(v => !v)}
+                    className="mt-1 text-xs font-bold text-orange-600 hover:text-orange-700"
+                  >
+                    {descExpanded ? "Ver menos" : "Ver descrição completa"}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Countdown */}
             {(() => {

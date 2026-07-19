@@ -23,6 +23,7 @@ export interface PremiumCardProps {
   category?: string;
   categoryColor?: string; // Tailwind class, e.g. 'bg-blue-500'
   title: string;
+  description?: string | null;
   location?: string;
   features?: PremiumFeature[];
   price?: number | null;
@@ -55,6 +56,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
   category,
   categoryColor = 'bg-sky-500',
   title,
+  description,
   location,
   features = [],
   price,
@@ -212,6 +214,12 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           <h3 className="text-base sm:text-lg font-black text-zinc-900 leading-snug line-clamp-2 group-hover:text-sky-700 transition-colors">
             {title}
           </h3>
+
+          {description && (
+            <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">
+              {description}
+            </p>
+          )}
         </div>
 
         {/* ─── 3. PREÇO ─── */}

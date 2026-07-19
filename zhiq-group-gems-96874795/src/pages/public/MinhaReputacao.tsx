@@ -197,7 +197,7 @@ export default function MinhaReputacao() {
             </div>
 
             <p className="mt-6 pb-8 text-center text-[10px] text-zinc-400">
-              Score explicável calculado só com dados reais da sua conta · ORION-AI-74 · ninguém é bloqueado automaticamente
+              Score explicável calculado só com dados reais da sua conta · Viagg-TX8 · ninguém é bloqueado automaticamente
             </p>
           </>
         )}

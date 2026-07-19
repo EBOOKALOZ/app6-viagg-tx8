@@ -113,6 +113,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing })
           category={isAuction ? 'Leilão' : 'Arremate'}
           categoryColor={isAuction ? 'bg-[#FF6A00]' : 'bg-blue-500'}
           title={listing.title}
+          description={listing.description}
           location={location || undefined}
           price={currentPrice}
           oldPrice={buyNowPrice && buyNowPrice > currentPrice ? buyNowPrice : undefined}

@@ -3,7 +3,7 @@
   "url": "https://www.viagg-tx8.com.br",
   "descricao": "A Viagg-TX8 é uma plataforma brasileira que une mobilidade urbana (motoboy, moto-táxi, motorista e fretes), marketplace local (produtos, serviços, veículos, imóveis e viagens), carteira digital com PIX e Mercado Pago, e módulos de inteligência artificial para auditoria, moderação e divulgação.",
   "idioma": "pt-BR",
-  "atualizado_em": "2026-07-15",
+  "atualizado_em": "2026-07-18",
   "versao": "1.0",
   "modulos": [
     {
@@ -345,7 +345,7 @@
     },
     {
       "slug": "postador-inteligente",
-      "nome": "Postador Inteligente (GLM)",
+      "nome": "Postador Inteligente",
       "categoria": "Inteligência Artificial",
       "url_publica": "https://www.viagg-tx8.com.br/institucional/postador-inteligente.html",
       "rota_app": "/admin/postador",

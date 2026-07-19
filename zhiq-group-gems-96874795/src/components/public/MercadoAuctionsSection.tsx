@@ -53,6 +53,7 @@ function useCountdown(endsAt: string) {
 interface AuctionRow {
   id: string;
   title: string;
+  description: string | null;
   product_image_url: string | null;
   starting_bid: number | null;
   current_bid: number | null;
@@ -102,6 +103,9 @@ function AuctionCard({ a, hot, onClick }: { a: AuctionRow; hot: boolean; onClick
 
       <div className="p-3 flex-1 flex flex-col gap-1.5">
         <h3 className="font-bold text-gray-800 text-sm leading-tight line-clamp-2 min-h-[36px]">{a.title}</h3>
+        {a.description && (
+          <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{a.description}</p>
+        )}
         <p className="text-lg font-black text-gray-900 leading-none">{formatBRL(price)}</p>
         <div className="flex items-center gap-3 text-[11px] text-gray-400">
           <span className="flex items-center gap-1"><Gavel className="h-3 w-3" /> {a.total_bids || 0}</span>
@@ -130,7 +134,7 @@ export function MercadoAuctionsSection({ search = "" }: { search?: string }) {
   const fetchRows = useCallback(async () => {
     const { data, error } = await supabase
       .from("auction_listings")
-      .select("id, title, product_image_url, starting_bid, current_bid, city, ends_at, total_bids, watchers_count, status, listing_type")
+      .select("id, title, description, product_image_url, starting_bid, current_bid, city, ends_at, total_bids, watchers_count, status, listing_type")
       .not("status", "in", "(canceled,cancelled,cancelado,deleted,removed,draft)")
       .order("ends_at", { ascending: true })
       .limit(48);

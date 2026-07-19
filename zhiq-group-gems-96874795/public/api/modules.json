@@ -1,7 +1,7 @@
 {
   "plataforma": "Viagg-TX8",
   "versao": "1.0",
-  "atualizado_em": "2026-07-15",
+  "atualizado_em": "2026-07-18",
   "modulos": [
     {
       "slug": "corridas-motoboy",
@@ -138,7 +138,7 @@
     },
     {
       "slug": "postador-inteligente",
-      "nome": "Postador Inteligente (GLM)",
+      "nome": "Postador Inteligente",
       "categoria": "Inteligência Artificial",
       "tags": [
         "postador automático",

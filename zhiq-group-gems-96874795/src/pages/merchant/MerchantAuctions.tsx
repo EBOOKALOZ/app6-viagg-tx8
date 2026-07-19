@@ -19,7 +19,7 @@ import {
   ChevronRight, Package, Loader2, AlertCircle, Crown, Zap, Timer, Edit, Trash2,
   ShoppingBag, ImagePlus, RefreshCw, Search, ClipboardList, Coins, PauseCircle,
   Settings, Calendar, DollarSign, Shield, ArrowUpDown, Truck, MapPin,
-  ToggleLeft, ToggleRight, Save, Hash, X, PlayCircle, ExternalLink, Megaphone
+  ToggleLeft, ToggleRight, Save, Hash, X, PlayCircle, ExternalLink, Megaphone, Gift
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
@@ -681,7 +681,7 @@ function EditListingModal({
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-lg">🤖</span>
                 <div className="min-w-0">
-                  <p className="text-[12px] font-black text-violet-200 uppercase tracking-wide">ORION Leilões AI</p>
+                  <p className="text-[12px] font-black text-violet-200 uppercase tracking-wide">Viagg-TX8 Leilões AI</p>
                   <p className="text-[10px] text-violet-300/70">Sugestões de preço, incremento, duração e sucesso — você aceita ou ajusta.</p>
                 </div>
               </div>
@@ -1289,6 +1289,79 @@ export default function MerchantAuctions() {
 
   const isLoading = loadingMyListings || loadingOffers;
   const [showPlans, setShowPlans] = useState(false);
+  const [dispatchingId, setDispatchingId] = useState<string | null>(null);
+
+  // Loja do usuário — exigida pela porta única merchant_dispatch_divulgacao
+  const { data: merchantStore } = useQuery({
+    queryKey: ["merchant-store-auctions", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await (supabase.from("merchant_stores") as any)
+        .select("id, city, region")
+        .eq("user_id", user!.id)
+        .limit(1)
+        .maybeSingle();
+      if (data) return data;
+      const { data: profile } = await (supabase.from("profiles") as any)
+        .select("full_name, nome_loja")
+        .eq("id", user!.id)
+        .single();
+      const { data: newStore } = await (supabase.from("merchant_stores") as any)
+        .insert({ user_id: user!.id, nome_loja: profile?.nome_loja || profile?.full_name || "Minha Loja" })
+        .select("id, city, region")
+        .single();
+      return newStore || null;
+    },
+  });
+
+  // Divulgação do leilão pela porta única: 1 gratuita/dia → crédito de pacote → SEM_SALDO
+  const handleDivulgar = async (listing: AuctionListing) => {
+    if (dispatchingId) return;
+    if (!merchantStore?.id) {
+      toast.error("Loja não encontrada — recarregue a página e tente novamente.");
+      return;
+    }
+    setDispatchingId(listing.id);
+    try {
+      const publicPath = (listing as any).listing_type === "arremate"
+        ? `/arremate/${listing.id}`
+        : `/leilao/${listing.id}`;
+      const { data, error } = await (supabase.rpc as any)("merchant_dispatch_divulgacao", {
+        p_merchant_store_id: merchantStore.id,
+        p_product_id: null,
+        p_campaign_type: "store_product",
+        p_title: listing.title,
+        p_message_text: [listing.description, `Participe: ${window.location.origin}${publicPath}`]
+          .filter(Boolean)
+          .join("\n\n"),
+        p_media_url: listing.product_image_url || null,
+        p_target_city: listing.city || merchantStore.city || null,
+        p_target_region: merchantStore.region || null,
+        p_source_type: "auction_listing",
+        p_source_id: listing.id,
+      });
+      if (error) {
+        if (String(error.message || "").includes("SEM_SALDO")) {
+          toast.error("Sua divulgação gratuita de hoje já foi utilizada e você não tem créditos de pacote.", {
+            description: "Adquira um pacote para continuar divulgando.",
+          });
+          setShowPlans(true);
+          return;
+        }
+        throw error;
+      }
+      if (data?.success === false) throw new Error(data.error || "Erro ao divulgar");
+      if (data?.origem === "gratuita_diaria") {
+        toast.success("🎁 Divulgação GRATUITA de hoje enviada à fila inteligente!");
+      } else {
+        toast.success(`📦 Divulgação enviada à fila! Saldo restante: ${data?.saldo_restante ?? "—"} divulgação(ões).`);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao divulgar leilão");
+    } finally {
+      setDispatchingId(null);
+    }
+  };
 
   return (
     <div className="px-4 pt-4 pb-28 lg:px-10 xl:px-16 max-w-5xl w-full mx-auto space-y-6">
@@ -1536,6 +1609,40 @@ export default function MerchantAuctions() {
                   >
                     <Trash2 className="h-5 w-5 group-hover:scale-110" />
                     <span className="text-[10px] font-black text-red-400 uppercase tracking-wider">Excluir</span>
+                  </button>
+                </div>
+
+                {/* Divulgação: 1 anúncio grátis/dia + pacotes */}
+                <div className={`grid gap-3 ${listing.status === 'active' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {listing.status === 'active' && (
+                    <button
+                      onClick={() => handleDivulgar(listing)}
+                      disabled={dispatchingId === listing.id}
+                      className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all group disabled:opacity-60"
+                      title="Divulgar este leilão nos grupos — 1 anúncio grátis por dia"
+                    >
+                      {dispatchingId === listing.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-emerald-400" />
+                      ) : (
+                        <Gift className="h-5 w-5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      )}
+                      <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider text-center leading-tight">
+                        Anúncio Grátis
+                        <span className="block text-[8px] text-emerald-400/70 normal-case font-bold tracking-normal">1 por dia</span>
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setShowPlans(true)}
+                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-violet-500/10 border-2 border-violet-500/30 hover:bg-violet-500/20 hover:border-violet-500/50 transition-all group"
+                    title="Ver opções de pacotes de divulgação"
+                  >
+                    <Megaphone className="h-5 w-5 text-violet-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-[10px] font-black text-violet-300 uppercase tracking-wider text-center leading-tight">
+                      Pacotes de
+                      <span className="block">Divulgação</span>
+                    </span>
                   </button>
                 </div>
 

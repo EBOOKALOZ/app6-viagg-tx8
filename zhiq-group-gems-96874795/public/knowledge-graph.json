@@ -39,7 +39,7 @@
         "RADAR IA — Inteligência de Grupos",
         "Comissão Inteligente",
         "Moderação IA de Imagens",
-        "Postador Inteligente (GLM)",
+        "Postador Inteligente",
         "Painel Administrativo",
         "Painel Financeiro",
         "Gestão de Grupos WhatsApp",
@@ -181,7 +181,7 @@
     {
       "@type": "Service",
       "@id": "https://www.viagg-tx8.com.br/institucional/postador-inteligente.html#service",
-      "name": "Postador Inteligente (GLM)",
+      "name": "Postador Inteligente",
       "serviceType": "Inteligência Artificial",
       "description": "Motor de divulgação que enfileira anúncios e os distribui de forma inteligente pela rede de grupos de WhatsApp auditados pelo RADAR IA.",
       "url": "https://www.viagg-tx8.com.br/institucional/postador-inteligente.html",

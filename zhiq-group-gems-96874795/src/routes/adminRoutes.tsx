@@ -166,6 +166,7 @@ import {
   AdminOrionCreativeLayout,
   AdminOrionAuctionOrchestrator,
   AdminOrionTrustCenter,
+  AdminOrionAudio,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -368,6 +369,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-creative-layout" element={<AdminOrionCreativeLayout />} />
       <Route path="/admin/orion-auction-orchestrator" element={<AdminOrionAuctionOrchestrator />} />
       <Route path="/admin/orion-trust-center" element={<AdminOrionTrustCenter />} />
+      <Route path="/admin/orion-audio" element={<AdminOrionAudio />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
