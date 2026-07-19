@@ -124,6 +124,15 @@ export function RadioMundial() {
 
   useEffect(() => { runSearch({ countrycode: "BR", order: "clickcount", reverse: true }); }, [runSearch]);
 
+  // BUSCA AO DIGITAR (debounce): a partir de 2 letras, busca sozinho ~450ms
+  // após parar de digitar — sem precisar apertar Enter/Buscar.
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    const id = setTimeout(() => { setTab("buscar"); setCat(null); runSearch({ name: term }, term); }, 450);
+    return () => clearTimeout(id);
+  }, [query, runSearch]);
+
   const loadPopulares = useCallback(async () => {
     setLoading(true); setError(null);
     try {
