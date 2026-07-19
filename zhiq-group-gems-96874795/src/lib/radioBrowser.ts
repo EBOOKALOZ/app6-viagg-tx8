@@ -95,7 +95,11 @@ export interface SearchParams {
 
 function cleanList(data: unknown): RadioStation[] {
   if (!Array.isArray(data)) return [];
-  return (data as RadioStation[]).filter((s) => s && (s.url_resolved || s.url));
+  const arr = (data as RadioStation[]).filter((s) => s && (s.url_resolved || s.url));
+  // MIXED CONTENT: em site HTTPS, streams http:// são bloqueados. Prioriza as
+  // emissoras com stream HTTPS (que realmente tocam) — sobem ao topo, resto mantém ordem.
+  const isHttps = (s: RadioStation) => (s.url_resolved || s.url || "").startsWith("https");
+  return arr.sort((a, b) => Number(isHttps(b)) - Number(isHttps(a)));
 }
 
 export async function searchStations(p: SearchParams): Promise<RadioStation[]> {

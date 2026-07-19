@@ -66,6 +66,8 @@ export function getRadioState(): RadioState {
   return state;
 }
 
+let lastWasHttp = false; // último stream tocado veio de http:// (site HTTPS bloqueia)
+
 function getEl(): HTMLAudioElement {
   let el = window.__viagg_radio_audio__;
   if (!el) {
@@ -77,7 +79,12 @@ function getEl(): HTMLAudioElement {
     el.addEventListener("waiting", () => set({ loading: true }));
     el.addEventListener("stalled", () => set({ loading: true }));
     el.addEventListener("error", () =>
-      set({ loading: false, playing: false, error: "Não foi possível tocar esta estação (stream indisponível)." }),
+      set({
+        loading: false, playing: false,
+        error: lastWasHttp
+          ? "Emissora só em HTTP — bloqueada em site seguro (HTTPS). Tente outra."
+          : "Não foi possível tocar (stream fora do ar).",
+      }),
     );
     window.__viagg_radio_audio__ = el;
   }
@@ -86,11 +93,18 @@ function getEl(): HTMLAudioElement {
 
 export async function playStation(station: RadioStation): Promise<void> {
   const el = getEl();
-  const url = station.url_resolved || station.url;
+  let url = station.url_resolved || station.url;
   if (!url) {
     set({ error: "Estação sem URL de stream." });
     return;
   }
+  // MIXED CONTENT: em site HTTPS o navegador bloqueia streams http:// → sobe p/ https.
+  // (http-only não toca em site seguro de qualquer forma; upgrade só ajuda.)
+  const wasHttp =
+    typeof location !== "undefined" && location.protocol === "https:" && url.startsWith("http://");
+  if (wasHttp) url = "https://" + url.slice("http://".length);
+  lastWasHttp = wasHttp;
+
   set({ station, loading: true, error: null });
   // pausa a música de fundo do app (GlobalAudioPlayer escuta) — evita 2 áudios
   try { window.dispatchEvent(new Event("viagg:stop-bg-music")); } catch { /* ignore */ }
@@ -100,7 +114,12 @@ export async function playStation(station: RadioStation): Promise<void> {
     await el.play();
     pushHistory(station);
   } catch {
-    set({ loading: false, playing: false, error: "Falha ao iniciar (autoplay bloqueado ou stream fora do ar)." });
+    set({
+      loading: false, playing: false,
+      error: wasHttp
+        ? "Esta emissora transmite só em HTTP e o navegador bloqueia em site seguro (HTTPS). Tente outra."
+        : "Falha ao iniciar (autoplay bloqueado ou stream fora do ar).",
+    });
   }
 }
 
