@@ -500,6 +500,13 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
     window.addEventListener('viagg:open-radio', openRadio);
     return () => window.removeEventListener('viagg:open-radio', openRadio);
   }, []);
+  // Ao ENTRAR na aba Rádio: corta o som da plataforma (música de fundo) e aguarda
+  // o usuário escolher a emissora (radio em standby, sem tocar nada por conta própria).
+  useEffect(() => {
+    if (aba === 'radio') {
+      try { window.dispatchEvent(new Event('viagg:stop-bg-music')); } catch { /* ignore */ }
+    }
+  }, [aba]);
 
   return (
     <div className="space-y-4">
@@ -515,12 +522,16 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
         </span>
       </div>
 
-      {/* ═══ ABAS: Equalizador · Rádio (Central Multimídia) ═══ */}
+      {/* ═══ ABAS: Equalizador (laranja) · Rádio (verde) ═══ */}
       <div className="flex gap-1.5">
-        {([['eq', 'Equalizador', SlidersHorizontal], ['radio', 'Rádio', Radio]] as const).map(([k, label, I]) => (
+        {([
+          ['eq', 'Equalizador', SlidersHorizontal, 'from-[#FF6A00] to-[#FF9A00]', 'rgba(255,106,0,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
+          ['radio', 'Rádio', Radio, 'from-emerald-500 to-green-500', 'rgba(16,185,129,0.85)', 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'],
+        ] as const).map(([k, label, I, grad, glow, inactive]) => (
           <button key={k} onClick={() => setAba(k)}
+            style={aba === k ? { boxShadow: `0 0 14px -4px ${glow}` } : undefined}
             className={cn('flex-1 flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-black transition-all',
-              aba === k ? 'bg-gradient-to-r from-[#FF6A00] to-[#FF9A00] text-white shadow-[0_0_14px_-4px_rgba(255,106,0,0.8)]' : 'bg-white/5 text-zinc-400 hover:bg-white/10')}>
+              aba === k ? `bg-gradient-to-r ${grad} text-white` : inactive)}>
             <I className="w-3.5 h-3.5" /> {label}
           </button>
         ))}
