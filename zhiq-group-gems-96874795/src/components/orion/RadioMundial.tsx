@@ -166,14 +166,24 @@ export function RadioMundial() {
         </div>
       )}
 
-      {/* BUSCA */}
+      {/* ═══ BARRA DE PESQUISA — encontre sua rádio de preferência ═══ */}
       <form onSubmit={submit} className="flex gap-1.5">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40" />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rádio, cidade, 89.1…"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.06] py-2 pl-8 pr-2 text-[12px] text-white outline-none placeholder:text-white/35 focus:border-orange-400/60" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-400/80" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Pesquise sua rádio…"
+            aria-label="Pesquisar rádio"
+            className="w-full rounded-xl border border-emerald-500/30 bg-white/[0.07] py-2.5 pl-9 pr-2 text-[13px] font-medium text-white outline-none transition-all placeholder:text-white/40 focus:border-emerald-400/70 focus:bg-white/[0.1] focus:shadow-[0_0_16px_-6px_rgba(16,185,129,0.7)]"
+          />
         </div>
-        <button type="submit" className="rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] px-3 text-[12px] font-bold text-white">Ir</button>
+        <button
+          type="submit"
+          className="flex items-center gap-1 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 px-3.5 text-[12px] font-black text-white shadow-[0_0_14px_-4px_rgba(16,185,129,0.75)] active:scale-95"
+        >
+          <Search className="h-3.5 w-3.5" /> Buscar
+        </button>
       </form>
 
       {/* CHIPS */}
