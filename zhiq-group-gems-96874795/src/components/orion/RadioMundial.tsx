@@ -303,7 +303,7 @@ export function RadioMundial() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquise sua rádio…"
+            placeholder="Nome, cidade ou frequência (ex.: 105,7)…"
             aria-label="Pesquisar rádio"
             className="w-full rounded-xl border border-emerald-500/30 bg-white/[0.07] py-2.5 pl-9 pr-2 text-[13px] font-medium text-white outline-none transition-all placeholder:text-white/40 focus:border-emerald-400/70 focus:bg-white/[0.1] focus:shadow-[0_0_16px_-6px_rgba(16,185,129,0.7)]"
           />
