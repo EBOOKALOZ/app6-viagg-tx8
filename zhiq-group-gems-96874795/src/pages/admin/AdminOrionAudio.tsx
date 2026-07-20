@@ -145,6 +145,71 @@ const DEVICE_LABELS: Record<string, string> = {
   auto: "Auto", fone: "Fone", bluetooth: "Bluetooth", speaker: "Caixa de Som", carro: "Carro",
 };
 
+/* ── Fila de Descoberta — aprovar/rejeitar rádios propostas (ETAPA 7) ── */
+interface QueueRow {
+  id: string; name: string; stream_url: string; city: string; state: string; uf: string;
+  region: string; category: string; confidence: number; status: string; fonte: string;
+}
+function DiscoveryQueueSection() {
+  const [msg, setMsg] = useState<string | null>(null);
+  const { data: stats } = useQuery({ queryKey: ["audio-catalog-stats"], queryFn: () => rpc("audio_catalog_stats") });
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["audio-queue"], queryFn: () => rpc("audio_queue_list", { p_status: "pending", p_limit: 200 }),
+  });
+  const list = (Array.isArray(data) ? data : []) as QueueRow[];
+  const approve = async (id: string) => {
+    try { await rpc("audio_queue_approve", { p_id: id }); setMsg("✓ Rádio aprovada e publicada no catálogo."); refetch(); }
+    catch (e) { setMsg("Erro: " + (e as Error).message); }
+  };
+  const reject = async (id: string) => {
+    const motivo = window.prompt("Motivo da rejeição (opcional):") ?? undefined;
+    try { await rpc("audio_queue_reject", { p_id: id, p_motivo: motivo }); refetch(); }
+    catch (e) { setMsg("Erro: " + (e as Error).message); }
+  };
+
+  return (
+    <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <h3 className="flex items-center gap-2 text-sm font-black text-zinc-800"><Radio className="h-4 w-4 text-emerald-600" /> Fila de Descoberta</h3>
+        {stats && (
+          <div className="flex flex-wrap gap-2 text-[11px] font-bold">
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">Comunitárias: {stats.comunitarias ?? 0}</span>
+            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-sky-700">Catálogo: {stats.ativas ?? 0}</span>
+            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">Fila: {stats.fila_pendente ?? 0}</span>
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-700">Duplicatas: {stats.duplicatas_no_catalogo ?? 0}</span>
+          </div>
+        )}
+      </div>
+      {msg && <p className="mb-2 text-xs font-bold text-zinc-600">{msg}</p>}
+      {isLoading ? <Loader2 className="h-4 w-4 animate-spin text-zinc-400" /> : list.length === 0 ? (
+        <p className="text-xs text-zinc-400">Nenhuma rádio pendente. Use a ingestão para descobrir novas emissoras.</p>
+      ) : (
+        <div className="max-h-[320px] space-y-1.5 overflow-y-auto">
+          {list.map((r) => (
+            <div key={r.id} className="flex items-center gap-2 rounded-xl bg-zinc-50 px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-zinc-800">{r.name}</p>
+                <p className="truncate text-[11px] text-zinc-500">
+                  {[r.city, r.uf, r.region].filter(Boolean).join(" · ")}{r.category ? ` · ${r.category}` : ""}
+                  {" · "}<span className={r.confidence < 60 ? "font-bold text-red-600" : "text-emerald-600"}>confiança {Number(r.confidence).toFixed(0)}%</span>
+                  {" · "}{r.fonte}
+                </p>
+              </div>
+              <button onClick={() => approve(r.id)} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700">Aprovar</button>
+              <button onClick={() => reject(r.id)} className="rounded-lg bg-zinc-200 px-2.5 py-1 text-[11px] font-bold text-zinc-600 hover:bg-zinc-300">Rejeitar</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {stats?.por_regiao && (
+        <p className="mt-3 text-[10px] text-zinc-400">
+          Cobertura por região: {Object.entries(stats.por_regiao).filter(([k]) => k !== "(sem)").map(([k, v]) => `${k} ${v}`).join(" · ")}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function AdminOrionAudio() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["orion-audio-admin"], queryFn: () => rpc("orion_audio_admin_stats"), refetchInterval: 60000,
@@ -280,6 +345,9 @@ export default function AdminOrionAudio() {
                 </p>
               </div>
             </div>
+
+            {/* FILA DE DESCOBERTA — aprovar/rejeitar rádios propostas (ETAPA 7) */}
+            <DiscoveryQueueSection />
 
             {/* CATÁLOGO CURADO — adicionar/excluir emissoras (todos os usuários acham) */}
             <CuratedCatalogSection />
