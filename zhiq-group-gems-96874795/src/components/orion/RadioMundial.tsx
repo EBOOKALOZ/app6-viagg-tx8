@@ -42,23 +42,30 @@ type Runner = (p: Parameters<typeof searchStations>[0], label?: string) => void;
 
 // Catálogo curado (compartilhado) — emissoras que a plataforma tem no banco.
 // Mesclado com o radio-browser para o usuário só buscar e achar.
+// supabase.rpc tipado por Database (types.ts vazio) não conhece as RPCs novas;
+// usar `as any` garante que a chamada seja montada em runtime sem interferência do TS.
+const sbrpc = (fn: string, args: Record<string, unknown>) => (supabase.rpc as any)(fn, args);
+
 async function curatedSearch(term: string): Promise<RadioStation[]> {
+  // 1) busca v2 (frequência/nome/cidade/categoria). Captura o error explicitamente.
   try {
-    // busca v2 (índice + filtros combinados); prioriza comunitárias
-    const { data } = await supabase.rpc("audio_radio_search_v2", { p_term: term || "", p_limit: 60 });
-    if (Array.isArray(data) && data.length) return data as unknown as RadioStation[];
-  } catch { /* cai para a v1 abaixo */ }
+    const { data, error } = await sbrpc("audio_radio_search_v2", { p_term: term || "", p_limit: 60 });
+    if (error) console.warn("[radio] v2 falhou, usando v1:", error.message);
+    else if (Array.isArray(data)) return data as unknown as RadioStation[];
+  } catch (e) { console.warn("[radio] v2 exception:", e); }
+  // 2) fallback v1 (sempre existiu) — garante que a busca do catálogo NUNCA fique vazia por erro de RPC
   try {
-    const { data } = await supabase.rpc("audio_radio_curated_search", { p_term: term || "", p_limit: 40 });
+    const { data } = await sbrpc("audio_radio_curated_search", { p_term: term || "", p_limit: 40 });
     return Array.isArray(data) ? (data as unknown as RadioStation[]) : [];
-  } catch { return []; }
+  } catch (e) { console.warn("[radio] v1 exception:", e); return []; }
 }
 // busca só no catálogo por categoria+UF (usada pelos chips de categoria)
 async function curatedByCategory(catKey: string): Promise<RadioStation[]> {
   try {
-    const { data } = await supabase.rpc("audio_radio_search_v2", { p_category: catKey, p_limit: 60 });
+    const { data, error } = await sbrpc("audio_radio_search_v2", { p_category: catKey, p_limit: 60 });
+    if (error) { console.warn("[radio] categoria falhou:", error.message); return []; }
     return Array.isArray(data) ? (data as unknown as RadioStation[]) : [];
-  } catch { return []; }
+  } catch (e) { console.warn("[radio] categoria exception:", e); return []; }
 }
 // mescla listas deduplicando por id (curado + radio-browser da mesma emissora colapsam)
 function dedupMerge(...lists: RadioStation[][]): RadioStation[] {
