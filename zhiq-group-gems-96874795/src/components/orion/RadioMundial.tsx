@@ -130,15 +130,17 @@ export function RadioMundial() {
         catMatch ? safe(curatedByCategory(catMatch.key)) : Promise.resolve([] as RadioStation[]),
       ]);
       const own = dedupMerge(catCur, cur);
-      if (own.length > 0) setResults(own); // resultado imediato do catálogo
+      if (own.length > 0) { setResults(own); setLoading(false); } // mostra o catálogo JÁ
       // 2) radio-browser (rede) ENRIQUECE — resiliente, nunca bloqueia/derruba.
       const [rb, catRb] = await Promise.all([
         safe(params.name ? smartSearchStations(params.name, 60) : searchStations({ limit: 60, ...params })),
         catMatch ? safe(discoverByCategory(catMatch, 40)) : Promise.resolve([] as RadioStation[]),
       ]);
       const merged = dedupMerge(catCur, cur, catRb, rb); // categoria/curado SEMPRE primeiro
-      setResults(merged);
-      if (merged.length === 0) {
+      // nunca sobrescreve um resultado bom por vazio (protege contra rede vazia/lenta)
+      if (merged.length > 0) setResults(merged);
+      else if (own.length === 0) {
+        setResults([]);
         setError(label
           ? `"${label}" não encontrada. Tente um nome mais curto, ou busque por cidade/gênero.`
           : "Nenhuma rádio encontrada.");
@@ -150,23 +152,16 @@ export function RadioMundial() {
 
   useEffect(() => { runSearch({ countrycode: "BR", order: "clickcount", reverse: true }); }, [runSearch]);
 
-  // BUSCA AO DIGITAR (debounce curto): a partir de 2 letras, mostra o CATÁLOGO
-  // PRÓPRIO na hora (rápido, offline-ish) e o radio-browser enriquece depois.
+  // BUSCA AO DIGITAR (debounce curto): a partir de 2 letras dispara a busca única.
+  // O runSearch já mostra o catálogo próprio primeiro (rápido) e enriquece com a rede.
   useEffect(() => {
     const term = query.trim();
     if (term.length < 2) return;
-    let cancelled = false;
-    const id = setTimeout(async () => {
-      setTab("buscar"); setCat(null); setError(null); setLoading(true);
-      // 1) catálogo próprio primeiro — resposta imediata, nunca falha a UI
-      try {
-        const own = await curatedSearch(term);
-        if (!cancelled && own.length) setResults(own);
-      } catch { /* ignora — o runSearch completo tenta de novo */ }
-      // 2) busca completa (catálogo + radio-browser) mesclada
-      if (!cancelled) await runSearch({ name: term }, term);
+    const id = setTimeout(() => {
+      setTab("buscar"); setCat(null);
+      runSearch({ name: term }, term);
     }, 250);
-    return () => { cancelled = true; clearTimeout(id); };
+    return () => clearTimeout(id);
   }, [query, runSearch]);
 
   const loadPopulares = useCallback(async () => {
