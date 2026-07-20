@@ -16,12 +16,13 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   searchStations, smartSearchStations, topStations, stationsNearby, countClick,
-  discoverByCategory, cepToLocation, RADIO_CATEGORIES,
+  discoverByCategory, cepToLocation, RADIO_CATEGORIES, makeCustomStation,
   type RadioStation, type NearbyStation,
 } from "@/lib/radioBrowser";
+import { Plus } from "lucide-react";
 import {
   playStation, togglePlay, stopRadio, setRadioVolume, subscribeRadio, getRadioState,
-  getFavorites, toggleFavorite, isFavorite, getHistory, type RadioState,
+  getFavorites, toggleFavorite, isFavorite, getHistory, pushHistory, type RadioState,
 } from "@/lib/radioPlayer";
 
 type Tab = "buscar" | "perto" | "favoritas" | "historico" | "populares";
@@ -113,6 +114,8 @@ export function RadioMundial() {
   const [cat, setCat] = useState<string | null>(null);     // categoria ativa (chip)
   const [cep, setCep] = useState("");                         // busca por CEP
   const [cepInfo, setCepInfo] = useState<string | null>(null);
+  const [addUrl, setAddUrl] = useState("");                   // "adicionar minha rádio" por link
+  const [addMsg, setAddMsg] = useState<string | null>(null);
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
@@ -249,6 +252,28 @@ export function RadioMundial() {
 
   const fav = useCallback((st: RadioStation) => { toggleFavorite(st); setTick((n) => n + 1); setFavs(getFavorites()); }, []);
   const submit = (e: React.FormEvent) => { e.preventDefault(); setTab("buscar"); setCat(null); runSearch({ name: query.trim() }, query.trim()); };
+
+  // ADICIONAR MINHA RÁDIO por link: toca na hora e salva no catálogo (todos passam a achar).
+  const addMyRadio = useCallback(async () => {
+    const url = addUrl.trim();
+    const nome = query.trim() || "Minha rádio";
+    if (!/^https?:\/\/.+/i.test(url)) { setAddMsg("Cole um link de stream válido (http:// ou https://)."); return; }
+    setAddMsg("Testando o link…");
+    const st = makeCustomStation(nome, url);
+    try {
+      await playStation(st);                 // toca já (valida o stream na prática)
+      pushHistory(st);
+      // salva no catálogo compartilhado (fica disponível para todos e na próxima busca)
+      try {
+        await sbrpc("audio_radio_curated_upsert", { p: {
+          name: nome, stream_url: url, category: "comunitaria",
+          tags: "adicionada pelo ouvinte,comunitaria", fonte: "ouvinte",
+        } });
+        setAddMsg("✓ Rádio adicionada e tocando! Já aparece na busca para todos.");
+      } catch { setAddMsg("✓ Tocando! (não consegui salvar no catálogo agora, mas está no seu histórico.)"); }
+      setResults([st, ...results]); setError(null); setAddUrl("");
+    } catch { setAddMsg("Não consegui tocar esse link. Confira o endereço do stream."); }
+  }, [addUrl, query, results]);
 
   const list: (RadioStation | NearbyStation)[] = useMemo(() => (
     tab === "perto" ? nearby : tab === "favoritas" ? favs : tab === "historico" ? hist : tab === "populares" ? populares : results
@@ -421,10 +446,33 @@ export function RadioMundial() {
               </div>
             );
           })}
-          {list.length === 0 && !error && (
-            <p className="py-6 text-center text-[11px] text-white/35">
-              {tab === "favoritas" ? "Toque no ♥ para salvar favoritas." : tab === "historico" ? "Seu histórico aparecerá aqui." : tab === "perto" ? "Escolha um raio." : "Nada por aqui."}
-            </p>
+          {list.length === 0 && (
+            tab === "buscar" ? (
+              // Não achou nos catálogos → oferece ADICIONAR a rádio por link (resolve emissoras locais)
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-center">
+                <p className="text-[11px] font-bold text-white/70">
+                  {query.trim() ? `Não achamos "${query.trim()}" nas rádios cadastradas.` : "Nenhuma rádio encontrada."}
+                </p>
+                <p className="mt-0.5 text-[10px] text-white/45">Tem o link do stream dela? Cole aqui para tocar e cadastrar:</p>
+                <div className="mt-2 flex gap-1.5">
+                  <input
+                    value={addUrl}
+                    onChange={(e) => setAddUrl(e.target.value)}
+                    placeholder="http://…stream.mp3 / .aac"
+                    className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.07] px-2.5 py-2 text-[12px] text-white outline-none placeholder:text-white/30 focus:border-emerald-400/60"
+                  />
+                  <button onClick={addMyRadio}
+                    className="flex shrink-0 items-center gap-1 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 px-3 text-[11px] font-black text-white active:scale-95">
+                    <Plus className="h-3.5 w-3.5" /> Tocar
+                  </button>
+                </div>
+                {addMsg && <p className="mt-1.5 text-[10px] font-bold text-emerald-300">{addMsg}</p>}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-[11px] text-white/35">
+                {tab === "favoritas" ? "Toque no ♥ para salvar favoritas." : tab === "historico" ? "Seu histórico aparecerá aqui." : "Escolha um raio."}
+              </p>
+            )
           )}
         </div>
       )}
