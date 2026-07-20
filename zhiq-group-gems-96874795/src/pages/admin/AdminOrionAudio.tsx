@@ -13,7 +13,8 @@ import {
   AudioLines, Loader2, Sparkles, Timer, Headphones, ShieldAlert,
   Star, Users, FlaskConical, Activity, Radio, Trash2, Plus, Search, Power,
 } from "lucide-react";
-import { RADIO_CATEGORIES } from "@/lib/radioBrowser";
+import { RADIO_CATEGORIES, makeCustomStation } from "@/lib/radioBrowser";
+import { playStation } from "@/lib/radioPlayer";
 
 const rpc = async (fn: string, args?: Record<string, unknown>) => {
   const { data, error } = await (supabase.rpc as any)(fn, args);
@@ -148,7 +149,7 @@ const DEVICE_LABELS: Record<string, string> = {
 /* ── Fila de Descoberta — aprovar/rejeitar rádios propostas (ETAPA 7) ── */
 interface QueueRow {
   id: string; name: string; stream_url: string; city: string; state: string; uf: string;
-  region: string; category: string; confidence: number; status: string; fonte: string;
+  region: string; category: string; confidence: number; status: string; fonte: string; origem?: string;
 }
 function DiscoveryQueueSection() {
   const [msg, setMsg] = useState<string | null>(null);
@@ -192,9 +193,12 @@ function DiscoveryQueueSection() {
                 <p className="truncate text-[11px] text-zinc-500">
                   {[r.city, r.uf, r.region].filter(Boolean).join(" · ")}{r.category ? ` · ${r.category}` : ""}
                   {" · "}<span className={r.confidence < 60 ? "font-bold text-red-600" : "text-emerald-600"}>confiança {Number(r.confidence).toFixed(0)}%</span>
-                  {" · "}{r.fonte}
+                  {r.origem === "ouvinte" && <span className="ml-1 rounded bg-violet-100 px-1 py-0.5 text-[9px] font-bold text-violet-700">SUGESTÃO DE OUVINTE</span>}
                 </p>
               </div>
+              <button onClick={() => playStation(makeCustomStation(r.name, r.stream_url, { city: r.city }))}
+                title="Ouvir o stream antes de aprovar"
+                className="rounded-lg bg-sky-100 px-2 py-1 text-[11px] font-bold text-sky-700 hover:bg-sky-200">▶ Ouvir</button>
               <button onClick={() => approve(r.id)} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700">Aprovar</button>
               <button onClick={() => reject(r.id)} className="rounded-lg bg-zinc-200 px-2.5 py-1 text-[11px] font-bold text-zinc-600 hover:bg-zinc-300">Rejeitar</button>
             </div>

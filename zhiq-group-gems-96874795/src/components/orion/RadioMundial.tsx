@@ -19,7 +19,6 @@ import {
   discoverByCategory, cepToLocation, RADIO_CATEGORIES, makeCustomStation,
   type RadioStation, type NearbyStation,
 } from "@/lib/radioBrowser";
-import { Plus } from "lucide-react";
 import {
   playStation, togglePlay, stopRadio, setRadioVolume, subscribeRadio, getRadioState,
   getFavorites, toggleFavorite, isFavorite, getHistory, pushHistory, type RadioState,
@@ -80,6 +79,21 @@ function dedupMerge(...lists: RadioStation[][]): RadioStation[] {
   return out;
 }
 
+// ── Busca UNIFICADA: a mesma barra aceita nome/cidade/frequência OU link ─────
+const isUrl = (s: string) => /^https?:\/\/\S+/i.test(s.trim());
+// link parece ser o STREAM (áudio) e não o site da emissora?
+const looksLikeStream = (url: string) =>
+  /\.(mp3|aac|aacp|m3u8?|pls|ogg|opus)([?;#]|$)/i.test(url)
+  || /:\d{2,5}\/\S*/.test(url.replace(/^https?:\/\/[^/]*:443\//i, ""))
+  || /\/(stream|live|listen|radio|;)/i.test(url);
+// "https://www.navegantesfm.com.br/" → "navegantes fm" (termo de busca pelo domínio)
+function hostToTerm(url: string): string {
+  try {
+    const base = new URL(url).hostname.replace(/^www\./i, "").split(".")[0] || "";
+    return base.replace(/[-_]+/g, " ").replace(/(fm|am)$/i, " $1").replace(/\s+/g, " ").trim();
+  } catch { return ""; }
+}
+
 function useRadio(): RadioState {
   const [st, setSt] = useState<RadioState>(getRadioState());
   useEffect(() => subscribeRadio(setSt), []);
@@ -118,8 +132,7 @@ export function RadioMundial() {
   const [cat, setCat] = useState<string | null>(null);     // categoria ativa (chip)
   const [cep, setCep] = useState("");                         // busca por CEP
   const [cepInfo, setCepInfo] = useState<string | null>(null);
-  const [addUrl, setAddUrl] = useState("");                   // "adicionar minha rádio" por link
-  const [addMsg, setAddMsg] = useState<string | null>(null);
+  const [addMsg, setAddMsg] = useState<string | null>(null);  // feedback do fluxo "tocar por link"
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
@@ -163,7 +176,8 @@ export function RadioMundial() {
   // O runSearch já mostra o catálogo próprio primeiro (rápido) e enriquece com a rede.
   useEffect(() => {
     const term = query.trim();
-    if (term.length < 2) return;
+    // link (stream/site) NÃO dispara busca por nome ao digitar — o submit/goSearch trata
+    if (term.length < 2 || isUrl(term)) return;
     const id = setTimeout(() => {
       setTab("buscar"); setCat(null);
       runSearch({ name: term }, term);
@@ -255,29 +269,62 @@ export function RadioMundial() {
   }, []);
 
   const fav = useCallback((st: RadioStation) => { toggleFavorite(st); setTick((n) => n + 1); setFavs(getFavorites()); }, []);
-  const submit = (e: React.FormEvent) => { e.preventDefault(); setTab("buscar"); setCat(null); runSearch({ name: query.trim() }, query.trim()); };
 
-  // ADICIONAR MINHA RÁDIO por link: toca na hora e salva no catálogo (todos passam a achar).
-  const addMyRadio = useCallback(async () => {
-    const url = addUrl.trim();
-    const nome = query.trim() || "Minha rádio";
-    if (!/^https?:\/\/.+/i.test(url)) { setAddMsg("Cole um link de stream válido (http:// ou https://)."); return; }
+  // ADICIONAR/TOCAR por link: toca na hora e salva no catálogo (todos passam a achar).
+  const addMyRadio = useCallback(async (rawUrl: string) => {
+    const url = rawUrl.trim();
+    if (!/^https?:\/\/.+/i.test(url)) { setAddMsg("Cole um link válido (http:// ou https://)."); return; }
+    const derivado = hostToTerm(url);
+    const nome = derivado ? derivado.replace(/\b\w/g, (c) => c.toUpperCase()) : "Minha rádio";
     setAddMsg("Testando o link…");
     const st = makeCustomStation(nome, url);
     try {
-      await playStation(st);                 // toca já (valida o stream na prática)
+      await playStation(st);                 // toca JÁ (o ouvinte não espera aprovação p/ ouvir)
       pushHistory(st);
-      // salva no catálogo compartilhado (fica disponível para todos e na próxima busca)
+      // SUGERE para o catálogo público → vai para a FILA DE APROVAÇÃO (nunca publica direto).
+      // Só admin publica. A rádio fica no histórico local do usuário (ele ouve quando quiser).
       try {
-        await sbrpc("audio_radio_curated_upsert", { p: {
-          name: nome, stream_url: url, category: "comunitaria",
-          tags: "adicionada pelo ouvinte,comunitaria", fonte: "ouvinte",
+        const { data, error: rpcErr } = await sbrpc("audio_radio_sugerir", { p: {
+          name: nome, stream_url: url, city: "", state: "",
+          tags: "sugerida pelo ouvinte",
         } });
-        setAddMsg("✓ Rádio adicionada e tocando! Já aparece na busca para todos.");
-      } catch { setAddMsg("✓ Tocando! (não consegui salvar no catálogo agora, mas está no seu histórico.)"); }
-      setResults([st, ...results]); setError(null); setAddUrl("");
-    } catch { setAddMsg("Não consegui tocar esse link. Confira o endereço do stream."); }
-  }, [addUrl, query, results]);
+        if (rpcErr) throw rpcErr;
+        const r = data as { ja_existe?: boolean; duplicada?: boolean; msg?: string } | null;
+        setAddMsg("✓ Tocando! " + (r?.msg || "Sugestão enviada para aprovação."));
+      } catch (err) {
+        const m = String((err as Error)?.message || "");
+        setAddMsg(m.includes("autenticação") || m.includes("requer login")
+          ? "✓ Tocando! Entre na sua conta para sugerir a rádio ao catálogo."
+          : m.includes("limite") || m.includes("aguardando")
+            ? "✓ Tocando! " + m
+            : "✓ Tocando! (salva no seu histórico; não consegui enviar a sugestão agora.)");
+      }
+      setResults((prev) => [st, ...prev]); setError(null);
+    } catch {
+      setAddMsg(looksLikeStream(url)
+        ? "Não consegui tocar esse link. Confira o endereço do stream."
+        : "Esse link parece o SITE da emissora, não o stream (áudio). Procure na página dela o link \"ouça ao vivo\" e cole aqui.");
+    }
+  }, []);
+
+  // BUSCA UNIFICADA (barra única): nome/cidade/frequência OU link (stream/site)
+  const goSearch = useCallback(async (raw: string) => {
+    const q = raw.trim();
+    if (!q) return;
+    setTab("buscar"); setCat(null); setAddMsg(null);
+    if (!isUrl(q)) { runSearch({ name: q }, q); return; }
+    if (looksLikeStream(q)) { await addMyRadio(q); return; }   // link de stream → toca e cadastra
+    // link de SITE → busca pelo nome derivado do domínio; o card ainda oferece tocar direto
+    const term = hostToTerm(q);
+    if (term) {
+      setAddMsg(`🔎 Esse link parece o site da emissora — busquei por "${term}". Não apareceu? Toque no botão abaixo para tentar o link direto.`);
+      runSearch({ name: term }, term);
+    } else {
+      await addMyRadio(q);
+    }
+  }, [runSearch, addMyRadio]);
+
+  const submit = (e: React.FormEvent) => { e.preventDefault(); goSearch(query); };
 
   const list: (RadioStation | NearbyStation)[] = useMemo(() => (
     tab === "perto" ? nearby : tab === "favoritas" ? favs : tab === "historico" ? hist : tab === "populares" ? populares : results
@@ -334,7 +381,7 @@ export function RadioMundial() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Nome, cidade ou frequência (ex.: 105,7)…"
+            placeholder="Nome, cidade, frequência ou link da rádio…"
             aria-label="Pesquisar rádio"
             className="w-full rounded-xl border border-emerald-500/30 bg-white/[0.07] py-2.5 pl-9 pr-2 text-[13px] font-medium text-white outline-none transition-all placeholder:text-white/40 focus:border-emerald-400/70 focus:bg-white/[0.1] focus:shadow-[0_0_16px_-6px_rgba(16,185,129,0.7)]"
           />
@@ -343,7 +390,9 @@ export function RadioMundial() {
           type="submit"
           className="flex items-center gap-1 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 px-3.5 text-[12px] font-black text-white shadow-[0_0_14px_-4px_rgba(16,185,129,0.75)] active:scale-95"
         >
-          <Search className="h-3.5 w-3.5" /> Buscar
+          {isUrl(query)
+            ? <><Play className="h-3.5 w-3.5" /> Tocar</>
+            : <><Search className="h-3.5 w-3.5" /> Buscar</>}
         </button>
       </form>
 
@@ -462,21 +511,15 @@ export function RadioMundial() {
                     📻 Sua emissora favorita não apareceu na lista?
                   </p>
                   <p className="mt-0.5 text-[11px] font-bold text-emerald-100/85">
-                    Cole o link do stream dela aqui embaixo — ela toca na hora e fica cadastrada 👇
+                    Cole o link do stream dela na busca acima 👆 — ela toca na hora e fica cadastrada.
                   </p>
                 </div>
-                <div className="mt-2 flex gap-1.5">
-                  <input
-                    value={addUrl}
-                    onChange={(e) => setAddUrl(e.target.value)}
-                    placeholder="http://…stream.mp3 / .aac"
-                    className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/[0.07] px-2.5 py-2 text-[12px] text-white outline-none placeholder:text-white/30 focus:border-emerald-400/60"
-                  />
-                  <button onClick={addMyRadio}
-                    className="flex shrink-0 items-center gap-1 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 px-3 text-[11px] font-black text-white active:scale-95">
-                    <Plus className="h-3.5 w-3.5" /> Tocar
+                {isUrl(query) && (
+                  <button onClick={() => addMyRadio(query)}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 px-3 py-2 text-[12px] font-black text-white active:scale-95">
+                    <Play className="h-3.5 w-3.5" /> Tocar este link agora
                   </button>
-                </div>
+                )}
                 {addMsg && <p className="mt-1.5 text-[10px] font-bold text-emerald-300">{addMsg}</p>}
               </div>
             ) : (
