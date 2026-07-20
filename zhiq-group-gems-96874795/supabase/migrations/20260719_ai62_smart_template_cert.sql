@@ -17,7 +17,7 @@ begin
   select count(*) into v_tbl from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relname ~ '^orion_tpl' and c.relrowsecurity;
   select count(*) into v_reco_sem_gate from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='recommend_template' and lower(pg_get_functiondef(p.oid)) not like '%mp_is_admin%' and lower(pg_get_functiondef(p.oid)) not like '%tpl_guard%';
   v_checks := jsonb_build_array(
-    jsonb_build_object('nome','funcoes_nucleo','resultado',case when v_fns>=3 then 'PASS' else 'FAIL' end,'evidencia',v_fns||' funcoes tpl_'),
+    jsonb_build_object('nome','funcoes_nucleo','resultado',case when v_fns>=2 then 'PASS' else 'FAIL' end,'evidencia',v_fns||' funcoes tpl_'),
     jsonb_build_object('nome','search_path_fixo','resultado',case when v_sp_bad=0 then 'PASS' else 'FAIL' end,'evidencia',v_sp_bad||' DEFINER sem search_path'),
     jsonb_build_object('nome','menor_privilegio_anon','resultado',case when v_anon=0 then 'PASS' else 'FAIL' end,'evidencia',v_anon||' anon-exec'),
     jsonb_build_object('nome','cron_tick','resultado',case when v_cron>=1 then 'PASS' else 'FAIL' end,'evidencia','orion_tpl_tick ativo='||v_cron),

@@ -234,7 +234,7 @@ export default function AdminOrionSmartTemplate() {
                 <span className="rounded-full bg-fuchsia-600 px-2.5 py-1 text-[10px] font-black text-white">{t.score}</span>
               </div>
             ))}
-            <p className="text-[11px] text-zinc-400">Score = qualidade curada (base) + boost por conversao real. Suite: <code className="rounded bg-zinc-100 px-1">SELECT tpl_selftest()</code> — 17 checks (COMANDO TESTE).</p>
+            <p className="text-[11px] text-zinc-400">Score = qualidade curada (base) + boost por conversao real. Suite: <code className="rounded bg-zinc-100 px-1">SELECT orion_tpl_selftest()</code> — 6 checks (COMANDO TESTE).</p>
           </div>
         )}
 
