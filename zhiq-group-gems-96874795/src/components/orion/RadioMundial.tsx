@@ -44,7 +44,19 @@ type Runner = (p: Parameters<typeof searchStations>[0], label?: string) => void;
 // Mesclado com o radio-browser para o usuário só buscar e achar.
 async function curatedSearch(term: string): Promise<RadioStation[]> {
   try {
+    // busca v2 (índice + filtros combinados); prioriza comunitárias
+    const { data } = await supabase.rpc("audio_radio_search_v2", { p_term: term || "", p_limit: 60 });
+    if (Array.isArray(data) && data.length) return data as unknown as RadioStation[];
+  } catch { /* cai para a v1 abaixo */ }
+  try {
     const { data } = await supabase.rpc("audio_radio_curated_search", { p_term: term || "", p_limit: 40 });
+    return Array.isArray(data) ? (data as unknown as RadioStation[]) : [];
+  } catch { return []; }
+}
+// busca só no catálogo por categoria+UF (usada pelos chips de categoria)
+async function curatedByCategory(catKey: string): Promise<RadioStation[]> {
+  try {
+    const { data } = await supabase.rpc("audio_radio_search_v2", { p_category: catKey, p_limit: 60 });
     return Array.isArray(data) ? (data as unknown as RadioStation[]) : [];
   } catch { return []; }
 }
@@ -163,7 +175,7 @@ export function RadioMundial() {
     if (!c) return;
     setTab("buscar"); setCat(key); setLoading(true); setError(null);
     try {
-      const [rb, cur] = await Promise.all([discoverByCategory(c, 60), curatedSearch(c.key)]);
+      const [rb, cur] = await Promise.all([discoverByCategory(c, 60), curatedByCategory(c.key)]);
       const r = dedupMerge(cur, rb);
       setResults(r);
       if (r.length === 0) setError(`Nenhuma rádio de "${c.label}" encontrada agora. Tente outra categoria.`);
@@ -219,7 +231,8 @@ export function RadioMundial() {
     tab === "perto" ? nearby : tab === "favoritas" ? favs : tab === "historico" ? hist : tab === "populares" ? populares : results
   ), [tab, nearby, favs, hist, populares, results]);
 
-  const TABS: [Tab, any][] = [["buscar", Search], ["perto", Navigation], ["favoritas", Heart], ["historico", HistoryIcon], ["populares", Flame]];
+  // Aba "Buscar" removida: a barra + botão "Buscar" já fazem a busca (resultados = view padrão).
+  const TABS: [Tab, any][] = [["perto", Navigation], ["favoritas", Heart], ["historico", HistoryIcon], ["populares", Flame]];
   const TAB_LABEL: Record<Tab, string> = { buscar: "Buscar", perto: "Perto", favoritas: "Favoritas", historico: "Histórico", populares: "Populares" };
 
   return (
