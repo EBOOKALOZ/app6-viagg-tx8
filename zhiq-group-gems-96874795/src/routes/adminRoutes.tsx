@@ -147,6 +147,7 @@ import {
   AdminOrionIdentity,
   AdminOrionThreat,
   AdminOrionZeroTrust,
+  AdminOrionIam,
   AdminOrionBackup,
   AdminOrionSoc,
   AdminOrionObservability,
@@ -350,6 +351,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-identity" element={<AdminOrionIdentity />} />
       <Route path="/admin/orion-threat-intelligence" element={<AdminOrionThreat />} />
       <Route path="/admin/orion-zero-trust" element={<AdminOrionZeroTrust />} />
+      <Route path="/admin/orion-iam" element={<AdminOrionIam />} />
       <Route path="/admin/orion-backup-recovery" element={<AdminOrionBackup />} />
       <Route path="/admin/orion-soc" element={<AdminOrionSoc />} />
       <Route path="/admin/orion-observability" element={<AdminOrionObservability />} />

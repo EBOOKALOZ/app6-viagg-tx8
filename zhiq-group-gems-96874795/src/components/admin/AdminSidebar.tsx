@@ -218,6 +218,7 @@ const menuSections: MenuSection[] = [
       { title: "Identity & Access AI", url: "/admin/orion-identity", icon: Fingerprint, badge: "IDENTITY" },
       { title: "Threat Intelligence AI", url: "/admin/orion-threat-intelligence", icon: Waypoints, badge: "THREAT" },
       { title: "Zero Trust AI", url: "/admin/orion-zero-trust", icon: Lock, badge: "ZERO TRUST" },
+      { title: "IAM Enforcement AI", url: "/admin/orion-iam", icon: ShieldCheck, badge: "ENFORCEMENT" },
       { title: "Backup & Recovery AI", url: "/admin/orion-backup-recovery", icon: DatabaseBackup, badge: "BACKUP" },
       { title: "SOC Commander AI", url: "/admin/orion-soc", icon: ShieldHalf, badge: "SOC COMMANDER" },
       { title: "Observability AI", url: "/admin/orion-observability", icon: Activity, badge: "OBSERVABILITY" },
