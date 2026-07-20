@@ -196,14 +196,19 @@ function stopEl(el: HTMLAudioElement | null) {
 
 export async function playStation(station: RadioStation): Promise<void> {
   const plainEl = getPlain();
-  let url = station.url_resolved || station.url;
-  if (!url) { set({ error: "Estação sem URL de stream." }); return; }
+  const original = station.url_resolved || station.url;
+  if (!original) { set({ error: "Estação sem URL de stream." }); return; }
 
-  // MIXED CONTENT: em site HTTPS o navegador bloqueia streams http:// → sobe p/ https.
-  const wasHttp =
-    typeof location !== "undefined" && location.protocol === "https:" && url.startsWith("http://");
-  if (wasHttp) url = "https://" + url.slice("http://".length);
-  lastWasHttp = wasHttp;
+  // Página HTTPS bloqueia http:// (mixed content). Estratégia: tenta o link ORIGINAL
+  // primeiro (em localhost/http o navegador deixa; muitos servidores só têm http),
+  // e guarda o upgrade https como tentativa de fallback (host que também serve https).
+  const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
+  const isHttp = original.startsWith("http://");
+  const httpsAlt = isHttp ? "https://" + original.slice("http://".length) : null;
+  // Em página https, o navegador barra o http:// de cara → começa pela versão https.
+  // Fora disso (localhost/dev), usa o original direto.
+  let url = pageHttps && isHttp && httpsAlt ? httpsAlt : original;
+  lastWasHttp = pageHttps && isHttp;
 
   set({ station, loading: true, error: null, eqActive: false });
   // pausa a música de fundo do app (GlobalAudioPlayer escuta) — evita 2 áudios
@@ -229,16 +234,22 @@ export async function playStation(station: RadioStation): Promise<void> {
 
   // 2) modo simples (sempre toca; sem EQ)
   activeEl = plainEl;
-  const okPlain = await startOn(plainEl, url);
+  let okPlain = await startOn(plainEl, url);
+  // FALLBACK: se a 1ª tentativa falhou e existe outra variante (original ↔ https), tenta a outra.
+  if (!okPlain && httpsAlt && url !== original) {
+    okPlain = await startOn(plainEl, original);   // tentou https, agora o http original
+  } else if (!okPlain && httpsAlt && url === original && pageHttps) {
+    okPlain = await startOn(plainEl, httpsAlt);    // tentou original, agora a versão https
+  }
   if (okPlain) {
     set({ playing: true, loading: false, error: null, eqActive: false });
     pushHistory(station);
   } else {
     set({
       loading: false, playing: false, eqActive: false,
-      error: wasHttp
-        ? "Esta emissora transmite só em HTTP e o navegador bloqueia em site seguro (HTTPS). Tente outra."
-        : "Falha ao iniciar (autoplay bloqueado ou stream fora do ar).",
+      error: lastWasHttp
+        ? "Esta emissora transmite só em HTTP e o navegador bloqueia em site seguro (HTTPS). Ela funcionará no app publicado."
+        : "Não consegui tocar. O stream pode estar fora do ar ou o link está incorreto.",
     });
   }
 }

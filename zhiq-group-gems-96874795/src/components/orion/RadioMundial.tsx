@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Radio, Search, MapPin, Heart, Play, Pause, Loader2, Square, Volume2,
+  Search, MapPin, Heart, Play, Pause, Loader2, Square, Volume2,
   Sparkles, Music2, History as HistoryIcon, Flame, Navigation,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -88,11 +88,15 @@ function useRadio(): RadioState {
 
 function Icon({ src }: { src?: string }) {
   const [ok, setOk] = useState(!!src);
+  // Sem logo da rádio (ou logo quebrado) → usa o logo do app (Viagg-TX8).
   if (!src || !ok) {
     return (
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-orange-300/70">
-        <Radio className="h-4 w-4" />
-      </div>
+      <img
+        src="/images/viagg-tx8-logo.png"
+        alt="Viagg-TX8"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        className="h-9 w-9 shrink-0 rounded-lg bg-white/5 object-contain p-0.5"
+      />
     );
   }
   return <img src={src} alt="" onError={() => setOk(false)} className="h-9 w-9 shrink-0 rounded-lg bg-white/5 object-cover" />;
@@ -449,11 +453,18 @@ export function RadioMundial() {
           {list.length === 0 && (
             tab === "buscar" ? (
               // Não achou nos catálogos → oferece ADICIONAR a rádio por link (resolve emissoras locais)
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3 text-center">
+              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] p-3 text-center">
                 <p className="text-[11px] font-bold text-white/70">
                   {query.trim() ? `Não achamos "${query.trim()}" nas rádios cadastradas.` : "Nenhuma rádio encontrada."}
                 </p>
-                <p className="mt-0.5 text-[10px] text-white/45">Tem o link do stream dela? Cole aqui para tocar e cadastrar:</p>
+                <div className="mt-2 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-2">
+                  <p className="text-[12px] font-black leading-snug text-emerald-200">
+                    📻 Sua emissora favorita não apareceu na lista?
+                  </p>
+                  <p className="mt-0.5 text-[11px] font-bold text-emerald-100/85">
+                    Cole o link do stream dela aqui embaixo — ela toca na hora e fica cadastrada 👇
+                  </p>
+                </div>
                 <div className="mt-2 flex gap-1.5">
                   <input
                     value={addUrl}
