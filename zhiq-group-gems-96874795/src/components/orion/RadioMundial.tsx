@@ -110,15 +110,19 @@ export function RadioMundial() {
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
     try {
-      // busca no catálogo curado (banco) + radio-browser, em paralelo, e mescla
-      const term = params.name || params.tag || params.state || "";
-      const [rb, cur] = await Promise.all([
-        params.name
-          ? smartSearchStations(params.name, 60)
-          : searchStations({ limit: 60, ...params }),
+      // busca no catálogo curado (banco) + radio-browser, em paralelo, e mescla.
+      const term = (params.name || params.tag || params.state || "").trim();
+      const tl = term.toLowerCase();
+      // o termo é uma CATEGORIA? (ex.: "comunitaria", "gospel", "esportes") → traz a categoria também
+      const catMatch = term ? RADIO_CATEGORIES.find((c) =>
+        c.key === tl || c.label.toLowerCase() === tl || c.tags.some((t) => t.toLowerCase() === tl)) : undefined;
+      const [rb, cur, catCur, catRb] = await Promise.all([
+        params.name ? smartSearchStations(params.name, 60) : searchStations({ limit: 60, ...params }),
         curatedSearch(term),
+        catMatch ? curatedByCategory(catMatch.key) : Promise.resolve([] as RadioStation[]),
+        catMatch ? discoverByCategory(catMatch, 40) : Promise.resolve([] as RadioStation[]),
       ]);
-      const merged = dedupMerge(cur, rb); // curado primeiro
+      const merged = dedupMerge(catCur, cur, catRb, rb); // categoria/curado primeiro
       setResults(merged);
       if (merged.length === 0) {
         setError(label
