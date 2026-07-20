@@ -143,13 +143,23 @@ export function RadioMundial() {
 
   useEffect(() => { runSearch({ countrycode: "BR", order: "clickcount", reverse: true }); }, [runSearch]);
 
-  // BUSCA AO DIGITAR (debounce): a partir de 2 letras, busca sozinho ~450ms
-  // após parar de digitar — sem precisar apertar Enter/Buscar.
+  // BUSCA AO DIGITAR (debounce curto): a partir de 2 letras, mostra o CATÁLOGO
+  // PRÓPRIO na hora (rápido, offline-ish) e o radio-browser enriquece depois.
   useEffect(() => {
     const term = query.trim();
     if (term.length < 2) return;
-    const id = setTimeout(() => { setTab("buscar"); setCat(null); runSearch({ name: term }, term); }, 450);
-    return () => clearTimeout(id);
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      setTab("buscar"); setCat(null); setError(null); setLoading(true);
+      // 1) catálogo próprio primeiro — resposta imediata, nunca falha a UI
+      try {
+        const own = await curatedSearch(term);
+        if (!cancelled && own.length) setResults(own);
+      } catch { /* ignora — o runSearch completo tenta de novo */ }
+      // 2) busca completa (catálogo + radio-browser) mesclada
+      if (!cancelled) await runSearch({ name: term }, term);
+    }, 250);
+    return () => { cancelled = true; clearTimeout(id); };
   }, [query, runSearch]);
 
   const loadPopulares = useCallback(async () => {
