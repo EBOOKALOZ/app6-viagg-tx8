@@ -109,20 +109,27 @@ export function RadioMundial() {
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
+    const term = (params.name || params.tag || params.state || "").trim();
+    const tl = term.toLowerCase();
+    // o termo é uma CATEGORIA? (ex.: "comunitaria", "gospel", "esportes") → traz a categoria também
+    const catMatch = term ? RADIO_CATEGORIES.find((c) =>
+      c.key === tl || c.label.toLowerCase() === tl || c.tags.some((t) => t.toLowerCase() === tl)) : undefined;
+    // helper: fonte externa (rede) NUNCA pode derrubar a busca — falha vira lista vazia
+    const safe = <T,>(p: Promise<T[]>) => p.catch(() => [] as T[]);
     try {
-      // busca no catálogo curado (banco) + radio-browser, em paralelo, e mescla.
-      const term = (params.name || params.tag || params.state || "").trim();
-      const tl = term.toLowerCase();
-      // o termo é uma CATEGORIA? (ex.: "comunitaria", "gospel", "esportes") → traz a categoria também
-      const catMatch = term ? RADIO_CATEGORIES.find((c) =>
-        c.key === tl || c.label.toLowerCase() === tl || c.tags.some((t) => t.toLowerCase() === tl)) : undefined;
-      const [rb, cur, catCur, catRb] = await Promise.all([
-        params.name ? smartSearchStations(params.name, 60) : searchStations({ limit: 60, ...params }),
-        curatedSearch(term),
-        catMatch ? curatedByCategory(catMatch.key) : Promise.resolve([] as RadioStation[]),
-        catMatch ? discoverByCategory(catMatch, 40) : Promise.resolve([] as RadioStation[]),
+      // 1) CATÁLOGO PRÓPRIO primeiro (rápido; tem as comunitárias) → mostra JÁ.
+      const [cur, catCur] = await Promise.all([
+        safe(curatedSearch(term)),
+        catMatch ? safe(curatedByCategory(catMatch.key)) : Promise.resolve([] as RadioStation[]),
       ]);
-      const merged = dedupMerge(catCur, cur, catRb, rb); // categoria/curado primeiro
+      const own = dedupMerge(catCur, cur);
+      if (own.length > 0) setResults(own); // resultado imediato do catálogo
+      // 2) radio-browser (rede) ENRIQUECE — resiliente, nunca bloqueia/derruba.
+      const [rb, catRb] = await Promise.all([
+        safe(params.name ? smartSearchStations(params.name, 60) : searchStations({ limit: 60, ...params })),
+        catMatch ? safe(discoverByCategory(catMatch, 40)) : Promise.resolve([] as RadioStation[]),
+      ]);
+      const merged = dedupMerge(catCur, cur, catRb, rb); // categoria/curado SEMPRE primeiro
       setResults(merged);
       if (merged.length === 0) {
         setError(label
