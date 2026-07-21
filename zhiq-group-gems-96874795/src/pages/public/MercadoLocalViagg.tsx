@@ -2077,10 +2077,10 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                         <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
                                             <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-5xl sm:text-6xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
                                         </div>
-                                        {/* Selo Oficial (canto inf-esquerdo, discreto) */}
-                                        <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2 py-0.5 pointer-events-none shadow-sm">
-                                            <img src="/images/viagg-tx8-logo.png" alt="" aria-hidden="true" width={20} height={12} loading="lazy" decoding="async" className="h-3 w-auto object-contain opacity-95" />
-                                            <span className="text-[8px] font-bold uppercase tracking-wider text-white/90">Oficial Viagg-TX8</span>
+                                        {/* Selo Oficial (canto inf-esquerdo). Logo é BRANCO -> pill ESCURA sólida garante contraste */}
+                                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-full bg-zinc-900/80 backdrop-blur-md pl-1.5 pr-2 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
+                                            <img src="/images/viagg-tx8-logo.png" alt="Viagg-TX8" width={26} height={15} loading="lazy" decoding="async" className="h-4 w-auto object-contain" />
+                                            <span className="text-[8px] font-black uppercase tracking-wider text-white/95">Oficial</span>
                                         </div>
 
                                         {/* WhatsApp Share */}

@@ -184,19 +184,18 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </span>
         </div>
 
-        {/* Selo institucional — canto inferior esquerdo, discreto (não competir com preço/foto/favoritar) */}
-        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2 py-0.5 pointer-events-none shadow-sm">
+        {/* Selo institucional — canto inferior esquerdo. Logo é BRANCO -> pill ESCURA sólida garante contraste */}
+        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1.5 rounded-full bg-zinc-900/80 backdrop-blur-md pl-1.5 pr-2 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
           <img
             src="/images/viagg-tx8-logo.png"
-            alt=""
-            aria-hidden="true"
-            width={14}
-            height={14}
+            alt="Viagg-TX8"
+            width={26}
+            height={15}
             loading="lazy"
             decoding="async"
-            className="h-3.5 w-auto object-contain rounded-sm opacity-95"
+            className="h-4 w-auto object-contain"
           />
-          <span className="text-[8px] font-bold uppercase tracking-wider text-white/90">Oficial Viagg-TX8</span>
+          <span className="text-[8px] font-black uppercase tracking-wider text-white/95">Oficial</span>
         </div>
 
         {/* Subtle Bottom Gradient */}
@@ -334,17 +333,20 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </Button>
 
           {/* ─── RODAPÉ INSTITUCIONAL (FASE 5): print compartilhado mantém a marca ─── */}
-          <div className="mt-2.5 flex items-center justify-center gap-1 opacity-60 select-none pointer-events-none">
-            <img
-              src="/images/viagg-tx8-logo.png"
-              alt=""
-              aria-hidden="true"
-              width={12}
-              height={12}
-              loading="lazy"
-              decoding="async"
-              className="h-3 w-auto object-contain rounded-[3px]"
-            />
+          {/* logo é BRANCO -> mini-chip escuro p/ visibilidade sobre o card branco */}
+          <div className="mt-2.5 flex items-center justify-center gap-1.5 select-none pointer-events-none">
+            <span className="inline-flex items-center rounded-[4px] bg-zinc-900/85 px-1 py-0.5">
+              <img
+                src="/images/viagg-tx8-logo.png"
+                alt=""
+                aria-hidden="true"
+                width={22}
+                height={13}
+                loading="lazy"
+                decoding="async"
+                className="h-3 w-auto object-contain"
+              />
+            </span>
             <span className="text-[9px] font-bold tracking-wide text-zinc-400">Marketplace Oficial Viagg-TX8™</span>
           </div>
         </div>
