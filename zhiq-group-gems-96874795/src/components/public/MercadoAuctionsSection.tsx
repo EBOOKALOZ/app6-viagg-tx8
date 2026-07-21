@@ -74,7 +74,7 @@ function AuctionCard({ a, hot, onClick }: { a: AuctionRow; hot: boolean; onClick
   return (
     <button
       onClick={onClick}
-      className="shrink-0 w-[240px] text-left bg-white rounded-2xl shadow-md hover:shadow-xl transition-all border border-gray-100 overflow-hidden group flex flex-col"
+      className="shrink-0 w-[280px] sm:w-[300px] text-left bg-white rounded-2xl shadow-md hover:shadow-xl transition-all border border-gray-100 overflow-hidden group flex flex-col"
     >
       <div className="relative bg-gray-50 aspect-[16/10] overflow-hidden">
         {img ? (
@@ -83,12 +83,18 @@ function AuctionCard({ a, hot, onClick }: { a: AuctionRow; hot: boolean; onClick
         ) : (
           <div className="w-full h-full flex items-center justify-center"><Gavel className="h-10 w-10 text-gray-200" /></div>
         )}
-        {/* badge tipo */}
-        <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/90 text-white text-[10px] font-bold uppercase backdrop-blur-sm">
+        {/* ─── LOGO DA PLATAFORMA (topo-esquerdo — identidade visual) ─── */}
+        <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
+        {/* Watermark central VX (marca / anti-print) */}
+        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
+          <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-4xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
+        </span>
+        {/* badge tipo (movido p/ baixo-esquerda p/ não colidir com o logo) */}
+        <span className="absolute bottom-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/90 text-white text-[10px] font-bold uppercase backdrop-blur-sm">
           <Gavel className="h-3 w-3" /> Leilão
         </span>
         {hot && (
-          <span className="absolute top-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black uppercase animate-pulse">
+          <span className="absolute top-2 right-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black uppercase animate-pulse">
             <Flame className="h-3 w-3" /> Em Alta
           </span>
         )}
@@ -214,7 +220,7 @@ export function MercadoAuctionsSection({ search = "" }: { search?: string }) {
         {loading ? (
           <div className="flex gap-3 overflow-hidden">
             {[0, 1, 2, 3].map(i => (
-              <div key={i} className="shrink-0 w-[240px] h-[260px] rounded-2xl bg-gray-100 animate-pulse" />
+              <div key={i} className="shrink-0 w-[280px] sm:w-[300px] h-[260px] rounded-2xl bg-gray-100 animate-pulse" />
             ))}
           </div>
         ) : (

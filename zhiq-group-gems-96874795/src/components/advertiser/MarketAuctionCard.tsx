@@ -106,7 +106,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing })
 
   return (
     <div className="flex justify-center w-full">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <PremiumCard
           imageUrl={listing.product_image_url}
           fallbackIcon={<Gavel className="w-16 h-16 text-[#FF6A00]/20" />}

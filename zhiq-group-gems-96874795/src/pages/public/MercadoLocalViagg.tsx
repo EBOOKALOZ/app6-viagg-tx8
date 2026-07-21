@@ -1427,7 +1427,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             </button>
                         </div>
 
-                        <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[26rem]">
+                        <HorizontalCarousel>
                             {travelListings.length > 0 ? (
                                 travelListings.map((tr) => (
                                     <MarketTravelCard key={tr.id} travel={tr} />
@@ -1611,8 +1611,14 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                 </div>
                                             )}
                                             <CardImageOverlay />
-                                            {/* Type badge */}
-                                            <DarkBadge tone={isAuction ? "orange" : "green"} className="absolute top-2 left-2 shadow-md backdrop-blur-md bg-[#1A1F24]/85">
+                                            {/* ─── LOGO DA PLATAFORMA (topo-esquerdo — FASE 2) ─── */}
+                                            <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
+                                            {/* Watermark central VX (marca / anti-print) */}
+                                            <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
+                                                <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-5xl sm:text-6xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
+                                            </div>
+                                            {/* Type badge (movido p/ direita, abaixo do countdown, p/ não colidir com o logo) */}
+                                            <DarkBadge tone={isAuction ? "orange" : "green"} className="absolute top-2 right-2 shadow-md backdrop-blur-md bg-[#1A1F24]/85">
                                                 {isAuction ? "🔨 Leilão" : "⚡ Arremate"}
                                             </DarkBadge>
                                             {/* Countdown badge */}
