@@ -128,7 +128,9 @@ export const publicRoutes = (
     <Route path="/fretes/lista" element={<PublicFreightHome />} />
     <Route path="/fretes/:id" element={<FreightDetailPage />} />
     <Route path="/viagens-inicio" element={<Suspense fallback={<PageFallback />}><ViagensInicio /></Suspense>} />
-    <Route path="/viagens" element={<Suspense fallback={<PageFallback />}><ViagensInicio /></Suspense>} />
+    {/* /viagens = VITRINE de anúncios (padrão marketplace: ofertas primeiro).
+        A antiga tela de seleção de modalidade continua em /viagens-inicio. */}
+    <Route path="/viagens" element={<PublicTravelHome />} />
     <Route path="/viagens/anuncios" element={<PublicTravelHome />} />
     <Route path="/viagens/lista" element={<PublicTravelHome />} />
     <Route path="/viagens/:id" element={<TravelDetailPage />} />
