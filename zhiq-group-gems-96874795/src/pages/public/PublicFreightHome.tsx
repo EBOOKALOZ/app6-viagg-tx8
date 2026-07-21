@@ -246,7 +246,7 @@ export default function PublicFreightHome() {
                 </div>
               ) : (
                 /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
-                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                <HorizontalCarousel>
                   {filteredFreight.map((s) => (
                     <MarketFreightCard key={s.id} freight={s} />
                   ))}

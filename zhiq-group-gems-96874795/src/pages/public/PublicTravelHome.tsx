@@ -225,7 +225,7 @@ export default function PublicTravelHome() {
               ) : (
                 /* Visão geral (Todas) → rolagem HORIZONTAL (mesmo carrossel
                    do /mercado), deslizando. */
-                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                <HorizontalCarousel>
                   {filtered.map((tr: any) => (
                     <MarketTravelCard key={tr.id} travel={tr} />
                   ))}

@@ -284,7 +284,7 @@ export const PublicRealEstateHome = () => {
                     </div>
                   ) : (
                     /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
-                    <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                    <HorizontalCarousel>
                       {propertyListings.map((prop) => (
                         <MarketPropertyCard key={prop.id} property={prop} />
                       ))}

@@ -300,7 +300,7 @@ export default function AllVehiclesPage() {
                 </div>
               ) : (
                 /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
-                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                <HorizontalCarousel>
                   {sortedVehicles.map(v => (
                     <MarketVehicleCard key={v.id} vehicle={v} />
                   ))}

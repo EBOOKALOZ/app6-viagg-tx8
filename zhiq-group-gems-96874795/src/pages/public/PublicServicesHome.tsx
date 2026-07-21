@@ -175,7 +175,7 @@ export default function PublicServicesHome() {
                 </div>
               ) : (
                 /* Visão geral → rolagem horizontal deslizando (padrão /viagens). */
-                <HorizontalCarousel cardWidth="w-[80vw] sm:w-80">
+                <HorizontalCarousel>
                   {filteredServices.map((s) => (
                     <MarketServiceCard key={s.id} service={s} />
                   ))}
