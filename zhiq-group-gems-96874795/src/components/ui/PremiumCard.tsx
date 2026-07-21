@@ -173,6 +173,32 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         {/* Custom Overlays (e.g., Timer / Auction countdown) */}
         {customOverlays}
 
+        {/* ─── IDENTIDADE VIAGG-TX8 (marca discreta, não interfere no fluxo) ─── */}
+        {/* Watermark central VX — proteção anti-print + reforço de marca (5–8% opacidade) */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[5]"
+        >
+          <span className="font-black tracking-tighter text-white/[0.07] dark:text-white/[0.08] mix-blend-overlay text-6xl sm:text-7xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">
+            VX
+          </span>
+        </div>
+
+        {/* Selo institucional — canto inferior esquerdo, discreto (não competir com preço/foto/favoritar) */}
+        <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2 py-0.5 pointer-events-none shadow-sm">
+          <img
+            src="/images/viagg-tx8-logo.png"
+            alt=""
+            aria-hidden="true"
+            width={14}
+            height={14}
+            loading="lazy"
+            decoding="async"
+            className="w-3.5 h-3.5 object-contain rounded-sm opacity-90"
+          />
+          <span className="text-[8px] font-bold uppercase tracking-wider text-white/90">Oficial Viagg-TX8</span>
+        </div>
+
         {/* Subtle Bottom Gradient */}
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
       </div>
@@ -306,6 +332,21 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
             {primaryActionIcon}
             <span>{primaryActionLabel}</span>
           </Button>
+
+          {/* ─── RODAPÉ INSTITUCIONAL (FASE 5): print compartilhado mantém a marca ─── */}
+          <div className="mt-2.5 flex items-center justify-center gap-1 opacity-60 select-none pointer-events-none">
+            <img
+              src="/images/viagg-tx8-logo.png"
+              alt=""
+              aria-hidden="true"
+              width={12}
+              height={12}
+              loading="lazy"
+              decoding="async"
+              className="w-3 h-3 object-contain rounded-[3px]"
+            />
+            <span className="text-[9px] font-bold tracking-wide text-zinc-400">Marketplace Oficial Viagg-TX8™</span>
+          </div>
         </div>
 
       </div>
