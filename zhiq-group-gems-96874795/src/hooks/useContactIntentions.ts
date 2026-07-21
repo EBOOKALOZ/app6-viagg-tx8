@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { playLeadNotificationSound } from "@/lib/notificationSound";
+import { unlockContact } from "@/lib/credits/unlockContact";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -381,47 +382,49 @@ export function useContactIntentions() {
   // Contagem de pendentes para badge
   const pendingCount = intentions.filter((i) => i.status === "pending_unlock").length;
 
-  // ── Unlock via RPC backend-driven ─────────────────────────────────────────
+  // ── Unlock via Carteira de Créditos (Wallet Core) ─────────────────────────
+  //  Rota ÚNICA: wallet_unlock_contact (2% do valor anunciado, permanente por
+  //  anúncio+comprador). Resolve módulo/anúncio/comprador a partir da intenção.
+  //  (o parâmetro `amount` é ignorado — o valor é calculado no banco)
   const unlockIntention = useCallback(
-    async (intentionId: string, amount: number = 9): Promise<{  // By default use 9 as requested by user
+    async (intentionId: string, _amount: number = 0): Promise<{
       success: boolean;
       error?: string;
       credits_charged?: number;
-      buy_credits_cta?: boolean;  // sinal: exibir CTA de compra de créditos
+      buy_credits_cta?: boolean;
       required?: number;
       available?: number;
     }> => {
-      const { data: rpcResult, error } = await supabase.rpc(
-        "unlock_contact_intention" as any,  // RPC blindada — apenas créditos comprados
-        { 
-          p_intention_id: intentionId,
-          p_amount: amount
-        }
-      );
+      const intent = intentions.find((i) => i.id === intentionId);
+      if (!intent) return { success: false, error: "intention_not_found" };
 
-      const result = rpcResult as any;
+      const buyerKey = String(intent.visitor_phone ?? "").replace(/\D/g, "") || intentionId;
+      const r = await unlockContact(intent.listing_module, intent.listing_id, buyerKey);
 
-      if (error || !result?.success) {
-        const errCode = result?.error || error?.message || "unknown";
+      if (!r.success) {
         return {
           success: false,
-          error: errCode,
-          buy_credits_cta: result?.buy_credits_cta ?? false,
-          required: result?.required,
-          available: result?.available,
+          error: r.error,
+          buy_credits_cta: r.buy_credits_cta ?? (r.error === "insufficient_credits"),
+          required: r.required_cents != null ? r.required_cents / 100 : undefined,
+          available: r.available_cents != null ? r.available_cents / 100 : undefined,
         };
       }
 
-      // Invalida saldo E lista de intenções
+      // Marca a intenção como desbloqueada (best-effort) para refletir na UI
+      try {
+        await (supabase.from("advertiser_contact_intentions") as any)
+          .update({ status: "unlocked", unlock_paid_at: new Date().toISOString() })
+          .eq("id", intentionId);
+      } catch { /* RLS/estado — não bloqueia o desbloqueio já pago */ }
+
       queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
 
-      return {
-        success: true,
-        credits_charged: result.credits_charged,
-      };
+      return { success: true, credits_charged: r.charged_cents != null ? r.charged_cents / 100 : 0 };
     },
-    [user?.id, queryClient]
+    [intentions, user?.id, queryClient]
   );
 
   // Buscar custo de desbloqueio para um módulo/tipo específico

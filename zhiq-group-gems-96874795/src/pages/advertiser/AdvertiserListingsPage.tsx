@@ -61,7 +61,7 @@ import { useAdvertiserLeadsDashboard } from "@/hooks/useAdvertiserLeadsDashboard
 import { LeadCard } from "@/components/advertiser/LeadCard";
 import { AdvertiserCreditPackagesPanel } from "@/components/advertiser/AdvertiserCreditPackagesPanel";
 import { useAdvertiserCampaignDispatch } from "@/hooks/useAdvertiserCampaignDispatch";
-import { debitSellerCredits } from "@/lib/credits/debitSellerCredits";
+import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { playNotificationSound } from "@/lib/notificationSound";
 
 // ─── Countdown inline ────────────────────────────────────────
@@ -296,26 +296,29 @@ export default function AdvertiserListingsPage() {
   };
 
   const respondDiscountRequest = async (id: string, newStatus: 'accepted' | 'rejected') => {
-    // Debita 9 créditos apenas no aceite
+    // Aceitar oferta = liberar comprador via Wallet Core (2% do valor anunciado, permanente).
     if (newStatus === 'accepted') {
-      const res = await debitSellerCredits({
-        event: "advertiser_accept_offer",
-        userId: user?.id,
-        refType: "discount_request",
-        refId: id,
-      });
-      if (!res.charged && res.reason === "insufficient_credits") {
-        toast.error(`Saldo insuficiente. Precisa de ${res.required}, tem ${res.available}.`);
+      const req = discountRequests.find((r: any) => r.id === id);
+      if (!req?.product_id) { toast.error("Oferta sem produto vinculado."); return; }
+      const buyerKey = String(req.customer_phone ?? "").replace(/\D/g, "") || id;
+      const res = await unlockContact(
+        "product", req.product_id, buyerKey,
+        Math.round(Number(req.product_price ?? req.requested_price ?? 0) * 100),
+      );
+      if (!res.success) {
+        if (res.error === "insufficient_credits") {
+          toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`);
+          setTimeout(() => navigate("/anunciante/carteira"), 1400);
+          return;
+        }
+        toast.error(`Erro ao liberar comprador: ${res.error ?? "desconhecido"}`);
         return;
       }
-      if (!res.charged && res.reason !== "deduped_in_session") {
-        toast.error(`Erro ao debitar: ${res.reason}`);
-        return;
+      if (!res.already_unlocked && (res.charged_cents ?? 0) > 0) {
+        toast.success(`Comprador liberado! ${centsToBRL(res.charged_cents)} debitados — Saldo: ${centsToBRL(res.balance_cents)}`);
       }
-      if (res.charged) {
-        toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
-        queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
     }
     const { error } = await supabase
       .from('discount_requests' as any)

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { debitSellerCredits } from "@/lib/credits/debitSellerCredits";
-import { CREDIT_COSTS } from "@/lib/credits/creditPricing";
+import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
@@ -121,26 +120,29 @@ export default function AdvertiserLeadsPage() {
   });
 
   const respondDiscount = async (id: string, status: 'accepted' | 'rejected') => {
-    // Debita 9 créditos apenas no aceite
+    // Aceitar oferta = liberar comprador via Wallet Core (2% do valor anunciado, permanente).
     if (status === 'accepted') {
-      const res = await debitSellerCredits({
-        event: "advertiser_accept_offer",
-        userId: user?.id,
-        refType: "discount_request",
-        refId: id,
-      });
-      if (!res.charged && res.reason === "insufficient_credits") {
-        toast.error(`Saldo insuficiente. Precisa de ${res.required}, tem ${res.available}.`);
+      const req = discountRequests.find((r: any) => r.id === id);
+      if (!req?.product_id) { toast.error("Oferta sem produto vinculado."); return; }
+      const buyerKey = String(req.customer_phone ?? "").replace(/\D/g, "") || id;
+      const res = await unlockContact(
+        "product", req.product_id, buyerKey,
+        Math.round(Number(req.product_price ?? req.requested_price ?? 0) * 100),
+      );
+      if (!res.success) {
+        if (res.error === "insufficient_credits") {
+          toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`);
+          setTimeout(() => navigate("/anunciante/carteira"), 1400);
+          return;
+        }
+        toast.error(`Erro ao liberar comprador: ${res.error ?? "desconhecido"}`);
         return;
       }
-      if (!res.charged && res.reason !== "deduped_in_session") {
-        toast.error(`Erro ao debitar: ${res.reason}`);
-        return;
+      if (!res.already_unlocked && (res.charged_cents ?? 0) > 0) {
+        toast.success(`Comprador liberado! ${centsToBRL(res.charged_cents)} debitados — Saldo: ${centsToBRL(res.balance_cents)}`);
       }
-      if (res.charged) {
-        toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
-        queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
     }
     const { error } = await (supabase.from("discount_requests") as any)
       .update({ status })
@@ -213,27 +215,24 @@ export default function AdvertiserLeadsPage() {
     });
   };
 
-  // Débito de créditos pra "Chamar Cliente no WhatsApp" no pedido (13 cr)
-  const debitOrderCallCredits = async (orderId: string): Promise<boolean> => {
-    if (unlockedOrders.has(orderId)) return true; // já debitou neste pedido
-    const res = await debitSellerCredits({
-      event: "advertiser_unlock_order_whatsapp",
-      userId: user?.id,
-      refType: "purchase_intention",
-      refId: orderId,
-      extraDescription: `Pedido ${orderId.slice(0, 8)}`,
-    });
-    if (!res.charged) {
-      if (res.reason === "insufficient_credits") {
-        toast.error(`Saldo insuficiente. Precisa de ${res.required}, tem ${res.available}.`);
-      } else if (res.reason === "advertiser_not_found") {
-        toast.error("Conta de anunciante não encontrada.");
-      } else if (res.reason !== "deduped_in_session") {
-        toast.error(`Erro ao debitar: ${res.reason}`);
+  // Liberar comprador do pedido via Wallet Core (2% do valor, permanente por pedido+comprador).
+  const debitOrderCallCredits = async (pi: PurchaseIntentionCard): Promise<boolean> => {
+    if (unlockedOrders.has(pi.id)) return true; // já liberado neste pedido
+    const buyerKey = String(pi.customer_whatsapp ?? "").replace(/\D/g, "") || pi.id;
+    const res = await unlockContact("product", pi.id, buyerKey, Math.round(Number(pi.subtotal ?? 0) * 100));
+    if (!res.success) {
+      if (res.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`);
+        setTimeout(() => navigate("/anunciante/carteira"), 1400);
+      } else {
+        toast.error(`Erro ao liberar comprador: ${res.error ?? "desconhecido"}`);
       }
       return false;
     }
-    toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
+    if (!res.already_unlocked && (res.charged_cents ?? 0) > 0) {
+      toast.success(`Comprador liberado! ${centsToBRL(res.charged_cents)} debitados — Saldo: ${centsToBRL(res.balance_cents)}`);
+    }
+    queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
     return true;
   };
@@ -760,29 +759,30 @@ export default function AdvertiserLeadsPage() {
                     <span className="text-sm font-black text-yellow-900">{formatCurrency(pi.subtotal)}</span>
                   </div>
 
-                  {pi.customer_whatsapp && (
+                  {pi.customer_whatsapp && (() => {
+                    const orderCostCents = Math.max(Math.round(Number(pi.subtotal ?? 0) * 0.02 * 100), 900);
+                    return (
                     <div className="mt-auto space-y-2">
                       <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-yellow-100 border border-yellow-400">
                         <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800 flex items-center gap-1">
-                          ⚠️ Custa {CREDIT_COSTS.advertiser_unlock_order_whatsapp} créditos ao chamar
+                          ⚠️ Liberar comprador custa {centsToBRL(orderCostCents)} (2%)
                         </span>
                         <span className="text-[10px] font-bold text-yellow-800">
-                          Saldo: {balance.available_credits ?? 0}
+                          Saldo: {centsToBRL(Math.round((balance.available_credits ?? 0) * 100))}
                         </span>
                       </div>
                       <Button
-                        disabled={(balance.available_credits ?? 0) < CREDIT_COSTS.advertiser_unlock_order_whatsapp}
                         onClick={async () => {
-                          const ok = await debitOrderCallCredits(pi.id);
+                          const ok = await debitOrderCallCredits(pi);
                           if (!ok) return;
                           markOrderUnlocked(pi.id);
                           window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank");
                         }}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 disabled:text-zinc-500 text-white font-black uppercase text-[11px] tracking-widest h-11 gap-2"
                       >
-                        <MessageSquare className="w-4 h-4" /> Chamar Cliente no WhatsApp (-{CREDIT_COSTS.advertiser_unlock_order_whatsapp} cr)
+                        <MessageSquare className="w-4 h-4" /> Liberar comprador (-{centsToBRL(orderCostCents)})
                       </Button>
-                      {(balance.available_credits ?? 0) < CREDIT_COSTS.advertiser_unlock_order_whatsapp && (
+                      {((balance.available_credits ?? 0) * 100) < orderCostCents && (
                         <div className="space-y-1.5">
                           <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider text-center">
                             saldo insuficiente
@@ -797,7 +797,8 @@ export default function AdvertiserLeadsPage() {
                         </div>
                       )}
                     </div>
-                  )}
+                  );
+                })()}
                 </CardContent>
               </Card>
             ))}

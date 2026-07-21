@@ -7,8 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { debitSellerCredits } from "@/lib/credits/debitSellerCredits";
-import { CREDIT_COSTS } from "@/lib/credits/creditPricing";
+import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 
 interface PurchaseIntentionCard {
   id: string;
@@ -37,23 +36,21 @@ export default function StoreOrdersPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const UNLOCK_COST = CREDIT_COSTS.advertiser_unlock_order_whatsapp;
 
-  // Saldo de créditos do anunciante
-  const { data: creditBalance = 0 } = useQuery({
-    queryKey: ["seller-credit-balance-for-orders", user?.id],
+  // Saldo da CARTEIRA ÚNICA (wallets, em cents)
+  const { data: walletCents = 0 } = useQuery({
+    queryKey: ["wallet-balance", user?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const { data: adv } = await (supabase.from("advertiser_accounts" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      const accId = (adv as any)?.id;
-      if (!accId) return 0;
-      const { data: bal } = await (supabase.from("advertiser_credit_balances" as any)
-        .select("available_credits").eq("advertiser_account_id", accId).maybeSingle()) as any;
-      return Number((bal as any)?.available_credits ?? 0);
+      const { data } = await (supabase.from("wallets" as any)
+        .select("balance_cents").eq("owner_uid", user!.id).maybeSingle()) as any;
+      return Number((data as any)?.balance_cents ?? 0);
     },
   });
+  // 2% do valor do pedido (política oficial), piso R$9, em cents
+  const unlockCostCents = (subtotal: number | null) =>
+    Math.max(Math.round(Number(subtotal ?? 0) * 0.02 * 100), 900);
 
   // Ocultar pedidos individuais (localStorage, por navegador)
   const HIDDEN_KEY = "viagg_hidden_orders";
@@ -75,37 +72,23 @@ export default function StoreOrdersPage() {
 
   const handleContactBuyer = async (pi: PurchaseIntentionCard) => {
     if (!pi.customer_whatsapp) return;
-    // Se não tem saldo, manda comprar créditos
-    if (creditBalance < UNLOCK_COST) {
-      toast.error(
-        `Você não tem saldo suficiente (precisa de ${UNLOCK_COST} créditos, tem ${creditBalance}). Redirecionando para a compra de créditos...`,
-        { duration: 3500 }
-      );
-      setTimeout(() => navigate("/anunciante/creditos"), 1200);
+    // Liberar comprador = desbloqueio de contato via Wallet Core (2% do valor do pedido).
+    // Permanente por (pedido, comprador); nunca recobra o mesmo comprador.
+    const buyerKey = String(pi.customer_whatsapp).replace(/\D/g, "") || pi.id;
+    const res = await unlockContact("product", pi.id, buyerKey, Math.round(Number(pi.subtotal ?? 0) * 100));
+    if (!res.success) {
+      if (res.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`, { duration: 3500 });
+        setTimeout(() => navigate("/anunciante/carteira"), 1400);
+        return;
+      }
+      toast.error(`Erro ao liberar comprador: ${res.error ?? "desconhecido"}`);
       return;
     }
-    // Debita os créditos
-    const res = await debitSellerCredits({
-      event: "advertiser_unlock_order_whatsapp",
-      userId: user?.id,
-      refType: "purchase_intention",
-      refId: pi.id,
-      extraDescription: `Pedido ${pi.id.slice(0, 8)}`,
-    });
-    if (!res.charged) {
-      if (res.reason === "insufficient_credits") {
-        toast.error(`Saldo insuficiente. Redirecionando...`);
-        setTimeout(() => navigate("/anunciante/creditos"), 1200);
-        return;
-      }
-      if (res.reason !== "deduped_in_session") {
-        toast.error(`Erro ao debitar: ${res.reason}`);
-        return;
-      }
-    } else {
-      toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
-    }
-    queryClient.invalidateQueries({ queryKey: ["seller-credit-balance-for-orders", user?.id] });
+    if (res.already_unlocked) toast.success("Comprador já estava liberado.");
+    else if ((res.charged_cents ?? 0) > 0) toast.success(`Comprador liberado! ${centsToBRL(res.charged_cents)} debitados — Saldo: ${centsToBRL(res.balance_cents)}`);
+    else toast.success("Comprador liberado!");
+    queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
 
     // Abre o WhatsApp do comprador
     const clean = String(pi.customer_whatsapp).replace(/\D/g, "").replace(/^55/, "");
@@ -311,7 +294,7 @@ export default function StoreOrdersPage() {
 
               {/* Saldo de créditos atual — vermelho se insuficiente, verde se suficiente */}
               {(() => {
-                const hasEnough = creditBalance >= UNLOCK_COST;
+                const hasEnough = walletCents >= unlockCostCents(pi.subtotal);
                 return (
                   <div className={cn(
                     "flex items-center justify-between p-3 rounded-xl border",
@@ -323,13 +306,13 @@ export default function StoreOrdersPage() {
                       "text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
                       hasEnough ? "text-emerald-700" : "text-red-700"
                     )}>
-                      <Coins className="w-3.5 h-3.5" /> Saldo atual
+                      <Coins className="w-3.5 h-3.5" /> Saldo da carteira
                     </span>
                     <span className={cn(
                       "text-2xl font-black tabular-nums leading-none",
                       hasEnough ? "text-emerald-600" : "text-red-600"
                     )}>
-                      {creditBalance}
+                      {centsToBRL(walletCents)}
                     </span>
                   </div>
                 );
@@ -341,7 +324,7 @@ export default function StoreOrdersPage() {
                   onClick={() => handleContactBuyer(pi)}
                   className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
                 >
-                  <MessageSquare className="w-4 h-4" /> Contatar Comprador (-{UNLOCK_COST} cr)
+                  <MessageSquare className="w-4 h-4" /> Liberar comprador (-{centsToBRL(unlockCostCents(pi.subtotal))})
                 </Button>
               )}
 

@@ -123,17 +123,21 @@ export function useAdvertiserCredits() {
         description: r.feature_name || r.description,
       }));
 
-      // 4. Saldo do anunciante (advertiser_credit_balances)
+      // 4. Saldo da CARTEIRA ÚNICA (wallets) — fonte financeira única (1 crédito = R$ 1).
+      //    available_credits vem em REAIS (balance_cents / 100); a antiga
+      //    advertiser_credit_balances foi aposentada (FASE 2 Carteira de Créditos).
       let balance: AdvertiserCreditBalance = { available_credits: 0, consumed_credits: 0 };
-      const { data: balData } = await (supabase.from("advertiser_credit_balances") as any)
-        .select("available_credits, consumed_credits")
-        .eq("advertiser_account_id", advertiserAccountId)
-        .maybeSingle();
-      if (balData) {
-        balance = {
-          available_credits: balData.available_credits ?? 0,
-          consumed_credits: balData.consumed_credits ?? 0,
-        };
+      if (user?.id) {
+        const { data: w } = await (supabase.from("wallets") as any)
+          .select("balance_cents, reserved_cents")
+          .eq("owner_uid", user.id)
+          .maybeSingle();
+        if (w) {
+          balance = {
+            available_credits: Number(w.balance_cents ?? 0) / 100,
+            consumed_credits: Number(w.reserved_cents ?? 0) / 100,
+          };
+        }
       }
 
       // 5. Ledger (Ãºltimas 20 entradas)
