@@ -190,36 +190,41 @@ export function OfertaRapidaModal({
   if (!open) return null;
 
   const isArremate = context === "arremate";
-  const accentFrom = isArremate ? "from-violet-500" : "from-orange-500";
-  const accentTo = isArremate ? "to-purple-500" : "to-amber-500";
-  const accentBg = isArremate ? "bg-violet-50" : "bg-orange-50";
-  const accentBorder = isArremate ? "border-violet-200" : "border-orange-200";
   const CtxIcon = isArremate ? Tag : Gavel;
+
+  const accentHex = isArremate ? "#7C3AED" : "#FF6A00";
+  const accentHex2 = isArremate ? "#A855F7" : "#FF9A00";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
 
-      {/* Modal */}
-      <div className="relative w-full sm:max-w-md bg-white sm:rounded-3xl rounded-t-3xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-        {/* ── Gradient header ── */}
-        <div className={`bg-gradient-to-r ${accentFrom} ${accentTo} px-6 py-5 text-white relative`}>
+      {/* Modal — visual premium escuro (consistente com o detalhe do leilão) */}
+      <div className="relative w-full sm:max-w-md overflow-hidden rounded-t-[28px] border border-white/10 bg-gradient-to-b from-[#15181E] via-[#101216] to-[#0B0D10] text-white shadow-[0_30px_80px_-12px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-bottom-4 duration-300 sm:rounded-[28px]">
+        {/* glow decorativo colorido pela categoria */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[130%] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
+             style={{ background: `radial-gradient(ellipse at center, ${accentHex}66, transparent 70%)` }} />
+
+        {/* ── Header ── */}
+        <div className="relative px-6 pb-4 pt-6">
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 p-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-all"
+            aria-label="Fechar"
+            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-white/20">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg"
+                 style={{ background: `linear-gradient(135deg, ${accentHex}, ${accentHex2})`, boxShadow: `0 8px 22px -8px ${accentHex}` }}>
               <CtxIcon className="h-6 w-6" />
             </div>
-            <div>
-              <h2 className="text-lg font-black">
+            <div className="min-w-0">
+              <h2 className="text-xl font-black leading-tight">
                 {sent ? "Oferta enviada! ✅" : isArremate ? "Fazer Oferta" : "Dar Lance"}
               </h2>
-              <p className="text-xs text-white/80 line-clamp-1">
+              <p className="truncate text-xs text-white/50">
                 {sent ? "A loja entrará em contato" : listingTitle}
               </p>
             </div>
@@ -227,53 +232,53 @@ export function OfertaRapidaModal({
         </div>
 
         {/* ── Content ── */}
-        <div className="px-6 py-5 space-y-4">
+        <div className="space-y-4 px-6 pb-6">
           {sent ? (
             /* ═══ SUCCESS STATE ═══ */
-            <div className="text-center space-y-4 py-4">
-              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+            <div className="space-y-4 py-2 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 ring-1 ring-emerald-400/30">
+                <CheckCircle2 className="h-8 w-8 text-emerald-400" />
               </div>
               <div>
-                <p className="text-base font-bold text-gray-800">{isAuction ? "Lance registrado! 🔥" : "Sua oferta foi registrada!"}</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-base font-black text-white">{isAuction ? "Lance registrado! 🔥" : "Sua oferta foi registrada!"}</p>
+                <p className="mt-1 text-sm text-white/50">
                   {isAuction
                     ? "Você está participando do leilão. Acompanhe seus lances na sua conta, em Meus Lances."
                     : "O lojista receberá sua proposta e, se aceita, entrará em contato pelo WhatsApp informado."}
                 </p>
               </div>
-              <div className={`rounded-xl ${accentBg} border ${accentBorder} p-3`}>
+              <div className="rounded-2xl border p-4" style={{ borderColor: `${accentHex}40`, background: `linear-gradient(160deg, ${accentHex}22, transparent)` }}>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">{isAuction ? "Seu lance" : "Valor da oferta"}</span>
-                  <span className="font-black text-gray-900">{formatBRL(parseFloat(amount) || 0)}</span>
+                  <span className="text-white/50">{isAuction ? "Seu lance" : "Valor da oferta"}</span>
+                  <span className="text-lg font-black" style={{ color: accentHex2 }}>{formatBRL(parseFloat(amount) || 0)}</span>
                 </div>
                 {!isAuction && (
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-gray-600">WhatsApp</span>
-                    <span className="font-bold text-gray-800">{formatPhone(whatsapp)}</span>
+                  <div className="mt-1 flex items-center justify-between text-sm">
+                    <span className="text-white/50">WhatsApp</span>
+                    <span className="font-bold text-white/80">{formatPhone(whatsapp)}</span>
                   </div>
                 )}
               </div>
               {isAuction ? (
                 <Button
                   onClick={() => { onClose(); navigate("/meus-lances"); }}
-                  variant="outline"
-                  className="w-full h-10 text-sm font-bold rounded-xl border-orange-300 text-orange-700 hover:bg-orange-50"
+                  className="h-11 w-full rounded-xl border border-white/15 bg-white/5 text-sm font-bold text-white hover:bg-white/10"
                 >
-                  <Gavel className="h-4 w-4 mr-2" /> Ver Meus Lances
+                  <Gavel className="mr-2 h-4 w-4" /> Ver Meus Lances
                 </Button>
               ) : (
-                <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-400">
+                <div className="flex items-center justify-center gap-1.5 text-[10px] text-white/40">
                   <ShieldCheck className="h-3 w-3" />
                   Seus dados são compartilhados apenas com a loja
                 </div>
               )}
-              <div className="text-[9px] text-gray-400/80 text-center leading-relaxed mt-1 px-2">
+              <div className="px-2 text-center text-[9px] leading-relaxed text-white/30">
                 A plataforma atua apenas como intermediadora de produtos locais, facilitando o acesso entre consumidores e lojas da região. Não nos envolvemos nem nos responsabilizamos pelas transações realizadas entre as partes.
               </div>
               <Button
                 onClick={onClose}
-                className={`w-full h-11 text-sm font-bold bg-gradient-to-r ${accentFrom} ${accentTo} hover:opacity-90 text-white rounded-xl`}
+                className="h-12 w-full rounded-xl text-sm font-black text-white hover:opacity-90"
+                style={{ background: `linear-gradient(135deg, ${accentHex}, ${accentHex2})` }}
               >
                 Fechar
               </Button>
@@ -282,27 +287,27 @@ export function OfertaRapidaModal({
             /* ═══ FORM STATE ═══ */
             <>
               {/* Valor da Oferta */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5" /> Valor da oferta (R$) <span className="text-red-500">*</span>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-xs font-bold text-white/60">
+                  <DollarSign className="h-3.5 w-3.5" /> Valor da oferta (R$) <span style={{ color: accentHex2 }}>*</span>
                 </Label>
                 {allowCustomAmount ? (
                   <Input
                     type="number"
                     step="0.01"
                     min="0"
-                    placeholder="Ex: 150.00"
+                    placeholder="Ex: 150,00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="h-12 rounded-xl text-lg font-bold"
+                    className="h-14 rounded-2xl border-white/10 bg-black/40 text-xl font-black text-white placeholder:text-white/25 focus-visible:ring-2"
+                    style={{ ["--tw-ring-color" as any]: `${accentHex}80` }}
                     autoFocus
                   />
                 ) : (
-                  <div className={`h-12 rounded-xl ${accentBg} border ${accentBorder} flex items-center px-4`}>
-                    <span className="text-lg font-black text-gray-900">
-                      {formatBRL(defaultAmount || 0)}
-                    </span>
-                    <span className="ml-auto text-[10px] text-gray-400 font-medium">valor fixo</span>
+                  <div className="flex h-14 items-center rounded-2xl border px-4"
+                       style={{ borderColor: `${accentHex}40`, background: `linear-gradient(160deg, ${accentHex}22, transparent)` }}>
+                    <span className="text-xl font-black" style={{ color: accentHex2 }}>{formatBRL(defaultAmount || 0)}</span>
+                    <span className="ml-auto text-[10px] font-medium text-white/40">valor fixo</span>
                   </div>
                 )}
               </div>
@@ -310,59 +315,60 @@ export function OfertaRapidaModal({
               {isAuction ? (
                 /* ═══ LEILÃO: identidade pela conta (sem nome/WhatsApp) ═══ */
                 user ? (
-                  <div className="flex items-center gap-2.5 rounded-xl bg-orange-50 border border-orange-200 px-3 py-2.5">
-                    <User className="h-4 w-4 text-orange-500 shrink-0" />
-                    <p className="text-xs text-gray-600 leading-snug">
-                      Dando lance como <b className="text-gray-900">{user.email || "sua conta"}</b> — fica registrado em <b>Meus Lances</b>.
+                  <div className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3">
+                    <User className="h-4 w-4 shrink-0" style={{ color: accentHex2 }} />
+                    <p className="text-xs leading-snug text-white/60">
+                      Dando lance como <b className="text-white">{user.email || "sua conta"}</b> — fica registrado em <b className="text-white/90">Meus Lances</b>.
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-center space-y-2.5">
-                    <p className="text-xs font-semibold text-gray-700">Entre na sua conta para dar lance no leilão.</p>
+                  <div className="space-y-2.5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-center">
+                    <p className="text-xs font-semibold text-white/70">Entre na sua conta para dar lance no leilão.</p>
                     <Button
                       onClick={() => { onClose(); navigate("/auth"); }}
-                      className="w-full h-10 text-sm font-bold bg-[#FF6A00] hover:bg-[#e85f00] text-white rounded-xl"
+                      className="h-11 w-full rounded-xl text-sm font-black text-white hover:opacity-90"
+                      style={{ background: `linear-gradient(135deg, ${accentHex}, ${accentHex2})` }}
                     >
-                      <LogIn className="h-4 w-4 mr-2" /> Entrar
+                      <LogIn className="mr-2 h-4 w-4" /> Entrar
                     </Button>
                   </div>
                 )
               ) : (
                 <>
                   {/* Nome */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5" /> Seu nome <span className="text-red-500">*</span>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs font-bold text-white/60">
+                      <User className="h-3.5 w-3.5" /> Seu nome <span style={{ color: accentHex2 }}>*</span>
                     </Label>
                     <Input
                       placeholder="Como quer ser chamado(a)"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      className="h-11 rounded-xl"
+                      className="h-12 rounded-2xl border-white/10 bg-black/40 text-white placeholder:text-white/25"
                     />
                   </div>
 
                   {/* WhatsApp (obrigatório) */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-gray-600 flex items-center gap-1.5">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs font-bold text-white/60">
                       <Phone className="h-3.5 w-3.5" /> WhatsApp
-                      <span className="text-red-500">*</span>
-                      <span className="ml-auto text-[9px] font-semibold text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full">obrigatório</span>
+                      <span style={{ color: accentHex2 }}>*</span>
+                      <span className="ml-auto rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-red-300">obrigatório</span>
                     </Label>
                     <Input
                       placeholder="(11) 99999-9999"
                       value={whatsapp}
                       onChange={(e) => setWhatsapp(formatPhone(e.target.value))}
-                      className="h-11 rounded-xl"
+                      className="h-12 rounded-2xl border-white/10 bg-black/40 text-white placeholder:text-white/25"
                     />
-                    <p className="text-[10px] text-gray-400">Sem WhatsApp, a loja não consegue entrar em contato</p>
+                    <p className="text-[10px] text-white/40">Sem WhatsApp, a loja não consegue entrar em contato</p>
                   </div>
                 </>
               )}
 
               {/* Error */}
               {error && (
-                <div className="text-red-500 text-xs font-medium bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-center">
+                <div className="rounded-xl border border-red-400/30 bg-red-500/15 px-3 py-2 text-center text-xs font-medium text-red-300">
                   {error}
                 </div>
               )}
@@ -376,13 +382,14 @@ export function OfertaRapidaModal({
                     (!amount && !defaultAmount) ||
                     (!isAuction && (!nome.trim() || whatsapp.replace(/\D/g, "").length < 10))
                   }
-                  className={`w-full h-12 text-sm font-bold bg-gradient-to-r ${accentFrom} ${accentTo} hover:opacity-90 text-white rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className="h-14 w-full rounded-2xl text-base font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                  style={{ background: `linear-gradient(135deg, ${accentHex}, ${accentHex2})`, boxShadow: `0 14px 34px -10px ${accentHex}` }}
                 >
                   {sending ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <>
-                      {isArremate ? <Send className="h-4 w-4 mr-2" /> : <Gavel className="h-4 w-4 mr-2" />}
+                      {isArremate ? <Send className="mr-2 h-5 w-5" /> : <Gavel className="mr-2 h-5 w-5" />}
                       {isArremate ? "Enviar Oferta" : "Dar Lance"}
                     </>
                   )}
@@ -390,15 +397,15 @@ export function OfertaRapidaModal({
               )}
 
               {/* Info */}
-              <div className="flex items-start gap-2 text-[10px] text-gray-400 leading-relaxed">
-                <ShieldCheck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-300" />
+              <div className="flex items-start gap-2 text-[10px] leading-relaxed text-white/45">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/30" />
                 <p>
                   {isAuction
                     ? "Seu lance fica registrado na sua conta única Viagg-TX8™ e aparece em Meus Lances. O maior lance ao encerramento vence."
                     : "Sem cadastro necessário. A loja receberá sua oferta e, se aceita, entrará em contato pelo WhatsApp informado."}
                 </p>
               </div>
-              <div className="text-[9px] text-gray-400/70 leading-relaxed px-1 border-t border-gray-100 pt-2">
+              <div className="border-t border-white/10 px-1 pt-3 text-[9px] leading-relaxed text-white/30">
                 A plataforma Viagg-TX8 atua exclusivamente como intermediadora de produtos locais, facilitando o acesso entre consumidores e lojas da região. A plataforma não participa, não intermedia e não se responsabiliza pelas transações, pagamentos ou acordos realizados diretamente entre comprador e loja.
               </div>
             </>
