@@ -61,6 +61,7 @@ import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { MercadoAuctionsSection } from "@/components/public/MercadoAuctionsSection";
+import { CardDark, CardInfo, CardHighlight, DarkStat, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 
 // ─── Helpers ────────────────────────────
 const STORAGE_BUCKET_CANDIDATES = ['marketing-materials', 'merchant-products', 'product-images', 'merchant-marketing'];
@@ -1426,7 +1427,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             </button>
                         </div>
 
-                        <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-80">
+                        <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[26rem]">
                             {travelListings.length > 0 ? (
                                 travelListings.map((tr) => (
                                     <MarketTravelCard key={tr.id} travel={tr} />
@@ -1593,30 +1594,27 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                 const imgSrc = normalizeImageUrl(auction.product_image_url);
                                 const isAuction = auction.listing_type !== "arremate";
                                 return (
-                                    <div
+                                    <CardDark
                                         key={auction.id}
-                                        className="rounded-[24px] overflow-hidden bg-white border border-orange-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] transition-all duration-300 cursor-pointer group flex flex-col h-full"
+                                        className="hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer group flex flex-col h-full"
                                         onClick={() => { setSelectedAuction(auction); setAuctionModalOpen(true); }}
                                     >
                                         {/* Image + type badge */}
                                         <div className="relative">
                                             {imgSrc ? (
-                                                <div className="aspect-square bg-gray-50 overflow-hidden">
+                                                <div className="aspect-square bg-[#252B33] overflow-hidden">
                                                     <img src={imgSrc} alt={auction.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                                 </div>
                                             ) : (
-                                                <div className="aspect-square bg-gradient-to-br from-orange-50 to-amber-50 flex items-center justify-center">
-                                                    <Gavel className="h-12 w-12 text-orange-200" />
+                                                <div className="aspect-square bg-[#252B33] flex items-center justify-center">
+                                                    <Gavel className="h-12 w-12 text-[#8E98A3]" />
                                                 </div>
                                             )}
+                                            <CardImageOverlay />
                                             {/* Type badge */}
-                                            <span className={`absolute top-2 left-2 text-[10px] font-bold uppercase px-2.5 py-1 rounded-full shadow-md ${
-                                                isAuction
-                                                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white"
-                                                    : "bg-gradient-to-r from-violet-500 to-purple-500 text-white"
-                                            }`}>
+                                            <DarkBadge tone={isAuction ? "orange" : "green"} className="absolute top-2 left-2 shadow-md backdrop-blur-md bg-[#1A1F24]/85">
                                                 {isAuction ? "🔨 Leilão" : "⚡ Arremate"}
-                                            </span>
+                                            </DarkBadge>
                                             {/* Countdown badge */}
                                             <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/75 text-white text-sm px-3.5 py-2 rounded-xl backdrop-blur-sm">
                                                 <Timer className="h-4 w-4 text-red-400 animate-pulse" />
@@ -1625,54 +1623,52 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                         </div>
                                         {/* Info */}
                                         <div className="p-4 space-y-2.5 flex-1 flex flex-col">
-                                            <h3 className="font-bold text-sm text-gray-800 line-clamp-2 leading-snug min-h-[40px]">{auction.title}</h3>
+                                            <h3 className="font-bold text-sm text-white line-clamp-2 leading-snug min-h-[40px]">{auction.title}</h3>
 
 
 
                                             {/* Description */}
                                             {auction.description && (
-                                                <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed">{auction.description}</p>
+                                                <p className="text-[12px] text-[#B8C2CC] line-clamp-2 leading-relaxed">{auction.description}</p>
                                             )}
 
                                             {/* Prices */}
                                             <div className="grid grid-cols-2 gap-2">
-                                                <div className="bg-gray-50 rounded-lg p-2 text-center">
-                                                    <p className="text-[9px] text-gray-400 font-bold uppercase">{isAuction ? "Lance atual" : "Preço"}</p>
-                                                    <p className="text-lg font-black text-orange-600">
-                                                        R$ {(auction.current_bid || auction.starting_bid || 0).toFixed(2).replace(".", ",")}
-                                                    </p>
-                                                </div>
-                                                <div className="bg-gray-50 rounded-lg p-2 text-center">
-                                                    <p className="text-[9px] text-gray-400 font-bold uppercase">Lance inicial</p>
-                                                    <p className="text-lg font-black text-gray-600">
-                                                        R$ {(auction.starting_bid || 0).toFixed(2).replace(".", ",")}
-                                                    </p>
-                                                </div>
+                                                <CardHighlight
+                                                    label={isAuction ? "Lance atual" : "Preço"}
+                                                    value={<>R$ {(auction.current_bid || auction.starting_bid || 0).toFixed(2).replace(".", ",")}</>}
+                                                    className="p-2"
+                                                />
+                                                <DarkStat
+                                                    label="Lance inicial"
+                                                    value={<>R$ {(auction.starting_bid || 0).toFixed(2).replace(".", ",")}</>}
+                                                    className="p-2"
+                                                />
                                             </div>
 
                                             {/* Dates */}
-                                            <div className="flex items-center gap-2 text-[10px] bg-gray-50 rounded-lg px-3 py-2">
+                                            <CardInfo className="flex items-center gap-2 text-[10px] px-3 py-2">
                                                 <div className="flex-1">
-                                                    <span className="text-gray-400 font-bold uppercase">Início </span>
-                                                    <span className="font-semibold text-gray-600">
+                                                    <span className="text-[#8E98A3] font-bold uppercase">Início </span>
+                                                    <span className="font-semibold text-[#B8C2CC]">
                                                         {auction.starts_at ? new Date(auction.starts_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : auction.created_at ? new Date(auction.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                                                     </span>
                                                 </div>
-                                                <div className="w-px h-3 bg-gray-200" />
+                                                <div className="w-px h-3 bg-[#323A45]" />
                                                 <div className="flex-1">
-                                                    <span className="text-gray-400 font-bold uppercase">Término </span>
-                                                    <span className="font-semibold text-gray-600">
+                                                    <span className="text-[#8E98A3] font-bold uppercase">Término </span>
+                                                    <span className="font-semibold text-[#B8C2CC]">
                                                         {auction.ends_at ? new Date(auction.ends_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                                                     </span>
                                                 </div>
-                                            </div>
+                                            </CardInfo>
 
                                             <div className="mt-auto space-y-2.5">
                                                 {/* Store Location + Google Maps */}
-                                                <div className="space-y-1.5 pt-2 border-t border-gray-50">
+                                                <div className="space-y-1.5 pt-2 border-t border-[#323A45]">
                                                     {auction.city && (
-                                                        <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                                                            <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
+                                                        <div className="flex items-center gap-1.5 text-[11px] text-[#B8C2CC]">
+                                                            <MapPin className="h-3 w-3 text-[#00C58E] shrink-0" />
                                                             <span className="font-semibold truncate">{auction.city}</span>
                                                         </div>
                                                     )}
@@ -1681,27 +1677,23 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         onClick={(e) => e.stopPropagation()}
-                                                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold text-blue-600 border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-all"
+                                                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-white border border-[#00C58E] bg-transparent hover:bg-[rgba(0,197,142,0.12)] transition-all"
                                                     >
-                                                        <MapPin className="h-3.5 w-3.5" />
+                                                        <MapPin className="h-3.5 w-3.5 text-[#00C58E]" />
                                                         📍 Ver no Mapa
                                                     </a>
                                                 </div>
 
                                                 {/* CTA */}
-                                                <button
+                                                <DarkButton
                                                     onClick={() => { setSelectedAuction(auction); setAuctionModalOpen(true); }}
-                                                    className={`w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-sm hover:shadow-md ${
-                                                        isAuction
-                                                            ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                                                            : "bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600"
-                                                    }`}
+                                                    className="w-full py-2.5 text-sm"
                                                 >
                                                     {isAuction ? "🔨 Dar Lance" : "⚡ Fazer Oferta"}
-                                                </button>
+                                                </DarkButton>
                                             </div>
                                         </div>
-                                    </div>
+                                    </CardDark>
                                 );
                             })}
                         </HorizontalCarousel>
@@ -1935,7 +1927,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                     </h2>
                     <div ref={gridRef} className={carouselMode
                         ? "flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide"
-                        : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5"
+                        : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5"
                     }>
                         {filtered
                             .flatMap(product => {
@@ -1957,8 +1949,8 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             const price = product.price_label ? formatPrice(product.price_label) : null;
 
                             return (
-                                <div key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
-                                    className={`rounded-[24px] overflow-hidden cursor-pointer shadow-[0_4px_24px_rgba(0,0,0,0.05)] lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] lg:hover:-translate-y-0.5 transition-all duration-300 bg-white border border-zinc-100/80 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
+                                <CardDark key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
+                                    className={`cursor-pointer lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5 transition-all duration-300 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
                                     onClick={() => {
                                         trackProductEvent({
                                             product_id: product.id,
@@ -1986,24 +1978,20 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                     }}>
 
                                     {/* Image */}
-                                    <div className="relative overflow-hidden bg-gray-50">
+                                    <div className="relative overflow-hidden bg-[#252B33]">
                                         {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
                                         <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
                                         {/* Condition Badge (movido p/ direita p/ não colidir com o logo) */}
                                         {product.condition && (
                                             <div className="absolute top-2 right-2 z-10">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${
-                                                    product.condition.toLowerCase().includes('novo')
-                                                    ? 'bg-emerald-500 text-white'
-                                                    : 'bg-amber-500 text-white'
-                                                }`}>
+                                                <DarkBadge tone={product.condition.toLowerCase().includes('novo') ? 'green' : 'orange'} className="shadow-sm backdrop-blur-md bg-[#1A1F24]/85">
                                                     {product.condition}
-                                                </span>
+                                                </DarkBadge>
                                             </div>
                                         )}
                                         {imgSrc ? (
-                                            <div className="relative w-full aspect-square flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                                                <ShoppingBag className="absolute h-8 w-8 text-gray-200 z-0" />
+                                            <div className="relative w-full aspect-square flex items-center justify-center bg-[#252B33]">
+                                                <ShoppingBag className="absolute h-8 w-8 text-[#8E98A3] z-0" />
                                                 <img src={imgSrc} alt={product.title}
                                                     className="absolute inset-0 w-full h-full object-cover lg:group-hover/card:scale-105 transition-transform duration-300 z-10"
                                                     onLoad={(e) => {
@@ -2074,6 +2062,9 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                             );
                                         })()}
 
+                                        {/* Overlay padrão do DS para leitura sobre a foto */}
+                                        <CardImageOverlay className="z-[11]" />
+
                                         {/* ─── IDENTIDADE VIAGG-TX8 (marca discreta sobre a imagem do produto) ─── */}
                                         {/* Watermark central VX (anti-print + marca; 7% opacidade; não interfere) */}
                                         <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
@@ -2112,29 +2103,29 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                                     {/* Info */}
                                     <div className="p-3 space-y-2 flex-1 flex flex-col">
-                                        <h3 className="text-[17px] text-gray-800 line-clamp-2 leading-snug font-semibold min-h-[42px]">
+                                        <h3 className="text-[17px] text-white line-clamp-2 leading-snug font-semibold min-h-[42px]">
                                             {product.title}
                                         </h3>
 
                                         {price ? (
                                             <div className="flex-1">
-                                                <p className="text-[26px] font-bold text-gray-900 leading-tight tracking-tight">
+                                                <p className="text-[26px] font-bold text-[#FF7A00] leading-tight tracking-tight">
                                                     <span className="text-[16px] align-top">R$</span>
                                                     {price.integer}
                                                     <span className="text-[16px] align-top">,{price.decimal}</span>
                                                 </p>
-                                                <p className="text-[13px] text-emerald-600 font-bold mt-0.5 flex items-center gap-0.5">
+                                                <p className="text-[13px] text-[#00C58E] font-bold mt-0.5 flex items-center gap-0.5">
                                                     <CheckCircle className="h-3 w-3" /> Pronta Entrega
                                                 </p>
                                             </div>
                                         ) : (
                                             <div className="flex-1">
-                                                <p className="text-[14px] text-gray-400 italic">Sob consulta</p>
+                                                <p className="text-[14px] text-[#8E98A3] italic">Sob consulta</p>
                                             </div>
                                         )}
 
                                         {/* Store & Location */}
-                                        <div className="space-y-1.5 pt-2 mt-auto border-t border-gray-100">
+                                        <div className="space-y-1.5 pt-2 mt-auto border-t border-[#323A45]">
                                             <div
                                                 className="flex items-center gap-1.5 cursor-pointer hover:text-orange-500 transition-colors"
                                                 onClick={(e) => {
@@ -2151,8 +2142,8 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                     }
                                                 }}
                                             >
-                                                <MapPin className="h-3.5 w-3.5 text-[#FF6A00] shrink-0" />
-                                                <span className="text-xs font-bold text-gray-600 truncate flex-1 leading-tight">{[product.neighborhood, product.city].filter(Boolean).join(", ") || product.store_name || "Vendedor Local"}</span>
+                                                <MapPin className="h-3.5 w-3.5 text-[#00C58E] shrink-0" />
+                                                <span className="text-xs font-bold text-[#B8C2CC] truncate flex-1 leading-tight">{[product.neighborhood, product.city].filter(Boolean).join(", ") || product.store_name || "Vendedor Local"}</span>
                                             </div>
                                         </div>
 
@@ -2175,7 +2166,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                         });
                                                     }}
                                                     disabled={globalCart.addingProductId === product.id}
-                                                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-[#FF6A00] hover:bg-[#e65c00] transition-all duration-200"
+                                                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7A00] hover:bg-[#FF8E1F] transition-all duration-200"
                                                 >
                                                     {globalCart.addingProductId === product.id && (
                                                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -2197,7 +2188,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                     });
                                                     setDiscountProduct(product);
                                                 }}
-                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-zinc-900 bg-[#68c7f2] hover:opacity-90 transition-all duration-200 shadow-sm"
+                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold text-white bg-[#252B33] border border-[#323A45] hover:bg-[#2E3640] transition-all duration-200 shadow-sm"
                                             >
                                                 Minha Oferta é...
                                             </button>
@@ -2216,7 +2207,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                     setInquiryProduct(product);
                                                     setInquiryOpen(true);
                                                 }}
-                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all duration-200 shadow-sm"
+                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold text-white bg-transparent border border-[#00C58E] hover:bg-[rgba(0,197,142,0.12)] transition-all duration-200"
                                             >
                                                 Saber mais
                                             </button>
@@ -2231,7 +2222,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                             setSelectedAuction(matchedAuction);
                                                             setAuctionModalOpen(true);
                                                         }}
-                                                        className="w-full py-1.5 rounded-lg text-[12px] font-bold text-violet-600 border border-violet-100 bg-violet-50 hover:bg-violet-100 transition-all text-center"
+                                                        className="w-full py-1.5 rounded-xl text-[12px] font-bold text-[#00C58E] border border-[#00C58E]/40 bg-[#252B33] hover:bg-[rgba(0,197,142,0.12)] transition-all text-center"
                                                     >
                                                         ⚡ Arremate
                                                     </button>
@@ -2242,7 +2233,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                             setSelectedAuction(matchedAuction);
                                                             setAuctionModalOpen(true);
                                                         }}
-                                                        className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold text-white bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 transition-all shadow-sm"
+                                                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7A00] hover:bg-[#FF8E1F] transition-all shadow-sm"
                                                     >
                                                         <Gavel className="h-3.5 w-3.5" />
                                                         Ver Leilão
@@ -2254,7 +2245,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                             )}
                                         </div>
                                     </div>
-                                </div>
+                                </CardDark>
                             );
                         })}
                     </div>

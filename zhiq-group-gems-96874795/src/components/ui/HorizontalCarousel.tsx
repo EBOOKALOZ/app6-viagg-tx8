@@ -13,7 +13,7 @@ interface HorizontalCarouselProps {
 
 export function HorizontalCarousel({
   children,
-  cardWidth = "w-72 sm:w-80",
+  cardWidth = "w-96 sm:w-[26rem]",
   className,
   gap = "gap-5",
   snap = false,
