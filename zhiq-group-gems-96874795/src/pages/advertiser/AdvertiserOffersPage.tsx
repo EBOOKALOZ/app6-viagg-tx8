@@ -6,8 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { debitSellerCredits } from "@/lib/credits/debitSellerCredits";
-import { CREDIT_COSTS } from "@/lib/credits/creditPricing";
+import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { formatCurrencyBRL } from "@/lib/utils";
 
 interface OfferCard {
@@ -28,23 +27,21 @@ export default function AdvertiserOffersPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const ACCEPT_COST = CREDIT_COSTS.advertiser_accept_offer;
 
-  // Saldo
-  const { data: creditBalance = 0 } = useQuery({
-    queryKey: ["seller-credit-balance-for-offers", user?.id],
+  // Saldo da CARTEIRA ÚNICA (wallets, em cents) — fonte financeira única
+  const { data: walletCents = 0 } = useQuery({
+    queryKey: ["wallet-balance", user?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const { data: adv } = await (supabase.from("advertiser_accounts" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      const accId = (adv as any)?.id;
-      if (!accId) return 0;
-      const { data: bal } = await (supabase.from("advertiser_credit_balances" as any)
-        .select("available_credits").eq("advertiser_account_id", accId).maybeSingle()) as any;
-      return Number((bal as any)?.available_credits ?? 0);
+      const { data } = await (supabase.from("wallets" as any)
+        .select("balance_cents").eq("owner_uid", user!.id).maybeSingle()) as any;
+      return Number((data as any)?.balance_cents ?? 0);
     },
   });
+  // 2% do valor anunciado (política oficial) em cents
+  const unlockCostCents = (priceStr: string | null) =>
+    Math.round(Number(priceStr ?? 0) * 0.02 * 100);
 
   // Ofertas
   const { data: offers = [], isLoading } = useQuery<OfferCard[]>({
@@ -116,27 +113,31 @@ export default function AdvertiserOffersPage() {
   });
 
   const handleAccept = async (offer: OfferCard) => {
-    if (creditBalance < ACCEPT_COST) {
-      toast.error(`Sem saldo (precisa ${ACCEPT_COST}, tem ${creditBalance}). Redirecionando para compra...`, { duration: 3000 });
-      setTimeout(() => navigate("/anunciante/creditos"), 1200);
-      return;
-    }
-    const res = await debitSellerCredits({
-      event: "advertiser_accept_offer",
-      userId: user?.id,
-      refType: "discount_request",
-      refId: offer.id,
-    });
-    if (!res.charged && res.reason === "insufficient_credits") {
-      toast.error(`Saldo insuficiente.`);
-      setTimeout(() => navigate("/anunciante/creditos"), 1200);
+    if (!offer.product_id) { toast.error("Oferta sem produto vinculado."); return; }
+    // Liberar comprador = desbloqueio de contato via Wallet Core (2% do valor anunciado).
+    // Permanente por (anúncio, comprador); nunca recobra o mesmo comprador.
+    const buyerKey = (offer.customer_phone ?? "").replace(/\D/g, "") || offer.id;
+    const res = await unlockContact(
+      "product",
+      offer.product_id,
+      buyerKey,
+      Math.round(Number(offer.product_price ?? 0) * 100), // valor anunciado (hint)
+    );
+    if (!res.success) {
+      if (res.error === "insufficient_credits") {
+        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`, { duration: 3500 });
+        setTimeout(() => navigate("/anunciante/carteira"), 1400);
+        return;
+      }
+      toast.error("Erro ao liberar comprador: " + (res.error ?? "desconhecido"));
       return;
     }
     const { error } = await (supabase.from("discount_requests" as any).update({ status: "accepted" }).eq("id", offer.id)) as any;
     if (error) { toast.error("Erro: " + error.message); return; }
-    if (res.charged) toast.success(`${res.credits_charged} créditos debitados — Saldo: ${res.balance_after}`);
-    else toast.success("Oferta aceita!");
-    queryClient.invalidateQueries({ queryKey: ["seller-credit-balance-for-offers", user?.id] });
+    if (res.already_unlocked) toast.success("Comprador já estava liberado — oferta aceita!");
+    else if ((res.charged_cents ?? 0) > 0) toast.success(`Comprador liberado! ${centsToBRL(res.charged_cents)} debitados — Saldo: ${centsToBRL(res.balance_cents)}`);
+    else toast.success("Comprador liberado!");
+    queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["advertiser-offers-page", user?.id] });
   };
 
@@ -220,7 +221,8 @@ export default function AdvertiserOffersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {offers.map((offer) => {
-            const hasEnough = creditBalance >= ACCEPT_COST;
+            const costCents = Math.max(unlockCostCents(offer.product_price), 900); // 2% ou piso R$9
+            const hasEnough = walletCents >= costCents;
             return (
               <div
                 key={offer.id}
@@ -298,13 +300,13 @@ export default function AdvertiserOffersPage() {
                     "text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
                     hasEnough ? "text-emerald-700" : "text-red-700"
                   )}>
-                    <Coins className="w-3.5 h-3.5" /> Saldo atual
+                    <Coins className="w-3.5 h-3.5" /> Saldo da carteira
                   </span>
                   <span className={cn(
                     "text-2xl font-black tabular-nums leading-none",
                     hasEnough ? "text-emerald-600" : "text-red-600"
                   )}>
-                    {creditBalance}
+                    {centsToBRL(walletCents)}
                   </span>
                 </div>
 
@@ -315,7 +317,7 @@ export default function AdvertiserOffersPage() {
                       onClick={() => handleAccept(offer)}
                       className="flex-1 h-11 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
                     >
-                      <CheckCheck className="w-4 h-4" /> Aceitar (-{ACCEPT_COST} cr)
+                      <CheckCheck className="w-4 h-4" /> Liberar comprador (-{centsToBRL(costCents)})
                     </Button>
                     <Button
                       onClick={() => handleReject(offer)}
