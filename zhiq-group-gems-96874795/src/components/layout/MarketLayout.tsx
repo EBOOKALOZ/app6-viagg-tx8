@@ -59,6 +59,8 @@ interface MarketLayoutProps {
     myAccountPath?: string;
     /** Esconde o botão Motoboy do topo (usado quando ele é exibido em outra linha). */
     hideTopMotoboy?: boolean;
+    /** Mantém o cabeçalho SEMPRE expandido (clima/rádio + navegação visíveis), sem retrair no scroll. */
+    lockHeaderExpanded?: boolean;
 }
 
 export function MarketLayout({
@@ -77,7 +79,8 @@ export function MarketLayout({
     blueFooter = false,
     blueFooterLabel = "Mercado Local",
     myAccountPath,
-    hideTopMotoboy = false
+    hideTopMotoboy = false,
+    lockHeaderExpanded = false
 }: MarketLayoutProps) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -118,6 +121,11 @@ export function MarketLayout({
     const [userOverride, setUserOverride] = useState<'expanded' | 'collapsed' | null>(null);
 
     useEffect(() => {
+        // Cabeçalho travado expandido: sem listener de scroll, nunca recolhe.
+        if (lockHeaderExpanded) {
+            setHeaderCollapsed(false);
+            return;
+        }
         let ticking = false;
         const handleScroll = () => {
             if (!ticking) {
@@ -153,7 +161,7 @@ export function MarketLayout({
 
         window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [lockHeaderExpanded]);
 
     const handleToggleHeader = () => {
         if (headerCollapsed) {
@@ -176,7 +184,7 @@ export function MarketLayout({
             {/* ═══ TOP BAR (STICKY HEADER WITH RETRACTABLE TRANSITIONS) ═══ */}
             <div className={cn(
                 "sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
-                isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-gradient-to-b from-[#FAF24A] via-[#F5E62B] to-[#ECD70B]"
+                isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-[#F5E62B]"
             )}>
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
                     {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta (RETRÁTIL) ── */}
@@ -294,6 +302,7 @@ export function MarketLayout({
                 </div>
 
                 {/* ═══ SETA CENTRAL DE CONTROLE RETRÁTIL (▼ / ▲) ═══ */}
+                {!lockHeaderExpanded && (
                 <div className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-7 z-50 flex items-center justify-center pointer-events-auto">
                     <button
                         type="button"
@@ -316,6 +325,7 @@ export function MarketLayout({
                         </span>
                     </button>
                 </div>
+                )}
             </div>
 
 

@@ -413,7 +413,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     const { trackSearch, trackCategoryView } = useMarketplaceTracking();
     const { user } = useAuth();
 
-    const [carouselMode, setCarouselMode] = useState(false);
+    const [carouselMode, setCarouselMode] = useState(true);
 
 
     // Botão Motoboy do topo: sempre manda pra tela de cadastro/login do motoboy.
@@ -2066,11 +2066,8 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                     <h2 className="text-xl font-bold text-gray-800 mb-4">
                       Produtos {conditionFilter === "all" ? "Todos" : conditionFilter === "novo" ? "Novos" : "Usados"}
                     </h2>
-                    <div ref={gridRef} className={carouselMode
-                        ? "flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide"
-                        : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5"
-                    }>
-                        {filtered
+                    {(() => {
+                        const renderedCards = filtered
                             .flatMap(product => {
                                 const matched = auctionListings.filter((a: any) => 
                                     a.product_id === product.id ||
@@ -2091,7 +2088,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                             return (
                                 <CardDark key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
-                                    className={`cursor-pointer lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5 transition-all duration-300 group/card flex flex-col${carouselMode ? " snap-start shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
+                                    className={`cursor-pointer lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5 transition-all duration-300 group/card flex flex-col${carouselMode ? " snap-start snap-always shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
                                     onClick={() => {
                                         trackProductEvent({
                                             product_id: product.id,
@@ -2212,80 +2209,69 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                         {/* Overlay padrão do DS para leitura sobre a foto */}
                                         <CardImageOverlay className="z-[11]" />
 
-                                        {/* ─── IDENTIDADE VIAGG-TX8 (marca discreta sobre a imagem do produto) ─── */}
-                                        {/* Watermark central VX (anti-print + marca; 7% opacidade; não interfere) */}
-                                        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
-                                            <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-5xl sm:text-6xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
-                                        </div>
-                                        {/* Selo Oficial (canto inf-esquerdo) — texto (logo largo ficava ilegível em px) */}
-                                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full bg-zinc-900/80 backdrop-blur-md px-2.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[#68c7f2] shrink-0" aria-hidden="true" />
-                                            <span className="text-[9px] font-black uppercase tracking-wider text-white/95">Oficial Viagg-TX8</span>
+                                        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 items-start">
+                                            {matchedAuction ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-[#FF6A00] text-white shadow-lg shadow-orange-500/30">
+                                                    <Gavel className="h-3 w-3" />
+                                                    {matchedAuction.listing_type === "arremate" ? "🔥 Arremate Agora" : "⚡ Em Leilão"}
+                                                </span>
+                                            ) : (
+                                                <DarkBadge variant={product.condition === "novo" ? "new" : "used"} className="shadow-md">
+                                                    {product.condition === "novo" ? "Novo" : "Usado"}
+                                                </DarkBadge>
+                                            )}
                                         </div>
 
-                                        {/* WhatsApp Share */}
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                trackProductEvent({
-                                                    product_id: product.id,
-                                                    store_id: product.merchant_store_id,
-                                                    event_type: "share",
-                                                    city: product.city,
-                                                    source: "landing",
-                                                });
-                                                const priceText = product.price_label ? ` por apenas R$${product.price_label}` : "";
+                                                const priceText = price ? ` — R$ ${price.integer},${price.decimal}` : "";
                                                 const storeUrl = product.merchant_store_id
                                                     ? `${window.location.origin}/loja/${product.merchant_store_id}`
                                                     : `${window.location.origin}/mercado`;
                                                 const text = `🔥 *${product.title}*${priceText}\n\n${product.store_name ? `🏪 ${product.store_name}` : ""}${product.city ? ` • 🚚 Entrega em ${product.city}` : ""}\n✅ Pronta Entrega!\n\n👉 Confira: ${storeUrl}`;
                                                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                                             }}
-                                            className="absolute top-1.5 right-1.5 bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5 shadow-lg transition-all lg:opacity-0 lg:group-hover/card:opacity-100 z-10"
-                                            title="Compartilhar no WhatsApp"
+                                            className="absolute top-2.5 right-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 rounded-full shadow-lg transition-all z-10"
                                         >
-                                            <Share2 className="h-3.5 w-3.5" />
+                                            <Share2 className="h-4 w-4" />
                                         </button>
                                     </div>
 
-                                    {/* Info */}
-                                    <div className="p-3 space-y-2 flex-1 flex flex-col">
-                                        <h3 className="text-[17px] text-white line-clamp-2 leading-snug font-semibold min-h-[42px]">
-                                            {product.title}
-                                        </h3>
-
+                                    <div className="p-4 space-y-3 flex-1 flex flex-col">
+                                        <h3 className="text-lg text-white font-bold leading-tight line-clamp-2">{product.title}</h3>
+                                        
                                         {price ? (
-                                            <div className="flex-1">
-                                                <p className="text-[26px] font-bold text-[#FF7A00] leading-tight tracking-tight">
-                                                    <span className="text-[16px] align-top">R$</span>
-                                                    {price.integer}
-                                                    <span className="text-[16px] align-top">,{price.decimal}</span>
-                                                </p>
-                                                <p className="text-[13px] text-[#00C58E] font-bold mt-0.5 flex items-center gap-0.5">
-                                                    <CheckCircle className="h-3 w-3" /> Pronta Entrega
-                                                </p>
-                                            </div>
+                                            <p className="text-2xl font-black text-[#FF7A00]">
+                                                <span className="text-sm font-normal mr-0.5">R$</span>
+                                                {price.integer}<span className="text-sm">,{price.decimal}</span>
+                                            </p>
                                         ) : (
-                                            <div className="flex-1">
-                                                <p className="text-[14px] text-[#8E98A3] italic">Sob consulta</p>
-                                            </div>
+                                            <p className="text-sm text-gray-400 italic">Sob consulta</p>
                                         )}
 
-                                        {/* Store & Location */}
                                         <div className="space-y-1.5 pt-2 mt-auto border-t border-[#323A45]">
+                                            {product.store_name && (
+                                                <div
+                                                    className="flex items-center gap-1.5 text-xs text-[#B8C2CC] hover:text-[#FF7A00] transition-colors"
+                                                    onClick={(e) => {
+                                                        if (product.merchant_store_id) {
+                                                            e.stopPropagation();
+                                                            navigate(`/loja/${product.merchant_store_id}`);
+                                                        }
+                                                    }}
+                                                >
+                                                    <Store className="h-3.5 w-3.5 shrink-0 text-[#FF7A00]" />
+                                                    <span className="truncate font-medium">{product.store_name}</span>
+                                                </div>
+                                            )}
                                             <div
-                                                className="flex items-center gap-1.5 cursor-pointer hover:text-orange-500 transition-colors"
+                                                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if (product.merchant_store_id) {
-                                                        consumeMarketplaceProductClick({
-                                                            productId: product.id,
-                                                            storeId: product.merchant_store_id,
-                                                            city: product.city,
-                                                            neighborhood: product.neighborhood,
-                                                            source: "store_name",
-                                                        });
-                                                        navigate(`/loja/${product.merchant_store_id}`);
+                                                    if (product.city) {
+                                                        const q = [product.city, product.neighborhood, product.store_name].filter(Boolean).join(" ");
+                                                        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, "_blank");
                                                     }
                                                 }}
                                             >
@@ -2294,10 +2280,34 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                             </div>
                                         </div>
 
-                                        {/* CTA Buttons */}
-                                        <div className="mt-auto space-y-1.5 pt-2">
-                                            {/* Add to Cart */}
-                                            {product.merchant_store_id && (
+                                        <div className="mt-3 space-y-2">
+                                            {matchedAuction ? (
+                                                matchedAuction.listing_type === "arremate" ? (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedAuction(matchedAuction);
+                                                            setAuctionModalOpen(true);
+                                                        }}
+                                                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-sm animate-pulse"
+                                                    >
+                                                        <Gavel className="h-3.5 w-3.5" />
+                                                        🔥 Arrematar Agora!
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedAuction(matchedAuction);
+                                                            setAuctionModalOpen(true);
+                                                        }}
+                                                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7A00] hover:bg-[#FF8E1F] transition-all"
+                                                    >
+                                                        <Gavel className="h-3.5 w-3.5" />
+                                                        Ver Leilão
+                                                    </button>
+                                                )
+                                            ) : (
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -2312,91 +2322,33 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                             storeLogo: product.store_logo || null,
                                                         });
                                                     }}
-                                                    disabled={globalCart.addingProductId === product.id}
                                                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7A00] hover:bg-[#FF8E1F] transition-all duration-200"
                                                 >
-                                                    {globalCart.addingProductId === product.id && (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    )}
-                                                    Adicionar Cesta
+                                                    <ShoppingBag className="h-4 w-4" />
+                                                    Comprar Agora
                                                 </button>
-                                            )}
-
-                                            {/* Botão "Minha Oferta é..." — abre modal de proposta de desconto */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    trackProductEvent({
-                                                        product_id: product.id,
-                                                        store_id: product.merchant_store_id,
-                                                        event_type: "click",
-                                                        city: product.city,
-                                                        source: "minha_oferta",
-                                                    });
-                                                    setDiscountProduct(product);
-                                                }}
-                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold text-white bg-[#252B33] border border-[#323A45] hover:bg-[#2E3640] transition-all duration-200 shadow-sm"
-                                            >
-                                                Minha Oferta é...
-                                            </button>
-
-                                            {/* Botão "Saber mais" — abre modal de pergunta direto pro vendedor */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    trackProductEvent({
-                                                        product_id: product.id,
-                                                        store_id: product.merchant_store_id,
-                                                        event_type: "click",
-                                                        city: product.city,
-                                                        source: "saber_mais",
-                                                    });
-                                                    setInquiryProduct(product);
-                                                    setInquiryOpen(true);
-                                                }}
-                                                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold text-white bg-transparent border border-[#00C58E] hover:bg-[rgba(0,197,142,0.12)] transition-all duration-200"
-                                            >
-                                                Saber mais
-                                            </button>
-
-
-                                             {/* Specialized Auction or Arremate Button */}
-                                             {matchedAuction && (
-                                                matchedAuction.listing_type === "arremate" ? (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedAuction(matchedAuction);
-                                                            setAuctionModalOpen(true);
-                                                        }}
-                                                        className="w-full py-1.5 rounded-xl text-[12px] font-bold text-[#00C58E] border border-[#00C58E]/40 bg-[#252B33] hover:bg-[rgba(0,197,142,0.12)] transition-all text-center"
-                                                    >
-                                                        ⚡ Arremate
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedAuction(matchedAuction);
-                                                            setAuctionModalOpen(true);
-                                                        }}
-                                                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-bold text-white bg-[#FF7A00] hover:bg-[#FF8E1F] transition-all shadow-sm"
-                                                    >
-                                                        <Gavel className="h-3.5 w-3.5" />
-                                                        Ver Leilão
-                                                        <span className="text-[10px] bg-black/20 px-1.5 py-0.5 rounded ml-1">
-                                                            <AuctionCountdown endsAt={matchedAuction.ends_at} />
-                                                        </span>
-                                                    </button>
-                                                )
                                             )}
                                         </div>
                                     </div>
                                 </CardDark>
                             );
-                        })}
-                    </div>
-                </div>
+                        });
+
+                        return (
+                            <div ref={gridRef}>
+                                {carouselMode ? (
+                                    <HorizontalCarousel cardWidth="w-[280px] sm:w-[320px] lg:w-[340px]" gap="gap-4">
+                                        {renderedCards}
+                                    </HorizontalCarousel>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                                        {renderedCards}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+                  </div>
                 )}
             </div>
             </div>

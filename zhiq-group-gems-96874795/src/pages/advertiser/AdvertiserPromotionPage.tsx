@@ -210,7 +210,7 @@ export default function AdvertiserPromotionPage() {
     if (!user?.id) return;
     fetchAllItems(advertiserAccountId, storeInfo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, advertiserAccountId, routeCategory]);
+  }, [user?.id, advertiserAccountId, storeInfo?.id, routeCategory]);
 
   // Os slots ficam sempre vazios ao entrar no painel — o anunciante adiciona manualmente.
 
@@ -257,30 +257,72 @@ export default function AdvertiserPromotionPage() {
           });
         }
 
-        // 2. Fetch Merchant Products (from old system)
-        const { data: merchData } = await supabase
-          .from("merchant_products")
-          .select("id, nome, preco, imagem_url")
-          .eq("user_id", user!.id)
-          .order("created_at", { ascending: false });
+        // 2. Fetch Merchant Marketing Products (main storefront table)
+        {
+          let mmpQuery = (supabase.from("merchant_marketing_products") as any)
+            .select("id, title, price_label, image_url, category, campaign_type, is_active, target_city, merchant_store_id, created_by_user_id, created_at")
+            .order("created_at", { ascending: false });
 
-        (merchData ?? []).forEach((r: any) => {
-          const imgUrl = resolveImage(r.imagem_url || r.image_url || null, "products");
-          results.push({
-            id: r.id,
-            title: r.nome ?? "Sem título",
-            price: r.preco,
-            image: imgUrl || null,
-            bucket: "products",
-            status: "active",
-            category: "produtos",
-            extra: "Produto da Loja",
-            city: store?.city,
-            state: store?.state,
-            storeId: store?.id,
-            storeName: store?.name,
+          // Filter by store or user
+          if (store?.id) {
+            mmpQuery = mmpQuery.or(`merchant_store_id.eq.${store.id},created_by_user_id.eq.${user!.id}`);
+          } else {
+            mmpQuery = mmpQuery.eq("created_by_user_id", user!.id);
+          }
+
+          const { data: mmpData } = await mmpQuery;
+          const existingIds = new Set(results.map((r) => r.id));
+
+          (mmpData ?? []).forEach((r: any) => {
+            if (existingIds.has(r.id)) return; // deduplicate
+            const priceNum = r.price_label ? parseFloat(String(r.price_label).replace(/[^0-9.,]/g, "").replace(",", ".")) || null : null;
+            const imgUrl = r.image_url ? resolveImage(r.image_url, "marketing-materials") : null;
+            results.push({
+              id: r.id,
+              title: r.title ?? "Sem título",
+              price: priceNum,
+              image: imgUrl || null,
+              bucket: "marketing-materials",
+              status: r.is_active ? "active" : "paused",
+              category: "produtos",
+              extra: r.category || r.campaign_type || "Produto da Loja",
+              city: r.target_city ?? store?.city,
+              state: store?.state,
+              storeId: r.merchant_store_id ?? store?.id,
+              storeName: store?.name,
+            });
           });
-        });
+        }
+
+        // 3. Fetch Merchant Products (legacy fallback)
+        {
+          const { data: merchData } = await supabase
+            .from("merchant_products")
+            .select("id, nome, preco, imagem_url")
+            .eq("user_id", user!.id)
+            .order("created_at", { ascending: false });
+
+          const existingIds = new Set(results.map((r) => r.id));
+
+          (merchData ?? []).forEach((r: any) => {
+            if (existingIds.has(r.id)) return; // deduplicate
+            const imgUrl = resolveImage(r.imagem_url || r.image_url || null, "products");
+            results.push({
+              id: r.id,
+              title: r.nome ?? "Sem título",
+              price: r.preco,
+              image: imgUrl || null,
+              bucket: "products",
+              status: "active",
+              category: "produtos",
+              extra: "Produto da Loja",
+              city: store?.city,
+              state: store?.state,
+              storeId: store?.id,
+              storeName: store?.name,
+            });
+          });
+        }
       }
 
       // Imóveis
@@ -903,7 +945,7 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-[#F5F7FA] tracking-tight">
-              Divulgar Grátis
+              Divulgar
             </h1>
             <p className="text-sm text-[#A7B0BE] mt-0.5">
               Clique nos slots e escolha até {MAX_PROMO_SLOTS} anúncios para divulgar

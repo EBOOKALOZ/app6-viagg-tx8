@@ -460,7 +460,7 @@ export default function AdvertiserListingsPage() {
       return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#2A3038] text-[#A7B0BE] text-[10px] font-black uppercase rounded-full border border-[#2A3038]"><Edit className="w-3 h-3" /> Rascunho</span>;
     }
     if (s === 'paused') {
-      return <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 text-amber-400 text-[10px] font-black uppercase rounded-full border border-amber-400/20"><Clock className="w-3 h-3" /> Anúncio Pausado</span>;
+      return <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-400/10 text-amber-400 text-[10px] font-black uppercase rounded-full border border-amber-400/20"><Clock className="w-3 h-3" /> Produto Pausado</span>;
     }
     return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#EF4444]/10 text-[#EF4444] text-[10px] font-black uppercase rounded-full border border-[#EF4444]/20"><AlertCircle className="w-3 h-3" /> {status}</span>;
   };
@@ -471,7 +471,7 @@ export default function AdvertiserListingsPage() {
       const { error } = await supabase.from(table as any).delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { listingsQuery.refetch(); toast.success("Anúncio excluído com sucesso."); },
+    onSuccess: () => { listingsQuery.refetch(); toast.success("Produto excluído com sucesso."); },
     onError: (err: any) => toast.error(`Erro: ${err.message}`)
   });
 
@@ -494,9 +494,9 @@ export default function AdvertiserListingsPage() {
     onSuccess: (newStatus) => { 
       listingsQuery.refetch(); 
       if (newStatus === 'published' || newStatus === 'active') {
-        toast.success("Anúncio ativado com sucesso!"); 
+        toast.success("Produto ativado com sucesso!"); 
       } else {
-        toast.success("Anúncio Pausado");
+        toast.success("Produto Pausado");
       }
     },
     onError: (err: any) => toast.error(`Erro ao alterar status: ${err.message}`)
@@ -541,15 +541,15 @@ export default function AdvertiserListingsPage() {
           <div>
             <h1 className="text-2xl font-black text-white flex items-center gap-3">
               <Package className="w-7 h-7 text-white/80" />
-              MEUS ANÚNCIOS — MERCADO
+              MEUS PRODUTOS — MERCADO
             </h1>
-            <p className="text-white/70 text-sm mt-1">Gerencie suas ofertas e acompanhe o status de cada publicação.</p>
+            <p className="text-white/70 text-sm mt-1">Gerencie seus produtos e acompanhe o status de cada publicação.</p>
           </div>
           <Button
             onClick={() => navigate("/anunciante/anuncios/novo")}
             className="bg-white text-[#FF6A00] font-black uppercase text-xs tracking-widest h-11 px-5 rounded-xl shadow-lg gap-2 hover:bg-white/90 shrink-0"
           >
-            <Plus className="w-4 h-4" /> Novo Anúncio
+            <Plus className="w-4 h-4" /> Novo Produto
           </Button>
         </div>
 
@@ -586,7 +586,7 @@ export default function AdvertiserListingsPage() {
             activeTab === 'listings' ? 'bg-[#FF6A00] text-white shadow-sm shadow-[#FF6A00]/30' : 'text-[#A7B0BE] hover:text-[#F5F7FA]'
           )}
         >
-          Anúncios
+          Produtos
         </button>
         <button
           onClick={() => setActiveTab('offers')}
@@ -605,7 +605,7 @@ export default function AdvertiserListingsPage() {
       </div>
 
       {/* ──────────────────────────────────────────────── */}
-      {/* TAB: ANÚNCIOS                                   */}
+      {/* TAB: PRODUTOS                                   */}
       {/* ──────────────────────────────────────────────── */}
       {activeTab === 'listings' && (
         <>
@@ -663,7 +663,7 @@ export default function AdvertiserListingsPage() {
                   <div className="absolute inset-0 bg-[#FF6A00]/20 rounded-full animate-ping opacity-20" />
                 </div>
                 <h3 className="text-2xl font-black text-[#F5F7FA] uppercase tracking-tight">
-                  {searchTerm ? "Nenhum resultado" : "Nenhum anúncio encontrado"}
+                  {searchTerm ? "Nenhum resultado" : "Nenhum produto encontrado"}
                 </h3>
                 <Button onClick={() => navigate("/anunciante/anuncios/novo")} className="h-14 px-10 rounded-2xl bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase tracking-widest text-xs shadow-lg shadow-[#FF6A00]/20">começar agora</Button>
               </CardContent>
@@ -710,12 +710,16 @@ export default function AdvertiserListingsPage() {
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {days}d</span>
                       </div>
                       {/* Ações */}
-                      <div className="flex gap-2 mt-auto pt-2">
+                      <div className="flex flex-col gap-2 mt-auto pt-2">
+                      <Button size="sm" onClick={() => navigate("/anunciante/divulgar-gratis")} className="w-full h-9 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black text-[10px] uppercase rounded-xl gap-1.5 shadow-md shadow-orange-600/20">
+                        <TrendingUp className="h-3.5 w-3.5" /> Divulgar Upgrade
+                      </Button>
+                      <div className="flex gap-2">
                         <Button size="sm" onClick={() => { if (listing.source === "merchant_marketing_products") navigate("/anunciante/minha-loja"); else navigate(`/anunciante/anuncios/editar/produto/${listing.id}`); }} className="flex-1 h-9 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black text-[10px] uppercase rounded-xl gap-1">
                           <Edit className="h-3 w-3" /> Editar
                         </Button>
                         <button onClick={() => handleShare(listing.id)} className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white hover:border-[#FF6A00]/40 transition-colors" title="Copiar link"><Share2 className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => window.open(`/produto/${listing.id}`, "_blank")} className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white transition-colors" title="Ver anúncio"><Eye className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => window.open(`/produto/${listing.id}`, "_blank")} className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white transition-colors" title="Ver produto"><Eye className="h-3.5 w-3.5" /></button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white transition-colors"><MoreVertical className="h-3.5 w-3.5" /></button>
@@ -741,6 +745,7 @@ export default function AdvertiserListingsPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -753,7 +758,7 @@ export default function AdvertiserListingsPage() {
                 <table className="w-full text-left">
                   <thead className="bg-[#14171B] border-b border-[#2A3038]">
                     <tr>
-                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest">Anúncio</th>
+                      <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest">Produto</th>
                       <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest">Modalidade</th>
                       <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest text-center">Status</th>
                       <th className="p-6 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest text-right">Valor</th>
@@ -811,6 +816,13 @@ export default function AdvertiserListingsPage() {
                         <td className="p-6">
                           <div className="flex items-center justify-end gap-2">
                             <Button
+                              size="sm"
+                              onClick={() => navigate("/anunciante/divulgar-gratis")}
+                              className="h-10 px-4 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl gap-1.5 shadow-md shadow-orange-600/20 whitespace-nowrap"
+                            >
+                              <TrendingUp className="w-3.5 h-3.5" /> Divulgar Upgrade
+                            </Button>
+                            <Button
                               variant="ghost" size="icon" className="h-10 w-10 hover:bg-[#FF6A00]/10 hover:text-[#FF6A00] rounded-xl text-[#A7B0BE]"
                               onClick={() => window.open(`/produto/${listing.id}`, '_blank')}
                             >
@@ -849,14 +861,14 @@ export default function AdvertiserListingsPage() {
                                     onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status, source: listing.source })}
                                     className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-amber-600 hover:bg-amber-50 mb-1"
                                   >
-                                    <Pause className="w-4 h-4" /> Pausar Anúncio
+                                    <Pause className="w-4 h-4" /> Pausar Produto
                                   </DropdownMenuItem>
                                 ) : (
                                   <DropdownMenuItem
                                     onClick={() => toggleStatus.mutate({ id: listing.id, category: listing.category, currentStatus: listing.status, source: listing.source })}
                                     className="font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer text-emerald-600 hover:bg-emerald-50 mb-1"
                                   >
-                                    <Play className="w-4 h-4" /> Ativar Anúncio
+                                    <Play className="w-4 h-4" /> Ativar Produto
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
@@ -864,7 +876,7 @@ export default function AdvertiserListingsPage() {
                                   onClick={() => deleteListing.mutate({ id: listing.id, category: listing.category, source: listing.source })}
                                   className="text-destructive font-black text-[10px] uppercase gap-2 p-3 rounded-xl cursor-pointer hover:bg-red-50"
                                 >
-                                  <Trash2 className="w-4 h-4" /> Excluir Anúncio
+                                  <Trash2 className="w-4 h-4" /> Excluir Produto
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -1322,7 +1334,7 @@ export default function AdvertiserListingsPage() {
                 </div>
                 <h3 className="text-xl font-black text-zinc-800 uppercase tracking-tight">Nenhum interessado ainda</h3>
                 <p className="text-sm text-zinc-500 font-medium max-w-xs leading-relaxed">
-                  Quando um visitante clicar em "Estou Interessado" ou "WhatsApp" em um dos seus anúncios,
+                  Quando um visitante clicar em "Estou Interessado" ou "WhatsApp" em um dos seus produtos,
                   ele aparecerá aqui aguardando desbloqueio.
                 </p>
               </CardContent>

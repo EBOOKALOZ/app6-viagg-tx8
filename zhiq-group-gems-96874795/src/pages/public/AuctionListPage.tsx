@@ -411,28 +411,28 @@ export default function AuctionListPage() {
       myAccountPath="/minha-conta"
     >
       {/* ═══ TRUST BAR (futurista) ═══ */}
-      <div className="relative bg-gradient-to-r from-[#08080f] via-[#14101f] to-[#08080f] border-b border-orange-500/20 overflow-hidden">
+      <div className="relative bg-[#F5E62B] border-b border-yellow-600/40 overflow-hidden shadow-md">
         {/* linha de scan neon */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#FF6A00]/70 to-transparent" />
-        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-5 sm:gap-7 text-[11px]">
-          <span className="flex items-center gap-1.5 font-semibold text-orange-100/90">
-            <BadgeCheck className="h-3.5 w-3.5 text-[#FF6A00] drop-shadow-[0_0_6px_rgba(255,106,0,0.9)]" /> Leilões Verificados
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-5 sm:gap-7 text-[11px] font-bold text-[#1A1F24]">
+          <span className="flex items-center gap-1.5 drop-shadow-sm">
+            <BadgeCheck className="h-3.5 w-3.5 text-[#1A1F24]" /> Leilões Verificados
           </span>
-          <span className="flex items-center gap-1.5 font-semibold text-emerald-100/90">
-            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" /> Pagamento Seguro
+          <span className="flex items-center gap-1.5 drop-shadow-sm">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#1A1F24]" /> Pagamento Seguro
           </span>
-          <span className="flex items-center gap-1.5 font-semibold text-sky-100/90 hidden sm:flex">
-            <Truck className="h-3.5 w-3.5 text-sky-400 drop-shadow-[0_0_6px_rgba(56,189,248,0.8)]" /> Entrega Local
+          <span className="flex items-center gap-1.5 drop-shadow-sm hidden sm:flex">
+            <Truck className="h-3.5 w-3.5 text-[#1A1F24]" /> Entrega Local
           </span>
         </div>
       </div>
 
       {/* ═══ FILTROS: CIDADE + TIPO (glassmorphism futurista) ═══ */}
-      <div className="relative bg-gradient-to-b from-[#0d0b18] to-[#08080f] border-b border-white/5 shadow-[0_18px_45px_-18px_rgba(0,0,0,0.7)] overflow-hidden">
+      <div className="relative bg-[#68c7f2] border-b border-sky-400/30 shadow-[0_18px_45px_-18px_rgba(0,0,0,0.5)] overflow-hidden">
         {/* orbs de brilho */}
-        <div className="pointer-events-none absolute -top-20 left-1/4 h-44 w-44 rounded-full bg-[#FF6A00]/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 right-1/5 h-44 w-44 rounded-full bg-violet-600/15 blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.04] bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:22px_22px]" />
+        <div className="pointer-events-none absolute -top-20 left-1/4 h-44 w-44 rounded-full bg-white/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-1/5 h-44 w-44 rounded-full bg-white/25 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:22px_22px]" />
 
         <div className="relative max-w-[1920px] mx-auto px-4 lg:px-6">
           {/* City filter pills */}
@@ -441,7 +441,7 @@ export default function AuctionListPage() {
               className={cn("flex items-center gap-1 px-3.5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all border backdrop-blur",
                 cityFilter === "all"
                   ? "bg-gradient-to-r from-[#FF6A00] to-[#FF9A00] text-white border-orange-300/50 shadow-[0_0_16px_-2px_rgba(255,106,0,0.7)]"
-                  : "bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white/90")}
+                  : "bg-black/15 text-[#1A1F24] border-black/15 hover:bg-black/25 hover:text-black")}
               onClick={() => setCityFilter("all")}>
               <Sparkles className="h-3 w-3" /> Todas Cidades
             </button>
@@ -450,7 +450,7 @@ export default function AuctionListPage() {
                 className={cn("px-3.5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap transition-all flex items-center gap-1 border backdrop-blur",
                   cityFilter === city
                     ? "bg-gradient-to-r from-[#FF6A00] to-[#FF9A00] text-white border-orange-300/50 shadow-[0_0_16px_-2px_rgba(255,106,0,0.7)]"
-                    : "bg-white/5 text-white/50 border-white/10 hover:bg-white/10 hover:text-white/90")}
+                    : "bg-black/15 text-[#1A1F24] border-black/15 hover:bg-black/25 hover:text-black")}
                 onClick={() => setCityFilter(city)}>
                 <MapPin className="h-3 w-3" /> {city}
               </button>
@@ -470,7 +470,7 @@ export default function AuctionListPage() {
                   "group relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-2xl min-w-[86px] transition-all duration-300 shrink-0 border backdrop-blur",
                   filter === key
                     ? "bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white border-orange-300/40 shadow-[0_0_24px_-4px_rgba(255,106,0,0.8)] scale-105 -translate-y-0.5"
-                    : "bg-white/[0.04] text-white/45 border-white/10 hover:bg-white/[0.09] hover:text-white/90 hover:border-white/20"
+                    : "bg-black/15 text-[#1A1F24] border-black/15 hover:bg-black/25 hover:text-black"
                 )}
                 onClick={() => handleFilterChange(key)}
               >
@@ -480,7 +480,7 @@ export default function AuctionListPage() {
                   "absolute -top-1.5 -right-1.5 text-[9px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 ring-2",
                   filter === key
                     ? "bg-[#1A1F24] text-[#FF7A00] ring-white/20"
-                    : "bg-[#FF6A00] text-white ring-[#0a0a12] shadow-[0_0_8px_rgba(255,106,0,0.7)]"
+                    : "bg-[#FF6A00] text-white ring-yellow-800 shadow-[0_0_8px_rgba(255,106,0,0.7)]"
                 )}>
                   {count}
                 </span>
@@ -496,7 +496,7 @@ export default function AuctionListPage() {
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="text-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-[#FF6A00] mx-auto" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#0284C7] mx-auto" />
                 <p className="text-sm text-gray-400">Carregando leilões...</p>
               </div>
             </div>

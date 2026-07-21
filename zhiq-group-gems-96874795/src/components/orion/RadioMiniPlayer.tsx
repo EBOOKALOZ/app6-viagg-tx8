@@ -8,8 +8,13 @@
  *    (contador de docks em window + evento — nunca duas barras na tela).
  * "Música atual": streams icecast não expõem metadata ICY ao navegador — lacuna
  * declarada; mostramos emissora + status reais.
+ *
+ * AUTO-MINIMIZAR (07-21): a versão FLUTUANTE, após 3 s sem interação, colapsa
+ * numa pílula compacta que flutua na PARTE SUPERIOR da tela (logo + status +
+ * play/pause). Qualquer interação (hover/clique/toque) reexpande e reinicia o
+ * timer. A versão encaixada (docked) nunca colapsa.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, Pause, X, Loader2, Volume2, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,6 +22,8 @@ import viaggLogo from '@/assets/logo.png';
 import {
   subscribeRadio, togglePlay, closeRadio, setRadioVolume, type RadioState, getRadioState,
 } from '@/lib/radioPlayer';
+
+const IDLE_MS = 3000; // 3 s sem interação → minimiza
 
 declare global {
   interface Window {
@@ -122,10 +129,60 @@ function MiniBar({ onOpenCenter, docked }: { onOpenCenter: () => void; docked?: 
   );
 }
 
+/** Pílula minimizada — flutua no TOPO. Clicar em qualquer parte (menos o play) reexpande. */
+function MiniPill({ onExpand }: { onExpand: () => void }) {
+  const [radio, setRadio] = useState<RadioState>(getRadioState());
+  const [logoOk, setLogoOk] = useState(true);
+  useEffect(() => subscribeRadio(setRadio), []);
+  useEffect(() => { setLogoOk(true); }, [radio.station?.stationuuid]);
+
+  if (!radio.station) return null;
+
+  return (
+    <button
+      onClick={onExpand}
+      title="Abrir player da rádio"
+      className="group flex items-center gap-2 rounded-full border border-emerald-400/40 bg-[#0a1f16]/95 py-1.5 pl-1.5 pr-2.5 shadow-[0_0_24px_4px_rgba(34,197,94,0.28)] ring-1 ring-white/15 backdrop-blur-xl transition-all hover:pr-3 active:scale-95"
+    >
+      <img
+        src={logoOk && radio.station.favicon ? radio.station.favicon : viaggLogo}
+        onError={() => setLogoOk(false)}
+        alt=""
+        className="h-7 w-7 shrink-0 rounded-full bg-white/5 object-cover ring-1 ring-emerald-400/30"
+      />
+      {/* status pulsante ao vivo */}
+      {radio.playing && (
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+        </span>
+      )}
+      <span className="max-w-[34vw] truncate text-[11px] font-black text-white sm:max-w-[160px]">
+        {radio.station.name || 'Rádio'}
+      </span>
+      {/* play/pause direto na pílula — não reexpande */}
+      <span
+        role="button"
+        tabIndex={0}
+        onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); togglePlay(); } }}
+        title={radio.playing ? 'Pausar' : 'Tocar'}
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-md shadow-emerald-500/30 active:scale-90"
+      >
+        {radio.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          : radio.playing ? <Pause className="h-3.5 w-3.5" />
+          : <Play className="h-3.5 w-3.5" />}
+      </span>
+    </button>
+  );
+}
+
 /** Flutuante global (portal). Se houver uma versão encaixada visível, esta se esconde. */
 export function RadioMiniPlayer({ hidden, onOpenCenter }: { hidden?: boolean; onOpenCenter: () => void }) {
   const [radio, setRadio] = useState<RadioState>(getRadioState());
   const [docks, setDocksState] = useState<number>(window.__viagg_radio_docks__ || 0);
+  const [collapsed, setCollapsed] = useState(false);
+  const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => subscribeRadio(setRadio), []);
   useEffect(() => {
@@ -134,10 +191,43 @@ export function RadioMiniPlayer({ hidden, onOpenCenter }: { hidden?: boolean; on
     return () => window.removeEventListener(DOCK_EVT, onDock);
   }, []);
 
+  // Timer de inatividade: 3 s sem interação → minimiza. `bump` reinicia.
+  const clearIdle = () => { if (idleRef.current) { clearTimeout(idleRef.current); idleRef.current = null; } };
+  const bump = () => {
+    clearIdle();
+    idleRef.current = setTimeout(() => setCollapsed(true), IDLE_MS);
+  };
+  // Sempre que o card está expandido e visível, arma o timer (e rearma ao trocar de estação).
+  useEffect(() => {
+    if (collapsed || hidden || docks > 0 || !radio.station) return;
+    bump();
+    return () => { if (idleRef.current) clearTimeout(idleRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsed, hidden, docks, radio.station?.stationuuid]);
+
+  const expand = () => { setCollapsed(false); bump(); };
+
   if (!radio.station || hidden || docks > 0) return null;
 
+  // MINIMIZADO → pílula flutuando no TOPO (onde foi orientado)
+  if (collapsed) {
+    return createPortal(
+      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[9980] animate-in fade-in slide-in-from-top-2 duration-300">
+        <MiniPill onExpand={expand} />
+      </div>,
+      document.body
+    );
+  }
+
+  // EXPANDIDO → card completo no rodapé; qualquer interação reinicia o timer de 3 s
   return createPortal(
-    <div className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 z-[9980] w-[min(94vw,420px)]">
+    <div
+      className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 z-[9980] w-[min(94vw,420px)] animate-in fade-in slide-in-from-bottom-2 duration-300"
+      onPointerDown={bump}
+      onTouchStart={bump}
+      onMouseEnter={clearIdle}
+      onMouseLeave={bump}
+    >
       <MiniBar onOpenCenter={onOpenCenter} />
     </div>,
     document.body

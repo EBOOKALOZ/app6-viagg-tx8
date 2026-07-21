@@ -16,14 +16,45 @@ export function HorizontalCarousel({
   cardWidth = "w-96 sm:w-[26rem]",
   className,
   gap = "gap-5",
-  snap = false,
+  snap = true,
   alwaysShowArrows = false,
 }: HorizontalCarouselProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: "left" | "right") => {
-    const w = ref.current?.clientWidth ?? 340;
-    ref.current?.scrollBy({ left: dir === "left" ? -(w * 0.75) : w * 0.75, behavior: "smooth" });
+    if (!ref.current) return;
+    const container = ref.current;
+    const children = Array.from(container.children) as HTMLElement[];
+    if (children.length === 0) return;
+
+    const currentScroll = Math.round(container.scrollLeft);
+    const firstChildOffset = children[0].offsetLeft;
+
+    if (dir === "right") {
+      const nextCard = children.find((child) => (child.offsetLeft - firstChildOffset) > currentScroll + 5);
+      if (nextCard) {
+        container.scrollTo({
+          left: nextCard.offsetLeft - firstChildOffset,
+          behavior: "smooth",
+        });
+      } else {
+        container.scrollTo({
+          left: container.scrollWidth - container.clientWidth,
+          behavior: "smooth",
+        });
+      }
+    } else {
+      const prevCards = children.filter((child) => (child.offsetLeft - firstChildOffset) < currentScroll - 5);
+      const prevCard = prevCards[prevCards.length - 1];
+      if (prevCard) {
+        container.scrollTo({
+          left: prevCard.offsetLeft - firstChildOffset,
+          behavior: "smooth",
+        });
+      } else {
+        container.scrollTo({ left: 0, behavior: "smooth" });
+      }
+    }
   };
 
   if (alwaysShowArrows) {
@@ -58,11 +89,11 @@ export function HorizontalCarousel({
         >
           {Array.isArray(children)
             ? children.map((child, i) => (
-                <div key={i} className={cn("flex-none", snap && "snap-start", cardWidth)}>
+                <div key={i} className={cn("flex-none", snap && "snap-start snap-always", cardWidth)}>
                   {child}
                 </div>
               ))
-            : <div className={cn("flex-none", snap && "snap-start", cardWidth)}>{children}</div>}
+            : <div className={cn("flex-none", snap && "snap-start snap-always", cardWidth)}>{children}</div>}
         </div>
       </div>
     );
@@ -80,11 +111,11 @@ export function HorizontalCarousel({
       >
         {Array.isArray(children)
           ? children.map((child, i) => (
-              <div key={i} className={cn("flex-none", snap && "snap-start", cardWidth)}>
+              <div key={i} className={cn("flex-none", snap && "snap-start snap-always", cardWidth)}>
                 {child}
               </div>
             ))
-          : <div className={cn("flex-none", snap && "snap-start", cardWidth)}>{children}</div>}
+          : <div className={cn("flex-none", snap && "snap-start snap-always", cardWidth)}>{children}</div>}
       </div>
 
       <button

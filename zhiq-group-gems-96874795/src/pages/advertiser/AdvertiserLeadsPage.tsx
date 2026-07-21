@@ -131,7 +131,7 @@ export default function AdvertiserLeadsPage() {
       );
       if (!res.success) {
         if (res.error === "insufficient_credits") {
-          toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`);
+          toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Recarregue sua carteira para liberar este contato.`);
           setTimeout(() => navigate("/anunciante/carteira"), 1400);
           return;
         }
@@ -222,7 +222,7 @@ export default function AdvertiserLeadsPage() {
     const res = await unlockContact("product", pi.id, buyerKey, Math.round(Number(pi.subtotal ?? 0) * 100));
     if (!res.success) {
       if (res.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`);
+        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Recarregue sua carteira para liberar este contato.`);
         setTimeout(() => navigate("/anunciante/carteira"), 1400);
       } else {
         toast.error(`Erro ao liberar comprador: ${res.error ?? "desconhecido"}`);

@@ -237,7 +237,7 @@ export default function ViagensInicio() {
       blueFooter
       blueFooterLabel="✈️ Viagens & Turismo"
       myAccountPath="/viagens/minha-conta"
-      mainClassName="bg-gradient-to-b from-[#E2D206] via-[#C9BA00] to-[#998D00]"
+      mainClassName="bg-gradient-to-b from-[#0284C7] via-[#0369A1] to-[#075985]"
     >
       <div className="min-h-[calc(100vh-160px)] flex flex-col items-center justify-center px-4 py-10">
 
@@ -247,8 +247,8 @@ export default function ViagensInicio() {
               <img src={viaggLogo} alt="Viagg-TX8" className="w-full h-full object-cover" />
             </div>
           </div>
-          <h1 className="text-3xl font-black text-black drop-shadow">Módulo Viagens & Turismo</h1>
-          <p className="text-black/80 text-base mt-1 font-semibold">Plataforma VIAGG-TX8™</p>
+          <h1 className="text-3xl font-black text-white drop-shadow">Módulo Viagens & Turismo</h1>
+          <p className="text-white/90 text-base mt-1 font-semibold">Plataforma VIAGG-TX8™</p>
         </div>
 
         {/* Card de destaque — VIAGENS E TURISMO (full width) */}

@@ -1,9 +1,9 @@
 import { useOutletContext, Link } from "react-router-dom";
 import { MyStoreData } from "@/hooks/useMyStore";
-import { Store, TrendingUp, Package, Wallet, Plus, Megaphone, Settings, Star, ChevronRight, MapPin, CheckCircle2, Clock, Eye, Edit, Trash2, Phone, Mail, ArrowLeft, Search, ShoppingBag, Share2 } from "lucide-react";
+import { Store, TrendingUp, Package, Wallet, Plus, Megaphone, Settings, Star, ChevronRight, MapPin, CheckCircle2, Clock, Eye, Edit, Trash2, Phone, Mail, Share2 } from "lucide-react";
 import ProductShowcase from "@/components/merchant/ProductShowcase";
 import { StoreHeader } from "@/components/public/store/StoreHeader";
-import { Input } from "@/components/ui/input";
+import { MarketLayout } from "@/components/layout/MarketLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,41 +43,11 @@ export default function StoreMinhaLojaPage() {
   const fullAddress = addressParts.join(' • ');
 
   return (
+    <MarketLayout hideFooter hideStoreNav mainClassName="bg-[#F5E62B]">
     <div className="p-4 md:p-8 animate-fade-in pb-24 bg-[#F5E62B] min-h-screen">
-      
-      {/* Mocking the MarketLayout for a realistic preview */}
-      <div className="rounded-[40px] overflow-hidden border border-zinc-200 shadow-2xl mb-8 bg-zinc-50/50">
-        {/* Mock Orange Market Top Bar */}
-        <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] px-4 md:px-6 h-[72px] flex items-center justify-between text-white shadow-md relative z-20">
-            <Link to="/mercado" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                 <ArrowLeft className="w-5 h-5" /> <span className="font-bold text-sm hidden md:inline">Mercado</span>
-            </Link>
-            <div className="flex-1 max-w-2xl mx-4 relative hidden lg:block opacity-70 pointer-events-none">
-                <Input placeholder="Buscar em Mercado Local..." className="h-[52px] rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-[15px] font-medium focus-visible:ring-0" />
-                <button className="absolute right-0 top-0 bottom-0 px-5 bg-[#e65c00] rounded-r-lg flex items-center justify-center translate-x-full">
-                    <Search className="h-6 w-6 text-white" />
-                </button>
-            </div>
-            <div className="flex items-center gap-4">
-                <button
-                    type="button"
-                    onClick={() => {
-                        const url = `${window.location.origin}/loja/${store?.id || ""}`;
-                        if (navigator.share) {
-                            navigator.share({ title: store?.nome_loja || "Minha Loja", url }).catch(() => {});
-                        } else {
-                            navigator.clipboard?.writeText(url);
-                            toast.success("Link da loja copiado!");
-                        }
-                    }}
-                    className="hover:opacity-80 transition-opacity"
-                    title="Compartilhar loja"
-                >
-                    <Share2 className="w-5 h-5" />
-                </button>
-            </div>
-        </div>
 
+      {/* Pré-visualização do perfil público (o cabeçalho completo real vem do MarketLayout) */}
+      <div className="rounded-[40px] overflow-hidden border border-zinc-200 shadow-2xl mb-8 bg-zinc-50/50">
         {/* The actual Public Store Header as preview */}
         <div className="pointer-events-none">
             <StoreHeader 
@@ -103,12 +73,30 @@ export default function StoreMinhaLojaPage() {
             <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-widest">
                 <Eye className="w-4 h-4" /> Pré-visualização do Perfil Público
             </div>
-            <Link 
-              to="/anunciante/conta" 
-              className="flex items-center justify-center h-[42px] px-[21px] rounded-lg bg-blue-600 text-white font-bold text-[15px] hover:bg-blue-700 transition-colors"
-            >
-              <Settings className="w-[18px] h-[18px] mr-2" /> Editar Perfil
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                  type="button"
+                  onClick={() => {
+                      const url = `${window.location.origin}/loja/${store?.id || ""}`;
+                      if (navigator.share) {
+                          navigator.share({ title: store?.nome_loja || "Minha Loja", url }).catch(() => {});
+                      } else {
+                          navigator.clipboard?.writeText(url);
+                          toast.success("Link da loja copiado!");
+                      }
+                  }}
+                  className="flex items-center justify-center h-[42px] px-[21px] rounded-lg border border-blue-200 bg-white text-blue-600 font-bold text-[15px] hover:bg-blue-50 transition-colors"
+                  title="Compartilhar loja"
+              >
+                  <Share2 className="w-[18px] h-[18px] mr-2" /> Compartilhar
+              </button>
+              <Link
+                to="/anunciante/conta"
+                className="flex items-center justify-center h-[42px] px-[21px] rounded-lg bg-blue-600 text-white font-bold text-[15px] hover:bg-blue-700 transition-colors"
+              >
+                <Settings className="w-[18px] h-[18px] mr-2" /> Editar Perfil
+              </Link>
+            </div>
         </div>
       </div>
 
@@ -119,5 +107,6 @@ export default function StoreMinhaLojaPage() {
         <ProductShowcase storeId={store?.id || null} />
       </div>
     </div>
+    </MarketLayout>
   );
 }

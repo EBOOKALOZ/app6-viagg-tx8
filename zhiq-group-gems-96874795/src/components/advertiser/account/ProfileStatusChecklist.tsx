@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, ChevronRight, AlertCircle, TrendingUp, ShieldCheck, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ interface ProfileStatusChecklistProps {
 
 export function ProfileStatusChecklist({ data }: ProfileStatusChecklistProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const isOnAccountPage = location.pathname === "/anunciante/conta";
 
   const steps: Step[] = [
@@ -46,7 +47,7 @@ export function ProfileStatusChecklist({ data }: ProfileStatusChecklistProps) {
     }
     // Fallback: navigate via link
     if (step.href) {
-      window.location.href = step.href;
+      navigate(step.href);
     }
   };
 
@@ -115,15 +116,15 @@ export function ProfileStatusChecklist({ data }: ProfileStatusChecklistProps) {
                    <div className="flex items-start gap-3">
                       <AlertCircle className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div className="space-y-1.5">
-                         <p className="text-[13px] font-black text-emerald-950 uppercase tracking-tight">Recurso Bloqueado</p>
+                         <p className="text-[13px] font-black text-emerald-950 uppercase tracking-tight">Anunciar é gratuito</p>
                          <p className="text-[13px] text-emerald-800 leading-relaxed font-bold">
-                            Sugerimos adquirir pacotes de créditos para que seu produto possa evoluir para vendas imediatas.
+                            Publicar seus anúncios não custa nada. Créditos servem apenas para liberar o contato dos compradores interessados.
                          </p>
                          <Link
                            to="/anunciante/creditos"
                            className="inline-flex items-center gap-1 text-[13px] font-black text-emerald-600 hover:text-emerald-700 transition-colors group/link pt-1"
                          >
-                           Ver benefícios agora <Zap className="w-4 h-4 ml-1 group-hover/link:animate-pulse" />
+                           Ver carteira e créditos <Zap className="w-4 h-4 ml-1 group-hover/link:animate-pulse" />
                          </Link>
                       </div>
                    </div>

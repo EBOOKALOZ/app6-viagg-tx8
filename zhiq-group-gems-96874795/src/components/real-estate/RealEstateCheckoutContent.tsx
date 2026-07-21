@@ -598,7 +598,7 @@ export function RealEstateCheckoutContent({ listingId: propListingId, onBack, on
 
                                 <p className="text-center text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-loose">
                                     {isListingCheckout
-                                        ? "A liberação do seu anúncio ocorrerá \nimediatamente após a confirmação."
+                                        ? "Anunciar é gratuito. Este é o plano de \nvisibilidade, ativado após a confirmação."
                                         : "Seus créditos estarão disponíveis \nimediatamente após o pagamento."}
                                 </p>
                             </div>

@@ -50,7 +50,6 @@ import {
   MinhasOfertas,
   Rates,
   LegalPage,
-  ProductPublicPage,
   ProductCheckoutPage,
   CheckoutCartaoPage,
   MyDigitalLibrary,
@@ -102,7 +101,7 @@ export const publicRoutes = (
 
     {/* ── Páginas públicas ── */}
     <Route path="/busca" element={<GlobalSearchPage />} />
-    <Route path="/produto/:id" element={<ProductLandingPage />} />
+    <Route path="/produto/:id" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />
     <Route path="/p/:slug" element={<ProductRedirectPage />} />
     <Route path="/mercado" element={<MercadoLocalViagg />} />
     <Route path="/mercado/quero-vender" element={<Navigate to="/auth" replace />} />
@@ -155,7 +154,9 @@ export const publicRoutes = (
     <Route path="/rates" element={<Rates />} />
 
     {/* ── Páginas de produto/biblioteca (public) ── */}
-    <Route path="/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductPublicPage /></Suspense>} />
+    {/* NOTA: /produto/:id (ProductLandingPage) é declarado acima e vence a rota;
+        a antiga /produto/:productId (ProductPublicPage) colidia e nunca era alcançada
+        → removida (o link real dos anúncios aponta p/ ProductLandingPage). */}
     <Route path="/checkout/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductCheckoutPage /></Suspense>} />
     <Route path="/pagamento/cartao" element={<Suspense fallback={<PageFallback />}><CheckoutCartaoPage /></Suspense>} />
     <Route path="/checkout/retorno" element={<CheckoutReturnPage />} />

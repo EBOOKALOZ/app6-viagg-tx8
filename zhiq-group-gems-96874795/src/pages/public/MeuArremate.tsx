@@ -13,7 +13,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { toast } from "sonner";
 import {
   Gavel, Loader2, CheckCircle2, Truck, PackageCheck, HandCoins, MessageCircle,
-  ShieldAlert, Phone, Paperclip, Send, User, ArrowLeft, Ban,
+  ShieldAlert, Phone, Paperclip, Send, User, ArrowLeft, Ban, Store, MapPin, Bike,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +42,7 @@ export default function MeuArremate() {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [entregaForm, setEntregaForm] = useState<{ pickup: string; drop: string; frete: string } | null>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -78,6 +79,36 @@ export default function MeuArremate() {
     if (c) setContato(c);
   };
 
+  // Solicita a entrega por motoboy (frete pago pelo comprador, fluxo provado das corridas).
+  // Usa a geolocalização do comprador p/ o destino; a coleta é o endereço do vendedor (texto)
+  // — combine os detalhes de coleta pelo chat. Coords são um ponto de partida (refináveis).
+  const solicitarEntrega = async () => {
+    if (!entregaForm) return;
+    setBusy("entrega");
+    const submit = async (dropLat: number, dropLng: number) => {
+      try {
+        const { data, error } = await (supabase.rpc as any)("arremate_solicitar_entrega", {
+          p_listing_id: listingId,
+          p_pickup_lat: dropLat, p_pickup_lng: dropLng, p_pickup_addr: entregaForm.pickup,
+          p_drop_lat: dropLat, p_drop_lng: dropLng, p_drop_addr: entregaForm.drop,
+          p_distance_km: null, p_frete_value: Number(entregaForm.frete) || 0,
+          p_notes: "Entrega de arremate — coleta combinada pelo chat",
+        });
+        if (error) throw error;
+        toast.success("Entrega solicitada! Um motoboy será acionado.");
+        setEntregaForm(null);
+        await load();
+      } catch (e: any) {
+        toast.error(e?.message || "Erro ao solicitar entrega");
+      } finally { setBusy(null); }
+    };
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => submit(pos.coords.latitude, pos.coords.longitude),
+      () => submit(-14.235, -51.925), // fallback centro do Brasil (refine no despacho)
+      { enableHighAccuracy: true, timeout: 6000 }
+    );
+  };
+
   const enviarMsg = async () => {
     if (!body.trim() && !file) return;
     setBusy("send");
@@ -108,6 +139,8 @@ export default function MeuArremate() {
   const isBuyer = role === "buyer", isSeller = role === "seller" || role === "admin";
   const terminal = st === "concluido" || st === "cancelado";
   const disputa = st === "em_disputa";
+  const fulfillment: "retirada" | "delivery" | null = settlement.fulfillment || null;
+  const deliveryOrderId: string | null = settlement.delivery_order_id || null;
 
   const Btn = ({ onClick, icon: Icon, children, tone = "orange", disabled }: any) => (
     <button onClick={onClick} disabled={!!busy || disabled}
@@ -174,14 +207,57 @@ export default function MeuArremate() {
               {st !== "aguardando_contato" && <Btn onClick={verContato} icon={Phone} tone="ghost">Ver contato da outra parte</Btn>}
 
               {isBuyer && st === "contato_liberado" && <Btn onClick={() => call("arremate_buyer_informar_pagamento", {}, "Pagamento informado")} icon={HandCoins} tone="green">Informar pagamento</Btn>}
-              {isBuyer && st === "entregue" && <Btn onClick={() => call("arremate_buyer_receber", {}, "Recebimento confirmado")} icon={PackageCheck} tone="green">Recebi o produto</Btn>}
 
               {isSeller && st === "pagamento_informado_comprador" && <Btn onClick={() => call("arremate_seller_confirmar_pagamento", {}, "Pagamento confirmado")} icon={CheckCircle2} tone="green">Confirmar pagamento</Btn>}
-              {isSeller && st === "pagamento_confirmado_vendedor" && <Btn onClick={() => call("arremate_seller_enviar", {}, "Envio confirmado")} icon={Truck} tone="sky">Produto enviado</Btn>}
+
+              {/* ── FASE D · Logística: escolha do modo de entrega + acionamento ── */}
+              {st === "pagamento_confirmado_vendedor" && !fulfillment && (<>
+                <Btn onClick={() => call("arremate_definir_fulfillment", { p_modo: "retirada" }, "Modo: retirada")} icon={Store} tone="ghost">Retirada no local</Btn>
+                <Btn onClick={() => call("arremate_definir_fulfillment", { p_modo: "delivery" }, "Modo: entrega")} icon={Bike} tone="ghost">Entrega por motoboy</Btn>
+              </>)}
+              {isSeller && st === "pagamento_confirmado_vendedor" && fulfillment === "retirada" && <Btn onClick={() => call("arremate_seller_enviar", {}, "Disponível para retirada")} icon={PackageCheck} tone="sky">Disponível para retirada</Btn>}
+              {isBuyer && st === "pagamento_confirmado_vendedor" && fulfillment === "delivery" && !deliveryOrderId && <Btn onClick={() => setEntregaForm({ pickup: "", drop: "", frete: "" })} icon={Bike} tone="sky">Solicitar entrega por motoboy</Btn>}
+
+              {isBuyer && st === "entregue" && <Btn onClick={() => call("arremate_buyer_receber", {}, "Recebimento confirmado")} icon={PackageCheck} tone="green">Recebi o produto</Btn>}
               {isSeller && st === "recebido" && <Btn onClick={() => call("arremate_concluir", {}, "Arremate concluído")} icon={CheckCircle2} tone="green">Confirmar conclusão</Btn>}
 
               <Btn onClick={() => { const m = prompt("Descreva o motivo da disputa:"); if (m) call("arremate_abrir_disputa", { p_motivo: m }, "Disputa aberta"); }} icon={ShieldAlert} tone="red">Abrir disputa</Btn>
             </div>
+          </div>
+        )}
+
+        {/* FASE D · Formulário de solicitação de entrega (frete pago pelo comprador) */}
+        {entregaForm && (
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 space-y-2.5">
+            <p className="flex items-center gap-1.5 text-sm font-black text-sky-900"><Bike className="h-4 w-4" /> Entrega por motoboy</p>
+            <p className="text-[12px] font-medium text-sky-800">O frete é uma corrida que <b>você paga</b> (separado do produto). Combine os detalhes de coleta com o vendedor pelo chat.</p>
+            <input value={entregaForm.pickup} onChange={(e) => setEntregaForm({ ...entregaForm, pickup: e.target.value })} placeholder="Endereço de coleta (vendedor)" className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm outline-none focus:border-sky-400" />
+            <input value={entregaForm.drop} onChange={(e) => setEntregaForm({ ...entregaForm, drop: e.target.value })} placeholder="Endereço de entrega (você)" className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm outline-none focus:border-sky-400" />
+            <input value={entregaForm.frete} onChange={(e) => setEntregaForm({ ...entregaForm, frete: e.target.value })} inputMode="decimal" placeholder="Valor do frete (R$)" className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm outline-none focus:border-sky-400" />
+            <div className="flex gap-2">
+              <button onClick={solicitarEntrega} disabled={busy === "entrega" || !entregaForm.pickup || !entregaForm.drop}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-bold text-white hover:brightness-110 disabled:opacity-50">
+                {busy === "entrega" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bike className="h-4 w-4" />} Acionar motoboy
+              </button>
+              <button onClick={() => setEntregaForm(null)} className="rounded-xl border-2 border-slate-200 px-4 text-sm font-bold text-slate-600">Cancelar</button>
+            </div>
+          </div>
+        )}
+
+        {/* FASE D · Rastreio da entrega em andamento */}
+        {fulfillment === "delivery" && deliveryOrderId && (st === "preparando_entrega" || st === "entregue") && (
+          <div className="flex items-center gap-2.5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm">
+            <Truck className="h-5 w-5 shrink-0 text-sky-600" />
+            <div>
+              <p className="font-black text-sky-900">{st === "entregue" ? "Entrega concluída pelo motoboy" : "Motoboy a caminho"}</p>
+              <p className="text-[12px] font-medium text-sky-700">{st === "entregue" ? "Confirme que recebeu o produto." : "Acompanhe a corrida da entrega. Coleta combinada pelo chat."}</p>
+            </div>
+          </div>
+        )}
+        {fulfillment === "retirada" && (st === "entregue" || st === "pagamento_confirmado_vendedor") && (
+          <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+            <Store className="h-5 w-5 shrink-0 text-slate-500" />
+            <p className="font-semibold text-slate-700">{st === "entregue" ? "Produto disponível para retirada — combine o local pelo chat." : "Modo retirada: combine o local e horário pelo chat."}</p>
           </div>
         )}
 

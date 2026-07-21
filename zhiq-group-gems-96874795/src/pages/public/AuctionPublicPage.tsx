@@ -266,7 +266,7 @@ export default function AuctionPublicPage() {
 
   if (loading) {
     return (
-      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />}
+      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
         mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Leilões" myAccountPath="/minha-conta">
         <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
@@ -277,7 +277,7 @@ export default function AuctionPublicPage() {
 
   if (!listing) {
     return (
-      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />}
+      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
         mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Leilões" myAccountPath="/minha-conta">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
           <AlertTriangle className="h-12 w-12 text-gray-400" />
@@ -296,6 +296,7 @@ export default function AuctionPublicPage() {
       search={q}
       setSearch={setQ}
       headerChildren={<MarketNavButtons />}
+      lockHeaderExpanded
       mainClassName="flex flex-col bg-[#F5E62B]"
       blueFooter
       blueFooterLabel="🏷️ Leilões"

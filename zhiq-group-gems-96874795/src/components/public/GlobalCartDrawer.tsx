@@ -441,7 +441,7 @@ function DrawerIntelligentHeader({ onClose }: { onClose: () => void }) {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
   return (
-    <div className="bg-gradient-to-b from-[#FAF24A] via-[#F5E62B] to-[#ECD70B] border-b border-black/10 shadow-sm shrink-0 relative">
+    <div className="bg-[#F5E62B] border-b border-black/10 shadow-sm shrink-0 relative">
       {/* Hero Card de Clima + IA RIDV (RETRÁTIL) */}
       <div className={cn(
         "transition-all duration-300 ease-in-out overflow-hidden px-3 pt-2",

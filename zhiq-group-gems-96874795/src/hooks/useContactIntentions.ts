@@ -28,7 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { playLeadNotificationSound } from "@/lib/notificationSound";
-import { unlockContact } from "@/lib/credits/unlockContact";
+import { revealContact, revealedPII } from "@/lib/credits/unlockContact";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -101,15 +101,20 @@ export function useContactIntentions() {
     refetchOnMount: "always",
     staleTime: 0,
     queryFn: async () => {
+      // P0/LGPD: colunas EXPLÍCITAS não-PII — visitor_phone/name/message só saem
+      // pela RPC wallet_reveal_contact (lockdown de coluna no banco; select("*") falha)
       const { data, error } = await (supabase.from("advertiser_contact_intentions") as any)
-        .select("*")
+        .select("id, created_at, listing_module, listing_id, advertiser_user_id, interest_type, masked_preview, city, region, status, credits_cost, unlock_paid_at, notified_at, opened_at")
         .eq("advertiser_user_id", user!.id)
         .neq("status", "cancelled")
         .order("created_at", { ascending: false })
         .limit(100);
 
       if (error) throw error;
-      const rows = (data || []) as ContactIntention[];
+      // mescla a PII já revelada NESTA sessão (o banco não devolve mais o telefone)
+      const rows = ((data || []) as ContactIntention[]).map(r =>
+        revealedPII.has(r.id) ? { ...r, ...revealedPII.get(r.id) } : r
+      );
       if (rows.length === 0) return rows;
 
       // ── Enriquecer com título/imagem do anúncio ───────────────────────────
@@ -398,8 +403,9 @@ export function useContactIntentions() {
       const intent = intentions.find((i) => i.id === intentionId);
       if (!intent) return { success: false, error: "intention_not_found" };
 
-      const buyerKey = String(intent.visitor_phone ?? "").replace(/\D/g, "") || intentionId;
-      const r = await unlockContact(intent.listing_module, intent.listing_id, buyerKey);
+      // P0/LGPD: porta única — o buyer_key nasce no SERVIDOR; a RPC cobra
+      // (reusando wallet_unlock_contact) e só então devolve o telefone.
+      const r = await revealContact(intentionId);
 
       if (!r.success) {
         return {
@@ -411,13 +417,7 @@ export function useContactIntentions() {
         };
       }
 
-      // Marca a intenção como desbloqueada (best-effort) para refletir na UI
-      try {
-        await (supabase.from("advertiser_contact_intentions") as any)
-          .update({ status: "unlocked", unlock_paid_at: new Date().toISOString() })
-          .eq("id", intentionId);
-      } catch { /* RLS/estado — não bloqueia o desbloqueio já pago */ }
-
+      // status='unlocked' já foi gravado pela própria RPC (server-side)
       queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
       queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });

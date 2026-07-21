@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Gavel, Timer, Flame, MapPin, Eye, ChevronRight, Users } from "lucide-react";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { cn } from "@/lib/utils";
 
 function formatBRL(value: number | undefined | null) {
@@ -224,22 +225,22 @@ export function MercadoAuctionsSection({ search = "" }: { search?: string }) {
             ))}
           </div>
         ) : (
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x">
-            {displayRows.map(a => (
-              <div key={a.id} className="snap-start">
-                <AuctionCard a={a} hot={hotIds.has(a.id)} onClick={() => navigate(`/leilao/${a.id}`)} />
-              </div>
-            ))}
-            {/* Card "ver todos" no fim */}
-            <button
-              onClick={() => navigate("/leiloes")}
-              className="shrink-0 w-[160px] rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/60 hover:bg-orange-100 transition-all flex flex-col items-center justify-center gap-2 text-orange-600 font-black text-xs uppercase"
-            >
-              <Users className="h-6 w-6" />
-              Ver todos os leilões
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+          <HorizontalCarousel cardWidth="w-[280px] sm:w-[300px]" gap="gap-3">
+            {[
+              ...displayRows.map(a => (
+                <AuctionCard key={a.id} a={a} hot={hotIds.has(a.id)} onClick={() => navigate(`/leilao/${a.id}`)} />
+              )),
+              <button
+                key="ver-todos"
+                onClick={() => navigate("/leiloes")}
+                className="w-full h-full min-h-[260px] rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/60 hover:bg-orange-100 transition-all flex flex-col items-center justify-center gap-2 text-orange-600 font-black text-xs uppercase"
+              >
+                <Users className="h-6 w-6" />
+                Ver todos os leilões
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            ]}
+          </HorizontalCarousel>
         )}
       </div>
     </section>

@@ -36,5 +36,23 @@ BEGIN
     RAISE EXCEPTION 'FASE-C INV6: trigger de imutabilidade winner/valor ausente';
   END IF;
 
-  RAISE NOTICE 'FASE C — invariantes OK (chat RLS, anon=0, estados P2P, imutabilidade)';
+  -- ── FASE D (Logística) ──
+  -- 7) coluna de vínculo de entrega existe (fulfillment retirada|delivery + delivery_order_id)
+  SELECT count(*) INTO v_n FROM information_schema.columns
+   WHERE table_schema='public' AND table_name='orion_auction_settlements'
+     AND column_name IN ('fulfillment','delivery_order_id');
+  IF v_n < 2 THEN RAISE EXCEPTION 'FASE-D INV7: colunas de entrega ausentes (% de 2)', v_n; END IF;
+
+  -- 8) RPCs de logística existem e NÃO são executáveis por anon
+  SELECT count(*) INTO v_n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='public' AND p.proname IN ('arremate_definir_fulfillment','arremate_solicitar_entrega')
+     AND has_function_privilege('anon', p.oid, 'EXECUTE');
+  IF v_n > 0 THEN RAISE EXCEPTION 'FASE-D INV8: % RPC(s) de logística executáveis por anon', v_n; END IF;
+
+  -- 9) trigger que avança o arremate quando a corrida vinculada é entregue
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='tg_arremate_on_delivery_delivered' AND NOT tgisinternal) THEN
+    RAISE EXCEPTION 'FASE-D INV9: trigger de conclusão de entrega ausente';
+  END IF;
+
+  RAISE NOTICE 'FASE C+D — invariantes OK (chat RLS, anon=0, estados P2P, imutabilidade, logística vinculada)';
 END $$;

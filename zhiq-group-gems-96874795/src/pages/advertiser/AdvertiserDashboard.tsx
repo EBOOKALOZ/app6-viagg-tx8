@@ -639,7 +639,7 @@ export default function AdvertiserDashboard() {
                      {listing.image ? (
                        <img 
                          src={listing.storageBucket ? supabase.storage.from(listing.storageBucket).getPublicUrl(listing.image).data.publicUrl : listing.image} 
-                         className="w-full h-full object-cover mix-blend-multiply group-hover:scale-110 transition-transform duration-700" 
+                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                          alt={listing.title} 
                        />
                      ) : (

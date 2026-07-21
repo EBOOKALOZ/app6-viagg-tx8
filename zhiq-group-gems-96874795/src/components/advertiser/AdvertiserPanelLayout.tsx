@@ -174,6 +174,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/veiculos/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/veiculos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/veiculos/mensagens", icon: MessageSquare },
+    { name: "Créditos", href: "/anunciante/veiculos/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/veiculos/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
@@ -182,6 +183,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/servicos/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/servicos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/servicos/mensagens", icon: MessageSquare },
+    { name: "Créditos", href: "/anunciante/servicos/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/servicos/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
@@ -190,6 +192,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/fretes/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/fretes/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/fretes/mensagens", icon: MessageSquare },
+    { name: "Créditos", href: "/anunciante/fretes/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/fretes/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
@@ -198,6 +201,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/viagens/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/viagens/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/viagens/mensagens", icon: MessageSquare },
+    { name: "Créditos", href: "/anunciante/viagens/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/viagens/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
@@ -206,6 +210,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/imoveis/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/imoveis/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/imoveis/mensagens", icon: MessageSquare },
+    { name: "Créditos", href: "/anunciante/imoveis/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/imoveis/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
@@ -225,6 +230,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       { name: "Visitas", href: "/anunciante/visitas", icon: Eye },
       { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     ] : []),
+    { name: "Créditos", href: "/anunciante/creditos", icon: Coins },
     { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Minha Conta", href: "/anunciante/conta", icon: User },
     { name: "Suporte", href: "/anunciante/suporte", icon: Headphones },
@@ -282,15 +288,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       <Link
         to={item.href}
         className="block w-full"
-        onClick={(e) => {
+        onClick={() => {
           if (isMobile) setMobileMenuOpen(false);
-          // Força reload apenas dentro do painel /anunciante/ para evitar
-          // stale location do React Router v7 startTransition.
-          // Links externos (ex: /loja/...) usam navegação normal do React Router.
-          if (item.href.startsWith("/anunciante/")) {
-            e.preventDefault();
-            window.location.href = item.href;
-          }
         }}
       >
         {content}

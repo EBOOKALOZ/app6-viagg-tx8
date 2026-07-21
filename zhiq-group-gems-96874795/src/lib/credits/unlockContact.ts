@@ -44,6 +44,50 @@ export async function unlockContact(
   return (data ?? { success: false, error: "empty_response" }) as UnlockContactResult;
 }
 
+export interface RevealContactResult extends UnlockContactResult {
+  visitor_name?: string | null;
+  visitor_phone?: string | null;
+  visitor_message?: string | null;
+  whatsapp_url?: string | null;
+}
+
+/**
+ * 🔐 revealContact — PORTA ÚNICA da PII (P0/LGPD 07-21).
+ * O banco não entrega mais visitor_phone/name/message em SELECT (lockdown de
+ * coluna); o telefone SÓ sai por esta RPC, após a autorização financeira
+ * (que REUSA wallet_unlock_contact — idempotente/permanente, nunca recobra).
+ * Para intenções de contato (advertiser_contact_intentions), use SEMPRE esta.
+ */
+export async function revealContact(
+  intentionId: string,
+  valueHintCents?: number | null,
+): Promise<RevealContactResult> {
+  const { data, error } = await (supabase.rpc as any)("wallet_reveal_contact", {
+    p_intention_id: intentionId,
+    p_value_hint_cents: valueHintCents ?? null,
+  });
+  if (error) return { success: false, error: error.message };
+  const r = (data ?? { success: false, error: "empty_response" }) as RevealContactResult;
+  if (r.success) {
+    revealedPII.set(intentionId, {
+      visitor_phone: r.visitor_phone ?? null,
+      visitor_name: r.visitor_name ?? null,
+      visitor_message: r.visitor_message ?? null,
+    });
+  }
+  return r;
+}
+
+/**
+ * PII revelada NESTA sessão (por intenção). O banco não devolve mais o telefone
+ * em SELECT — os hooks mesclam este cache nas linhas para a UI exibir após o
+ * reveal. Recarregou a página? O "ver contato" chama o reveal de novo (grátis,
+ * idempotente) — nunca há telefone dormindo no payload.
+ */
+export const revealedPII = new Map<string, {
+  visitor_phone?: string | null; visitor_name?: string | null; visitor_message?: string | null;
+}>();
+
 /** cents → "R$ 1.234,56" */
 export function centsToBRL(cents?: number | null): string {
   return ((cents ?? 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });

@@ -1,5 +1,5 @@
 import React from "react";
-import { Megaphone, Zap, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { Zap, Lock, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -15,8 +15,8 @@ export function AdvertiserCommercialRuleCard() {
       <div className="relative z-10 p-8 md:p-10 flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
         {/* Icon & Badge Area */}
         <div className="flex-shrink-0 flex flex-col items-center lg:items-start space-y-4">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-xl shadow-orange-600/20">
-             <Megaphone className="w-10 h-10" />
+          <div className="w-20 h-20 rounded-3xl bg-white/10 p-0.5 border border-white/20 overflow-hidden shadow-xl shadow-orange-600/20 flex items-center justify-center">
+             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-[20px]" />
           </div>
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6A00]/10 border border-[#FF6A00]/20">
              <Sparkles className="w-3.5 h-3.5 text-[#FF6A00]" />

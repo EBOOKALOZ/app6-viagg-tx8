@@ -53,7 +53,10 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      {/* v7_startTransition REMOVIDA de propósito: com ela, navegar para rota lazy
+          mantinha a tela antiga congelada (URL muda, tela não) e forçou reloads
+          duros no painel anunciante. Sem a flag, navegação volta a ser SPA normal. */}
+      <BrowserRouter future={{ v7_relativeSplatPath: true }}>
         <AuthProvider>
           <SoundSettingsProvider>
             <GlobalCallProvider>

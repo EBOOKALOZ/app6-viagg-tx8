@@ -12,13 +12,23 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://broifhfqmnzqoongtokm.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyb2lmaGZxbW56cW9vbmd0b2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4Mjc2NzAsImV4cCI6MjA4MzQwMzY3MH0.Zk_AsCPkqaRozf0Nbsxd_S8HBef52VBu7rU4fOD0Hv8";
+const getEnv = (key: string): string | undefined => {
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    return (import.meta.env as any)[key];
+  }
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key];
+  }
+  return undefined;
+};
 
-if (import.meta.env.DEV) {
+const SUPABASE_URL = getEnv("VITE_SUPABASE_URL") || "https://broifhfqmnzqoongtokm.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("VITE_SUPABASE_ANON_KEY") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyb2lmaGZxbW56cW9vbmd0b2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4Mjc2NzAsImV4cCI6MjA4MzQwMzY3MH0.Zk_AsCPkqaRozf0Nbsxd_S8HBef52VBu7rU4fOD0Hv8";
+
+if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) {
   console.log('[Supabase] Initializing client:', {
     url: SUPABASE_URL.substring(0, 40) + '...',
-    usingEnvUrl: Boolean(import.meta.env.VITE_SUPABASE_URL),
+    usingEnvUrl: Boolean(getEnv("VITE_SUPABASE_URL")),
     usingEnvKey: Boolean(SUPABASE_PUBLISHABLE_KEY)
   });
 }

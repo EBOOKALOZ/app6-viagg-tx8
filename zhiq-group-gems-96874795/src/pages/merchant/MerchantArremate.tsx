@@ -1180,12 +1180,11 @@ export default function MerchantArremate() {
                   const startDate = configForm.start_date ? new Date(configForm.start_date) : new Date();
                   const endDate = configForm.end_date ? new Date(configForm.end_date) : new Date(Date.now() + 24 * 60 * 60 * 1000);
                   const durationHours = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 3600000));
-                  const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
-                  if ((balance?.available_credits ?? 0) < publishCost) {
-                    const { toast } = require("sonner");
-                    toast.error(`Créditos insuficientes! Necessário: ${publishCost}. Saldo: ${balance?.available_credits ?? 0}.`, { description: "Recarregue seus créditos para publicar arremates." });
-                    return;
-                  }
+                  // Publicar é GRÁTIS (modelo oficial): gate de crédito para publicar
+                  // arremate desativado — espelha MerchantAuctions. Créditos só no
+                  // desbloqueio de contato do comprador, não para anunciar.
+                  // const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
+                  // if ((balance?.available_credits ?? 0) < publishCost) { ... }
                   createListing.mutate({
                     title: configProduct.name,
                     description: configProduct.description || undefined,

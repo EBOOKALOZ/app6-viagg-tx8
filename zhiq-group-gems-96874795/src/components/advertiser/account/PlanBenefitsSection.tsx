@@ -28,7 +28,7 @@ export function PlanBenefitsSection({ data }: PlanBenefitsSectionProps) {
                    <CardTitle className="text-sm font-black uppercase tracking-tight">PLANO E BENEFÍCIOS</CardTitle>
                 </div>
                 <CardDescription className={cn("text-[10px] font-black uppercase tracking-widest", isPremium ? "text-zinc-500" : "text-zinc-400")}>
-                   {isPremium ? "Assinatura Profissional Ativa" : "Vendas limitadas no modo Grátis"}
+                   {isPremium ? "Assinatura Profissional Ativa" : "Anunciar é grátis · recursos extras no Premium"}
                 </CardDescription>
              </div>
              

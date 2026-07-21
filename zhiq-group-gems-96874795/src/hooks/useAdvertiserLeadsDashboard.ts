@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { unlockContact } from "@/lib/credits/unlockContact";
+import { revealContact } from "@/lib/credits/unlockContact";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -196,14 +196,9 @@ export function useAdvertiserLeadsDashboard() {
       required?: number;
       available?: number;
     }> => {
-      const { data: intent } = await (supabase.from("advertiser_contact_intentions") as any)
-        .select("listing_module, listing_id, visitor_phone")
-        .eq("id", intentionId)
-        .maybeSingle();
-      if (!intent) return { success: false, error: "intention_not_found" };
-
-      const buyerKey = String((intent as any).visitor_phone ?? "").replace(/\D/g, "") || intentionId;
-      const r = await unlockContact((intent as any).listing_module, (intent as any).listing_id, buyerKey);
+      // P0/LGPD: porta única — buyer_key derivado no servidor; telefone só volta
+      // da RPC wallet_reveal_contact após a autorização financeira.
+      const r = await revealContact(intentionId);
 
       if (!r.success) {
         queryClient.invalidateQueries({ queryKey: ["advertiser-leads-dashboard", user?.id] });

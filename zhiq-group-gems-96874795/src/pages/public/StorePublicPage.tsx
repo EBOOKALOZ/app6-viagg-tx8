@@ -25,8 +25,8 @@ import { StorePremiumCard, StoreProduct } from "@/components/public/store/StoreP
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import DiscountRequestModal from "@/components/public/DiscountRequestModal";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
-import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
+import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 
 type TabValue = "home" | "all" | "promo";
 
@@ -701,7 +701,7 @@ export default function StorePublicPage() {
                                             Ver Tudo
                                         </Button>
                                     </div>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6">
+                                    <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
                                         {homeFeatured.map(product => (
                                             <StorePremiumCard 
                                                 key={product.id}
@@ -723,7 +723,7 @@ export default function StorePublicPage() {
                                                 }}
                                             />
                                         ))}
-                                    </div>
+                                    </HorizontalCarousel>
                                 </div>
                             )}
 
@@ -735,7 +735,7 @@ export default function StorePublicPage() {
                                             Recém-Chegados
                                         </h3>
                                     </div>
-                                    <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6">
+                                    <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
                                         {homeLatest.map(product => (
                                             <StorePremiumCard
                                                 key={product.id}
@@ -766,7 +766,7 @@ export default function StorePublicPage() {
                                                 }}
                                             />
                                         ))}
-                                    </div>
+                                    </HorizontalCarousel>
                                 </div>
                             )}
                         </div>
@@ -806,7 +806,7 @@ export default function StorePublicPage() {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6">
+                                <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
                                     {filteredProducts.map(product => (
                                         <StorePremiumCard 
                                             key={product.id}
@@ -828,7 +828,7 @@ export default function StorePublicPage() {
                                             }}
                                         />
                                     ))}
-                                </div>
+                                </HorizontalCarousel>
                             )}
                         </div>
                     )}

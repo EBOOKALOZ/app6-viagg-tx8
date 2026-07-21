@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Star, ShieldCheck, Zap, ArrowRight, Loader2, CheckCircle2, Building2, PackageCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ interface AdvertiserPlanUpgradeCardProps {
 export function AdvertiserPlanUpgradeCard({ account }: AdvertiserPlanUpgradeCardProps) {
   const { data: packages, isLoading } = useRealEstatePackages();
   const [showPricing, setShowPricing] = useState(false);
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -49,7 +51,7 @@ export function AdvertiserPlanUpgradeCard({ account }: AdvertiserPlanUpgradeCard
         <Button 
           variant="outline"
           className="rounded-xl font-bold text-[10px] uppercase tracking-widest border-zinc-100 hover:bg-zinc-50"
-          onClick={() => window.location.href = '/anunciante/anuncios'}
+          onClick={() => navigate('/anunciante/anuncios')}
         >
           Meus Anúncios
         </Button>
@@ -240,7 +242,7 @@ export function AdvertiserPlanUpgradeCard({ account }: AdvertiserPlanUpgradeCard
                         )}
                         onClick={() => {
                           if (!isCurrent) {
-                            window.location.href = `/anunciante/checkout/${p.id}`;
+                            navigate(`/anunciante/checkout/${p.id}`);
                           }
                         }}
                       >
