@@ -205,7 +205,7 @@ AS $$
 DECLARE v_party text; v_seller uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','admin') THEN RAISE EXCEPTION 'ARREMATE: só o comprador informa pagamento'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','admin') THEN RAISE EXCEPTION 'ARREMATE: só o comprador informa pagamento'; END IF;
   SELECT seller_user_id INTO v_seller FROM orion_auction_settlements WHERE listing_id=p_listing_id;
   PERFORM public.arremate_transition(p_listing_id, 'pagamento_informado_comprador', 'comprador informou pagamento', v_party);
   INSERT INTO orion_eventos (tipo, origem, dados)
@@ -221,7 +221,7 @@ AS $$
 DECLARE v_party text; v_buyer uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('seller','admin') THEN RAISE EXCEPTION 'ARREMATE: só o vendedor confirma o pagamento'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('seller','admin') THEN RAISE EXCEPTION 'ARREMATE: só o vendedor confirma o pagamento'; END IF;
   SELECT winner_user_id INTO v_buyer FROM orion_auction_settlements WHERE listing_id=p_listing_id;
   PERFORM public.arremate_transition(p_listing_id, 'pagamento_confirmado_vendedor', 'vendedor confirmou recebimento do pagamento', v_party);
   UPDATE orion_auction_settlements SET pagamento_ok = true WHERE listing_id = p_listing_id;
@@ -238,7 +238,7 @@ AS $$
 DECLARE v_party text; v_buyer uuid; v_deal uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('seller','admin') THEN RAISE EXCEPTION 'ARREMATE: só o vendedor confirma envio'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('seller','admin') THEN RAISE EXCEPTION 'ARREMATE: só o vendedor confirma envio'; END IF;
   SELECT winner_user_id INTO v_buyer FROM orion_auction_settlements WHERE listing_id=p_listing_id;
   PERFORM public.arremate_transition(p_listing_id, 'entregue', 'vendedor confirmou envio/entrega', v_party);
   v_deal := public._arremate_ensure_deal(p_listing_id);
@@ -256,7 +256,7 @@ AS $$
 DECLARE v_party text; v_seller uuid; v_deal uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','admin') THEN RAISE EXCEPTION 'ARREMATE: só o comprador confirma recebimento'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','admin') THEN RAISE EXCEPTION 'ARREMATE: só o comprador confirma recebimento'; END IF;
   SELECT seller_user_id INTO v_seller FROM orion_auction_settlements WHERE listing_id=p_listing_id;
   PERFORM public.arremate_transition(p_listing_id, 'recebido', 'comprador confirmou recebimento do produto', v_party);
   v_deal := public._arremate_ensure_deal(p_listing_id);
@@ -295,7 +295,7 @@ AS $$
 DECLARE v_party text; v_deal uuid; v_seller uuid; v_buyer uuid; v_other uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado'; END IF;
   SELECT seller_user_id, winner_user_id INTO v_seller, v_buyer FROM orion_auction_settlements WHERE listing_id=p_listing_id;
   v_deal := public._arremate_ensure_deal(p_listing_id);
   PERFORM public.arremate_transition(p_listing_id, 'em_disputa', coalesce(p_motivo,'disputa'), v_party);
@@ -312,7 +312,7 @@ AS $$
 DECLARE v_party text; v_seller uuid; v_buyer uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado'; END IF;
   SELECT seller_user_id, winner_user_id INTO v_seller, v_buyer FROM orion_auction_settlements WHERE listing_id=p_listing_id;
   PERFORM public.arremate_transition(p_listing_id, 'cancelado', coalesce(p_motivo,'cancelamento'), v_party);
   UPDATE orion_alc_deals SET status='cancelada', canceled_at=now(), updated_at=now() WHERE listing_id=p_listing_id;
@@ -354,7 +354,7 @@ AS $$
 DECLARE v_party text; v_deal uuid; v_seller uuid; v_buyer uuid; v_other uuid; v_id uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado ao chat'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado ao chat'; END IF;
   IF coalesce(trim(p_body),'') = '' AND coalesce(jsonb_array_length(p_attachments),0) = 0 THEN
     RAISE EXCEPTION 'ARREMATE: mensagem vazia';
   END IF;

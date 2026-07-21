@@ -7,7 +7,6 @@ import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { chatCompletion } from "@/lib/aiapi";
 import { toast } from "sonner";
 import {
-  Search,
   Megaphone,
   Package,
   Building2,
@@ -45,7 +44,6 @@ import { PromotionActiveDashboard } from "@/components/promotion/PromotionActive
 import { CampaignTrackingCard } from "@/components/promotion/CampaignTrackingCard";
 import { PromotionFloatingBalloon } from "@/components/promotion/PromotionFloatingBalloon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -157,7 +155,6 @@ export default function AdvertiserPromotionPage() {
 
   // Picker state
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
-  const [pickerSearch, setPickerSearch] = useState("");
   const [pickerTab, setPickerTab] = useState<CategoryTab>(routeCategory ?? "produtos");
   const pickerRef = useRef<HTMLDivElement>(null);
   const autoOpenedRef = useRef(false);
@@ -208,14 +205,13 @@ export default function AdvertiserPromotionPage() {
   /* ── Fetch ALL items once ── */
   useEffect(() => {
     if (!user?.id) return;
-    fetchAllItems(advertiserAccountId, storeInfo);
+    fetchAllItems(storeInfo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, advertiserAccountId, storeInfo?.id, routeCategory]);
 
   // Os slots ficam sempre vazios ao entrar no painel — o anunciante adiciona manualmente.
 
   async function fetchAllItems(
-    accountId: string | null = advertiserAccountId,
     store: typeof storeInfo = storeInfo,
   ) {
     setLoading(true);
@@ -225,16 +221,16 @@ export default function AdvertiserPromotionPage() {
 
       // Produtos (Advertiser Listings + Merchant Products)
       if (!onlyCategory || onlyCategory === "produtos") {
-        // 1. Fetch Advertiser Listings — by account ID if available, fallback to owner_user_id
+        // 1. Fetch Advertiser Listings — posse é via advertiser_accounts.user_id
+        //    (a tabela NÃO tem owner_user_id; filtrar por ela dava 42703 e zerava o picker)
         {
-          const advQuery = supabase
+          const { data: advData, error: advErr } = await supabase
             .from("advertiser_listings" as any)
-            .select("id, title, price, listing_status, cover_image_url, category, city, advertiser_listing_media(media_url, storage_path)")
+            .select("id, title, price, listing_status, cover_image_url, category, city, advertiser_listing_media(media_url, storage_path), advertiser_accounts!inner(user_id)")
+            .eq("advertiser_accounts.user_id", user!.id)
             .order("created_at", { ascending: false });
 
-          const { data: advData } = accountId
-            ? await advQuery.or(`advertiser_account_id.eq.${accountId},owner_user_id.eq.${user!.id}`)
-            : await advQuery.eq("owner_user_id", user!.id);
+          if (advErr) console.error("[Divulgar] advertiser_listings:", advErr);
 
           (advData ?? []).forEach((r: any) => {
             const m = r.advertiser_listing_media?.[0];
@@ -629,23 +625,13 @@ export default function AdvertiserPromotionPage() {
     }
   }
 
-  /* ── Picker items filtered by tab and search ── */
+  /* ── Picker items: todos os cadastrados da aba, OCULTANDO os já em divulgação/fila ── */
   const pickerItems = useMemo(() => {
-    let list = allItems.filter((i) => i.category === pickerTab);
-    if (pickerSearch.trim()) {
-      const q = pickerSearch.toLowerCase();
-      list = list.filter((i) => i.title.toLowerCase().includes(q));
-    }
-    // Mostra apenas os itens cadastrados por esse perfil — tanto os já selecionados quanto os ainda não selecionados
+    const list = allItems.filter((i) => i.category === pickerTab);
     const selectedIds = new Set(selectedItems.map((s) => s.id));
     const queuedIds = new Set(queuedItems.map((q) => q.id));
-    return [...list].sort((a, b) => {
-      const aSel = selectedIds.has(a.id) || queuedIds.has(a.id);
-      const bSel = selectedIds.has(b.id) || queuedIds.has(b.id);
-      if (aSel === bSel) return 0;
-      return aSel ? 1 : -1; // não selecionados em primeiro para fácil escolha
-    });
-  }, [allItems, pickerTab, pickerSearch, selectedItems, queuedItems]);
+    return list.filter((i) => !selectedIds.has(i.id) && !queuedIds.has(i.id));
+  }, [allItems, pickerTab, selectedItems, queuedItems]);
 
   /* ── Fila visível — só os anúncios do perfil em uso (a fila real é da conta toda) ── */
   const visibleQueue = useMemo(
@@ -1210,17 +1196,6 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
                         ))}
                       </div>
 
-                      {/* Search */}
-                      <div className="relative mt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A7B0BE]" />
-                        <Input
-                          placeholder="Buscar..."
-                          value={pickerSearch}
-                          onChange={(e) => setPickerSearch(e.target.value)}
-                          className="pl-9 h-9 bg-[#1B1F24] border-[#2A3038]/60 text-[#F5F7FA] rounded-lg text-xs placeholder:text-[#A7B0BE]/40"
-                          autoFocus
-                        />
-                      </div>
                     </div>
 
                     {/* Picker Items List */}

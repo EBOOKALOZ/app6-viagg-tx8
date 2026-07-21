@@ -32,7 +32,7 @@ DECLARE v_party text;
 BEGIN
   IF p_modo NOT IN ('retirada','delivery') THEN RAISE EXCEPTION 'ARREMATE: modo inválido (retirada|delivery)'; END IF;
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','seller','admin') THEN RAISE EXCEPTION 'ARREMATE: acesso negado'; END IF;
   UPDATE orion_auction_settlements SET fulfillment = p_modo, updated_at = now() WHERE listing_id = p_listing_id;
   PERFORM public._arremate_audit(p_listing_id, 'arremate.fulfillment_definido', v_party, jsonb_build_object('modo', p_modo));
   RETURN jsonb_build_object('ok', true, 'fulfillment', p_modo);
@@ -54,7 +54,7 @@ AS $$
 DECLARE v_party text; v_est text; v_order uuid; v_seller uuid; v_buyer uuid;
 BEGIN
   v_party := public._arremate_party(p_listing_id);
-  IF v_party NOT IN ('buyer','admin') THEN RAISE EXCEPTION 'ARREMATE: só o comprador solicita a entrega'; END IF;
+  IF v_party IS NULL OR v_party NOT IN ('buyer','admin') THEN RAISE EXCEPTION 'ARREMATE: só o comprador solicita a entrega'; END IF;
   SELECT arremate_status, seller_user_id, winner_user_id INTO v_est, v_seller, v_buyer
     FROM orion_auction_settlements WHERE listing_id = p_listing_id;
   IF v_est <> 'pagamento_confirmado_vendedor' THEN

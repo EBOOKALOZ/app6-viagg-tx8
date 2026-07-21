@@ -107,16 +107,16 @@ export function AdvertiserOverviewCards() {
     onClick?: () => void;
   }> = [
     {
-      title: "MEUS ANÚNCIOS",
-      description: "Gerencie suas ofertas ativas e pausadas.",
+      title: "MEUS PRODUTOS",
+      description: "Gerencie seus produtos ativos e pausados.",
       icon: Package,
       color: "bg-orange-500",
       href: "/anunciante/meus-anuncios",
       stats: `${activeListings} Ativo${activeListings !== 1 ? 's' : ''}`,
     },
     {
-      title: "CRIAR NOVO ANÚNCIO",
-      description: "Publique um novo imóvel ou produto agora.",
+      title: "CRIAR NOVO PRODUTO",
+      description: "Publique um novo produto agora.",
       icon: PlusCircle,
       color: "bg-[#FF6A00]",
       href: "/anunciante/anuncios/novo",

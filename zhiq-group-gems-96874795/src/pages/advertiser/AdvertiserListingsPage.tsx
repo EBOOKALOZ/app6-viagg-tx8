@@ -142,6 +142,25 @@ export default function AdvertiserListingsPage() {
   const { receivedOffers, loadingOffers, respondOffer } = useAdvertiserArremate();
   const { acceptArremateOfferWithCredits, balance, usageRules } = useAdvertiserCredits();
 
+  // ── Query for Store Logo ──
+  const storeInfoQuery = useQuery({
+    queryKey: ['advertiser-store-info', user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('merchant_stores' as any)
+        .select('nome_loja, logo_url')
+        .eq('user_id', user!.id)
+        .limit(1)
+        .single();
+      if (error) return null;
+      let logo = data?.logo_url;
+      if (logo && !logo.startsWith('http')) {
+        logo = supabase.storage.from('lojas').getPublicUrl(logo).data.publicUrl;
+      }
+      return { ...data, logo_url: logo };
+    }
+  });
+
   // ── Hook unificado de leads + créditos (anunciante) ──
   const {
     dashboard,
@@ -540,7 +559,11 @@ export default function AdvertiserListingsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
           <div>
             <h1 className="text-2xl font-black text-white flex items-center gap-3">
-              <Package className="w-7 h-7 text-white/80" />
+              {storeInfoQuery.data?.logo_url ? (
+                <img src={storeInfoQuery.data.logo_url} alt="Logo da loja" className="w-8 h-8 rounded-full object-cover shadow-md border border-white/20" />
+              ) : (
+                <Package className="w-7 h-7 text-white/80" />
+              )}
               MEUS PRODUTOS — MERCADO
             </h1>
             <p className="text-white/70 text-sm mt-1">Gerencie seus produtos e acompanhe o status de cada publicação.</p>

@@ -175,9 +175,16 @@ export function useAdvertiserAccountData() {
         stats
       } as AdvertiserAccountData;
     },
-    staleTime: 0,
-    refetchInterval: 15_000,           // revalida a cada 15s
-    refetchOnWindowFocus: true,        // revalida ao voltar pra aba
-    refetchOnMount: "always",
+    // Antes: staleTime:0 + refetch a cada 15s + on-focus + on-mount "always"
+    // refaziam esta cadeia PESADA (RPC ensure + profile + package + 4 selects)
+    // sem parar → com o banco lento a página travava no LoadingTransition (isLoading
+    // nunca resolvia). Agora: cache curto, sem refetch de foco, retry limitado.
+    staleTime: 30_000,                 // 30s de cache — não refaz a cada render
+    gcTime: 5 * 60_000,
+    refetchInterval: 60_000,           // revalida a cada 1 min (era 15s)
+    refetchOnWindowFocus: false,       // não refaz ao voltar pra aba
+    refetchOnMount: false,             // usa cache se ainda fresco
+    retry: 1,                          // no máx 1 retry (evita ficar preso em falha)
+    retryDelay: 1500,
   });
 }

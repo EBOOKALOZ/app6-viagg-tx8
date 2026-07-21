@@ -22,44 +22,66 @@ export function AdvertiserProtectedRoute({ children }: AdvertiserProtectedRouteP
       return;
     }
 
+    let cancelled = false;
     const checkAdvertiserAccount = async () => {
-      try {
+      // Erro de leitura (timeout de rede, RLS momentânea, hiccup) NÃO pode barrar
+      // um anunciante válido — a página de destino já é resiliente e cria a conta
+      // sozinha se faltar. Só deixa de bloquear quem realmente não está logado.
+      // 1 retry rápido antes de liberar mesmo assim.
+      const readAccount = async () => {
         const { data, error } = await supabase
           .from("advertiser_accounts")
           .select("id")
-          .eq("id", user.id)
+          .eq("user_id", user.id)
           .maybeSingle();
+        return { data, error };
+      };
 
+      try {
+        let { data, error } = await readAccount();
         if (error) {
-          console.error("[AdvertiserProtectedRoute] Error checking account:", error);
-          // If there's a real DB error (like table missing), show error UI
-          setHasAdvertiserAccount(false);
-        } else if (data) {
+          // 1 nova tentativa após um respiro — cobre lentidão/queda momentânea
+          await new Promise((r) => setTimeout(r, 1200));
+          ({ data, error } = await readAccount());
+        }
+
+        if (cancelled) return;
+
+        if (data) {
           setHasAdvertiserAccount(true);
-        } else {
-          console.log("[AdvertiserProtectedRoute] Account not found, attempting to ensure...");
-          // We try to ensure, but we DON'T block if it fails (the page will handle defaults)
+        } else if (!error) {
+          // Conta não existe (sem erro) → tenta criar; nunca bloqueia se falhar
           const { error: ensureError } = await supabase.rpc('ensure_advertiser_account', {
             p_full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
-            p_whatsapp: user.user_metadata?.phone || null
+            p_whatsapp: user.user_metadata?.phone || null,
           });
-          
           if (ensureError) {
-            console.warn("[AdvertiserProtectedRoute] ensure_advertiser_account failed:", ensureError);
-            console.log("Proceeding anyway, the page will use fallback data.");
+            console.warn("[AdvertiserProtectedRoute] ensure_advertiser_account falhou (seguindo com fallback):", ensureError);
           }
-          
+          setHasAdvertiserAccount(true);
+        } else {
+          // Ainda com erro após o retry: LIBERA mesmo assim (não trava o anunciante);
+          // a página usa dados de fallback. Só usuário deslogado é redirecionado.
+          console.warn("[AdvertiserProtectedRoute] leitura de conta falhou 2x; liberando com fallback:", error);
           setHasAdvertiserAccount(true);
         }
       } catch (err) {
-        console.error("[AdvertiserProtectedRoute] Unexpected error:", err);
+        if (cancelled) return;
+        console.error("[AdvertiserProtectedRoute] erro inesperado (liberando):", err);
         setHasAdvertiserAccount(true); // Don't block
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
+    // Teto de tempo: se a checagem pendurar (>6s), libera com fallback em vez de
+    // deixar o usuário preso em "Verificando Acesso…".
+    const failsafe = setTimeout(() => {
+      if (!cancelled) { setHasAdvertiserAccount(true); setLoading(false); }
+    }, 6000);
+
     checkAdvertiserAccount();
+    return () => { cancelled = true; clearTimeout(failsafe); };
   }, [user, initialized]);
 
   if (user && loading || !initialized) {

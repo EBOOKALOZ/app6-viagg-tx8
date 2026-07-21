@@ -105,16 +105,21 @@ export async function fetchPromotedSlotsByProfile(
   profile: ProfileType,
   limit = 50,
 ): Promise<PromotedSlot[]> {
-  // Usa get_next_slots_for_posting() — RPC pública do Módulo Fila
-  // Filtra status='active' e ordena por position internamente
-  const { data: rpcResult, error } = await supabase.rpc(
-    "get_next_slots_for_posting",
-    { p_profile: profile, p_limit: limit },
-  );
+  // A RPC get_next_slots_for_posting foi removida do banco (PGRST202 em 07-21).
+  // Leitura direta da fila real: promoted_listing_slots status='active' por perfil.
+  // Colunas reais da tabela: id, user_id, listing_id/type/title/price/image/city,
+  // networks, status, created_at — NÃO existe "position" (ordena por created_at).
+  const { data: rows, error } = await supabase
+    .from("promoted_listing_slots" as any)
+    .select("id, user_id, listing_id, listing_type, listing_title, listing_price, listing_image, listing_city")
+    .eq("status", "active")
+    .eq("listing_type", profile)
+    .order("created_at", { ascending: true })
+    .limit(limit);
 
-  if (error) throw new Error(`get_next_slots_for_posting(${profile}): ${error.message}`);
+  if (error) throw new Error(`promoted_listing_slots(${profile}): ${error.message}`);
 
-  const slots: any[] = rpcResult?.slots ?? [];
+  const slots: any[] = (rows ?? []).map((r: any, i: number) => ({ ...r, slot_id: r.id, position: i }));
   if (slots.length === 0) return [];
 
   const userIds = [...new Set(slots.map((s: any) => s.user_id as string))];

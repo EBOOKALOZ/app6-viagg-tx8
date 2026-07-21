@@ -119,6 +119,16 @@ export default function AdvertiserDashboard() {
   }, [user?.id]);
 
   const { data: accountFull, isLoading } = useAdvertiserAccountData();
+
+  // Rede de segurança: se a conta demorar > 4s, renderiza o painel mesmo assim
+  // (o resto da página já tem fallback pro e-mail; o card de conta preenche quando
+  // os dados chegarem). Impede a página de ficar PRESA no LoadingTransition.
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
+  useEffect(() => {
+    if (!isLoading) { setLoadTimedOut(false); return; }
+    const t = setTimeout(() => setLoadTimedOut(true), 4000);
+    return () => clearTimeout(t);
+  }, [isLoading]);
   // Adapta o retorno do hook completo para o formato esperado pelo AdvertiserAccountCard
   const account = accountFull ? {
     id: accountFull.id,
@@ -315,7 +325,7 @@ export default function AdvertiserDashboard() {
     return <span className="flex items-center gap-1.5 px-3 py-1 bg-[#2A3038] text-[#A7B0BE] text-[10px] font-bold uppercase rounded-md border border-[#2A3038]">{status || 'Rascunho'}</span>;
   };
 
-  if (isLoading) return <LoadingTransition />;
+  if (isLoading && !loadTimedOut) return <LoadingTransition />;
 
   // Resilient fallback for account data
   const displayName = account?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "MEMBRO";
@@ -323,7 +333,7 @@ export default function AdvertiserDashboard() {
 
   const stats = [
     {
-      label: "Anúncios Ativos",
+      label: "Produtos Ativos",
       value: String(dashStats?.totalAds ?? 0),
       icon: Package, color: "text-[#FF6A00]",
       trend: (dashStats?.totalAds ?? 0) > 0 ? "ativo" : "+0%",
@@ -613,7 +623,7 @@ export default function AdvertiserDashboard() {
       {/* ── SEÇÃO MERCADO LIVRE: PRODUTOS ── */}
       <section className="mt-12 space-y-6">
         <div className="flex items-center justify-between px-4">
-          <h2 className="text-2xl font-black text-[#F5F7FA] tracking-tight uppercase">Seus Anúncios</h2>
+          <h2 className="text-2xl font-black text-[#F5F7FA] tracking-tight uppercase">Seus Produtos</h2>
           <Link to="/anunciante/meus-anuncios" className="text-xs font-black uppercase tracking-widest text-[#FF6A00] hover:text-[#FF7A1A]">Ver Catálogo Completo →</Link>
         </div>
 

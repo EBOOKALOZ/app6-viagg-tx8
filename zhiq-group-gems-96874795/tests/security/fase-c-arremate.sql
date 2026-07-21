@@ -54,5 +54,13 @@ BEGIN
     RAISE EXCEPTION 'FASE-D INV9: trigger de conclusão de entrega ausente';
   END IF;
 
+  -- 10) SEGURANÇA (regressão do bypass do não-parte, cert OCE 07-19): nenhuma RPC de
+  --     arremate pode usar a guarda vulnerável 'IF v_party NOT IN (...)' — quando v_party
+  --     é NULL (não-parte), NULL NOT IN(...) = NULL e o IF NÃO dispara. O padrão correto
+  --     é 'IF v_party IS NULL OR v_party NOT IN (...)'.
+  SELECT count(*) INTO v_n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+   WHERE n.nspname='public' AND p.proname LIKE 'arremate_%' AND p.prosrc ~ 'IF v_party NOT IN';
+  IF v_n > 0 THEN RAISE EXCEPTION 'FASE-C/D INV10: % RPC(s) com guarda de papel VULNERÁVEL (não-parte bypassa)', v_n; END IF;
+
   RAISE NOTICE 'FASE C+D — invariantes OK (chat RLS, anon=0, estados P2P, imutabilidade, logística vinculada)';
 END $$;
