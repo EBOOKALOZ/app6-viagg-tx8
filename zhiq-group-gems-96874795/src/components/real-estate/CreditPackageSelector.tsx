@@ -24,10 +24,15 @@ interface CreditPackageSelectorProps {
   onSelect: (pkg: CreditPackage) => void;
 }
 
-export const CreditPackageSelector: React.FC<CreditPackageSelectorProps> = ({ 
-  selectedPackageId, 
-  onSelect 
+export const CreditPackageSelector: React.FC<CreditPackageSelectorProps> = ({
+  selectedPackageId,
+  onSelect
 }) => {
+  // 🗑️ REMOVIDO (FASE 2/3 — Carteira de Créditos): pacotes "Premium Auto" de
+  // comunicação de imóveis não são mais comercializados. Desbloqueio = 2% da
+  // carteira. Componente desativado (será apagado na limpeza final).
+  return null;
+  // eslint-disable-next-line no-unreachable
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [loading, setLoading] = useState(true);
 

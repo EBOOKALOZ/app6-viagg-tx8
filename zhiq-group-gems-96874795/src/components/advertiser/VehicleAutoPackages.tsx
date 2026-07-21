@@ -66,6 +66,11 @@ export const VehicleAutoPackages: React.FC<VehicleAutoPackagesProps> = ({
   onSelect,
   selectedId,
 }) => {
+  // 🗑️ REMOVIDO (FASE 2/3 — Carteira de Créditos): pacotes "Auto Básico/Revenda"
+  // (comunicação) não são mais comercializados. O desbloqueio consome 2% do
+  // valor direto da carteira. Componente desativado (será apagado na limpeza final).
+  return null;
+  // eslint-disable-next-line no-unreachable
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const { data: allPackages, isLoading } = useRealEstatePackages();
 

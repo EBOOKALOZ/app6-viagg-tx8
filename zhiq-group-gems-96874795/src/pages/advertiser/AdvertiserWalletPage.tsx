@@ -328,7 +328,7 @@ export default function AdvertiserWalletPage() {
             className="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-black font-black text-xs uppercase tracking-wider rounded-xl"
           >
             <Banknote className="h-3.5 w-3.5 mr-1.5" />
-            Comprar Pacote de Créditos
+            Adicionar Créditos
           </Button>
         </div>
 
