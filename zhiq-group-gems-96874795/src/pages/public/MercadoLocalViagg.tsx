@@ -83,6 +83,123 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
     return null;
 }
 
+// ── Fallback: fotos reais do Unsplash para produtos sem imagem ──
+// Mapeia palavras-chave (categoria ou título) para URLs de fotos reais.
+const FALLBACK_PHOTO_KEYWORDS: Array<[string, string]> = [
+    // Alimentos
+    ["pizza", "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop&q=80"],
+    ["hamburguer", "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=600&fit=crop&q=80"],
+    ["burger", "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=600&fit=crop&q=80"],
+    ["lanche", "https://images.unsplash.com/photo-1561758033-d89a9ad46330?w=600&h=600&fit=crop&q=80"],
+    ["acai", "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=600&h=600&fit=crop&q=80"],
+    ["açaí", "https://images.unsplash.com/photo-1590301157890-4810ed352733?w=600&h=600&fit=crop&q=80"],
+    ["marmita", "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&h=600&fit=crop&q=80"],
+    ["sushi", "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600&h=600&fit=crop&q=80"],
+    ["japonesa", "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=600&h=600&fit=crop&q=80"],
+    ["doce", "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=600&h=600&fit=crop&q=80"],
+    ["bolo", "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=600&h=600&fit=crop&q=80"],
+    ["café", "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=600&fit=crop&q=80"],
+    ["cafe", "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=600&fit=crop&q=80"],
+    ["sorvete", "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=600&h=600&fit=crop&q=80"],
+    ["bebida", "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=600&h=600&fit=crop&q=80"],
+    ["suco", "https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=600&h=600&fit=crop&q=80"],
+    ["churrasco", "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=600&fit=crop&q=80"],
+    ["padaria", "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=600&fit=crop&q=80"],
+    ["pão", "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=600&fit=crop&q=80"],
+    ["fruta", "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&h=600&fit=crop&q=80"],
+    ["alimento funcional", "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=600&fit=crop&q=80"],
+    ["funcional", "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=600&fit=crop&q=80"],
+    ["saudavel", "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=600&fit=crop&q=80"],
+    ["saudável", "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=600&fit=crop&q=80"],
+    ["vegano", "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=600&fit=crop&q=80"],
+    ["hortifruti", "https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=600&fit=crop&q=80"],
+    ["verdura", "https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=600&fit=crop&q=80"],
+    ["marguerita", "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop&q=80"],
+    ["margherita", "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&h=600&fit=crop&q=80"],
+    // Eletrônicos
+    ["celular", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop&q=80"],
+    ["smartphone", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop&q=80"],
+    ["samsung", "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&h=600&fit=crop&q=80"],
+    ["sangsung", "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&h=600&fit=crop&q=80"],
+    ["iphone", "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&h=600&fit=crop&q=80"],
+    ["notebook", "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop&q=80"],
+    ["computador", "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop&q=80"],
+    ["fone", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop&q=80"],
+    ["camera", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=600&fit=crop&q=80"],
+    ["câmera", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=600&fit=crop&q=80"],
+    ["televisão", "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&h=600&fit=crop&q=80"],
+    ["tv", "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&h=600&fit=crop&q=80"],
+    ["game", "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=600&h=600&fit=crop&q=80"],
+    ["console", "https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=600&h=600&fit=crop&q=80"],
+    ["eletronic", "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=600&fit=crop&q=80"],
+    // Moda & Beleza
+    ["roupa", "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop&q=80"],
+    ["moda", "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&h=600&fit=crop&q=80"],
+    ["sapato", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop&q=80"],
+    ["tênis", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop&q=80"],
+    ["tenis", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop&q=80"],
+    ["calcado", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&h=600&fit=crop&q=80"],
+    ["bolsa", "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600&h=600&fit=crop&q=80"],
+    ["perfume", "https://images.unsplash.com/photo-1541643600914-78b084683601?w=600&h=600&fit=crop&q=80"],
+    ["beleza", "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=600&fit=crop&q=80"],
+    ["cosmetic", "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=600&fit=crop&q=80"],
+    // Casa & Decoração
+    ["decorac", "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&h=600&fit=crop&q=80"],
+    ["movel", "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=600&fit=crop&q=80"],
+    ["movei", "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&h=600&fit=crop&q=80"],
+    ["luminaria", "https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe?w=600&h=600&fit=crop&q=80"],
+    ["abajur", "https://images.unsplash.com/photo-1507473885765-e6ed057ab6fe?w=600&h=600&fit=crop&q=80"],
+    // Automotivo
+    ["pneu", "https://images.unsplash.com/photo-1580273916550-e323be2ae537?w=600&h=600&fit=crop&q=80"],
+    ["carro", "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&h=600&fit=crop&q=80"],
+    ["moto", "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&h=600&fit=crop&q=80"],
+    ["automotivo", "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&h=600&fit=crop&q=80"],
+    // Pet
+    ["pet", "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&h=600&fit=crop&q=80"],
+    ["animal", "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&h=600&fit=crop&q=80"],
+    // Outros
+    ["ferramenta", "https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&h=600&fit=crop&q=80"],
+    ["construc", "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&h=600&fit=crop&q=80"],
+    ["livro", "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=600&h=600&fit=crop&q=80"],
+    ["brinquedo", "https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=600&h=600&fit=crop&q=80"],
+    ["esporte", "https://images.unsplash.com/photo-1461896836934-bd45ea8b6c3c?w=600&h=600&fit=crop&q=80"],
+    ["fitness", "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=600&fit=crop&q=80"],
+    ["farmac", "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&h=600&fit=crop&q=80"],
+    ["remedio", "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&h=600&fit=crop&q=80"],
+    ["flor", "https://images.unsplash.com/photo-1490750967868-88aa4f44baee?w=600&h=600&fit=crop&q=80"],
+    ["planta", "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=600&h=600&fit=crop&q=80"],
+    ["jardim", "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=600&h=600&fit=crop&q=80"],
+    ["musica", "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop&q=80"],
+    ["instrumento", "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop&q=80"],
+    ["curso", "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=600&h=600&fit=crop&q=80"],
+    ["ebook", "https://images.unsplash.com/photo-1501504905252-473c47e087f8?w=600&h=600&fit=crop&q=80"],
+    ["tipografi", "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&h=600&fit=crop&q=80"],
+    ["fonte", "https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&h=600&fit=crop&q=80"],
+    ["arte", "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&h=600&fit=crop&q=80"],
+    ["artesanato", "https://images.unsplash.com/photo-1452860606245-08b6778a94e3?w=600&h=600&fit=crop&q=80"],
+];
+
+// Fotos genéricas (quando nenhuma keyword bate) — rotacionadas pelo ID do produto
+const FALLBACK_GENERIC_PHOTOS = [
+    "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=600&fit=crop&q=80", // loja/shopping
+    "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=600&fit=crop&q=80", // compras
+    "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=600&h=600&fit=crop&q=80", // vitrine
+    "https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&h=600&fit=crop&q=80", // sacolas
+    "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&h=600&fit=crop&q=80", // shopping
+    "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=600&h=600&fit=crop&q=80", // produto genérico
+];
+
+function getProductFallbackImage(title: string, category: string | null | undefined, productId: string): string {
+    const haystack = `${title || ""} ${category || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    for (const [keyword, url] of FALLBACK_PHOTO_KEYWORDS) {
+        const normalizedKw = keyword.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        if (haystack.includes(normalizedKw)) return url;
+    }
+    // Fallback genérico rotacionado pelo id do produto
+    const idx = (productId?.charCodeAt(0) ?? 0) % FALLBACK_GENERIC_PHOTOS.length;
+    return FALLBACK_GENERIC_PHOTOS[idx];
+}
+
 interface CategoriaLoja {
     id: string;
     nome: string;
@@ -1706,134 +1823,148 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                     </div>
                 </div>
             )}
-{auctionModalOpen && selectedAuction && (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm transition-all duration-300">
-        <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-orange-100 flex flex-col relative animate-in fade-in zoom-in duration-300">
-            {/* Header / Dismiss */}
+{auctionModalOpen && selectedAuction && (() => {
+    const isArr = selectedAuction.listing_type === "arremate";
+    const accent = isArr ? "#7C3AED" : "#FF6A00";
+    const accent2 = isArr ? "#A855F7" : "#FF9A00";
+    const cur = (selectedAuction.current_bid || selectedAuction.starting_bid || 0);
+    const ini = (selectedAuction.starting_bid || 0);
+    return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 backdrop-blur-md transition-all duration-300"
+         onClick={() => setAuctionModalOpen(false)}>
+        <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative flex w-full max-w-md flex-col overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-b from-[#15181E] via-[#101216] to-[#0B0D10] text-white shadow-[0_30px_80px_-12px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 duration-300"
+        >
+            {/* glow decorativo no topo */}
+            <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[130%] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
+                 style={{ background: `radial-gradient(ellipse at center, ${accent}66, transparent 70%)` }} />
+
+            {/* Dismiss */}
             <button
-                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/80 text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-all shadow-sm"
                 onClick={() => setAuctionModalOpen(false)}
+                aria-label="Fechar"
+                className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/70 backdrop-blur-md transition-all hover:bg-white/10 hover:text-white"
             >
                 <X className="h-5 w-5" />
             </button>
 
-            {/* Content Container */}
-            <div className="overflow-y-auto max-h-[90vh]">
-                {/* Image Section */}
-                <div className="relative aspect-video bg-gray-50 overflow-hidden">
+            <div className="relative overflow-y-auto max-h-[92vh]">
+                {/* ── Imagem com overlay premium ── */}
+                <div className="relative aspect-[4/3] overflow-hidden bg-[#0B0D10]">
                     {selectedAuction.product_image_url ? (
                         <img
                             src={normalizeImageUrl(selectedAuction.product_image_url)!}
                             alt={selectedAuction.title}
-                            className="w-full h-full object-cover"
+                            className="h-full w-full object-contain"
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
-                            <Gavel className="h-16 w-16 text-orange-200" />
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#1a1d23] to-[#0B0D10]">
+                            <Gavel className="h-20 w-20 text-white/10" />
                         </div>
                     )}
-                    {/* Status Badge */}
-                    <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg border border-white/20 ${
-                            selectedAuction.listing_type === "arremate"
-                                ? "bg-violet-500 text-white"
-                                : "bg-orange-500 text-white"
-                        }`}>
-                            {selectedAuction.listing_type === "arremate" ? "⚡ Arremate" : "🔨 Leilão Ativo"}
+                    {/* gradiente inferior para fundir com o card */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#101216] via-[#101216]/70 to-transparent" />
+                    {/* logo do app */}
+                    <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28}
+                         className="absolute left-4 top-4 h-8 w-8 rounded-xl object-cover shadow-lg ring-1 ring-white/20" />
+
+                    {/* Badge + cronômetro flutuando na base da imagem */}
+                    <div className="absolute inset-x-4 bottom-4 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white shadow-lg"
+                              style={{ background: `linear-gradient(135deg, ${accent}, ${accent2})`, boxShadow: `0 6px 20px -6px ${accent}` }}>
+                            {isArr ? <>⚡ Arremate</> : <><Gavel className="h-3 w-3" /> Leilão Ativo</>}
                         </span>
-                        <div className="flex items-center gap-1.5 bg-black/70 text-white text-[11px] font-bold px-3 py-1 rounded-full backdrop-blur-md border border-white/10 shadow-lg">
-                            <Timer className="h-3.5 w-3.5 text-red-400 animate-pulse" />
+                        <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 text-[11px] font-black backdrop-blur-md">
+                            <Timer className="h-3.5 w-3.5 animate-pulse text-red-400" />
                             <AuctionCountdown endsAt={selectedAuction.ends_at} />
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6 space-y-6">
-                    {/* Title & Store */}
-                    <div className="space-y-1">
-                        <h2 className="text-2xl font-black text-gray-900 leading-tight">{selectedAuction.title}</h2>
-                        {selectedAuction.store_name && (
-                            <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-                                <Store className="h-4 w-4 text-orange-400" />
-                                <span>{selectedAuction.store_name}</span>
-                                {selectedAuction.city && (
-                                    <>
-                                        <span className="text-gray-300">•</span>
-                                        <span className="flex items-center gap-0.5"><MapPin className="h-3.5 w-3.5" /> {selectedAuction.city}</span>
-                                    </>
-                                )}
-                            </div>
-                        )}
+                <div className="space-y-5 p-6 pt-4">
+                    {/* Título + loja/cidade */}
+                    <div className="space-y-1.5">
+                        <h2 className="text-2xl font-black leading-tight text-white">{selectedAuction.title}</h2>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-medium text-white/50">
+                            {selectedAuction.store_name && (
+                                <span className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" style={{ color: accent2 }} /> {selectedAuction.store_name}</span>
+                            )}
+                            {selectedAuction.city && (
+                                <>
+                                    {selectedAuction.store_name && <span className="text-white/20">•</span>}
+                                    <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-emerald-400" /> {selectedAuction.city}</span>
+                                </>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Pricing Grid */}
+                    {/* Preços */}
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 shadow-sm">
-                            <p className="text-[10px] text-orange-400 font-black uppercase tracking-wider mb-1">
-                                {selectedAuction.listing_type === "arremate" ? "Preço de Arremate" : "Lance Atual"}
+                        <div className="rounded-2xl border p-4 shadow-inner"
+                             style={{ borderColor: `${accent}40`, background: `linear-gradient(160deg, ${accent}22, transparent)` }}>
+                            <p className="mb-1 text-[10px] font-black uppercase tracking-wider" style={{ color: accent2 }}>
+                                {isArr ? "Preço de Arremate" : "Lance Atual"}
                             </p>
-                            <p className="text-2xl font-black text-orange-600">
-                                R$ {(selectedAuction.current_bid || selectedAuction.starting_bid || 0).toFixed(2).replace(".", ",")}
+                            <p className="text-2xl font-black leading-none" style={{ color: accent2 }}>
+                                R$ {cur.toFixed(2).replace(".", ",")}
                             </p>
                         </div>
-                        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 shadow-sm">
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider mb-1">Lance Inicial</p>
-                            <p className="text-2xl font-black text-gray-700">
-                                R$ {(selectedAuction.starting_bid || 0).toFixed(2).replace(".", ",")}
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                            <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-white/40">Lance Inicial</p>
+                            <p className="text-2xl font-black leading-none text-white/80">
+                                R$ {ini.toFixed(2).replace(".", ",")}
                             </p>
                         </div>
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-between px-2 py-4 border-y border-gray-100">
-                        <div className="flex items-center gap-4">
+                    {/* Stats */}
+                    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <div className="flex items-center gap-5">
                             <div className="text-center">
-                                <p className="text-sm font-black text-gray-800">{selectedAuction.total_bids || 0}</p>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">Lances</p>
+                                <p className="text-base font-black text-white">{selectedAuction.total_bids || 0}</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Lances</p>
                             </div>
-                            <div className="w-px h-6 bg-gray-100" />
+                            <div className="h-7 w-px bg-white/10" />
                             <div className="text-center">
-                                <p className="text-sm font-black text-gray-800">{selectedAuction.watchers_count || 0}</p>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">Observando</p>
+                                <p className="text-base font-black text-white">{selectedAuction.watchers_count || 0}</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Observando</p>
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">📅 Encerra em</p>
-                            <p className="text-xs font-black text-gray-700">
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Encerra em</p>
+                            <p className="text-xs font-black text-white/80">
                                 {new Date(selectedAuction.ends_at).toLocaleDateString("pt-BR", { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                             </p>
                         </div>
                     </div>
 
-                    {/* Description */}
+                    {/* Descrição */}
                     {selectedAuction.description && (
                         <div className="space-y-2">
-                            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Descrição detalhada</h4>
-                            <p className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 rounded-xl p-4 border border-gray-50">
+                            <h4 className="text-[11px] font-black uppercase tracking-widest text-white/40">Descrição detalhada</h4>
+                            <p className="rounded-2xl border border-white/5 bg-black/30 p-4 text-[13px] leading-relaxed text-white/70 whitespace-pre-wrap">
                                 {selectedAuction.description}
                             </p>
                         </div>
                     )}
 
-                    {/* CTA Section */}
-                    <div className="flex flex-col gap-3 pt-2 pb-4">
+                    {/* CTA */}
+                    <div className="flex flex-col gap-2.5 pt-1">
                         <button
                             onClick={() => {
                                 setAuctionModalOpen(false);
-                                const targetPath = selectedAuction.listing_type === "arremate" 
-                                    ? `/arremate/${selectedAuction.id}` 
-                                    : `/leilao/${selectedAuction.id}`;
-                                navigate(targetPath);
+                                navigate(isArr ? `/arremate/${selectedAuction.id}` : `/leilao/${selectedAuction.id}`);
                             }}
-                            className="w-full h-14 bg-[#FF6A00] hover:bg-[#e65c00] text-white rounded-2xl font-black text-base shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            style={{ background: `linear-gradient(135deg, ${accent}, ${accent2})`, boxShadow: `0 14px 34px -10px ${accent}` }}
                         >
                             <Gavel className="h-5 w-5" />
-                            {selectedAuction.listing_type === "arremate" ? "Dar Oferta / Arrematar" : "Ver Detalhes & Dar Lance"}
+                            {isArr ? "Dar Oferta / Arrematar" : "Ver Detalhes & Dar Lance"}
                         </button>
-                        
                         <button
                             onClick={() => setAuctionModalOpen(false)}
-                            className="w-full h-12 bg-white text-gray-400 hover:text-gray-600 rounded-xl font-bold text-sm transition-colors border border-transparent hover:border-gray-100"
+                            className="h-11 w-full rounded-xl text-sm font-bold text-white/40 transition-colors hover:bg-white/5 hover:text-white/70"
                         >
                             Voltar para o Mercado
                         </button>
@@ -1842,7 +1973,8 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             </div>
         </div>
     </div>
-)}
+    );
+})()}
             {/* ═══ PRODUCT GRID (flat, individual cards) ═══ */}
             <div className="flex-1" style={{ backgroundColor: '#F5E62B' }}>
             <div ref={productSectionRef} className="w-full px-4 lg:px-6 py-6">
@@ -2044,26 +2176,32 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                     }} />
                                             </div>
                                         ) : (() => {
-                                            const initial = (product.title?.trim()[0] || "?").toUpperCase();
-                                            const palette = [
-                                                "from-orange-400 to-pink-500",
-                                                "from-blue-400 to-indigo-500",
-                                                "from-emerald-400 to-teal-500",
-                                                "from-purple-400 to-fuchsia-500",
-                                                "from-amber-400 to-orange-500",
-                                                "from-rose-400 to-red-500",
-                                                "from-cyan-400 to-blue-500",
-                                            ];
-                                            const idx = (product.id?.charCodeAt(0) ?? 0) % palette.length;
+                                            const fallbackUrl = getProductFallbackImage(product.title, product.category, product.id);
                                             if (typeof window !== "undefined" && !(window as any).__loggedMissingImg?.[product.id]) {
                                                 (window as any).__loggedMissingImg = (window as any).__loggedMissingImg || {};
                                                 (window as any).__loggedMissingImg[product.id] = true;
-                                                console.warn(`[MercadoLocal] Produto SEM image_url no banco: "${product.title}" (id: ${product.id})`);
+                                                console.warn(`[MercadoLocal] Produto SEM image_url no banco: "${product.title}" (id: ${product.id}) → usando fallback: ${fallbackUrl}`);
                                             }
                                             return (
-                                                <div className={`w-full aspect-square flex flex-col items-center justify-center bg-gradient-to-br ${palette[idx]} text-white`}>
-                                                    <span className="text-6xl font-black drop-shadow-md">{initial}</span>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-80">Sem foto</span>
+                                                <div className="relative w-full aspect-square bg-[#252B33] overflow-hidden">
+                                                    <img
+                                                        src={fallbackUrl}
+                                                        alt={product.title}
+                                                        loading="lazy"
+                                                        className="absolute inset-0 w-full h-full object-cover lg:group-hover/card:scale-105 transition-transform duration-300"
+                                                        onError={(e) => {
+                                                            // Se a foto do Unsplash falhar, mostra gradiente com a inicial
+                                                            const container = e.currentTarget.parentElement;
+                                                            if (container) {
+                                                                const initial = (product.title?.trim()[0] || "?").toUpperCase();
+                                                                container.innerHTML = `<div class="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-orange-400 to-pink-500 text-white"><span class="text-6xl font-black drop-shadow-md">${initial}</span><span class="text-[10px] font-bold uppercase tracking-widest mt-1 opacity-80">Sem foto</span></div>`;
+                                                            }
+                                                        }}
+                                                    />
+                                                    {/* Sutil overlay de marca sobre foto ilustrativa */}
+                                                    <div className="absolute bottom-2 right-2 z-20 bg-black/50 backdrop-blur-sm rounded-lg px-2 py-0.5">
+                                                        <span className="text-[8px] font-bold uppercase tracking-wider text-white/70">Foto ilustrativa</span>
+                                                    </div>
                                                 </div>
                                             );
                                         })()}
