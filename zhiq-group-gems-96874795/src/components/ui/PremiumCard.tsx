@@ -144,18 +144,16 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         )}
 
         {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
-        {/* Logo é arte branca -> chip escuro garante visibilidade. h-5 (~20px, faixa 20-28px) */}
-        <div className="absolute top-2.5 left-2.5 z-20 inline-flex items-center rounded-lg bg-zinc-900/75 backdrop-blur-md px-1.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
-          <img
-            src="/images/viagg-tx8-logo.png"
-            alt="Viagg-TX8"
-            width={36}
-            height={20}
-            loading="lazy"
-            decoding="async"
-            className="h-5 w-auto object-contain opacity-95"
-          />
-        </div>
+        {/* Logo oficial quadrado (verde+dourado, fundo próprio) — ~28px */}
+        <img
+          src="/viagg-logo.png"
+          alt="Viagg-TX8"
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
+          className="absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+        />
 
         {/* Top Badges (movidos p/ direita, abaixo do favoritar, p/ não colidir com o logo) */}
         <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
@@ -339,20 +337,17 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </Button>
 
           {/* ─── RODAPÉ INSTITUCIONAL (FASE 5): print compartilhado mantém a marca ─── */}
-          {/* logo é BRANCO -> mini-chip escuro p/ visibilidade sobre o card branco */}
-          <div className="mt-2.5 flex items-center justify-center gap-1.5 select-none pointer-events-none">
-            <span className="inline-flex items-center rounded-[4px] bg-zinc-900/85 px-1 py-0.5">
-              <img
-                src="/images/viagg-tx8-logo.png"
-                alt=""
-                aria-hidden="true"
-                width={22}
-                height={13}
-                loading="lazy"
-                decoding="async"
-                className="h-3 w-auto object-contain"
-              />
-            </span>
+          <div className="mt-2.5 flex items-center justify-center gap-1.5 select-none pointer-events-none opacity-80">
+            <img
+              src="/viagg-logo.png"
+              alt=""
+              aria-hidden="true"
+              width={16}
+              height={16}
+              loading="lazy"
+              decoding="async"
+              className="h-4 w-4 rounded object-cover"
+            />
             <span className="text-[9px] font-bold tracking-wide text-zinc-400">Marketplace Oficial Viagg-TX8™</span>
           </div>
         </div>

@@ -1988,9 +1988,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                     {/* Image */}
                                     <div className="relative overflow-hidden bg-gray-50">
                                         {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
-                                        <div className="absolute top-2 left-2 z-20 inline-flex items-center rounded-lg bg-zinc-900/75 backdrop-blur-md px-1.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
-                                            <img src="/images/viagg-tx8-logo.png" alt="Viagg-TX8" width={36} height={20} loading="lazy" decoding="async" className="h-5 w-auto object-contain opacity-95" />
-                                        </div>
+                                        <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
                                         {/* Condition Badge (movido p/ direita p/ não colidir com o logo) */}
                                         {product.condition && (
                                             <div className="absolute top-2 right-2 z-10">
