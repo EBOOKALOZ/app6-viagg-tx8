@@ -1555,7 +1555,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                         </div>
                         <div className="shrink-0">
                            <div className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xl px-10 py-5 rounded-2xl shadow-2xl transition-all flex items-center justify-center text-center gap-3 group-hover:scale-105">
-                                <Megaphone className="w-6 h-6 shrink-0 group-hover:rotate-12 transition-transform" />
+                                <img src="/assets/brand/viagg-tx8-logo-premium.png" alt="Viagg-TX8" className="w-8 h-8 shrink-0 rounded-md group-hover:scale-110 transition-transform" />
                                 <span className="leading-tight">QUERO<br />VENDER</span>
                            </div>
                         </div>
@@ -2071,6 +2071,18 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                 </div>
                                             );
                                         })()}
+
+                                        {/* ─── IDENTIDADE VIAGG-TX8 (marca discreta sobre a imagem do produto) ─── */}
+                                        {/* Watermark central VX (anti-print + marca; 7% opacidade; não interfere) */}
+                                        <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
+                                            <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-5xl sm:text-6xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
+                                        </div>
+                                        {/* Selo Oficial (canto inf-esquerdo, discreto) */}
+                                        <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-black/45 backdrop-blur-md px-2 py-0.5 pointer-events-none shadow-sm">
+                                            <img src="/images/viagg-tx8-logo.png" alt="" aria-hidden="true" width={20} height={12} loading="lazy" decoding="async" className="h-3 w-auto object-contain opacity-95" />
+                                            <span className="text-[8px] font-bold uppercase tracking-wider text-white/90">Oficial Viagg-TX8</span>
+                                        </div>
+
                                         {/* WhatsApp Share */}
                                         <button
                                             onClick={(e) => {

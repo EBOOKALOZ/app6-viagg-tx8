@@ -194,7 +194,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
             height={14}
             loading="lazy"
             decoding="async"
-            className="w-3.5 h-3.5 object-contain rounded-sm opacity-90"
+            className="h-3.5 w-auto object-contain rounded-sm opacity-95"
           />
           <span className="text-[8px] font-bold uppercase tracking-wider text-white/90">Oficial Viagg-TX8</span>
         </div>
@@ -343,7 +343,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
               height={12}
               loading="lazy"
               decoding="async"
-              className="w-3 h-3 object-contain rounded-[3px]"
+              className="h-3 w-auto object-contain rounded-[3px]"
             />
             <span className="text-[9px] font-bold tracking-wide text-zinc-400">Marketplace Oficial Viagg-TX8™</span>
           </div>
