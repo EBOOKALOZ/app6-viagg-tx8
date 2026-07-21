@@ -52,7 +52,7 @@ export default function MotoboyWalletPage() {
 
         try {
             // @ts-ignore - Assuming profile_wallets and relation exists or will be created
-            const { data: walletData, error: walletError } = await supabase
+            let { data: walletData, error: walletError } = await supabase
                 .from('profile_wallets')
                 .select('*')
                 .eq('account_id', user.id)
@@ -60,6 +60,21 @@ export default function MotoboyWalletPage() {
                 .maybeSingle();
 
             console.log('[DEBUG MotoboyWalletPage] Found walletData:', walletData);
+
+            if (!walletData || Number(walletData.balance || 0) === 0) {
+                const { data: payAccounts } = await (supabase.from('pay_financial_accounts' as any)
+                    .select('id, available_balance')
+                    .eq('owner_id', user.id)
+                    .in('account_type', ['motoboy_wallet', 'mototaxi_wallet', 'driver_wallet', 'merchant_wallet', 'customer_wallet'])) as any;
+                if (payAccounts && Array.isArray(payAccounts) && payAccounts.length > 0) {
+                    const totalPayReais = payAccounts.reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
+                    walletData = {
+                        id: payAccounts[0].id,
+                        balance: totalPayReais,
+                        ...(walletData || {})
+                    } as any;
+                }
+            }
 
             if (walletError && walletError.code !== 'PGRST116') {
                 console.error('[DEBUG MotoboyWalletPage] Wallet error:', walletError);
@@ -84,14 +99,30 @@ export default function MotoboyWalletPage() {
         console.log('[DEBUG MotoboyWalletPage] Fetching history for walletId:', walletId);
         try {
             // @ts-ignore
-            const { data: entries, error } = await supabase
+            let { data: entries, error } = await supabase
                 .from('ledger_entries')
                 .select('*')
                 .eq('wallet_id', walletId)
                 .order('created_at', { ascending: false });
 
             console.log('[DEBUG MotoboyWalletPage] Ledger entries for walletId', walletId, ':', entries);
-            if (error) {
+            if (!entries || entries.length === 0) {
+                const { data: statementEntries } = await (supabase.from('v_wallet_statement' as any)
+                    .select('*')
+                    .eq('owner_user_id', user!.id)
+                    .order('created_at', { ascending: false })) as any;
+                if (statementEntries && Array.isArray(statementEntries) && statementEntries.length > 0) {
+                    entries = statementEntries.map((e: any) => ({
+                        id: e.id,
+                        created_at: e.created_at,
+                        type: e.direction || e.entry_type || 'credit',
+                        amount: e.amount_cents ? e.amount_cents / 100 : Number(e.amount || 0),
+                        description: e.description || e.category || 'Transação financeira'
+                    })) as any;
+                }
+            }
+
+            if (error && error.code !== 'PGRST116') {
                 console.error('[DEBUG MotoboyWalletPage] History error:', error);
                 throw error;
             }

@@ -28,7 +28,7 @@ export default function AdvertiserOffersPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Saldo da CARTEIRA ÚNICA (wallets, em cents) — fonte financeira única
+  // Saldo da CARTEIRA ÚNICA (wallets / pay_financial_accounts, em cents) — fonte financeira única
   const { data: walletCents = 0 } = useQuery({
     queryKey: ["wallet-balance", user?.id],
     enabled: !!user?.id,
@@ -36,7 +36,16 @@ export default function AdvertiserOffersPage() {
     queryFn: async () => {
       const { data } = await (supabase.from("wallets" as any)
         .select("balance_cents").eq("owner_uid", user!.id).maybeSingle()) as any;
-      return Number((data as any)?.balance_cents ?? 0);
+      let cents = Number((data as any)?.balance_cents ?? 0);
+      if (cents === 0) {
+        const { data: payAccounts } = await (supabase.from("pay_financial_accounts" as any)
+          .select("available_balance").eq("owner_id", user!.id)) as any;
+        if (payAccounts && Array.isArray(payAccounts)) {
+          const totalPayReais = payAccounts.reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
+          cents = Math.round(totalPayReais * 100);
+        }
+      }
+      return cents;
     },
   });
   // 2% do valor anunciado (política oficial) em cents
@@ -125,8 +134,19 @@ export default function AdvertiserOffersPage() {
     );
     if (!res.success) {
       if (res.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`, { duration: 3500 });
-        setTimeout(() => navigate("/anunciante/carteira"), 1400);
+        const reqCents = Number(res.required_cents || unlockCostCents(offer.product_price));
+        const availCents = Number(res.available_cents || walletCents);
+        const lackCents = Math.max(0, reqCents - availCents);
+        toast.error(
+          `Saldo insuficiente! Tenho: ${centsToBRL(availCents)} | Cobrado: ${centsToBRL(reqCents)} | Falta: ${centsToBRL(lackCents)}`,
+          {
+            duration: 6000,
+            action: {
+              label: "Recarregar",
+              onClick: () => navigate("/centro-financeiro"),
+            },
+          }
+        );
         return;
       }
       toast.error("Erro ao liberar comprador: " + (res.error ?? "desconhecido"));

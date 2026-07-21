@@ -7,8 +7,8 @@
  * e passou a responder: como meus anúncios performam, quantos interessados,
  * quanto investi em desbloqueios e quanto converti.
  *
- * Fontes REAIS (legíveis pelo lojista): marketplace_product_click_events (views),
- * advertiser_contact_intentions (interessados, via useContactIntentions),
+ * Fontes REAIS (todas legíveis pelo lojista): marketplace_product_click_events
+ * (views), advertiser_contact_intentions (interessados, via useContactIntentions),
  * purchase_intentions (pedidos), discount_requests (ofertas), useWalletCenter
  * (financeiro + desbloqueios). Ranking/categoria/IA = heurística client-side.
  */
@@ -39,24 +39,17 @@ const MODULE_LABEL: Record<string, string> = {
   product: "Mercado", real_estate: "Imóveis", vehicles: "Veículos",
   services: "Serviços", freight: "Fretes", travel: "Viagens",
 };
-// Classes LITERAIS por tom (Tailwind JIT não gera classes interpoladas).
-const TONE: Record<string, { wrap: string; icon: string }> = {
-  amber:   { wrap: "bg-amber-500/10 border-amber-500/20",     icon: "text-amber-400" },
-  emerald: { wrap: "bg-emerald-500/10 border-emerald-500/20", icon: "text-emerald-400" },
-  blue:    { wrap: "bg-blue-500/10 border-blue-500/20",       icon: "text-blue-400" },
-  violet:  { wrap: "bg-violet-500/10 border-violet-500/20",   icon: "text-violet-400" },
-};
 const PERIODS = [
   { key: "1", label: "Hoje", days: 1 }, { key: "7", label: "7 dias", days: 7 },
   { key: "30", label: "30 dias", days: 30 }, { key: "90", label: "90 dias", days: 90 },
   { key: "365", label: "12 meses", days: 365 },
 ];
 
-function KpiCard({ title, value, sub, Icon, color }: {
-  title: string; value: string | number; sub?: string; Icon: any; color: string;
+function KpiCard({ title, value, sub, Icon, color, alert }: {
+  title: string; value: string | number; sub?: string; Icon: any; color: string; alert?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-4">
+    <div className={`rounded-2xl bg-[#1B1F24] border p-4 ${alert ? "border-amber-500/40" : "border-[#2A3038]/60"}`}>
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}22` }}>
           <Icon className="w-4 h-4" style={{ color }} />
@@ -79,6 +72,7 @@ export default function AdvertiserVisitsPage() {
   const { intentions } = useContactIntentions();     // leads (advertiser_contact_intentions)
   const wc = useWalletCenter();                       // financeiro + desbloqueios (read-only)
 
+  // ── Query real: views + pedidos + ofertas + títulos de produto ──
   const { data: bi, isLoading, refetch } = useQuery({
     queryKey: ["commercial-intel", user?.id],
     enabled: !!user?.id,
@@ -106,11 +100,13 @@ export default function AdvertiserVisitsPage() {
         ]);
         views = v || []; offers = o || [];
       }
+      // pedidos — RLS pi_select_store_owner filtra por dono
       const { data: ord } = await (supabase.from("purchase_intentions" as any)
         .select("id, subtotal, status, created_at")
         .order("created_at", { ascending: false }).limit(1500)) as any;
       const orders = ord || [];
 
+      // Títulos de produto (fallback 3 tabelas) p/ ranking
       const pids = Array.from(new Set([...views, ...offers].map((x: any) => x.product_id).filter(Boolean))).slice(0, 300);
       const titleMap = new Map<string, string>();
       if (pids.length) {
@@ -127,6 +123,7 @@ export default function AdvertiserVisitsPage() {
 
   const titles = (bi?.titles ?? {}) as Record<string, string>;
 
+  // ── Derivações no período ──
   const d = useMemo(() => {
     const inP = (iso: string) => new Date(iso).getTime() >= since;
     const views = (bi?.views ?? []).filter((v: any) => inP(v.created_at));
@@ -142,10 +139,12 @@ export default function AdvertiserVisitsPage() {
     const deals = acceptedOffers.length + convertedOrders.length;
     const conversion = views.length ? (deals / views.length) * 100 : 0;
 
+    // Produto mais procurado (views)
     const viewsByProduct = new Map<string, number>();
     views.forEach((v: any) => v.product_id && viewsByProduct.set(v.product_id, (viewsByProduct.get(v.product_id) || 0) + 1));
     const topProductId = [...viewsByProduct.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
 
+    // Tempo médio até 1º interesse (heurística: 1ª view vs 1º lead por produto)
     const firstView = new Map<string, number>(), firstLead = new Map<string, number>();
     views.forEach((v: any) => { if (v.product_id) { const t = new Date(v.created_at).getTime(); if (!firstView.has(v.product_id) || t < firstView.get(v.product_id)!) firstView.set(v.product_id, t); } });
     leads.forEach((l: any) => { const k = l.listing_id; if (k) { const t = new Date(l.created_at).getTime(); if (!firstLead.has(k) || t < firstLead.get(k)!) firstLead.set(k, t); } });
@@ -153,9 +152,10 @@ export default function AdvertiserVisitsPage() {
     firstLead.forEach((t, k) => { const fv = firstView.get(k); if (fv && t > fv) gaps.push(t - fv); });
     const avgGapH = gaps.length ? gaps.reduce((s, g) => s + g, 0) / gaps.length / 36e5 : null;
 
+    // Ranking por produto (une views/leads/ofertas/liberados)
     const rank = new Map<string, { views: number; leads: number; offers: number; unlocked: number; value: number }>();
-    const bump = (id: string | null, f: "views" | "leads" | "offers" | "unlocked" | "value", n = 1) => {
-      if (!id) return; const r = rank.get(id) || { views: 0, leads: 0, offers: 0, unlocked: 0, value: 0 }; r[f] += n; rank.set(id, r);
+    const bump = (id: string, f: keyof ReturnType<() => any>, n = 1) => {
+      if (!id) return; const r = rank.get(id) || { views: 0, leads: 0, offers: 0, unlocked: 0, value: 0 }; (r as any)[f] += n; rank.set(id, r);
     };
     views.forEach((v: any) => bump(v.product_id, "views"));
     leads.forEach((l: any) => { bump(l.listing_id, "leads"); if (l.status === "unlocked") bump(l.listing_id, "unlocked"); });
@@ -163,10 +163,12 @@ export default function AdvertiserVisitsPage() {
     const ranking = [...rank.entries()].map(([id, r]) => ({ id, title: titles[id] || "Produto", ...r, conv: r.views ? (r.unlocked / r.views) * 100 : 0 }))
       .sort((a, b) => b.views - a.views).slice(0, 8);
 
+    // Por módulo (leads)
     const byModule = new Map<string, number>();
     leads.forEach((l: any) => byModule.set(l.listing_module, (byModule.get(l.listing_module) || 0) + 1));
     const moduleRows = [...byModule.entries()].map(([m, n]) => ({ modulo: MODULE_LABEL[m] || m, leads: n })).sort((a, b) => b.leads - a.leads);
 
+    // Série temporal (buckets por dia)
     const bucket = new Map<string, { dia: string; Visualizações: number; Interessados: number; Pedidos: number }>();
     const dayKey = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
     const ensure = (iso: string) => { const k = dayKey(iso); if (!bucket.has(k)) bucket.set(k, { dia: k, Visualizações: 0, Interessados: 0, Pedidos: 0 }); return bucket.get(k)!; };
@@ -175,6 +177,7 @@ export default function AdvertiserVisitsPage() {
     orders.forEach((o: any) => ensure(o.created_at).Pedidos++);
     const series = [...bucket.values()].reverse().slice(-30);
 
+    // Melhor horário/dia (views)
     const byHour = new Array(24).fill(0), byDow = new Array(7).fill(0);
     views.forEach((v: any) => { const dt = new Date(v.created_at); byHour[dt.getHours()]++; byDow[dt.getDay()]++; });
     const bestHour = byHour.indexOf(Math.max(...byHour));
@@ -190,6 +193,7 @@ export default function AdvertiserVisitsPage() {
     };
   }, [bi, intentions, since, titles]);
 
+  // ── ORION IA Comercial + Alertas (heurística client-side) ──
   const insights = useMemo(() => {
     const out: { Icon: any; color: string; title: string; text: string }[] = [];
     const alerts: { Icon: any; tone: string; text: string }[] = [];
@@ -209,8 +213,9 @@ export default function AdvertiserVisitsPage() {
     return { out, alerts };
   }, [d]);
 
+  // ── Financeiro (useWalletCenter) ──
   const spentCents = wc.contact.totalSpentCents;
-  const revenueEst = d.negotiated;
+  const revenueEst = d.negotiated;                                   // receita estimada = valor negociado
   const roi = spentCents > 0 ? ((revenueEst - spentCents / 100) / (spentCents / 100)) * 100 : null;
 
   const KPIS = [
@@ -236,6 +241,7 @@ export default function AdvertiserVisitsPage() {
 
   return (
     <div className="space-y-6">
+      {/* HEADER + PERÍODO */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black text-[#F5F7FA] tracking-tight flex items-center gap-3">
@@ -257,10 +263,12 @@ export default function AdvertiserVisitsPage() {
         </div>
       </div>
 
+      {/* KPIs COMERCIAIS */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {KPIS.map((k) => <KpiCard key={k.title} {...k} />)}
       </div>
 
+      {/* FINANCEIRO */}
       <div className="rounded-2xl bg-gradient-to-br from-[#0D3D2E] via-[#0F4A35] to-[#124D38] border border-emerald-500/20 p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-black uppercase tracking-widest text-emerald-200 flex items-center gap-2"><Wallet className="h-4 w-4" /> Financeiro</h3>
@@ -283,6 +291,7 @@ export default function AdvertiserVisitsPage() {
         </div>
       </div>
 
+      {/* GRÁFICOS: funil + evolução */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
           <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Layers className="h-4 w-4 text-[#FF6A00]" /> Funil de Conversão</h3>
@@ -317,6 +326,7 @@ export default function AdvertiserVisitsPage() {
         </div>
       </div>
 
+      {/* ORION IA COMERCIAL + ALERTAS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-2xl bg-[#1B1F24] border border-violet-500/20 p-5">
           <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-400" /> ORION IA Comercial</h3>
@@ -333,20 +343,18 @@ export default function AdvertiserVisitsPage() {
           <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400" /> Alertas</h3>
           {insights.alerts.length === 0 ? <p className="text-xs text-[#A7B0BE] py-8 text-center">Tudo em ordem — nenhum alerta no período.</p> : (
             <div className="space-y-2">
-              {insights.alerts.map((a, k) => {
-                const t = TONE[a.tone] ?? TONE.blue;
-                return (
-                  <div key={k} className={`flex items-start gap-3 p-3 rounded-xl border ${t.wrap}`}>
-                    <a.Icon className={`w-4 h-4 shrink-0 mt-0.5 ${t.icon}`} />
-                    <p className="text-[11px] text-[#F5F7FA]">{a.text}</p>
-                  </div>
-                );
-              })}
+              {insights.alerts.map((a, k) => (
+                <div key={k} className={`flex items-start gap-3 p-3 rounded-xl bg-${a.tone}-500/10 border border-${a.tone}-500/20`}>
+                  <a.Icon className={`w-4 h-4 text-${a.tone}-400 shrink-0 mt-0.5`} />
+                  <p className="text-[11px] text-[#F5F7FA]">{a.text}</p>
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
 
+      {/* RANKING POR PRODUTO */}
       <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
         <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Trophy className="h-4 w-4 text-[#c98500]" /> Ranking de Anúncios</h3>
         {d.ranking.length === 0 ? <p className="text-xs text-[#A7B0BE] py-8 text-center">Sem anúncios com atividade no período.</p> : (
@@ -378,6 +386,7 @@ export default function AdvertiserVisitsPage() {
         )}
       </div>
 
+      {/* POR MÓDULO/CATEGORIA */}
       <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
         <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Layers className="h-4 w-4 text-blue-400" /> Interessados por Categoria</h3>
         {d.moduleRows.length === 0 ? <p className="text-xs text-[#A7B0BE] py-6 text-center">Sem interessados no período.</p> : (

@@ -36,50 +36,45 @@ export function useWalletOverview() {
 
                 console.log("[Wallet] Buscando dados para USER ID:", user.id);
 
-                // 1) Puxar Conta Financeira Primeiro para validar existência
-                const { data: account, error: accountError } = await supabase
-                    .from('financial_accounts')
-                    .select('id, available_balance')
-                    .eq('owner_user_id', user.id)
-                    .maybeSingle();
+                // 1) Puxar Contas Financeiras Oficiais do motor pay_*
+                const { data: accounts, error: accountError } = await (supabase.from('pay_financial_accounts') as any)
+                    .select('id, account_type, available_balance')
+                    .eq('owner_id', user.id)
+                    .in('account_type', [
+                        'motoboy_wallet', 'mototaxi_wallet', 'driver_wallet', 'merchant_wallet', 'customer_wallet'
+                    ]);
 
-                console.log("[Wallet] Supabase Result:", { account, accountError });
+                console.log("[Wallet] Supabase Result (pay_financial_accounts):", { accounts, accountError });
 
                 if (accountError) {
-                    console.error("[Wallet] Erro ao buscar financial_accounts:", accountError);
+                    console.error("[Wallet] Erro ao buscar pay_financial_accounts:", accountError);
                     return defaultOverview;
                 }
 
-                if (!account) {
-                    console.log("[Wallet] Nenhuma financial_account encontrada. Retornando 0.");
-                    return defaultOverview;
-                }
-
-                const balance_reais = account.available_balance || 0;
+                const balance_reais = (accounts || []).reduce((acc: number, curr: any) => acc + Number(curr.available_balance || 0), 0);
                 const balance_cents = Math.round(balance_reais * 100);
 
                 let total_recargas = 0;
                 let total_gastos = 0;
 
                 try {
-                    const { data: ledgerData, error: ledgerError } = await supabase
-                        .from('ledger_entries')
-                        .select('amount_cents, entry_type')
-                        .eq('account_id', account.id);
+                    const { data: statementData, error: statementError } = await (supabase.from('v_wallet_statement') as any)
+                        .select('amount_cents, direction')
+                        .eq('owner_user_id', user.id);
 
-                    if (ledgerError) {
-                        console.error("[Wallet] Erro ao buscar ledger_entries:", ledgerError);
-                    } else if (ledgerData && Array.isArray(ledgerData)) {
-                        total_recargas = ledgerData
-                            .filter(e => e.entry_type === 'credit')
+                    if (statementError) {
+                        console.error("[Wallet] Erro ao buscar v_wallet_statement:", statementError);
+                    } else if (statementData && Array.isArray(statementData)) {
+                        total_recargas = statementData
+                            .filter(e => String(e.direction).toLowerCase() === 'credit')
                             .reduce((acc, curr) => acc + ((curr as any).amount_cents || 0) / 100, 0);
 
-                        total_gastos = ledgerData
-                            .filter(e => e.entry_type === 'debit')
+                        total_gastos = statementData
+                            .filter(e => String(e.direction).toLowerCase() === 'debit')
                             .reduce((acc, curr) => acc + ((curr as any).amount_cents || 0) / 100, 0);
                     }
                 } catch (innerErr) {
-                    console.error("[Wallet] Falha não esperada no fetch do ledger:", innerErr);
+                    console.error("[Wallet] Falha não esperada no fetch do statement:", innerErr);
                 }
 
                 return {

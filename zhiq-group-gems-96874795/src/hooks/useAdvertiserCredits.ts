@@ -1,4 +1,4 @@
-﻿/**
+/**
  * useAdvertiserCredits â€” CrÃ©ditos para anunciantes
  *
  * Fonte de verdade compartilhada com o painel admin/lojista:
@@ -132,12 +132,18 @@ export function useAdvertiserCredits() {
           .select("balance_cents, reserved_cents")
           .eq("owner_uid", user.id)
           .maybeSingle();
-        if (w) {
-          balance = {
-            available_credits: Number(w.balance_cents ?? 0) / 100,
-            consumed_credits: Number(w.reserved_cents ?? 0) / 100,
-          };
-        }
+        const legacyAvailable = Number(w?.balance_cents ?? 0) / 100;
+        const legacyConsumed = Number(w?.reserved_cents ?? 0) / 100;
+
+        const { data: payAccounts } = await (supabase.from("pay_financial_accounts") as any)
+          .select("available_balance")
+          .eq("owner_id", user.id);
+        const totalPayReais = (payAccounts || []).reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
+
+        balance = {
+          available_credits: Math.max(legacyAvailable, totalPayReais),
+          consumed_credits: legacyConsumed,
+        };
       }
 
       // 5. Ledger (Ãºltimas 20 entradas)

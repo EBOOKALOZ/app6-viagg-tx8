@@ -167,6 +167,25 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
   }, [user?.id, activeProfile]);
 
   /* =============================
+     PERFIL INCORRETO / AUTO-SWITCH  (HOOK — precisa vir ANTES de qualquer
+     return condicional; JAMAIS depois, senão a contagem de hooks muda entre
+     renders e o React quebra a tela com "Rendered more/fewer hooks…")
+     → Se o usuário possui o perfil em availableProfiles ou acessa rota merchant,
+       faz auto-switch de activeProfile sem redirecionar para outro painel.
+  ============================= */
+  useEffect(() => {
+    if (
+      requiredProfile &&
+      activeProfile &&
+      activeProfile !== requiredProfile &&
+      (availableProfiles.includes(requiredProfile) || requiredProfile === "merchant")
+    ) {
+      console.log(`[ProtectedRoute] Transição automática de perfil: ${activeProfile} → ${requiredProfile}`);
+      setActiveProfile(requiredProfile);
+    }
+  }, [requiredProfile, activeProfile, availableProfiles, setActiveProfile]);
+
+  /* =============================
      LOADING GLOBAL
      (único gate necessário)
   ============================= */
@@ -299,23 +318,12 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
   }
 
   /* =============================
-     PERFIL INCORRETO / AUTO-SWITCH
-     → Se o usuário possui o perfil em availableProfiles ou acessa rota merchant,
-       realiza auto-switch de activeProfile sem redirecionar para outro painel.
+     PERFIL INCORRETO / AUTO-SWITCH (decisão de render)
+     → O auto-switch em si já foi disparado pelo useEffect no topo (fora dos
+       returns condicionais). Aqui só decidimos o que renderizar enquanto o
+       activeProfile sincroniza.
      → Caso contrário, redireciona para o dashboard do perfil ativo (NUNCA para /auth)
   ============================= */
-  useEffect(() => {
-    if (
-      requiredProfile &&
-      activeProfile &&
-      activeProfile !== requiredProfile &&
-      (availableProfiles.includes(requiredProfile) || requiredProfile === "merchant")
-    ) {
-      console.log(`[ProtectedRoute] Transição automática de perfil: ${activeProfile} → ${requiredProfile}`);
-      setActiveProfile(requiredProfile);
-    }
-  }, [requiredProfile, activeProfile, availableProfiles, setActiveProfile]);
-
   if (requiredProfile && activeProfile !== requiredProfile) {
     if (availableProfiles.includes(requiredProfile) || requiredProfile === "merchant") {
       // Permite renderizar a rota (ex: /merchant/create-delivery) enquanto o useEffect sincroniza o activeProfile

@@ -12,6 +12,7 @@ import {
   AdvertiserListingsPage,
   MerchantAuctions,
   MerchantArremate,
+  MerchantArrematesPanel,
   MerchantConversions,
   AdvertiserNewListingPage,
   LazyPropertyForm,
@@ -102,6 +103,7 @@ export const advertiserRoutes = (
     <Route path="/anunciante/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserListingsPage /></Suspense>} />
     <Route path="/anunciante/leiloes"         element={<MerchantAuctions />} />
     <Route path="/anunciante/arremates"       element={<MerchantArremate />} />
+    <Route path="/anunciante/arremates/gestao" element={<Suspense fallback={<PageFallback />}><MerchantArrematesPanel /></Suspense>} />
     <Route path="/anunciante/conversoes"      element={<MerchantConversions />} />
     <Route path="/anunciante/anuncios/novo"   element={<Suspense fallback={<PageFallback />}><AdvertiserNewListingPage /></Suspense>} />
     <Route path="/anunciante/anuncios/novo/imovel"  element={<Suspense fallback={<PageFallback />}><LazyPropertyForm /></Suspense>} />
@@ -125,6 +127,8 @@ export const advertiserRoutes = (
     <Route path="/anunciante/divulgar-gratis"         element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/produtos/divulgar-gratis" element={<Suspense fallback={<PageFallback />}><AdvertiserPromotionPage /></Suspense>} />
     <Route path="/anunciante/carteira"        element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
+    {/* Alias do Centro Financeiro — vários fluxos (recarga/saldo insuficiente) navegam para /centro-financeiro */}
+    <Route path="/centro-financeiro"          element={<Suspense fallback={<PageFallback />}><AdvertiserWalletPage /></Suspense>} />
     <Route path="/anunciante/suporte"        element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
     <Route path="/anunciante/monitor"        element={<Suspense fallback={<PageFallback />}><AdvertiserPostingMonitorPage /></Suspense>} />
   </Route>

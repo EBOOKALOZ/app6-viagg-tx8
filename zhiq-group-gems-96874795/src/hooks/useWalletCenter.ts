@@ -108,8 +108,19 @@ export function useWalletCenter(): WalletCenterData {
         .maybeSingle()) as any;
 
       const walletId = (w as any)?.id ?? null;
-      const balance = Number((w as any)?.balance_cents ?? 0);
+      let balance = Number((w as any)?.balance_cents ?? 0);
       const reserved = Number((w as any)?.reserved_cents ?? 0);
+
+      // Se o saldo do legado for 0 ou nulo, buscar das contas pay_financial_accounts do usuário
+      if (balance === 0) {
+        const { data: payAccounts } = await (supabase.from("pay_financial_accounts" as any)
+          .select("available_balance")
+          .eq("owner_id", user!.id)) as any;
+        if (payAccounts && Array.isArray(payAccounts)) {
+          const totalPayReais = payAccounts.reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
+          balance = Math.round(totalPayReais * 100);
+        }
+      }
 
       let txns: WCTxn[] = [];
       if (walletId) {
@@ -160,8 +171,8 @@ export function useWalletCenter(): WalletCenterData {
   );
 
   // Saldo total após operação (best-effort): total corrente e "desconta" para trás
-  const creditAvailableCents = balance - reserved;
-  const totalCents = creditAvailableCents + financialCents;
+  const creditAvailableCents = Math.max(balance - reserved, financialCents);
+  const totalCents = Math.max(creditAvailableCents, financialCents);
   let running = totalCents;
   for (const t of all) {
     t.running_cents = running;
