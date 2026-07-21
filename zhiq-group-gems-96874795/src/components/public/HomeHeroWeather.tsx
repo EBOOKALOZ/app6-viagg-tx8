@@ -74,7 +74,7 @@ const IA_TAGS = [
   { icon: "💡", label: "Sugestão Inteligente" },
 ];
 
-export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
+export function HomeHeroWeather({ compact = false, onClose }: { compact?: boolean; onClose?: () => void }) {
   const { pathname } = useLocation();
   const modulo = moduloFromPath(pathname);
   const { city: userCity, resolved: cityResolved } = useUserAutonomousCity();
@@ -85,6 +85,9 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
     [weather, modulo],
   );
 
+  // dispensado = o usuário minimizou o card. Fecha TOTALMENTE (sem pílula,
+  // sem reabrir sozinho) e avisa o pai (HeroClimaRadio) p/ deixar só o rádio.
+  const [dismissed, setDismissed] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [progress, setProgress] = useState(100);
   const [iaTagIdx, setIaTagIdx] = useState(0);
@@ -123,8 +126,9 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
           return prev - stepValue;
         });
       }, stepTime);
-    } else {
-      // Quando oculto (some), aguarda 30 segundos para aparecer automaticamente de novo (ou reabre no clique)
+    } else if (!dismissed) {
+      // Encolhido pelo TEMPO (não pelo usuário): aguarda 30s e reabre sozinho.
+      // Se foi DISPENSADO pelo usuário (X), não reabre — fica fechado de vez.
       timeout = setTimeout(() => {
         setExpanded(true);
         setProgress(100);
@@ -135,7 +139,7 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
       if (interval) clearInterval(interval);
       if (timeout) clearTimeout(timeout);
     };
-  }, [weather, ia, expanded]);
+  }, [weather, ia, expanded, dismissed]);
 
   if (loading && (!weather || !ia)) {
     return (
@@ -146,6 +150,10 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
     );
   }
   if (!weather || !ia) return null;
+
+  // Dispensado pelo usuário: fecha TOTALMENTE (sem pílula, sem reabrir).
+  // O HeroClimaRadio assume o topo com o rádio.
+  if (dismissed) return null;
 
   if (!expanded) {
     return (
@@ -231,12 +239,12 @@ export function HomeHeroWeather({ compact = false }: { compact?: boolean }) {
         </span>
       </div>
 
-      {/* Botão de Fechar Rápido (X) */}
+      {/* Botão de Fechar (X): dispensa TOTALMENTE o card e cede o topo ao rádio */}
       <button
-        onClick={() => setExpanded(false)}
-        aria-label="Ocultar previsão do tempo"
+        onClick={() => { setDismissed(true); onClose?.(); }}
+        aria-label="Fechar previsão do tempo"
         className="absolute top-2.5 right-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-slate-800 shadow-sm transition-all duration-200 hover:bg-white hover:scale-110 active:scale-95 cursor-pointer"
-        title="Ocultar previsão do tempo"
+        title="Fechar previsão do tempo"
       >
         <X className="h-4 w-4" />
       </button>
