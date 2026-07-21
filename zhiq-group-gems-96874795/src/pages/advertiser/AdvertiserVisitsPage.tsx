@@ -1,868 +1,395 @@
 /**
- * AdvertiserVisitsPage — Centro de Inteligência Comercial VIAGG-TX8™
- * BI completo: visitas, créditos, gráficos, IA analítica, simulador, upgrade.
+ * AdvertiserVisitsPage — CENTRO DE INTELIGÊNCIA COMERCIAL (Viagg-TX8)
+ *
+ * SOMENTE UI/leitura. Não toca banco/RPC/RLS/motor financeiro/comissão/ledger.
+ * A plataforma NÃO cobra mais por visita/clique/crédito — a monetização é só o
+ * desbloqueio de contato (2%). Esta tela deixou de ser "faturamento por visitas"
+ * e passou a responder: como meus anúncios performam, quantos interessados,
+ * quanto investi em desbloqueios e quanto converti.
+ *
+ * Fontes REAIS (legíveis pelo lojista): marketplace_product_click_events (views),
+ * advertiser_contact_intentions (interessados, via useContactIntentions),
+ * purchase_intentions (pedidos), discount_requests (ofertas), useWalletCenter
+ * (financeiro + desbloqueios). Ranking/categoria/IA = heurística client-side.
  */
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useContactIntentions } from "@/hooks/useContactIntentions";
+import { useWalletCenter } from "@/hooks/useWalletCenter";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip,
+  ResponsiveContainer, CartesianGrid, Cell,
 } from "recharts";
 import {
-  Eye, TrendingUp, Coins, AlertTriangle, Zap, ShoppingCart,
-  MessageCircle, Phone, Star, Package, ArrowRight, RefreshCw,
-  BrainCircuit, Calculator, BarChart3, Clock, MapPin,
-  CheckCircle, XCircle, Loader2, ChevronRight, Gift, Crown,
+  Eye, Heart, MessageSquare, Package, Handshake, CheckCircle2, DollarSign,
+  TrendingUp, Clock, Star, RefreshCw, BrainCircuit, AlertTriangle, Wallet,
+  Layers, Trophy, Flame, Snowflake, ArrowRight, Sparkles, Gauge,
 } from "lucide-react";
-import { viaggAI } from "@/lib/viaggAI";
 
-// ── Tipos ──────────────────────────────────────────────────────────────────────
+// Paleta categórica pré-validada (dataviz, dark) — identidade também nos rótulos.
+const CAT = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#9085e9"];
+const brl = (v: number) => (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const centsBRL = (c: number) => ((c ?? 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const num = (n: number) => (n ?? 0).toLocaleString("pt-BR");
 
-interface VisitEvent {
-  id: string;
-  product_id: string | null;
-  city: string | null;
-  neighborhood: string | null;
-  source: string | null;
-  status: string;
-  credits_charged: number | null;
-  created_at: string;
-}
-interface ProductInfo { title: string; image: string | null }
-
-// ── Custos por ação (centralizados) ───────────────────────────────────────────
-
-const CREDIT_COSTS: Record<string, { cost: number; label: string; icon: React.ElementType; color: string; desc: string }> = {
-  product_click:     { cost: 1,  label: "Clique em produto",   icon: Eye,           color: "#3B82F6", desc: "Usuário clicou em um produto da sua loja" },
-  store_entry:       { cost: 3,  label: "Entrada na loja",     icon: TrendingUp,    color: "#FF6A00", desc: "Visitante entrou na sua loja via anúncio" },
-  cart_addition:     { cost: 5,  label: "Carrinho",            icon: ShoppingCart,  color: "#8B5CF6", desc: "Produto adicionado ao carrinho" },
-  order_completed:   { cost: 5,  label: "Pedido concluído",    icon: Package,       color: "#22C55E", desc: "Comprador finalizou um pedido" },
-  offer_accepted:    { cost: 9,  label: "Oferta aceita",       icon: Star,          color: "#F59E0B", desc: "Você visualizou e aceitou uma oferta" },
-  whatsapp_unlocked: { cost: 13, label: "WhatsApp desbloqueado", icon: Phone,       color: "#25D366", desc: "Contato direto desbloqueado com comprador" },
-  direct_message:    { cost: 13, label: "Conversa direta",     icon: MessageCircle, color: "#6366F1", desc: "Conversa iniciada com vendedor" },
+const MODULE_LABEL: Record<string, string> = {
+  product: "Mercado", real_estate: "Imóveis", vehicles: "Veículos",
+  services: "Serviços", freight: "Fretes", travel: "Viagens",
 };
-
-// ── Pacotes de upgrade ─────────────────────────────────────────────────────────
-
-const PLANS = [
-  { name: "Gratuito",    credits: 30,   price: 0,    priceLabel: "Grátis",    color: "#6B7280", features: ["30 créditos de boas-vindas", "Básico"] },
-  { name: "Básico",      credits: 100,  price: 19.9, priceLabel: "R$ 19,90",  color: "#3B82F6", features: ["100 créditos", "Validade 30 dias", "Relatórios básicos"] },
-  { name: "Profissional",credits: 300,  price: 49.9, priceLabel: "R$ 49,90",  color: "#FF6A00", features: ["300 créditos", "Validade 60 dias", "Análise Viagg-TX8™", "Relatórios completos"], recommended: true },
-  { name: "Premium",     credits: 600,  price: 89.9, priceLabel: "R$ 89,90",  color: "#8B5CF6", features: ["600 créditos", "Validade 90 dias", "Análise Viagg-TX8™ avançada", "Suporte prioritário"] },
-  { name: "Empresarial", credits: 1500, price: 199,  priceLabel: "R$ 199,00", color: "#F59E0B", features: ["1500 créditos", "Validade 180 dias", "Análise Viagg-TX8™ ilimitada", "Gerente dedicado"] },
+// Classes LITERAIS por tom (Tailwind JIT não gera classes interpoladas).
+const TONE: Record<string, { wrap: string; icon: string }> = {
+  amber:   { wrap: "bg-amber-500/10 border-amber-500/20",     icon: "text-amber-400" },
+  emerald: { wrap: "bg-emerald-500/10 border-emerald-500/20", icon: "text-emerald-400" },
+  blue:    { wrap: "bg-blue-500/10 border-blue-500/20",       icon: "text-blue-400" },
+  violet:  { wrap: "bg-violet-500/10 border-violet-500/20",   icon: "text-violet-400" },
+};
+const PERIODS = [
+  { key: "1", label: "Hoje", days: 1 }, { key: "7", label: "7 dias", days: 7 },
+  { key: "30", label: "30 dias", days: 30 }, { key: "90", label: "90 dias", days: 90 },
+  { key: "365", label: "12 meses", days: 365 },
 ];
 
-// ── Formatadores ──────────────────────────────────────────────────────────────
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", {
-    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-  });
-}
-function fmtHour(iso: string) {
-  return new Date(iso).getHours() + "h";
-}
-
-// ── KPI Card ──────────────────────────────────────────────────────────────────
-
-function KpiCard({
-  title, value, sub, icon: Icon, color, negative, pulse,
-}: {
-  title: string; value: string | number; sub?: string;
-  icon: React.ElementType; color: string; negative?: boolean; pulse?: boolean;
+function KpiCard({ title, value, sub, Icon, color }: {
+  title: string; value: string | number; sub?: string; Icon: any; color: string;
 }) {
   return (
-    <div className={`rounded-2xl p-4 border flex items-start gap-3 ${
-      negative ? "bg-red-950/30 border-red-500/30" : "bg-white border-gray-100 shadow-sm"
-    }`}>
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}18` }}>
-        <Icon className={`w-5 h-5 ${pulse ? "animate-pulse" : ""}`} style={{ color }} />
+    <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-4">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}22` }}>
+          <Icon className="w-4 h-4" style={{ color }} />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#A7B0BE]">{title}</p>
       </div>
-      <div className="min-w-0">
-        <p className="text-xs text-gray-500 font-medium truncate">{title}</p>
-        <p className={`text-xl font-black leading-tight mt-0.5 ${negative ? "text-red-500" : "text-gray-900"}`}>
-          {value}
-        </p>
-        {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
-      </div>
+      <p className="text-2xl font-black text-[#F5F7FA] tabular-nums mt-2">{value}</p>
+      {sub && <p className="text-[11px] text-[#A7B0BE]/70 mt-0.5">{sub}</p>}
     </div>
   );
 }
-
-// ══════════════════════════════════════════════════════════════════════════════
 
 export default function AdvertiserVisitsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab]                 = useState<"overview" | "credits" | "history" | "ai">("overview");
-  const [chartPeriod, setChartPeriod] = useState<"hour" | "day" | "month">("day");
-  const [simVisits, setSimVisits]     = useState(100);
-  const [aiInsights, setAiInsights]   = useState<string[]>([]);
-  const [aiLoading, setAiLoading]     = useState(false);
+  const [period, setPeriod] = useState("30");
+  const days = PERIODS.find((p) => p.key === period)!.days;
+  const since = Date.now() - days * 864e5;
 
-  // ── Query ──────────────────────────────────────────────────────────────────
+  const { intentions } = useContactIntentions();     // leads (advertiser_contact_intentions)
+  const wc = useWalletCenter();                       // financeiro + desbloqueios (read-only)
 
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["advertiser-visits-bi", user?.id],
+  const { data: bi, isLoading, refetch } = useQuery({
+    queryKey: ["commercial-intel", user?.id],
     enabled: !!user?.id,
     refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data: ms } = await (supabase.from("merchant_stores" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      const storeId = (ms as any)?.id;
-      if (!storeId) return null;
+      const storeIds: string[] = [];
+      const [{ data: ms }, { data: aa }] = await Promise.all([
+        (supabase.from("merchant_stores" as any).select("id").eq("user_id", user!.id)) as any,
+        (supabase.from("advertiser_accounts" as any).select("id").eq("user_id", user!.id)) as any,
+      ]);
+      ((ms || []) as any[]).forEach((s) => s?.id && storeIds.push(s.id));
+      ((aa || []) as any[]).forEach((a) => a?.id && storeIds.push(a.id));
 
-      const { data: rows } = await (supabase.from("marketplace_product_click_events" as any)
-        .select("id, product_id, city, neighborhood, source, status, credits_charged, created_at")
-        .eq("store_id", storeId)
-        .not("status", "in", "(owner_skip,dry_run)")
-        .order("created_at", { ascending: false })
-        .limit(1000)) as any;
-      const events: VisitEvent[] = rows || [];
-
-      // Produtos
-      const ids = Array.from(new Set(events.map((e) => e.product_id).filter(Boolean))) as string[];
-      const products: Record<string, ProductInfo> = {};
-      const resolveImg = (raw: string | null | undefined): string | null => {
-        if (!raw) return null;
-        if (/^https?:\/\//i.test(raw)) return raw;
-        const { data: pub } = supabase.storage.from("marketing-materials").getPublicUrl(raw);
-        return pub?.publicUrl ?? null;
-      };
-      if (ids.length) {
-        const { data: mmp } = await (supabase.from("merchant_marketing_products" as any)
-          .select("id, title, image_url").in("id", ids)) as any;
-        (mmp || []).forEach((p: any) => { products[p.id] = { title: p.title || "Produto", image: resolveImg(p.image_url) }; });
-        const missing = ids.filter((id) => !products[id]);
-        if (missing.length) {
-          const { data: adv } = await (supabase.from("advertiser_listings" as any)
-            .select("id, title, cover_image_url").in("id", missing)) as any;
-          (adv || []).forEach((a: any) => { products[a.id] = { title: a.title || "Produto", image: resolveImg(a.cover_image_url) }; });
-        }
-        const missing2 = ids.filter((id) => !products[id]);
-        if (missing2.length) {
-          const { data: mp } = await (supabase.from("marketplace_products" as any)
-            .select("id, title, cover_image_url").in("id", missing2)) as any;
-          (mp || []).forEach((p: any) => { products[p.id] = { title: p.title || "Produto", image: resolveImg(p.cover_image_url) }; });
-        }
+      let views: any[] = [], offers: any[] = [];
+      if (storeIds.length) {
+        const [{ data: v }, { data: o }] = await Promise.all([
+          (supabase.from("marketplace_product_click_events" as any)
+            .select("id, product_id, city, created_at, status")
+            .in("store_id", storeIds).not("status", "in", "(owner_skip,dry_run)")
+            .order("created_at", { ascending: false }).limit(3000)) as any,
+          (supabase.from("discount_requests" as any)
+            .select("id, product_id, requested_price, product_price, status, created_at")
+            .in("store_id", storeIds).neq("status", "deleted")
+            .order("created_at", { ascending: false }).limit(1500)) as any,
+        ]);
+        views = v || []; offers = o || [];
       }
+      const { data: ord } = await (supabase.from("purchase_intentions" as any)
+        .select("id, subtotal, status, created_at")
+        .order("created_at", { ascending: false }).limit(1500)) as any;
+      const orders = ord || [];
 
-      // Saldo
-      const { data: advAcc } = await (supabase.from("advertiser_accounts" as any)
-        .select("id").eq("user_id", user!.id).maybeSingle()) as any;
-      let available = 0, consumed = 0;
-      const usageByReason: Record<string, number> = {};
-      if ((advAcc as any)?.id) {
-        const { data: bal } = await (supabase.from("advertiser_credit_balances" as any)
-          .select("available_credits, consumed_credits")
-          .eq("advertiser_account_id", (advAcc as any).id).maybeSingle()) as any;
-        available = Number((bal as any)?.available_credits ?? 0);
-        consumed  = Number((bal as any)?.consumed_credits ?? 0);
-
-        const { data: ledger } = await (supabase.from("advertiser_credit_ledger" as any)
-          .select("reason_code, amount, created_at")
-          .eq("advertiser_account_id", (advAcc as any).id)
-          .eq("entry_type", "debit")
-          .order("created_at", { ascending: false })
-          .limit(2000)) as any;
-        (ledger || []).forEach((r: any) => {
-          if (r.reason_code) usageByReason[r.reason_code] = (usageByReason[r.reason_code] || 0) + 1;
-        });
+      const pids = Array.from(new Set([...views, ...offers].map((x: any) => x.product_id).filter(Boolean))).slice(0, 300);
+      const titleMap = new Map<string, string>();
+      if (pids.length) {
+        const [{ data: mmp }, { data: al }] = await Promise.all([
+          (supabase.from("merchant_marketing_products" as any).select("id, title").in("id", pids)) as any,
+          (supabase.from("advertiser_listings" as any).select("id, title").in("id", pids)) as any,
+        ]);
+        ((mmp || []) as any[]).forEach((p) => p.title && titleMap.set(p.id, p.title));
+        ((al || []) as any[]).forEach((p) => !titleMap.has(p.id) && p.title && titleMap.set(p.id, p.title));
       }
-
-      return { events, products, available, consumed, usageByReason, storeId };
+      return { views, offers, orders, titles: Object.fromEntries(titleMap) };
     },
   });
 
-  // ── Derivações ─────────────────────────────────────────────────────────────
+  const titles = (bi?.titles ?? {}) as Record<string, string>;
 
-  const events      = data?.events      || [];
-  const products    = data?.products    || {};
-  const available   = data?.available   ?? 0;
-  const consumed    = data?.consumed    ?? 0;
-  const usageByReason = data?.usageByReason || {};
-  const isNegative  = available < 0;
-  const totalVisits = events.length;
-  const totalCredits = events.reduce((s, e) => s + (Number(e.credits_charged) || 0), 0);
+  const d = useMemo(() => {
+    const inP = (iso: string) => new Date(iso).getTime() >= since;
+    const views = (bi?.views ?? []).filter((v: any) => inP(v.created_at));
+    const offers = (bi?.offers ?? []).filter((o: any) => inP(o.created_at));
+    const orders = (bi?.orders ?? []).filter((o: any) => inP(o.created_at));
+    const leads = intentions.filter((l: any) => inP(l.created_at));
+    const unlocked = leads.filter((l: any) => l.status === "unlocked");
+    const acceptedOffers = offers.filter((o: any) => o.status === "accepted");
+    const convertedOrders = orders.filter((o: any) => o.status === "converted");
 
-  const now = new Date();
-  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const start7d    = startToday - 6 * 864e5;
-  const start30d   = startToday - 29 * 864e5;
-  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const negotiated = orders.reduce((s: number, o: any) => s + Number(o.subtotal ?? 0), 0)
+      + acceptedOffers.reduce((s: number, o: any) => s + Number(o.requested_price ?? 0), 0);
+    const deals = acceptedOffers.length + convertedOrders.length;
+    const conversion = views.length ? (deals / views.length) * 100 : 0;
 
-  const since = (from: number) => events.filter((e) => new Date(e.created_at).getTime() >= from);
-  const sumCr = (arr: VisitEvent[]) => arr.reduce((s, e) => s + (Number(e.credits_charged) || 0), 0);
+    const viewsByProduct = new Map<string, number>();
+    views.forEach((v: any) => v.product_id && viewsByProduct.set(v.product_id, (viewsByProduct.get(v.product_id) || 0) + 1));
+    const topProductId = [...viewsByProduct.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
 
-  const todayList  = since(startToday);
-  const week7List  = since(start7d);
-  const month30List= since(start30d);
-  const monthList  = since(startMonth);
+    const firstView = new Map<string, number>(), firstLead = new Map<string, number>();
+    views.forEach((v: any) => { if (v.product_id) { const t = new Date(v.created_at).getTime(); if (!firstView.has(v.product_id) || t < firstView.get(v.product_id)!) firstView.set(v.product_id, t); } });
+    leads.forEach((l: any) => { const k = l.listing_id; if (k) { const t = new Date(l.created_at).getTime(); if (!firstLead.has(k) || t < firstLead.get(k)!) firstLead.set(k, t); } });
+    const gaps: number[] = [];
+    firstLead.forEach((t, k) => { const fv = firstView.get(k); if (fv && t > fv) gaps.push(t - fv); });
+    const avgGapH = gaps.length ? gaps.reduce((s, g) => s + g, 0) / gaps.length / 36e5 : null;
 
-  const charged    = events.filter((e) => e.status === "charged");
-  const convRate   = totalVisits > 0 ? ((charged.length / totalVisits) * 100).toFixed(1) : "0";
+    const rank = new Map<string, { views: number; leads: number; offers: number; unlocked: number; value: number }>();
+    const bump = (id: string | null, f: "views" | "leads" | "offers" | "unlocked" | "value", n = 1) => {
+      if (!id) return; const r = rank.get(id) || { views: 0, leads: 0, offers: 0, unlocked: 0, value: 0 }; r[f] += n; rank.set(id, r);
+    };
+    views.forEach((v: any) => bump(v.product_id, "views"));
+    leads.forEach((l: any) => { bump(l.listing_id, "leads"); if (l.status === "unlocked") bump(l.listing_id, "unlocked"); });
+    offers.forEach((o: any) => { bump(o.product_id, "offers"); if (o.status === "accepted") bump(o.product_id, "value", Number(o.requested_price ?? 0)); });
+    const ranking = [...rank.entries()].map(([id, r]) => ({ id, title: titles[id] || "Produto", ...r, conv: r.views ? (r.unlocked / r.views) * 100 : 0 }))
+      .sort((a, b) => b.views - a.views).slice(0, 8);
 
-  // Unique cities
-  const cities = useMemo(() => {
-    const m = new Map<string, number>();
-    events.forEach((e) => { if (e.city) m.set(e.city, (m.get(e.city) || 0) + 1); });
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8);
-  }, [events]);
+    const byModule = new Map<string, number>();
+    leads.forEach((l: any) => byModule.set(l.listing_module, (byModule.get(l.listing_module) || 0) + 1));
+    const moduleRows = [...byModule.entries()].map(([m, n]) => ({ modulo: MODULE_LABEL[m] || m, leads: n })).sort((a, b) => b.leads - a.leads);
 
-  // Top products
-  const topProducts = useMemo(() => {
-    const m = new Map<string, number>();
-    events.forEach((e) => { if (e.product_id) m.set(e.product_id, (m.get(e.product_id) || 0) + 1); });
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [events]);
+    const bucket = new Map<string, { dia: string; Visualizações: number; Interessados: number; Pedidos: number }>();
+    const dayKey = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+    const ensure = (iso: string) => { const k = dayKey(iso); if (!bucket.has(k)) bucket.set(k, { dia: k, Visualizações: 0, Interessados: 0, Pedidos: 0 }); return bucket.get(k)!; };
+    views.forEach((v: any) => ensure(v.created_at).Visualizações++);
+    leads.forEach((l: any) => ensure(l.created_at).Interessados++);
+    orders.forEach((o: any) => ensure(o.created_at).Pedidos++);
+    const series = [...bucket.values()].reverse().slice(-30);
 
-  // Chart data
-  const chartData = useMemo(() => {
-    if (chartPeriod === "hour") {
-      const m = new Map<number, number>();
-      for (let h = 0; h < 24; h++) m.set(h, 0);
-      todayList.forEach((e) => {
-        const h = new Date(e.created_at).getHours();
-        m.set(h, (m.get(h) || 0) + 1);
-      });
-      return Array.from(m.entries()).map(([h, count]) => ({ label: `${h}h`, count }));
-    }
-    if (chartPeriod === "day") {
-      const m = new Map<string, { count: number; ts: number }>();
-      week7List.forEach((e) => {
-        const d = new Date(e.created_at);
-        const key = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-        const cur = m.get(key) || { count: 0, ts: 0 };
-        m.set(key, { count: cur.count + 1, ts: Math.max(cur.ts, d.getTime()) });
-      });
-      return Array.from(m.entries()).map(([label, v]) => ({ label, count: v.count, ts: v.ts }))
-        .sort((a, b) => a.ts - b.ts);
-    }
-    // month
-    const m = new Map<string, number>();
-    events.forEach((e) => {
-      const d = new Date(e.created_at);
-      const key = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
-      m.set(key, (m.get(key) || 0) + 1);
-    });
-    return Array.from(m.entries()).map(([label, count]) => ({ label, count })).slice(-12);
-  }, [events, chartPeriod, todayList, week7List]);
+    const byHour = new Array(24).fill(0), byDow = new Array(7).fill(0);
+    views.forEach((v: any) => { const dt = new Date(v.created_at); byHour[dt.getHours()]++; byDow[dt.getDay()]++; });
+    const bestHour = byHour.indexOf(Math.max(...byHour));
+    const DOW = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const bestDay = DOW[byDow.indexOf(Math.max(...byDow))];
 
-  // Simulador
-  const simResults = useMemo(() => {
-    const entries  = simVisits;
-    const clicks   = Math.round(simVisits * 0.4);
-    const carts    = Math.round(simVisits * 0.1);
-    const orders   = Math.round(simVisits * 0.05);
-    const wpp      = Math.round(simVisits * 0.02);
-    const total    = entries * 3 + clicks * 1 + carts * 5 + orders * 5 + wpp * 13;
-    const daysLeft = total > 0 && available > 0 ? Math.floor(available / (total / 30)) : 0;
-    const bestPlan = PLANS.find((p) => p.credits >= total) ?? PLANS[PLANS.length - 1];
-    return { entries, clicks, carts, orders, wpp, total, daysLeft, bestPlan };
-  }, [simVisits, available]);
+    return {
+      views: views.length, leads: leads.length, unlocked: unlocked.length,
+      orders: orders.length, offers: offers.length, deals, negotiated, conversion,
+      topProductId, topProductTitle: topProductId ? (titles[topProductId] || "Produto") : "—",
+      avgGapH, ranking, moduleRows, series, bestHour, bestDay,
+      pendingUnlock: leads.filter((l: any) => l.status === "pending_unlock").length,
+    };
+  }, [bi, intentions, since, titles]);
 
-  // ── IA Analítica ──────────────────────────────────────────────────────────
+  const insights = useMemo(() => {
+    const out: { Icon: any; color: string; title: string; text: string }[] = [];
+    const alerts: { Icon: any; tone: string; text: string }[] = [];
+    if (d.views > 20 && d.leads / Math.max(d.views, 1) < 0.05)
+      alerts.push({ Icon: AlertTriangle, tone: "amber", text: "Muitas visualizações mas poucos interessados — revise fotos, título e preço." });
+    if (d.conversion > 8)
+      alerts.push({ Icon: Flame, tone: "emerald", text: "Sua conversão está acima da média — considere ampliar o estoque dos campeões." });
+    if (d.pendingUnlock > 0)
+      alerts.push({ Icon: MessageSquare, tone: "blue", text: `Você tem ${d.pendingUnlock} interessado(s) aguardando liberação de contato.` });
+    const hot = d.ranking.find((r) => r.views >= 5 && r.conv >= 10);
+    if (hot) out.push({ Icon: Flame, color: "#d95926", title: "Produto em alta", text: `"${hot.title}" converte ${hot.conv.toFixed(0)}% das visitas.` });
+    const cold = d.ranking.find((r) => r.views >= 8 && r.leads === 0);
+    if (cold) { out.push({ Icon: Snowflake, color: "#3987e5", title: "Produto parado", text: `"${cold.title}" teve ${cold.views} visitas e 0 interessados — vale impulsionar.` }); alerts.push({ Icon: TrendingUp, tone: "violet", text: `Vale impulsionar "${cold.title}".` }); }
+    out.push({ Icon: Clock, color: "#199e70", title: "Melhor horário", text: `Seus anúncios recebem mais visitas por volta das ${d.bestHour}h, ${d.bestDay}.` });
+    const prob = Math.min(95, Math.round(d.conversion * 4 + (d.unlocked / Math.max(d.leads, 1)) * 30));
+    out.push({ Icon: Gauge, color: "#c98500", title: "Probabilidade de venda", text: `Estimativa ${prob}% com base na sua conversão e desbloqueios.` });
+    return { out, alerts };
+  }, [d]);
 
-  async function generateAIInsights() {
-    setAiLoading(true);
-    const prompt = `Você é o analista de negócios da VIAGG-TX8™. Analise estes dados do anunciante e gere 5 insights comerciais práticos em português, cada um em uma linha separada (use • no início de cada insight):
+  const spentCents = wc.contact.totalSpentCents;
+  const revenueEst = d.negotiated;
+  const roi = spentCents > 0 ? ((revenueEst - spentCents / 100) / (spentCents / 100)) * 100 : null;
 
-- Total de visitas: ${totalVisits}
-- Visitas hoje: ${todayList.length}
-- Visitas últimos 7 dias: ${week7List.length}
-- Créditos disponíveis: ${available}
-- Créditos consumidos: ${consumed}
-- Taxa de conversão: ${convRate}%
-- Cidades com mais visitas: ${cities.slice(0, 3).map(([c, n]) => `${c}(${n})`).join(", ")}
-- Produto mais visitado: ${topProducts[0] ? (products[topProducts[0][0]]?.title ?? "N/D") : "N/D"}
+  const KPIS = [
+    { title: "Visualizações", value: num(d.views), Icon: Eye, color: "#3987e5" },
+    { title: "Interessados", value: num(d.leads), Icon: Heart, color: "#d55181" },
+    { title: "Contatos Liberados", value: num(d.unlocked), Icon: MessageSquare, color: "#199e70" },
+    { title: "Pedidos", value: num(d.orders), Icon: Package, color: "#c98500" },
+    { title: "Ofertas", value: num(d.offers), Icon: Handshake, color: "#9085e9" },
+    { title: "Negócios Fechados", value: num(d.deals), Icon: CheckCircle2, color: "#22C55E" },
+    { title: "Valor Negociado", value: brl(d.negotiated), Icon: DollarSign, color: "#FF6A00" },
+    { title: "Taxa de Conversão", value: `${d.conversion.toFixed(1)}%`, Icon: TrendingUp, color: "#14b8a6" },
+    { title: "Tempo até 1º interesse", value: d.avgGapH == null ? "—" : d.avgGapH < 24 ? `${d.avgGapH.toFixed(0)}h` : `${(d.avgGapH / 24).toFixed(1)}d`, Icon: Clock, color: "#6366F1" },
+    { title: "Mais Procurado", value: d.topProductTitle, Icon: Star, color: "#F59E0B" },
+  ];
 
-Foque em: horários de pico, produtos com maior potencial, quando o saldo pode acabar, como aumentar conversões e qual pacote de créditos faz mais sentido.`;
-
-    try {
-      const answer = await viaggAI.ask(prompt);
-      const lines  = answer.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("•"));
-      setAiInsights(lines.length ? lines : [answer]);
-    } catch {
-      setAiInsights(["• Não foi possível gerar insights agora. Tente novamente em alguns instantes."]);
-    }
-    setAiLoading(false);
-  }
-
-  // ── Alert bar ─────────────────────────────────────────────────────────────
-
-  const AlertBar = () => {
-    if (isNegative) return (
-      <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-4">
-        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-red-700">Saldo negativo: {available} créditos</p>
-          <p className="text-xs text-red-500 mt-0.5">Sua loja permanece ativa. Adquira créditos para continuar usando recursos premium.</p>
-        </div>
-        <button onClick={() => navigate("/anunciante/creditos")}
-          className="shrink-0 text-xs font-bold text-white bg-red-500 px-3 py-1.5 rounded-xl hover:bg-red-600 transition-colors">
-          Comprar agora
-        </button>
-      </div>
-    );
-    if (available <= 5) return (
-      <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-4">
-        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 animate-pulse" />
-        <p className="text-sm font-bold text-red-700 flex-1">⚠ Restam apenas {available} créditos — recarregue agora para não perder clientes.</p>
-        <button onClick={() => navigate("/anunciante/creditos")}
-          className="shrink-0 text-xs font-bold text-white bg-red-500 px-3 py-1.5 rounded-xl">Recarregar</button>
-      </div>
-    );
-    if (available <= 20) return (
-      <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-4">
-        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-        <p className="text-sm font-bold text-amber-700 flex-1">⚠ Atenção: restam apenas {available} créditos.</p>
-        <button onClick={() => navigate("/anunciante/creditos")}
-          className="shrink-0 text-xs font-bold text-amber-700 border border-amber-300 bg-amber-50 px-3 py-1.5 rounded-xl">Recarregar</button>
-      </div>
-    );
-    return null;
-  };
-
-  // ── Loading ────────────────────────────────────────────────────────────────
-
-  if (isLoading) return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center space-y-3">
-        <Loader2 className="w-8 h-8 animate-spin text-[#FF6A00] mx-auto" />
-        <p className="text-sm text-gray-500">Carregando dados da inteligência comercial…</p>
-      </div>
-    </div>
-  );
-
-  // ══════════════════════════════════════════════════════════════════════════
+  const funnel = [
+    { etapa: "Visualizações", n: d.views, color: CAT[0] },
+    { etapa: "Interessados", n: d.leads, color: CAT[4] },
+    { etapa: "Liberados", n: d.unlocked, color: CAT[2] },
+    { etapa: "Pedidos", n: d.orders, color: CAT[3] },
+    { etapa: "Negócios", n: d.deals, color: "#22C55E" },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-xl font-black text-gray-900 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-[#FF6A00]" />
-              Centro de Inteligência Comercial
-            </h1>
-            <p className="text-sm text-gray-500 mt-0.5">Análise completa de visitas, créditos e conversões — VIAGG-TX8™</p>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-black text-[#F5F7FA] tracking-tight flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF6A00] to-[#E55A00] flex items-center justify-center shadow-lg"><BrainCircuit className="h-5 w-5 text-white" /></div>
+            Inteligência Comercial
+          </h1>
+          <p className="text-sm text-[#A7B0BE] mt-1">Como seus anúncios performam, quem tem interesse e quanto você converte</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-[#1B1F24] border border-[#2A3038] rounded-xl p-1">
+            {PERIODS.map((p) => (
+              <button key={p.key} onClick={() => setPeriod(p.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${period === p.key ? "bg-[#FF6A00] text-white" : "text-[#A7B0BE] hover:text-white"}`}>{p.label}</button>
+            ))}
           </div>
-          <button onClick={() => refetch()}
-            className="flex items-center gap-1.5 text-xs text-gray-500 border border-gray-200 bg-white rounded-xl px-3 py-2 hover:bg-gray-50 transition-colors">
-            <RefreshCw className="w-3.5 h-3.5" />
-            Atualizar
+          <button onClick={() => { refetch(); wc.refetch(); }} className="p-2.5 rounded-xl bg-[#1B1F24] border border-[#2A3038] text-[#A7B0BE] hover:text-white">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
+      </div>
 
-        {/* Alert */}
-        <AlertBar />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {KPIS.map((k) => <KpiCard key={k.title} {...k} />)}
+      </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <KpiCard title="Total de Visitas"    value={totalVisits}          sub={`${todayList.length} hoje`}        icon={Eye}          color="#FF6A00" />
-          <KpiCard title="Créditos Disponíveis" value={available}           sub={`${consumed} consumidos`}           icon={Coins}        color="#22C55E" negative={isNegative} pulse={isNegative} />
-          <KpiCard title="Esta Semana"          value={week7List.length}    sub={`${month30List.length} em 30 dias`} icon={TrendingUp}   color="#3B82F6" />
-          <KpiCard title="Taxa de Conversão"    value={`${convRate}%`}      sub={`${charged.length} cobradas`}       icon={CheckCircle}  color="#8B5CF6" />
+      <div className="rounded-2xl bg-gradient-to-br from-[#0D3D2E] via-[#0F4A35] to-[#124D38] border border-emerald-500/20 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-black uppercase tracking-widest text-emerald-200 flex items-center gap-2"><Wallet className="h-4 w-4" /> Financeiro</h3>
+          <button onClick={() => navigate("/anunciante/carteira")} className="text-xs font-bold text-emerald-200 hover:text-white flex items-center gap-1">Abrir Carteira <ArrowRight className="h-3.5 w-3.5" /></button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <KpiCard title="Cliques WhatsApp"   value={usageByReason["whatsapp_unlocked"] || 0}  sub="13cr cada"  icon={Phone}        color="#25D366" />
-          <KpiCard title="Pedidos"            value={usageByReason["order_completed"]   || 0}  sub="5cr cada"   icon={Package}      color="#F59E0B" />
-          <KpiCard title="Ofertas Aceitas"    value={usageByReason["offer_accepted"]    || 0}  sub="9cr cada"   icon={Star}         color="#EF4444" />
-          <KpiCard title="Créditos Gastos"    value={totalCredits}                             sub="total geral" icon={Zap}         color="#6366F1" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { l: "Saldo Disponível", v: centsBRL(wc.creditAvailableCents), c: "text-white" },
+            { l: "Gasto em Desbloqueios", v: centsBRL(spentCents), c: "text-red-300" },
+            { l: "Contatos Liberados", v: num(wc.contact.unlockCount), c: "text-white" },
+            { l: "Valor Médio / Contato", v: centsBRL(wc.contact.avgCents), c: "text-white" },
+            { l: "Receita Estimada", v: brl(revenueEst), c: "text-emerald-300" },
+            { l: "ROI Estimado", v: roi == null ? "—" : `${roi.toFixed(0)}%`, c: roi != null && roi >= 0 ? "text-emerald-300" : "text-red-300" },
+          ].map((x) => (
+            <div key={x.l} className="bg-white/5 rounded-xl p-3 border border-white/5">
+              <p className="text-[10px] text-white/50 uppercase tracking-wider font-bold">{x.l}</p>
+              <p className={`text-lg font-black tabular-nums mt-1 ${x.c}`}>{x.v}</p>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1.5 shadow-sm w-fit">
-          {([
-            { key: "overview", label: "Visão Geral",  icon: BarChart3    },
-            { key: "credits",  label: "Créditos",     icon: Coins        },
-            { key: "history",  label: "Histórico",    icon: Clock        },
-            { key: "ai",       label: "Análise Viagg-TX8™", icon: BrainCircuit },
-          ] as const).map((t) => {
-            const Icon = t.icon;
-            return (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  tab === t.key
-                    ? "bg-[#FF6A00] text-white shadow-sm"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                }`}>
-                <Icon className="w-4 h-4" />
-                {t.label}
-              </button>
-            );
-          })}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
+          <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Layers className="h-4 w-4 text-[#FF6A00]" /> Funil de Conversão</h3>
+          <ResponsiveContainer width="100%" height={230}>
+            <BarChart data={funnel} layout="vertical" margin={{ left: 12 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2A3038" horizontal={false} />
+              <XAxis type="number" tick={{ fill: "#A7B0BE", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis type="category" dataKey="etapa" tick={{ fill: "#A7B0BE", fontSize: 11 }} axisLine={false} tickLine={false} width={92} />
+              <RTooltip contentStyle={{ background: "#0D0F12", border: "1px solid #2A3038", borderRadius: 12, color: "#fff" }} />
+              <Bar dataKey="n" radius={[0, 4, 4, 0]}>{funnel.map((f, i) => <Cell key={i} fill={f.color} />)}</Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
+        <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
+          <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-400" /> Evolução ({PERIODS.find(p => p.key === period)!.label})</h3>
+          {d.series.length === 0 ? <p className="text-xs text-[#A7B0BE] py-14 text-center">Sem dados no período.</p> : (
+            <ResponsiveContainer width="100%" height={230}>
+              <AreaChart data={d.series}>
+                <defs>
+                  <linearGradient id="gV" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3987e5" stopOpacity={0.4} /><stop offset="100%" stopColor="#3987e5" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="gI" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#d55181" stopOpacity={0.4} /><stop offset="100%" stopColor="#d55181" stopOpacity={0} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2A3038" vertical={false} />
+                <XAxis dataKey="dia" tick={{ fill: "#A7B0BE", fontSize: 10 }} axisLine={{ stroke: "#2A3038" }} tickLine={false} />
+                <YAxis tick={{ fill: "#A7B0BE", fontSize: 10 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+                <RTooltip contentStyle={{ background: "#0D0F12", border: "1px solid #2A3038", borderRadius: 12, color: "#fff" }} />
+                <Area type="monotone" dataKey="Visualizações" stroke="#3987e5" fill="url(#gV)" strokeWidth={2} />
+                <Area type="monotone" dataKey="Interessados" stroke="#d55181" fill="url(#gI)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
 
-        {/* ── TAB: VISÃO GERAL ── */}
-        {tab === "overview" && (
-          <div className="space-y-5">
-            {/* Gráfico de visitas */}
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                <h2 className="text-sm font-bold text-gray-900">Visitas ao Longo do Tempo</h2>
-                <div className="flex gap-1">
-                  {(["hour","day","month"] as const).map((p) => (
-                    <button key={p} onClick={() => setChartPeriod(p)}
-                      className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                        chartPeriod === p ? "bg-[#FF6A00] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}>
-                      {p === "hour" ? "Hora" : p === "day" ? "Dia" : "Mês"}
-                    </button>
-                  ))}
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="rounded-2xl bg-[#1B1F24] border border-violet-500/20 p-5">
+          <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-400" /> ORION IA Comercial</h3>
+          <div className="space-y-2">
+            {insights.out.map((i, k) => (
+              <div key={k} className="flex items-start gap-3 p-3 rounded-xl bg-[#14171B] border border-[#2A3038]/60">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${i.color}22` }}><i.Icon className="w-4 h-4" style={{ color: i.color }} /></div>
+                <div><p className="text-xs font-black text-[#F5F7FA]">{i.title}</p><p className="text-[11px] text-[#A7B0BE] mt-0.5">{i.text}</p></div>
               </div>
-              {chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="vg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#FF6A00" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#FF6A00" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="label" tick={{ fill: "#9CA3AF", fontSize: 11 }} />
-                    <YAxis tick={{ fill: "#9CA3AF", fontSize: 11 }} allowDecimals={false} />
-                    <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, fontSize: 12 }} />
-                    <Area type="monotone" dataKey="count" stroke="#FF6A00" fill="url(#vg)" strokeWidth={2.5} name="Visitas" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
-                  Nenhuma visita no período selecionado.
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Produtos mais visitados */}
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-                <h2 className="text-sm font-bold text-gray-900 mb-4">Produtos Mais Visitados</h2>
-                {topProducts.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">Nenhum dado disponível.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {topProducts.map(([pid, count], i) => {
-                      const pct = Math.round((count / (topProducts[0]?.[1] || 1)) * 100);
-                      return (
-                        <div key={pid}>
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[11px] font-black text-gray-400 w-4 shrink-0">#{i + 1}</span>
-                              <span className="text-xs font-semibold text-gray-700 truncate">
-                                {products[pid]?.title ?? "Produto"}
-                              </span>
-                            </div>
-                            <span className="text-xs font-bold text-[#FF6A00] shrink-0 ml-2">{count}</span>
-                          </div>
-                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-[#FF6A00]" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Cidades de origem */}
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-                <h2 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#FF6A00]" />
-                  Visitantes por Cidade
-                </h2>
-                {cities.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">Sem dados de localização ainda.</p>
-                ) : (
-                  <div className="space-y-2.5">
-                    {cities.map(([city, count], i) => {
-                      const pct = Math.round((count / (cities[0]?.[1] || 1)) * 100);
-                      return (
-                        <div key={city}>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-700 truncate">{city}</span>
-                            <span className="text-xs font-bold text-gray-500 ml-2">{count} visitas</span>
-                          </div>
-                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full" style={{
-                              width: `${pct}%`,
-                              background: `hsl(${240 - i * 25}, 70%, 55%)`,
-                            }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Resumo período */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Hoje",          visits: todayList.length,    credits: sumCr(todayList) },
-                { label: "Últimos 7 dias",visits: week7List.length,    credits: sumCr(week7List) },
-                { label: "Este mês",      visits: monthList.length,    credits: sumCr(monthList) },
-                { label: "Últimos 30 dias",visits:month30List.length,  credits: sumCr(month30List) },
-              ].map((p) => (
-                <div key={p.label} className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 text-center">
-                  <p className="text-[11px] text-gray-400 font-medium">{p.label}</p>
-                  <p className="text-2xl font-black text-gray-900 mt-1">{p.visits}</p>
-                  <p className="text-xs text-[#FF6A00] font-semibold">{p.credits} créditos</p>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
-        )}
-
-        {/* ── TAB: CRÉDITOS ── */}
-        {tab === "credits" && (
-          <div className="space-y-5">
-            {/* Saldo visual */}
-            <div className={`rounded-2xl p-5 border ${isNegative ? "bg-red-50 border-red-200" : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-100"}`}>
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-gray-600">Saldo disponível</p>
-                  <p className={`text-4xl font-black mt-1 ${isNegative ? "text-red-600" : "text-gray-900"}`}>
-                    {available.toLocaleString()} <span className="text-lg font-semibold text-gray-400">créditos</span>
-                  </p>
-                  {isNegative && (
-                    <p className="text-sm text-red-500 mt-1">
-                      Você continua recebendo visitas. Sua loja está ativa, mas o saldo está negativo. Recarregue para usar recursos premium.
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Total consumido</p>
-                  <p className="text-2xl font-black text-gray-700">{consumed.toLocaleString()}</p>
-                  <button onClick={() => navigate("/anunciante/creditos")}
-                    className="mt-2 flex items-center gap-1.5 text-sm font-bold text-white bg-[#FF6A00] px-4 py-2 rounded-xl hover:bg-orange-600 transition-colors">
-                    Comprar Créditos
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Consumo por ação */}
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-              <h2 className="text-sm font-bold text-gray-900 mb-4">Consumo por Tipo de Ação</h2>
-              <div className="space-y-3">
-                {Object.entries(CREDIT_COSTS).map(([key, cfg]) => {
-                  const count = usageByReason[key] || 0;
-                  const total = count * cfg.cost;
-                  const Icon  = cfg.icon;
-                  return (
-                    <div key={key} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${cfg.color}18` }}>
-                        <Icon className="w-4 h-4" style={{ color: cfg.color }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-gray-800">{cfg.label}</span>
-                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${cfg.color}18`, color: cfg.color }}>
-                            {cfg.cost} cr
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-gray-400 truncate">{cfg.desc}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-black text-gray-900">{count}×</p>
-                        <p className="text-[11px] font-bold" style={{ color: cfg.color }}>{total} cr</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Simulador de consumo */}
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-              <h2 className="text-sm font-bold text-gray-900 mb-1 flex items-center gap-2">
-                <Calculator className="w-4 h-4 text-[#FF6A00]" />
-                Simulador de Consumo
-              </h2>
-              <p className="text-xs text-gray-400 mb-4">Estime quantos créditos você vai precisar por mês</p>
-
-              <div className="mb-4">
-                <label className="text-xs font-semibold text-gray-600 mb-1 block">
-                  Visitas esperadas por mês: <strong className="text-[#FF6A00]">{simVisits}</strong>
-                </label>
-                <input type="range" min={10} max={2000} step={10} value={simVisits}
-                  onChange={(e) => setSimVisits(Number(e.target.value))}
-                  className="w-full accent-[#FF6A00]" />
-                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                  <span>10</span><span>2.000</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {[
-                  { label: "Entradas na loja", count: simResults.entries, cr: simResults.entries * 3, color: "#FF6A00" },
-                  { label: "Cliques produto",  count: simResults.clicks,  cr: simResults.clicks * 1,  color: "#3B82F6" },
-                  { label: "Carrinhos",        count: simResults.carts,   cr: simResults.carts * 5,   color: "#8B5CF6" },
-                  { label: "Pedidos",          count: simResults.orders,  cr: simResults.orders * 5,  color: "#22C55E" },
-                  { label: "WhatsApp",         count: simResults.wpp,     cr: simResults.wpp * 13,    color: "#25D366" },
-                ].map((r) => (
-                  <div key={r.label} className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 text-xs">
-                    <div>
-                      <div className="font-semibold text-gray-700">{r.label}</div>
-                      <div className="text-gray-400">{r.count} vezes</div>
-                    </div>
-                    <div className="font-black" style={{ color: r.color }}>{r.cr} cr</div>
+        </div>
+        <div className="rounded-2xl bg-[#1B1F24] border border-amber-500/20 p-5">
+          <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-400" /> Alertas</h3>
+          {insights.alerts.length === 0 ? <p className="text-xs text-[#A7B0BE] py-8 text-center">Tudo em ordem — nenhum alerta no período.</p> : (
+            <div className="space-y-2">
+              {insights.alerts.map((a, k) => {
+                const t = TONE[a.tone] ?? TONE.blue;
+                return (
+                  <div key={k} className={`flex items-start gap-3 p-3 rounded-xl border ${t.wrap}`}>
+                    <a.Icon className={`w-4 h-4 shrink-0 mt-0.5 ${t.icon}`} />
+                    <p className="text-[11px] text-[#F5F7FA]">{a.text}</p>
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
+        <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Trophy className="h-4 w-4 text-[#c98500]" /> Ranking de Anúncios</h3>
+        {d.ranking.length === 0 ? <p className="text-xs text-[#A7B0BE] py-8 text-center">Sem anúncios com atividade no período.</p> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-widest text-[#A7B0BE] border-b border-[#2A3038]/60">
+                  <th className="text-left py-2 font-bold">Anúncio</th>
+                  <th className="text-right py-2 font-bold">Views</th><th className="text-right py-2 font-bold">Interess.</th>
+                  <th className="text-right py-2 font-bold">Ofertas</th><th className="text-right py-2 font-bold">Liberados</th>
+                  <th className="text-right py-2 font-bold">Conv.</th><th className="text-right py-2 font-bold">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2A3038]/40">
+                {d.ranking.map((r) => (
+                  <tr key={r.id} className="hover:bg-[#2A3038]/20">
+                    <td className="py-2.5 font-bold text-[#F5F7FA] truncate max-w-[220px]">{r.title}</td>
+                    <td className="text-right tabular-nums text-[#A7B0BE]">{num(r.views)}</td>
+                    <td className="text-right tabular-nums text-[#A7B0BE]">{num(r.leads)}</td>
+                    <td className="text-right tabular-nums text-[#A7B0BE]">{num(r.offers)}</td>
+                    <td className="text-right tabular-nums text-emerald-400">{num(r.unlocked)}</td>
+                    <td className="text-right tabular-nums text-[#F5F7FA]">{r.conv.toFixed(0)}%</td>
+                    <td className="text-right tabular-nums text-[#FF6A00] font-bold">{brl(r.value)}</td>
+                  </tr>
                 ))}
-              </div>
-
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-600">Total estimado/mês</p>
-                  <p className="text-2xl font-black text-[#FF6A00]">{simResults.total} créditos</p>
-                  {simResults.daysLeft > 0 && (
-                    <p className="text-xs text-gray-500 mt-0.5">Saldo atual dura ~{simResults.daysLeft} dias</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-[11px] text-gray-400">Melhor plano</p>
-                  <p className="text-sm font-black" style={{ color: simResults.bestPlan.color }}>{simResults.bestPlan.name}</p>
-                  <p className="text-xs font-bold text-gray-600">{simResults.bestPlan.credits} cr</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Pacotes */}
-            <div>
-              <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Crown className="w-4 h-4 text-[#FF6A00]" />
-                Planos Disponíveis
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {PLANS.map((plan) => (
-                  <div key={plan.name}
-                    className={`relative bg-white border rounded-2xl p-4 flex flex-col shadow-sm transition-all hover:shadow-md ${
-                      plan.recommended ? "border-[#FF6A00] ring-2 ring-[#FF6A00]/20" : "border-gray-100"
-                    }`}>
-                    {plan.recommended && (
-                      <span className="absolute -top-2.5 left-4 text-[10px] font-black text-white bg-[#FF6A00] px-2.5 py-0.5 rounded-full uppercase tracking-wide">
-                        Recomendado
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${plan.color}18` }}>
-                        <Gift className="w-4 h-4" style={{ color: plan.color }} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-gray-900">{plan.name}</p>
-                        <p className="text-xs font-bold" style={{ color: plan.color }}>{plan.credits.toLocaleString()} créditos</p>
-                      </div>
-                    </div>
-                    <p className="text-2xl font-black text-gray-900 mb-3">{plan.priceLabel}</p>
-                    <ul className="space-y-1.5 flex-1">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-1.5 text-xs text-gray-600">
-                          <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    {plan.price > 0 && (
-                      <button onClick={() => navigate("/anunciante/creditos")}
-                        className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold text-white transition-colors"
-                        style={{ background: plan.color }}>
-                        Assinar {plan.name}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Card upgrade premium */}
-              <div className="mt-4 bg-gradient-to-r from-[#FF6A00] to-[#FF4500] rounded-2xl p-5 text-white">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
-                    <Zap className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-black">🚀 Aumente suas oportunidades de venda</h3>
-                    <p className="text-sm text-orange-100 mt-1 mb-3">
-                      Quanto maior seu saldo, maior sua capacidade de interagir com clientes, converter visitas em vendas e escalar seu negócio.
-                    </p>
-                    <ul className="space-y-1 mb-4">
-                      {[
-                        "Nunca perder um cliente por falta de créditos",
-                        "Continuar respondendo ofertas em tempo real",
-                        "Desbloquear WhatsApp de compradores interessados",
-                        "Aproveitar 100% das visitas recebidas",
-                      ].map((b) => (
-                        <li key={b} className="flex items-center gap-1.5 text-xs text-orange-100">
-                          <CheckCircle className="w-3.5 h-3.5 text-white shrink-0" />
-                          {b}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex gap-2 flex-wrap">
-                      <button onClick={() => navigate("/anunciante/creditos")}
-                        className="px-4 py-2 bg-white text-[#FF6A00] rounded-xl text-sm font-black hover:bg-orange-50 transition-colors">
-                        Comprar Créditos
-                      </button>
-                      <button onClick={() => navigate("/anunciante/creditos")}
-                        className="px-4 py-2 bg-white/20 border border-white/30 text-white rounded-xl text-sm font-bold hover:bg-white/30 transition-colors">
-                        Fazer Upgrade de Plano
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              </tbody>
+            </table>
           </div>
         )}
+      </div>
 
-        {/* ── TAB: HISTÓRICO ── */}
-        {tab === "history" && (
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900">Histórico de Visitas ({events.length})</h2>
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                Atualização automática
-              </div>
-            </div>
-            {events.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-3">
-                <Eye className="w-10 h-10 text-gray-200" />
-                <p className="text-sm text-gray-400">Nenhuma visita registrada ainda.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="text-left px-4 py-3 font-semibold text-gray-500">Data</th>
-                      <th className="text-left px-4 py-3 font-semibold text-gray-500">Produto</th>
-                      <th className="text-left px-4 py-3 font-semibold text-gray-500">Cidade</th>
-                      <th className="text-left px-4 py-3 font-semibold text-gray-500">Origem</th>
-                      <th className="text-center px-4 py-3 font-semibold text-gray-500">Status</th>
-                      <th className="text-right px-4 py-3 font-semibold text-gray-500">Créditos</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {events.slice(0, 200).map((e) => (
-                      <tr key={e.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{fmtDate(e.created_at)}</td>
-                        <td className="px-4 py-2.5">
-                          <span className="text-gray-700 font-medium truncate max-w-[140px] block">
-                            {e.product_id ? (products[e.product_id]?.title ?? "Produto") : "—"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-gray-500">{e.city ?? "—"}</td>
-                        <td className="px-4 py-2.5 text-gray-400">{e.source ?? "—"}</td>
-                        <td className="px-4 py-2.5 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold text-[10px] ${
-                            e.status === "charged"              ? "bg-green-50 text-green-600" :
-                            e.status === "insufficient_balance" ? "bg-red-50 text-red-500"    :
-                            "bg-gray-100 text-gray-400"
-                          }`}>
-                            {e.status === "charged" ? <CheckCircle className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
-                            {e.status === "charged" ? "Cobrada" : e.status === "insufficient_balance" ? "Sem saldo" : "Ignorada"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right font-bold text-[#FF6A00]">
-                          {e.credits_charged ? `-${e.credits_charged}` : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {events.length > 200 && (
-                  <p className="text-center text-xs text-gray-400 py-4">
-                    Exibindo 200 de {events.length} registros.
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── TAB: IA ANALÍTICA ── */}
-        {tab === "ai" && (
-          <div className="space-y-5">
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center shrink-0">
-                  <BrainCircuit className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-base font-black text-gray-900">Análise Viagg-TX8™</h2>
-                  <p className="text-sm text-gray-500 mt-0.5 mb-4">
-                    Análise inteligente do comportamento da sua loja, projeção de créditos e recomendações personalizadas.
-                  </p>
-                  {aiInsights.length === 0 ? (
-                    <button
-                      onClick={generateAIInsights}
-                      disabled={aiLoading}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-60"
-                    >
-                      {aiLoading
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Analisando dados…</>
-                        : <><Zap className="w-4 h-4" /> Gerar Insights com Viagg-TX8™</>
-                      }
-                    </button>
-                  ) : (
-                    <div className="space-y-3">
-                      {aiInsights.map((insight, i) => (
-                        <div key={i} className="flex items-start gap-3 bg-white border border-indigo-100 rounded-xl p-3.5">
-                          <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0 mt-0.5">
-                            <BrainCircuit className="w-3.5 h-3.5 text-indigo-600" />
-                          </div>
-                          <p className="text-sm text-gray-700 leading-relaxed">{insight.replace(/^•\s*/, "")}</p>
-                        </div>
-                      ))}
-                      <button onClick={generateAIInsights} disabled={aiLoading}
-                        className="flex items-center gap-2 text-xs text-indigo-600 font-semibold hover:text-indigo-800 disabled:opacity-50">
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Gerar novos insights
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Alertas inteligentes automáticos */}
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-3">
-              <h2 className="text-sm font-bold text-gray-900">Alertas Inteligentes</h2>
-              {[
-                { condition: isNegative, color: "red", msg: `🔴 Saldo negativo: ${available} créditos. Recarregue para não perder oportunidades.` },
-                { condition: !isNegative && available <= 5,  color: "red",    msg: `🔴 Crítico: apenas ${available} créditos restantes.` },
-                { condition: !isNegative && available <= 20 && available > 5, color: "amber", msg: `⚠️ Atenção: apenas ${available} créditos disponíveis.` },
-                { condition: todayList.length > week7List.length / 7 * 1.5, color: "green", msg: `📈 Pico de visitas hoje! ${todayList.length} visitas já registradas — aproveite o momento.` },
-                { condition: cities.length > 0, color: "blue", msg: `📍 Seu principal mercado é ${cities[0]?.[0] ?? "sua cidade"} com ${cities[0]?.[1] ?? 0} visitas.` },
-                { condition: totalVisits > 0 && Number(convRate) < 50, color: "amber", msg: `📊 Taxa de conversão em ${convRate}% — otimize seus anúncios para converter mais visitas.` },
-              ].filter((a) => a.condition).map((alert, i) => (
-                <div key={i} className={`flex items-start gap-2.5 p-3 rounded-xl text-sm ${
-                  alert.color === "red"   ? "bg-red-50 border border-red-100 text-red-700" :
-                  alert.color === "amber" ? "bg-amber-50 border border-amber-100 text-amber-700" :
-                  alert.color === "green" ? "bg-green-50 border border-green-100 text-green-700" :
-                  "bg-blue-50 border border-blue-100 text-blue-700"
-                }`}>
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{alert.msg}</span>
-                </div>
-              ))}
-              {!isNegative && available > 20 && todayList.length === 0 && (
-                <div className="flex items-center gap-2.5 p-3 rounded-xl text-sm bg-gray-50 border border-gray-100 text-gray-500">
-                  <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                  Tudo funcionando normalmente. Nenhum alerta ativo.
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="rounded-2xl bg-[#1B1F24] border border-[#2A3038]/60 p-5">
+        <h3 className="text-sm font-bold text-[#F5F7FA] mb-4 flex items-center gap-2"><Layers className="h-4 w-4 text-blue-400" /> Interessados por Categoria</h3>
+        {d.moduleRows.length === 0 ? <p className="text-xs text-[#A7B0BE] py-6 text-center">Sem interessados no período.</p> : (
+          <ResponsiveContainer width="100%" height={Math.max(120, d.moduleRows.length * 42)}>
+            <BarChart data={d.moduleRows} layout="vertical" margin={{ left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2A3038" horizontal={false} />
+              <XAxis type="number" tick={{ fill: "#A7B0BE", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis type="category" dataKey="modulo" tick={{ fill: "#A7B0BE", fontSize: 11 }} axisLine={false} tickLine={false} width={72} />
+              <RTooltip contentStyle={{ background: "#0D0F12", border: "1px solid #2A3038", borderRadius: 12, color: "#fff" }} />
+              <Bar dataKey="leads" radius={[0, 4, 4, 0]}>{d.moduleRows.map((_, i) => <Cell key={i} fill={CAT[i % CAT.length]} />)}</Bar>
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </div>
     </div>
