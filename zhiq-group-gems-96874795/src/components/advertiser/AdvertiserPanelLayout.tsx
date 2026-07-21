@@ -174,7 +174,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/veiculos/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/veiculos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/veiculos/mensagens", icon: MessageSquare },
-    { name: "Carteira", href: "/anunciante/veiculos/creditos", icon: Wallet },
+    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/veiculos/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : servicosMode ? [
@@ -182,7 +182,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/servicos/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/servicos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/servicos/mensagens", icon: MessageSquare },
-    { name: "Carteira", href: "/anunciante/servicos/creditos", icon: Coins },
+    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/servicos/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : fretesMode ? [
@@ -190,7 +190,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/fretes/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/fretes/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/fretes/mensagens", icon: MessageSquare },
-    { name: "Carteira", href: "/anunciante/fretes/creditos", icon: Coins },
+    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/fretes/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : viagensMode ? [
@@ -198,7 +198,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/viagens/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/viagens/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/viagens/mensagens", icon: MessageSquare },
-    { name: "Carteira", href: "/anunciante/viagens/creditos", icon: Coins },
+    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/viagens/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : imoveisMode ? [
@@ -206,7 +206,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Meus Anúncios", href: "/anunciante/imoveis/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/imoveis/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/imoveis/mensagens", icon: MessageSquare },
-    { name: "Carteira", href: "/anunciante/imoveis/creditos", icon: Coins },
+    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Suporte", href: "/anunciante/imoveis/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : [
