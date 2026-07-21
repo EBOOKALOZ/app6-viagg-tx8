@@ -31,6 +31,13 @@ declare global {
 const FAV = "viagg_radio_favs";
 const HIST = "viagg_radio_hist";
 const VOL = "viagg_radio_vol";
+// sessionStorage: o app navega com window.location.href (full reload) em 47 pontos —
+// a sessão da rádio sobrevive ao reload e é retomada pelo GlobalAudioPlayer no boot.
+const SESSION_RADIO = "viagg_radio_session";
+// localStorage: a ÚLTIMA estação ouvida sobrevive a fechar o app (minutos/horas/DIAS).
+// Ao reabrir, o app oferece "continuar de onde parou" (não toca sozinho — autoplay é
+// bloqueado pelo navegador; a estação fica pronta com 1 toque para retomar).
+const LAST_STATION = "viagg_radio_last_station";
 const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
 const listeners = new Set<(s: RadioState) => void>();
@@ -54,7 +61,39 @@ if (typeof window !== "undefined") window.__viagg_radio_state__ = state;
 
 function emit() {
   if (typeof window !== "undefined") window.__viagg_radio_state__ = state;
+  // persiste a sessão (station+playing) p/ retomar após full reload
+  try {
+    if (state.station) {
+      sessionStorage.setItem(SESSION_RADIO, JSON.stringify({ station: state.station, playing: state.playing || state.loading }));
+      // ÚLTIMA estação (localStorage): sobrevive a fechar o app por dias.
+      localStorage.setItem(LAST_STATION, JSON.stringify(state.station));
+    } else {
+      sessionStorage.removeItem(SESSION_RADIO);
+      // NÃO apaga LAST_STATION ao parar — o usuário deve poder retomar a última mesmo após parar.
+    }
+  } catch { /* ignore */ }
+  syncMediaSession();
   listeners.forEach((l) => l(state));
+}
+
+// ── Media Session API: controles do sistema (tela de bloqueio, PWA, teclado) ──
+function syncMediaSession() {
+  try {
+    if (!("mediaSession" in navigator)) return;
+    const ms = navigator.mediaSession;
+    if (!state.station) { ms.metadata = null; return; }
+    ms.metadata = new MediaMetadata({
+      title: state.station.name || "Rádio",
+      artist: "Viagg-TX8 Rádio",
+      artwork: state.station.favicon
+        ? [{ src: state.station.favicon, sizes: "96x96" }]
+        : [{ src: "/logo.png", sizes: "192x192" }],
+    });
+    ms.playbackState = state.playing ? "playing" : "paused";
+    ms.setActionHandler("play", () => togglePlay());
+    ms.setActionHandler("pause", () => togglePlay());
+    ms.setActionHandler("stop", () => closeRadio());
+  } catch { /* ignore */ }
 }
 function set(patch: Partial<RadioState>) {
   state = { ...state, ...patch };
@@ -146,6 +185,18 @@ function ensureEqGraph(): boolean {
     eqGain.connect(audioCtx.destination);
     eqEl = el;
     eqBuilt = true;
+    // Autoplay policy pode deixar o ctx 'suspended' → som NENHUM apesar do estado
+    // "tocando". Qualquer gesto do usuário tenta retomar até rodar.
+    const resumeOnGesture = () => {
+      audioCtx?.resume().then(() => {
+        if (audioCtx?.state === "running") {
+          document.removeEventListener("click", resumeOnGesture, true);
+          document.removeEventListener("keydown", resumeOnGesture, true);
+        }
+      }).catch(() => { /* ignore */ });
+    };
+    document.addEventListener("click", resumeOnGesture, { capture: true, passive: true });
+    document.addEventListener("keydown", resumeOnGesture, { capture: true, passive: true });
     return true;
   } catch {
     eqBuilt = false;
@@ -176,7 +227,8 @@ function startOn(el: HTMLAudioElement, url: string): Promise<boolean> {
     };
     const onPlay = () => finish(true);
     const onErr = () => finish(false);
-    const to = setTimeout(() => finish(false), 5000);
+    // streams ao vivo demoram (DNS+TLS+buffer): 8s antes de declarar falha
+    const to = setTimeout(() => finish(false), 8000);
     el.addEventListener("playing", onPlay);
     el.addEventListener("error", onErr);
     try {
@@ -215,21 +267,30 @@ export async function playStation(station: RadioStation): Promise<void> {
   try { window.dispatchEvent(new Event("viagg:stop-bg-music")); } catch { /* ignore */ }
 
   // 1) EQ ligado → tenta tocar pelo grafo (só funciona em stream com CORS)
-  if (eqEnabledDesired && ensureEqGraph() && eqEl) {
-    trialing = true;
-    stopEl(plainEl);
-    activeEl = eqEl;
-    try { if (audioCtx && audioCtx.state === "suspended") await audioCtx.resume(); } catch { /* ignore */ }
-    applyRadioEq(eqValues, eqEnabledDesired);
-    const okEq = await startOn(eqEl, url);
-    trialing = false;
-    if (okEq) {
-      set({ playing: true, loading: false, error: null, eqActive: true });
-      pushHistory(station);
-      return;
+  if (eqEnabledDesired && ensureEqGraph() && eqEl && audioCtx) {
+    try { if (audioCtx.state === "suspended") await audioCtx.resume(); } catch { /* ignore */ }
+    // ARMADILHA "roda mas não toca": com o ctx suspenso o elemento avança e o
+    // estado vira "tocando", mas o som morre dentro do grafo. Só usa o caminho
+    // do EQ com o contexto comprovadamente rodando; senão, caminho simples.
+    if (audioCtx.state !== "running") {
+      console.warn("[radio] AudioContext", audioCtx.state, "→ tocando SEM EQ para garantir som");
+    } else {
+      trialing = true;
+      stopEl(plainEl);
+      activeEl = eqEl;
+      applyRadioEq(eqValues, eqEnabledDesired);
+      const okEq = await startOn(eqEl, url);
+      trialing = false;
+      if (okEq) {
+        console.info("[radio] tocando via EQ (ctx=running, CORS ok)");
+        set({ playing: true, loading: false, error: null, eqActive: true });
+        pushHistory(station);
+        return;
+      }
+      // CORS bloqueou o Web Audio → cai para o modo simples (sem EQ)
+      stopEl(eqEl);
+      console.info("[radio] stream sem CORS p/ o EQ → caminho simples");
     }
-    // CORS bloqueou o Web Audio → cai para o modo simples (sem EQ)
-    stopEl(eqEl);
   }
 
   // 2) modo simples (sempre toca; sem EQ)
@@ -255,15 +316,68 @@ export async function playStation(station: RadioStation): Promise<void> {
 }
 
 export function togglePlay(): void {
-  const el = activeEl || getPlain();
   if (!state.station) return;
+  // sessão órfã (HMR/dev recarregou o módulo): activeEl sumiu ou está sem src →
+  // retomar = tocar a estação do zero, senão o play() falha em silêncio
+  if (!activeEl || !activeEl.currentSrc) {
+    void playStation(state.station);
+    return;
+  }
+  const el = activeEl;
   if (el.paused) el.play().catch(() => set({ error: "Falha ao retomar o áudio." }));
   else el.pause();
 }
 
 export function stopRadio(): void {
   stopEl(activeEl);
-  set({ playing: false });
+  // desliga de fato (limpa a estação atual) — a ÚLTIMA estação continua salva em
+  // localStorage (getLastStation), então o "Continuar ouvindo" reaparece p/ retomar.
+  set({ playing: false, loading: false, station: null, error: null, eqActive: false });
+}
+
+/** Pausa SEM derrubar o stream (usada pelo audioManager quando uma mídia manual vence). */
+export function pauseRadio(): void {
+  try { activeEl?.pause(); } catch { /* ignore */ }
+  set({ playing: false, loading: false });
+}
+
+/** Encerra de vez: para o áudio e limpa a estação (Mini Player some; sessão limpa). */
+export function closeRadio(): void {
+  stopEl(activeEl);
+  set({ playing: false, loading: false, station: null, error: null });
+}
+
+/** Há sessão de rádio marcada como tocando (pré-reload)? O bg music cede prioridade. */
+export function hasPendingRadioSession(): boolean {
+  if (state.playing || state.loading) return true;
+  try {
+    const raw = sessionStorage.getItem(SESSION_RADIO);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    return !!(s?.playing && s?.station);
+  } catch { return false; }
+}
+
+/**
+ * Retoma a rádio após um full reload (window.location.href). Se o autoplay for
+ * bloqueado, mantém a estação visível PAUSADA no Mini Player (sem erro assustador)
+ * e rearma a retomada no primeiro clique do usuário.
+ */
+export async function resumeRadioAfterReload(): Promise<void> {
+  let session: { station: RadioStation; playing: boolean } | null = null;
+  try { session = JSON.parse(sessionStorage.getItem(SESSION_RADIO) || "null"); } catch { /* ignore */ }
+  if (!session?.station || !session.playing || state.playing || state.loading) return;
+
+  await playStation(session.station);
+  if (getRadioState().playing) return;                 // retomou direto
+
+  // autoplay bloqueado → estação fica visível pausada; 1º gesto retoma
+  set({ station: session.station, playing: false, loading: false, error: null });
+  const retry = () => {
+    document.removeEventListener("click", retry, true);
+    if (!getRadioState().playing && getRadioState().station) void playStation(getRadioState().station!);
+  };
+  document.addEventListener("click", retry, { capture: true, passive: true, once: true });
 }
 
 export function setRadioVolume(v: number): void {
@@ -308,4 +422,15 @@ export function getHistory(): RadioStation[] {
 export function pushHistory(st: RadioStation): void {
   const cur = getHistory().filter((s) => s.stationuuid !== st.stationuuid);
   try { localStorage.setItem(HIST, JSON.stringify([st, ...cur].slice(0, 100))); } catch { /* ignore */ }
+}
+
+// ÚLTIMA estação ouvida (persiste em localStorage — sobrevive a fechar o app por dias).
+// Retorna null se nunca ouviu nada. Usado para "continuar de onde parou".
+export function getLastStation(): RadioStation | null {
+  try {
+    const raw = localStorage.getItem(LAST_STATION);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as RadioStation;
+    return s && (s.url_resolved || s.url) ? s : null;
+  } catch { return null; }
 }

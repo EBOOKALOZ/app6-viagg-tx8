@@ -21,7 +21,7 @@ import {
 } from "@/lib/radioBrowser";
 import {
   playStation, togglePlay, stopRadio, setRadioVolume, subscribeRadio, getRadioState,
-  getFavorites, toggleFavorite, isFavorite, getHistory, pushHistory, type RadioState,
+  getFavorites, toggleFavorite, isFavorite, getHistory, pushHistory, getLastStation, type RadioState,
 } from "@/lib/radioPlayer";
 
 type Tab = "buscar" | "perto" | "favoritas" | "historico" | "populares";
@@ -133,6 +133,8 @@ export function RadioMundial() {
   const [cep, setCep] = useState("");                         // busca por CEP
   const [cepInfo, setCepInfo] = useState<string | null>(null);
   const [addMsg, setAddMsg] = useState<string | null>(null);  // feedback do fluxo "tocar por link"
+  // "Continuar ouvindo": última estação salva em localStorage (sobrevive a fechar o app por dias).
+  const [lastStation, setLastStation] = useState<RadioStation | null>(() => getLastStation());
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
@@ -262,6 +264,7 @@ export function RadioMundial() {
   };
 
   const listen = useCallback(async (st: RadioStation) => {
+    setLastStation(st);   // vira a "última estação" (o radioPlayer também salva no localStorage)
     await playStation(st); // radioPlayer dispara a pausa da música de fundo
     setHist(getHistory());
     try { supabase.rpc("audio_radio_log", { p_station: st as unknown as Record<string, unknown> }); } catch { /* fire-and-forget */ }
@@ -280,6 +283,10 @@ export function RadioMundial() {
     const st = makeCustomStation(nome, url);
     try {
       await playStation(st);                 // toca JÁ (o ouvinte não espera aprovação p/ ouvir)
+      // playStation NÃO lança em falha (só seta error no estado) — sem este guard,
+      // link de SITE era dado como "tocando" e ia p/ o catálogo sem som (caso Navegantes)
+      const now = getRadioState();
+      if (now.error || !now.playing) throw new Error(now.error || "stream não tocou");
       pushHistory(st);
       // SUGERE para o catálogo público → vai para a FILA DE APROVAÇÃO (nunca publica direto).
       // Só admin publica. A rádio fica no histórico local do usuário (ele ouve quando quiser).
@@ -361,10 +368,23 @@ export function RadioMundial() {
               </button>
             );
           })()}
-          <button onClick={togglePlay} className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white">
+          <button
+            onClick={togglePlay}
+            title={radio.playing ? "Pausar" : "Tocar"}
+            aria-label={radio.playing ? "Pausar" : "Tocar"}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white transition-transform active:scale-95"
+          >
             {radio.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : radio.playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </button>
-          <button onClick={stopRadio} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-white/60"><Square className="h-3.5 w-3.5" /></button>
+          <button
+            onClick={stopRadio}
+            title="Parar e desligar a rádio"
+            aria-label="Parar rádio"
+            className="flex h-8 items-center gap-1 rounded-lg bg-red-500/15 px-2 text-red-300 transition-colors hover:bg-red-500/25 active:scale-95"
+          >
+            <Square className="h-3.5 w-3.5 fill-current" />
+            <span className="text-[10px] font-bold">Parar</span>
+          </button>
         </div>
       )}
       {radio.station && (
@@ -465,6 +485,23 @@ export function RadioMundial() {
           </div>
           <p className="px-0.5 text-[9px] text-white/30">Toque num raio para usar seu GPS — ou digite um CEP acima e o raio busca a partir dele.</p>
         </div>
+      )}
+
+      {/* CONTINUAR OUVINDO — última estação salva (volta mesmo após dias fechado) */}
+      {tab === "buscar" && !radio.station && lastStation && (
+        <button
+          onClick={() => { listen(lastStation); }}
+          className="flex w-full items-center gap-2 rounded-xl border border-emerald-500/25 bg-gradient-to-r from-emerald-500/[0.12] to-transparent px-2.5 py-2 text-left transition-all hover:from-emerald-500/[0.18] active:scale-[0.99]"
+        >
+          <Icon src={lastStation.favicon} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-300/80">Continuar ouvindo</p>
+            <p className="truncate text-[12px] font-bold text-white">{lastStation.name?.trim() || "Sua rádio"}</p>
+          </div>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow">
+            <Play className="h-3.5 w-3.5" />
+          </span>
+        </button>
       )}
 
       {/* ESTADO */}
