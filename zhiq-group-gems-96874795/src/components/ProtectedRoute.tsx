@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireAdmin = false, requiredProfile }: ProtectedRouteProps) {
-  const { user, initialized, isAdmin, role, activeProfile, availableProfiles, isProfileComplete, isLoading, profileReady } = useAuth();
+  const { user, initialized, isAdmin, role, activeProfile, availableProfiles, isProfileComplete, isLoading, profileReady, setActiveProfile } = useAuth();
   const { supportRole, isLoading: isSupportRoleLoading } = useSupportRole();
 
   const location = useLocation();
@@ -299,11 +299,29 @@ export function ProtectedRoute({ children, requireAdmin = false, requiredProfile
   }
 
   /* =============================
-     PERFIL INCORRETO
-     → Redireciona para dashboard do perfil ativo (NUNCA para /auth)
+     PERFIL INCORRETO / AUTO-SWITCH
+     → Se o usuário possui o perfil em availableProfiles ou acessa rota merchant,
+       realiza auto-switch de activeProfile sem redirecionar para outro painel.
+     → Caso contrário, redireciona para o dashboard do perfil ativo (NUNCA para /auth)
   ============================= */
+  useEffect(() => {
+    if (
+      requiredProfile &&
+      activeProfile &&
+      activeProfile !== requiredProfile &&
+      (availableProfiles.includes(requiredProfile) || requiredProfile === "merchant")
+    ) {
+      console.log(`[ProtectedRoute] Transição automática de perfil: ${activeProfile} → ${requiredProfile}`);
+      setActiveProfile(requiredProfile);
+    }
+  }, [requiredProfile, activeProfile, availableProfiles, setActiveProfile]);
+
   if (requiredProfile && activeProfile !== requiredProfile) {
-    return <Navigate to={getProfileRoute(activeProfile)} replace />;
+    if (availableProfiles.includes(requiredProfile) || requiredProfile === "merchant") {
+      // Permite renderizar a rota (ex: /merchant/create-delivery) enquanto o useEffect sincroniza o activeProfile
+    } else {
+      return <Navigate to={getProfileRoute(activeProfile || "")} replace />;
+    }
   }
 
   return <>{children}</>;
