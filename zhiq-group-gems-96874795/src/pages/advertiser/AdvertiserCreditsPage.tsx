@@ -811,7 +811,7 @@ export default function AdvertiserCreditsPage() {
           </div>
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-[#F5F7FA] tracking-tighter uppercase leading-none">
-              Gestão e Pacotes
+              Carteira de Créditos
             </h1>
             <div className="flex items-center gap-2">
               <div className={cn("flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border", seg.bgColor, seg.borderColor, seg.color)}>
@@ -828,7 +828,7 @@ export default function AdvertiserCreditsPage() {
         {!isSpecialModule && (
           <div className="ml-0 md:ml-16 p-5 bg-[#FF6A00]/10 border-l-4 border-[#FF6A00] rounded-r-2xl max-w-2xl">
             <p className="text-[#FF6A00] text-lg font-extrabold tracking-tight leading-tight">
-              Adquira os planos que mais atendem seu negócio e mantenha seu contato desbloqueado
+              Adicione créditos à sua carteira e libere compradores quando quiser — você paga apenas 2% do valor anunciado por comprador, uma única vez.
             </p>
           </div>
         )}
@@ -847,35 +847,21 @@ export default function AdvertiserCreditsPage() {
           <p className="mt-4 text-[10px] font-black text-[#A7B0BE] uppercase tracking-widest">Sincronizando Ofertas...</p>
         </div>
       ) : (
-        <div className="space-y-24">
-          {/* 1. Pacotes de Serviços (Créditos de Comunicação e Desbloqueio) */}
-          {isImoveis
-            ? renderSection("1. Pacotes de Serviços (Imóveis)", "Plano mensal — renove todo mês", null, Building2, realEstatePkgs, true)
-            : isVeiculos
-              ? renderSection("1. Pacotes de Serviços (Veículos)", "Compre quando precisar", null, CarFront, vehiclePkgs, false)
-              : isServicos
-                ? renderSection("1. Pacotes de Serviços (Serviços)", "Compre quando precisar", null, Briefcase, servicePkgs, false)
-                : isFretes
-                  ? renderSection("1. Pacotes de Serviços (Fretes)", "Compre quando precisar", null, Truck, freightPkgs, false)
-                  : isViagens
-                    ? renderSection("1. Pacotes de Serviços (Viagens)", "Compre quando precisar", null, Plane, travelPkgs, false)
-                    : renderSection("1. Pacotes de Serviços (Mercado)", "Créditos de Comunicação", "PACOTES CONFIGURADOS PELO ADMINISTRADOR", Sparkles, productPkgs)}
-
-          {/* 2. Pacotes de Anúncios (Promoção e Impulsionamento) */}
-          <div className="pt-12 border-t border-[#2A3038]/80">
-            <PromotionPlansGrid
-              profileType={segKey === "mercado" ? "produtos" : segKey as any}
-              listingModule={PROFILE_MODULE[segKey === "mercado" ? "produtos" : segKey] || "travel"}
-              inline={true}
-              showHeader={true}
-              title="2. Pacotes de Anúncios e Impulsionamento"
-            />
-          </div>
+        <div className="space-y-12">
+          {/* PACOTES DE COMUNICAÇÃO REMOVIDOS (FASE 2 — Carteira de Créditos).
+              O desbloqueio de comprador agora consome 2% do valor anunciado
+              direto da carteira (wallet_unlock_contact). Não há mais venda de
+              pacotes/planos de comunicação nem comparativo/"economia".
+              Mantidos apenas Promoção e Impulsionamento abaixo. */}
+          <PromotionPlansGrid
+            profileType={segKey === "mercado" ? "produtos" : segKey as any}
+            listingModule={PROFILE_MODULE[segKey === "mercado" ? "produtos" : segKey] || "travel"}
+            inline={true}
+            showHeader={true}
+            title="Pacotes de Anúncios e Impulsionamento"
+          />
         </div>
       )}
-
-      {/* ═══ 5. COMPARATIVO DOS PACOTES (todos os segmentos) ════════════════════ */}
-      {!packagesLoading && !merchantLoading && renderComparisonTable(currentPkgsForComparison)}
 
       {/* ═══ 6. RELATÓRIO DE CRÉDITOS ════════════════════════════════════════════ */}
       {isImoveis  && <RealEstateCreditReportCard />}
