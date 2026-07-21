@@ -44,6 +44,32 @@ export async function unlockContact(
   return (data ?? { success: false, error: "empty_response" }) as UnlockContactResult;
 }
 
+/**
+ * 💰 quoteUnlockContact — COTAÇÃO da comissão de liberação, SEM debitar.
+ *
+ * Chama a RPC oficial `wallet_unlock_charge_cents` (STABLE, autorizada p/
+ * authenticated) que é a FONTE ÚNICA do valor: lê `orion_commission_policy`
+ * (percentual + piso + teto) e aplica ao valor do anúncio/hint. O front NUNCA
+ * calcula o percentual — apenas exibe o que o backend devolve.
+ *
+ * Retorna o custo em CENTS (o mesmo que será debitado no unlock), ou null se
+ * não houver política/valor. Idempotente e barato (pode ser chamado por card).
+ */
+export async function quoteUnlockContact(
+  module: string,
+  listingId: string,
+  valueHintCents?: number | null,
+): Promise<number | null> {
+  const { data, error } = await (supabase.rpc as any)("wallet_unlock_charge_cents", {
+    p_module: module,
+    p_listing_id: listingId,
+    p_value_hint_cents: valueHintCents ?? null,
+  });
+  if (error) return null;
+  const cents = Number(data);
+  return Number.isFinite(cents) ? cents : null;
+}
+
 export interface RevealContactResult extends UnlockContactResult {
   visitor_name?: string | null;
   visitor_phone?: string | null;

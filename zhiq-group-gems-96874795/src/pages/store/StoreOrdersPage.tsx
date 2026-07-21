@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
+import { unlockContact, quoteUnlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 
 interface PurchaseIntentionCard {
   id: string;
@@ -48,9 +48,9 @@ export default function StoreOrdersPage() {
       return Number((data as any)?.balance_cents ?? 0);
     },
   });
-  // 2% do valor do pedido (política oficial), piso R$9, em cents
-  const unlockCostCents = (subtotal: number | null) =>
-    Math.max(Math.round(Number(subtotal ?? 0) * 0.02 * 100), 900);
+  // NOTA: o custo da liberação NÃO é calculado no front. Ele vem do backend
+  // (wallet_unlock_charge_cents → orion_commission_policy: %, piso e teto).
+  // Ver o `unlockCosts` abaixo, populado após carregar os pedidos.
 
   // Ocultar pedidos individuais (localStorage, por navegador)
   const HIDDEN_KEY = "viagg_hidden_orders";
@@ -72,14 +72,29 @@ export default function StoreOrdersPage() {
 
   const handleContactBuyer = async (pi: PurchaseIntentionCard) => {
     if (!pi.customer_whatsapp) return;
-    // Liberar comprador = desbloqueio de contato via Wallet Core (2% do valor do pedido).
+    // Liberar comprador = desbloqueio de contato via Wallet Core (comissão do backend).
     // Permanente por (pedido, comprador); nunca recobra o mesmo comprador.
     const buyerKey = String(pi.customer_whatsapp).replace(/\D/g, "") || pi.id;
+
+    // Confirmação com o valor VINDO DO BACKEND (unlockCosts). Front nunca calcula.
+    const costCents = unlockCosts[pi.id];
+    if (costCents != null && costCents > 0) {
+      const ok = window.confirm(
+        `Será debitado ${centsToBRL(costCents)} da sua carteira para liberar os dados deste comprador.`
+      );
+      if (!ok) return;
+    }
+
     const res = await unlockContact("product", pi.id, buyerKey, Math.round(Number(pi.subtotal ?? 0) * 100));
     if (!res.success) {
       if (res.error === "insufficient_credits") {
-        toast.error(`Saldo insuficiente (precisa ${centsToBRL(res.required_cents)}, tem ${centsToBRL(res.available_cents)}). Adicione créditos.`, { duration: 3500 });
-        setTimeout(() => navigate("/anunciante/carteira"), 1400);
+        const reqC = Number(res.required_cents ?? 0);
+        const availC = Number(res.available_cents ?? walletCents);
+        const lackC = Math.max(0, reqC - availC);
+        toast.error(
+          `Saldo insuficiente — Disponível: ${centsToBRL(availC)} · Necessário: ${centsToBRL(reqC)} · Faltam: ${centsToBRL(lackC)}`,
+          { duration: 5000, action: { label: "Adicionar Saldo", onClick: () => navigate("/centro-financeiro") } }
+        );
         return;
       }
       toast.error(`Erro ao liberar comprador: ${res.error ?? "desconhecido"}`);
@@ -145,6 +160,32 @@ export default function StoreOrdersPage() {
       return list.map((p) => ({ ...p, items: itemsBy.get(p.id) || [] }));
     },
   });
+
+  // Custo (comissão) de liberação de CADA pedido — vindo do BACKEND, nunca
+  // calculado no front. Chama wallet_unlock_charge_cents (fonte oficial:
+  // orion_commission_policy). Mapa id_do_pedido → cents.
+  const orderIds = (orders as PurchaseIntentionCard[]).map((o) => o.id).join(",");
+  const { data: unlockCosts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["order-unlock-costs", orderIds],
+    enabled: (orders as PurchaseIntentionCard[]).length > 0,
+    queryFn: async () => {
+      const out: Record<string, number> = {};
+      await Promise.all(
+        (orders as PurchaseIntentionCard[]).map(async (o) => {
+          const cents = await quoteUnlockContact(
+            "product",
+            o.id,
+            Math.round(Number(o.subtotal ?? 0) * 100),
+          );
+          if (cents != null) out[o.id] = cents;
+        }),
+      );
+      return out;
+    },
+  });
+  // custo do pedido pelo backend (0 = ainda carregando a cotação; nunca calcula)
+  const costOf = (pi: PurchaseIntentionCard): number | null =>
+    Object.prototype.hasOwnProperty.call(unlockCosts, pi.id) ? unlockCosts[pi.id] : null;
 
   const hiddenCount = (orders as PurchaseIntentionCard[]).filter((o) => hiddenIds.includes(o.id)).length;
   const visibleOrders = (orders as PurchaseIntentionCard[]).filter((o) => showHidden || !hiddenIds.includes(o.id));
@@ -292,41 +333,69 @@ export default function StoreOrdersPage() {
                 <span className="text-lg text-yellow-900">{fmtBRL(pi.subtotal)}</span>
               </div>
 
-              {/* Saldo de créditos atual — vermelho se insuficiente, verde se suficiente */}
+              {/* ─── BLOCO FINANCEIRO (valores 100% do backend, front nunca calcula) ─── */}
               {(() => {
-                const hasEnough = walletCents >= unlockCostCents(pi.subtotal);
+                const cost = costOf(pi);                 // comissão (cents) do backend, ou null enquanto cota
+                const quoting = cost == null;
+                const afterCents = cost == null ? walletCents : walletCents - cost;
+                const enough = cost != null && afterCents >= 0;
+                const lackCents = cost != null && !enough ? cost - walletCents : 0;
+                // tom: verde=sobra folgada · amarelo=sobra pouco · vermelho=insuficiente
+                const tone = quoting ? "slate" : !enough ? "red" : afterCents < cost! ? "amber" : "emerald";
+                const T = {
+                  slate:   { box: "bg-slate-50 border-slate-200",     head: "text-slate-500",   strong: "text-slate-700" },
+                  emerald: { box: "bg-emerald-50 border-emerald-200", head: "text-emerald-700", strong: "text-emerald-700" },
+                  amber:   { box: "bg-amber-50 border-amber-300",     head: "text-amber-700",   strong: "text-amber-700" },
+                  red:     { box: "bg-red-50 border-red-200",         head: "text-red-700",     strong: "text-red-700" },
+                }[tone];
+                const Row = ({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) => (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={cn("font-semibold", strong ? T.strong : "text-yellow-800/80")}>{label}</span>
+                    <span className={cn("tabular-nums", strong ? cn("font-black text-sm", T.strong) : "font-bold text-yellow-900")}>{value}</span>
+                  </div>
+                );
                 return (
-                  <div className={cn(
-                    "flex items-center justify-between p-3 rounded-xl border",
-                    hasEnough
-                      ? "bg-emerald-50 border-emerald-200"
-                      : "bg-red-50 border-red-200"
-                  )}>
-                    <span className={cn(
-                      "text-[10px] font-black uppercase tracking-widest flex items-center gap-1",
-                      hasEnough ? "text-emerald-700" : "text-red-700"
-                    )}>
-                      <Coins className="w-3.5 h-3.5" /> Saldo da carteira
-                    </span>
-                    <span className={cn(
-                      "text-2xl font-black tabular-nums leading-none",
-                      hasEnough ? "text-emerald-600" : "text-red-600"
-                    )}>
-                      {centsToBRL(walletCents)}
-                    </span>
+                  <div className={cn("rounded-xl border p-3 space-y-1.5", T.box)}>
+                    <Row label="Valor do pedido" value={fmtBRL(pi.subtotal)} />
+                    <Row label="Comissão para liberar contato" value={quoting ? "—" : centsToBRL(cost)} />
+                    <div className="h-px bg-black/5 my-1" />
+                    <Row label="Saldo disponível" value={centsToBRL(walletCents)} />
+                    {enough ? (
+                      <Row label="Saldo após liberação" value={centsToBRL(afterCents)} strong />
+                    ) : !quoting ? (
+                      <>
+                        <Row label="Necessário" value={centsToBRL(cost)} />
+                        <Row label="Faltam" value={centsToBRL(lackCents)} strong />
+                      </>
+                    ) : null}
+                    {!quoting && !enough && (
+                      <Button
+                        onClick={() => navigate("/centro-financeiro")}
+                        className="w-full h-9 mt-1 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[10px] tracking-widest gap-1.5 rounded-lg"
+                      >
+                        <Coins className="w-3.5 h-3.5" /> Adicionar Saldo
+                      </Button>
+                    )}
                   </div>
                 );
               })()}
 
-              {/* Botão Contatar Comprador */}
-              {pi.customer_whatsapp && (
-                <Button
-                  onClick={() => handleContactBuyer(pi)}
-                  className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
-                >
-                  <MessageSquare className="w-4 h-4" /> Liberar comprador (-{centsToBRL(unlockCostCents(pi.subtotal))})
-                </Button>
-              )}
+              {/* Botão Liberar Comprador — confirma o débito (valor do backend) antes de liberar */}
+              {pi.customer_whatsapp && (() => {
+                const cost = costOf(pi);
+                const quoting = cost == null;
+                const enough = cost != null && walletCents >= cost;
+                return (
+                  <Button
+                    onClick={() => handleContactBuyer(pi)}
+                    disabled={quoting || !enough}
+                    className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    {quoting ? "Calculando…" : enough ? `Liberar comprador (-${centsToBRL(cost)})` : "Saldo insuficiente"}
+                  </Button>
+                );
+              })()}
 
               <Button
                 onClick={() => navigate('/anunciante/entregas')}
