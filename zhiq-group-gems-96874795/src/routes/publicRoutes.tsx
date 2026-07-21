@@ -123,7 +123,9 @@ export const publicRoutes = (
     <Route path="/servicos" element={<PublicServicesHome />} />
     <Route path="/servicos/:id" element={<ServiceDetailPage />} />
     <Route path="/fretes-inicio" element={<Suspense fallback={<PageFallback />}><FretesInicio /></Suspense>} />
-    <Route path="/fretes" element={<Suspense fallback={<PageFallback />}><FretesInicio /></Suspense>} />
+    {/* /fretes = VITRINE de anúncios (padrão marketplace: ofertas primeiro).
+        A antiga tela de seleção de modalidade continua em /fretes-inicio. */}
+    <Route path="/fretes" element={<PublicFreightHome />} />
     <Route path="/fretes/anuncios" element={<PublicFreightHome />} />
     <Route path="/fretes/lista" element={<PublicFreightHome />} />
     <Route path="/fretes/:id" element={<FreightDetailPage />} />
