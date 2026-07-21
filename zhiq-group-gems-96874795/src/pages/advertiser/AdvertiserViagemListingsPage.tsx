@@ -159,8 +159,8 @@ export default function AdvertiserViagemListingsPage() {
       {/* Header */}
       <div className="bg-gradient-to-br from-sky-800 to-sky-600 px-6 pt-8 pb-6">
         <div className="flex items-center gap-4 mb-4">
-          <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
-            <Plane className="w-6 h-6 text-white" />
+          <div className="h-12 w-12 rounded-2xl bg-white/10 p-0.5 border border-white/20 overflow-hidden shadow-md shrink-0 flex items-center justify-center">
+            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-xl" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-white">Meus Pacotes de Viagem</h1>

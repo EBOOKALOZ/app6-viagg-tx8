@@ -20,12 +20,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-interface Cat { key: string; label: string; icon: LucideIcon; color: string; }
+interface Cat { key: string; label: string; icon: LucideIcon; color: string; photo: string; }
 const CATEGORIES: Cat[] = [
-  { key: "carro",     label: "Carro",     icon: Car,   color: "bg-blue-600"   },
-  { key: "moto",      label: "Moto",      icon: Bike,  color: "bg-indigo-600" },
-  { key: "barco",     label: "Barco",     icon: Ship,  color: "bg-cyan-600"   },
-  { key: "utilitario",label: "Utilitário",icon: Truck, color: "bg-slate-600"  },
+  { key: "carro",     label: "Carro",     icon: Car,   color: "bg-blue-600",   photo: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&h=400&fit=crop&q=80" },
+  { key: "moto",      label: "Moto",      icon: Bike,  color: "bg-indigo-600", photo: "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=400&h=400&fit=crop&q=80" },
+  { key: "barco",     label: "Barco",     icon: Ship,  color: "bg-cyan-600",   photo: "https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=400&h=400&fit=crop&q=80" },
+  { key: "utilitario",label: "Utilitário",icon: Truck, color: "bg-slate-600",  photo: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=400&h=400&fit=crop&q=80" },
 ];
 const TYPE_LABEL: Record<string, string> = {
   carro: "Carro", moto: "Moto", barco: "Barco", utilitario: "Utilitário",
@@ -162,8 +162,8 @@ export default function AdvertiserVeiculosListingsPage() {
       {/* ── Header ── */}
       <div className="bg-gradient-to-br from-blue-800 to-blue-600 px-6 pt-8 pb-6">
         <div className="flex items-center gap-4 mb-4">
-          <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center">
-            <CarFront className="w-6 h-6 text-white" />
+          <div className="h-12 w-12 rounded-2xl bg-white/10 p-0.5 border border-white/20 overflow-hidden shadow-md shrink-0 flex items-center justify-center">
+            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-xl" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-white">Meus Veículos</h1>
@@ -204,18 +204,35 @@ export default function AdvertiserVeiculosListingsPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {CATEGORIES.map((c) => {
-              const Icon = c.icon;
               return (
                 <button
                   key={c.key}
                   onClick={() => navigate(`/anunciante/veiculos/anuncios/novo/veiculo?tipo=${c.key}`)}
-                  className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-[#2A3038] bg-[#14171B] hover:border-blue-700/50 hover:bg-blue-950/20 transition-all"
+                  className="group relative flex flex-col items-center gap-2 rounded-xl border border-[#2A3038] bg-[#14171B] hover:border-blue-700/50 hover:bg-blue-950/20 transition-all overflow-hidden"
                 >
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", c.color)}>
-                    <Icon className="w-5 h-5 text-white" />
+                  {/* Foto real do veículo */}
+                  <div className="w-full h-24 overflow-hidden rounded-t-xl relative">
+                    <img
+                      src={c.photo}
+                      alt={c.label}
+                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        // Fallback para ícone se a foto falhar
+                        const container = e.currentTarget.parentElement;
+                        if (container) {
+                          container.innerHTML = `<div class="w-full h-full flex items-center justify-center ${c.color}"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></div>`;
+                        }
+                      }}
+                    />
+                    {/* Gradiente de escurecimento na base */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#14171B] via-transparent to-transparent" />
                   </div>
-                  <span className="font-bold text-[#F5F7FA] text-xs">{c.label}</span>
-                  <span className="text-[10px] font-black text-blue-400">Anunciar grátis</span>
+                  <div className="pb-3 px-2 text-center">
+                    <span className="font-bold text-[#F5F7FA] text-xs">{c.label}</span>
+                    <br />
+                    <span className="text-[10px] font-black text-blue-400">Anunciar grátis</span>
+                  </div>
                 </button>
               );
             })}
@@ -291,7 +308,22 @@ export default function AdvertiserVeiculosListingsPage() {
                     {v.thumb ? (
                       <img src={v.thumb} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center"><Car className="w-10 h-10 text-[#2A3038]" /></div>
+                      <img
+                        src={CATEGORIES.find(c => c.key === v.vehicle_type)?.photo || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=400&h=400&fit=crop&q=80"}
+                        alt={v.title || "Veículo"}
+                        loading="lazy"
+                        className="w-full h-full object-cover opacity-60"
+                        onError={e => {
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            e.currentTarget.style.display = "none";
+                            const fallback = document.createElement("div");
+                            fallback.className = "w-full h-full flex items-center justify-center";
+                            fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2A3038" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10.42-4.21a2 2 0 0 1 .58 1.4V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4.81a2 2 0 0 1 .58-1.4L7.17 9.2A2 2 0 0 1 8.58 8h6.84a2 2 0 0 1 1.41.59Z"/><path d="M12 11V4"/></svg>';
+                            parent.appendChild(fallback);
+                          }
+                        }}
+                      />
                     )}
                     <div className="absolute top-2 left-2">
                       <span className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black border", sc.text, sc.bg, sc.border)}>

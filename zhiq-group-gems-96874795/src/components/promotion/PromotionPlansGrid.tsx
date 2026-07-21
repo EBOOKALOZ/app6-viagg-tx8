@@ -304,8 +304,8 @@ export function PromotionPlansGrid({
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
           {/* Ícone de Destaque */}
-          <div className="p-4 bg-gradient-to-br from-[#FF6A00] to-[#E55A00] rounded-2xl shadow-xl shadow-orange-900/40 shrink-0 flex items-center justify-center">
-            <Megaphone className="w-8 h-8 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-white/10 p-0.5 border border-white/20 overflow-hidden shadow-xl shadow-orange-900/40 shrink-0 flex items-center justify-center">
+            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-xl" />
           </div>
 
           <div className="flex-1 space-y-3">

@@ -16,6 +16,7 @@ import {
   Twitter
 } from "lucide-react";
 import { z } from "zod";
+import { getRadioState } from "@/lib/radioPlayer";
 import themeMusic from "@/assets/viagg_search_loop.mp3";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -131,6 +132,8 @@ export default function Auth() {
   }, []);
 
   const startMusic = () => {
+    // rádio no ar = áudio prioritário → tema do login não entra por cima
+    if (getRadioState().playing || getRadioState().loading) return;
     if (!musicStarted && audioRef.current) {
       audioRef.current.play().catch(() => { });
       setMusicStarted(true);

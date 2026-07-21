@@ -41,7 +41,7 @@ interface AdvertiserPanelLayoutProps {
 }
 
 export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) {
-  const { user, signOut, activeProfile, availableProfiles } = useAuth();
+  const { user, signOut, activeProfile, availableProfiles, avatarUrl } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -374,8 +374,17 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
                 <p className="text-xs font-black text-[#F5F7FA] uppercase tracking-tight">{user?.email}</p>
                  <p className="text-[10px] font-bold text-[#FF6A00] uppercase tracking-widest">Conta Premium</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-[#FF6A00]/15 border border-[#FF6A00]/30 flex items-center justify-center text-[#FF6A00] font-black shadow-sm shadow-[#FF6A00]/10">
-                {user?.email?.[0].toUpperCase()}
+              <div className="w-10 h-10 rounded-xl bg-[#FF6A00]/15 border border-[#FF6A00]/30 flex items-center justify-center text-[#FF6A00] font-black shadow-sm shadow-[#FF6A00]/10 overflow-hidden">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Foto do perfil"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  user?.email?.[0].toUpperCase()
+                )}
               </div>
             </div>
           </div>

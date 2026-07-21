@@ -20,6 +20,7 @@ import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { OfertaRapidaModal } from "@/components/public/MiniCadastroModal";
 import type { AuctionListing } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { CardDark, CardInfo, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 
 // ─── Helpers ────────────────────────────
 
@@ -99,7 +100,7 @@ function TopBar({ navigate, globalCart, cartOpen, setCartOpen }: any) {
                 onClick={() => setCartOpen(true)}
                 className={`relative flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
                   globalCart.totalItems > 0
-                    ? "bg-white text-[#FF6A00] shadow-lg hover:shadow-xl hover:scale-105"
+                    ? "bg-[#1A1F24] text-[#FF7A00] shadow-lg hover:shadow-xl hover:scale-105"
                     : "bg-white/15 text-white hover:bg-white/25"
                 }`}
               >
@@ -122,8 +123,8 @@ function TopBar({ navigate, globalCart, cartOpen, setCartOpen }: any) {
         </div>
       </div>
 
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-6 text-[11px] text-gray-500">
+      <div className="bg-[#10151A] border-b border-[#323A45]">
+        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-6 text-[11px] text-[#8E98A3]">
           <span className="flex items-center gap-1.5 font-medium">
             <Tag className="h-3.5 w-3.5 text-violet-500" /> Arremate Verificado
           </span>
@@ -246,15 +247,16 @@ export default function ArrematePublicPage() {
         <div className="relative max-w-lg mx-auto px-4 pt-6 pb-8 space-y-5">
           {/* Badge */}
           <div className="flex items-center justify-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500 text-white text-xs font-bold uppercase tracking-wider shadow-md">
+            <DarkBadge tone="green" className="bg-[#1A1F24] px-3 py-1 text-xs shadow-md">
               <Tag className="h-3.5 w-3.5" /> Oportunidade
-            </span>
+            </DarkBadge>
           </div>
 
           {/* Product image */}
           {imgSrc && (
-            <div className="rounded-2xl overflow-hidden bg-white shadow-lg border border-gray-200">
-              <img src={imgSrc} alt={listing.title} className="w-full aspect-[16/9] object-contain bg-gray-50" />
+            <div className="relative rounded-2xl overflow-hidden bg-[#252B33] shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-[#323A45]">
+              <img src={imgSrc} alt={listing.title} className="w-full aspect-[16/9] object-contain bg-[#252B33]" />
+              <CardImageOverlay />
             </div>
           )}
 
@@ -277,50 +279,50 @@ export default function ArrematePublicPage() {
           </div>
 
           {/* Prices */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3 shadow-md">
+          <CardDark className="p-5 space-y-3">
             {normalPrice && normalPrice > opportunityPrice && (
               <div className="text-center">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Preço normal</p>
-                <p className="text-xl text-gray-400 line-through">{formatBRL(normalPrice)}</p>
+                <p className="text-[10px] text-[#8E98A3] uppercase tracking-wider">Preço normal</p>
+                <p className="text-xl text-[#8E98A3] line-through">{formatBRL(normalPrice)}</p>
               </div>
             )}
             <div className="text-center">
-              <p className="text-[10px] text-violet-600 uppercase tracking-wider font-bold">Preço de oportunidade</p>
-              <p className="text-4xl font-black text-gray-900">{formatBRL(opportunityPrice)}</p>
+              <p className="text-[10px] text-[#00C58E] uppercase tracking-wider font-bold">Preço de oportunidade</p>
+              <p className="text-4xl font-black text-[#FF7A00]">{formatBRL(opportunityPrice)}</p>
               {savings && savings > 0 && (
-                <span className="inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">
+                <span className="inline-flex items-center gap-1 mt-1 px-3 py-1 rounded-full bg-[#00C58E]/15 text-[#00C58E] text-sm font-bold">
                   <TrendingUp className="h-4 w-4" /> Economize {savings}%
                 </span>
               )}
             </div>
-          </div>
+          </CardDark>
 
           {/* Quick info */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
-              <Package className="h-4 w-4 text-blue-500 mx-auto mb-1" />
-              <p className="text-lg font-black text-gray-900">{(listing as any).stock_quantity || "—"}</p>
-              <p className="text-[10px] text-gray-500">Estoque</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
-              <Timer className="h-4 w-4 text-amber-500 mx-auto mb-1" />
-              <p className="text-lg font-black text-gray-900">{(listing as any).response_deadline_hours || "—"}h</p>
-              <p className="text-[10px] text-gray-500">Prazo resposta</p>
-            </div>
-            <div className="text-center p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
-              <Users className="h-4 w-4 text-violet-500 mx-auto mb-1" />
-              <p className="text-lg font-black text-gray-900">{listing.offer_count || 0}</p>
-              <p className="text-[10px] text-gray-500">Ofertas</p>
-            </div>
+            <CardInfo className="text-center p-3">
+              <Package className="h-4 w-4 text-[#00C58E] mx-auto mb-1" />
+              <p className="text-lg font-black text-white">{(listing as any).stock_quantity || "—"}</p>
+              <p className="text-[10px] text-[#8E98A3]">Estoque</p>
+            </CardInfo>
+            <CardInfo className="text-center p-3">
+              <Timer className="h-4 w-4 text-amber-400 mx-auto mb-1" />
+              <p className="text-lg font-black text-white">{(listing as any).response_deadline_hours || "—"}h</p>
+              <p className="text-[10px] text-[#8E98A3]">Prazo resposta</p>
+            </CardInfo>
+            <CardInfo className="text-center p-3">
+              <Users className="h-4 w-4 text-[#B8C2CC] mx-auto mb-1" />
+              <p className="text-lg font-black text-white">{listing.offer_count || 0}</p>
+              <p className="text-[10px] text-[#8E98A3]">Ofertas</p>
+            </CardInfo>
           </div>
 
           {/* Countdown */}
           {isActive && (
             <div className={`text-center py-3 rounded-xl border shadow-sm ${
-              urgency === "critical" ? "bg-red-50 border-red-300" : "bg-white border-gray-200"
+              urgency === "critical" ? "bg-[#1A1F24] border-red-500/50" : "bg-[#1A1F24] border-[#323A45]"
             }`}>
-              <p className="text-[10px] text-gray-500 mb-0.5">Oportunidade disponível por</p>
-              <p className={`text-2xl font-black ${urgency === "critical" ? "text-red-600 animate-pulse" : "text-gray-900"}`}>
+              <p className="text-[10px] text-[#8E98A3] mb-0.5">Oportunidade disponível por</p>
+              <p className={`text-2xl font-black ${urgency === "critical" ? "text-red-400 animate-pulse" : "text-white"}`}>
                 {timeLeft}
               </p>
             </div>
@@ -330,18 +332,18 @@ export default function ArrematePublicPage() {
           {isActive && (
             <div className="space-y-3">
               {/* Arrematar direto */}
-              <Button
-                className="w-full h-14 text-base font-bold bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl shadow-lg shadow-violet-500/30"
+              <DarkButton
+                className="w-full h-14 text-base flex items-center justify-center"
                 onClick={handleArremate}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Arrematar por {formatBRL(opportunityPrice)}
-              </Button>
+              </DarkButton>
 
               {/* Enviar oferta personalizada */}
               <Button
                 variant="outline"
-                className="w-full h-12 text-sm font-bold border-gray-300 text-gray-700 hover:bg-gray-100 rounded-xl"
+                className="w-full h-12 text-sm font-bold border-[#323A45] bg-[#1A1F24] text-white hover:bg-[#252B33] hover:text-white rounded-xl"
                 onClick={handleSendOffer}
               >
                 <Send className="h-4 w-4 mr-2" /> Enviar minha oferta
@@ -350,11 +352,11 @@ export default function ArrematePublicPage() {
           )}
 
           {!isActive && (
-            <div className="text-center py-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
-              <p className="text-lg font-bold text-gray-500">
+            <CardDark className="text-center py-6">
+              <p className="text-lg font-bold text-[#B8C2CC]">
                 {listing.status === "sold" ? "Vendido!" : "Oportunidade encerrada"}
               </p>
-            </div>
+            </CardDark>
           )}
         </div>
       </div>
@@ -362,9 +364,9 @@ export default function ArrematePublicPage() {
       {/* ── SOCIAL PROOF ── */}
       <div className="max-w-lg mx-auto px-4 py-6 space-y-3">
         {(listing.offer_count || 0) > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-50 border border-violet-200">
-            <Flame className="h-3.5 w-3.5 text-violet-500 shrink-0" />
-            <p className="text-xs text-violet-700">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-[#FF7A00]/40">
+            <Flame className="h-3.5 w-3.5 text-[#FF7A00] shrink-0" />
+            <p className="text-xs text-orange-300">
               {(listing.offer_count || 0) > 3
                 ? `🔥 Alta demanda — ${listing.offer_count} ofertas recebidas`
                 : `${listing.offer_count} pessoa(s) já fizeram oferta`}
@@ -372,20 +374,20 @@ export default function ArrematePublicPage() {
           </div>
         )}
         {(listing as any).stock_quantity && (listing as any).stock_quantity <= 3 && (listing as any).stock_quantity > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-            <p className="text-xs text-amber-700">⚡ Apenas {(listing as any).stock_quantity} unidade(s) disponíveis</p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-amber-500/40">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+            <p className="text-xs text-amber-300">⚡ Apenas {(listing as any).stock_quantity} unidade(s) disponíveis</p>
           </div>
         )}
         {listing.city && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
-            <MapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-            <p className="text-xs text-emerald-700">📍 Produto da sua região — {listing.neighborhood || listing.city}</p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-[#00C58E]/40">
+            <MapPin className="h-3.5 w-3.5 text-[#00C58E] shrink-0" />
+            <p className="text-xs text-[#00C58E]">📍 Produto da sua região — {listing.neighborhood || listing.city}</p>
           </div>
         )}
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
-          <CheckCircle className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-          <p className="text-xs text-blue-700">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-[#323A45]">
+          <CheckCircle className="h-3.5 w-3.5 text-[#00C58E] shrink-0" />
+          <p className="text-xs text-[#B8C2CC]">
             {(listing as any).fulfillment_type === "both" ? "📦 Entrega ou retirada disponível" : (listing as any).fulfillment_type === "delivery" ? "🚚 Entrega disponível" : "🏪 Retirada na loja"}
           </p>
         </div>
@@ -394,21 +396,21 @@ export default function ArrematePublicPage() {
       {/* ── DETAILS ── */}
       <div className="max-w-lg mx-auto px-4 pb-12 space-y-4">
         {listing.description && (
-          <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-2 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-700">Descrição</h3>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">{listing.description}</p>
-          </div>
+          <CardInfo className="p-4 space-y-2">
+            <h3 className="text-sm font-bold text-white">Descrição</h3>
+            <p className="text-sm text-[#B8C2CC] whitespace-pre-wrap">{listing.description}</p>
+          </CardInfo>
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-            <p className="text-[10px] text-gray-500 uppercase mb-1">Condição</p>
-            <p className="text-sm font-bold text-gray-900 capitalize">{(listing as any).condition || "—"}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-            <p className="text-[10px] text-gray-500 uppercase mb-1">Categoria</p>
-            <p className="text-sm font-bold text-gray-900 capitalize">{(listing as any).category || "—"}</p>
-          </div>
+          <CardInfo className="p-3 text-center">
+            <p className="text-[10px] text-[#8E98A3] uppercase mb-1">Condição</p>
+            <p className="text-sm font-bold text-white capitalize">{(listing as any).condition || "—"}</p>
+          </CardInfo>
+          <CardInfo className="p-3 text-center">
+            <p className="text-[10px] text-[#8E98A3] uppercase mb-1">Categoria</p>
+            <p className="text-sm font-bold text-white capitalize">{(listing as any).category || "—"}</p>
+          </CardInfo>
         </div>
 
         <div className="flex items-center justify-center gap-4 py-4 text-[10px] text-gray-600">

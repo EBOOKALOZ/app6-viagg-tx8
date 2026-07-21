@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
-import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
+import { HeroClimaRadio } from "@/components/public/HeroClimaRadio";
 import { GlobalSearchBar } from "@/components/public/GlobalSearchBar";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { PremiumQuickAccessBar } from "@/components/layout/PremiumQuickAccessBar";
@@ -185,9 +185,9 @@ export function MarketLayout({
                         headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0 pb-0" : "max-h-[300px] opacity-100 translate-y-0 pt-2 pb-1"
                     )}>
                         <div className="flex items-stretch gap-2">
-                            {/* Card de clima (estreitado pela coluna de botões) */}
+                            {/* Card de clima (estreitado pela coluna de botões) — após apresentar, cede o lugar ao player da rádio */}
                             <div className="min-w-0 flex-1">
-                                <HomeHeroWeather />
+                                <HeroClimaRadio />
                             </div>
 
                             {/* Coluna lateral: apenas extras */}
@@ -204,7 +204,7 @@ export function MarketLayout({
                         "hidden lg:block w-full transition-all duration-300 ease-in-out overflow-hidden",
                         headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0" : "max-h-[300px] opacity-100 translate-y-0 pt-2"
                     )}>
-                        <HomeHeroWeather compact />
+                        <HeroClimaRadio compact />
                     </div>
 
                     {/* ── DESKTOP HEADER (≥ lg) - SEMPRE VISÍVEL NO ESTADO RECOLHIDO ── */}

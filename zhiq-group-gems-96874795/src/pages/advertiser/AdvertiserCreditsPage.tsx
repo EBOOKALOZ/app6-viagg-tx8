@@ -806,8 +806,8 @@ export default function AdvertiserCreditsPage() {
       {/* ═══ 1. CABEÇALHO ════════════════════════════════════════════════════════ */}
       <div className="space-y-4">
         <div className="flex items-start gap-4">
-          <div className="p-3.5 bg-gradient-to-br from-[#FF6A00] to-[#E55A00] rounded-2xl shadow-2xl shadow-orange-900/40 shrink-0">
-            <CreditCard className="w-8 h-8 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-white/10 p-0.5 border border-white/20 overflow-hidden shadow-2xl shadow-orange-900/40 shrink-0 flex items-center justify-center">
+            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-xl" />
           </div>
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-[#F5F7FA] tracking-tighter uppercase leading-none">

@@ -48,36 +48,36 @@ export const SellRealEstateCTA: React.FC<SellRealEstateCTAProps> = ({
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 border border-primary/20 p-8 md:p-12 shadow-2xl ${className}`}>
+    <div className={`relative overflow-hidden rounded-2xl bg-[#1A1F24] border border-[#323A45] p-8 md:p-12 shadow-[0_8px_24px_rgba(0,0,0,0.35)] ${className}`}>
       {/* Decorative background elements */}
-      <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-[#FF7A00]/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-48 h-48 bg-[#00C58E]/10 rounded-full blur-3xl" />
 
       <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
         <div className="flex-1 space-y-4 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00C58E]/15 text-[#00C58E] text-xs font-bold uppercase tracking-wider">
             <Home className="w-3 h-3" />
             Oportunidade Premium
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-            Venda ou anuncie seu imóvel com <span className="text-primary italic">proteção de contato</span> e alcance local inteligente.
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+            Venda ou anuncie seu imóvel com <span className="text-[#FF7A00] italic">proteção de contato</span> e alcance local inteligente.
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl">
+          <p className="text-[#B8C2CC] text-lg max-w-xl">
             Publique chácara, sítio, fazenda, lote ou terreno e receba interessados qualificados.
           </p>
         </div>
 
         <div className="flex flex-col items-center gap-3">
-          <Button 
+          <Button
             onClick={handleCtaClick}
             size="lg"
-            className="h-16 px-10 text-xl font-black bg-primary hover:bg-primary/90 text-white rounded-2xl shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:scale-105 transition-all group gap-3"
+            className="h-16 px-10 text-xl font-black bg-[#FF7A00] hover:bg-[#FF8E1F] text-white rounded-2xl shadow-[0_6px_18px_rgba(255,122,0,0.30)] hover:scale-105 transition-all group gap-3"
           >
             <Megaphone className="w-6 h-6 group-hover:rotate-12 transition-transform" />
             QUERO VENDER
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Button>
-          <span className="text-xs text-muted-foreground italic font-medium">
+          <span className="text-xs text-[#8E98A3] italic font-medium">
             Grátis para começar • Proteção Anti-SPAM
           </span>
         </div>

@@ -233,34 +233,34 @@ export default function AllVehiclesPage() {
 
       {/* ── CTA para anunciantes ── */}
       <div className="w-full px-4 lg:px-6 pb-4 pt-2">
-        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="bg-[#1A1F24] border border-[#323A45] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
           <div className="text-white space-y-1">
-            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para revendas e proprietários</p>
-            <h3 className="text-xl font-black leading-tight">🚗 Anuncie seu veículo aqui!</h3>
-            <p className="text-sm text-sky-100">Alcance compradores na sua região. Cadastro rápido e gratuito.</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[#00C58E]">Para revendas e proprietários</p>
+            <h3 className="text-xl font-black leading-tight text-white">🚗 Anuncie seu veículo aqui!</h3>
+            <p className="text-sm text-[#B8C2CC]">Alcance compradores na sua região. Cadastro rápido e gratuito.</p>
           </div>
           <button
             onClick={() => navigate("/auth")}
-            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+            className="shrink-0 bg-[#FF7A00] hover:bg-[#FF8E1F] text-white font-black text-sm px-6 py-3 rounded-2xl shadow-[0_6px_18px_rgba(255,122,0,0.30)] transition-all whitespace-nowrap"
           >
             Anunciar meu veículo →
           </button>
         </div>
       </div>
 
-      <div className="w-full py-10 bg-[#F5E62B]">
+      <div className="w-full py-10 bg-[#10151A]">
         <div className="max-w-[1920px] mx-auto space-y-6">
           <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
             <div className="flex items-center gap-2 justify-center">
-              <div className="p-2 bg-zinc-900/10 rounded-lg">
-                <Car className="w-5 h-5 text-zinc-900" />
+              <div className="p-2 bg-[#252B33] border border-[#323A45] rounded-lg">
+                <Car className="w-5 h-5 text-[#00C58E]" />
               </div>
-              <span className="text-xs font-black text-zinc-700 uppercase tracking-widest">Revendas & Proprietários</span>
+              <span className="text-xs font-black text-[#8E98A3] uppercase tracking-widest">Revendas & Proprietários</span>
             </div>
-            <h1 className="text-4xl font-black text-zinc-900 tracking-tighter w-full text-center">
-              VEÍCULOS <span className="text-orange-500">&</span> AUTOMÓVEIS
+            <h1 className="text-4xl font-black text-white tracking-tighter w-full text-center">
+              VEÍCULOS <span className="text-[#FF7A00]">&</span> AUTOMÓVEIS
             </h1>
-            <p className="text-zinc-500 font-medium max-w-xl text-center">
+            <p className="text-[#B8C2CC] font-medium max-w-xl text-center">
               Carros, motos, caminhões e mais — negocie direto com o dono.
             </p>
           </div>
@@ -280,14 +280,14 @@ export default function AllVehiclesPage() {
           )}
 
           {vehiclesLoading ? (
-            <div className="flex items-center gap-2 py-16 justify-center text-zinc-400">
+            <div className="flex items-center gap-2 py-16 justify-center text-[#8E98A3]">
               <Loader2 className="w-6 h-6 animate-spin" /> Carregando veículos...
             </div>
           ) : sortedVehicles.length === 0 ? (
             <div className="text-center py-20 space-y-4 px-4">
               <div className="text-6xl">🚗</div>
-              <h2 className="text-2xl font-black text-zinc-700">Nenhum veículo encontrado</h2>
-              <p className="text-zinc-500">Seja o primeiro a anunciar aqui!</p>
+              <h2 className="text-2xl font-black text-white">Nenhum veículo encontrado</h2>
+              <p className="text-[#B8C2CC]">Seja o primeiro a anunciar aqui!</p>
             </div>
           ) : (
             <div className="px-4 lg:px-6">

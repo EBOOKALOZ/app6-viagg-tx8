@@ -20,6 +20,7 @@ import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { OfertaRapidaModal } from "@/components/public/MiniCadastroModal";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { CardDark, CardInfo, CardHighlight, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 
 // ─── Helpers ────────────────────────────
 
@@ -311,29 +312,29 @@ export default function AuctionPublicPage() {
           </div>
 
           {/* ── Premium Card Container ── */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/60 p-6 space-y-5"
-               style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.08)' }}>
+          <CardDark className="rounded-3xl p-6 space-y-5">
 
             {/* Product image */}
             {imgSrc && (
-              <div className="rounded-2xl overflow-hidden bg-gray-50 shadow-inner border border-gray-100">
-                <img src={imgSrc} alt={listing.title} className="w-full aspect-[16/9] object-contain bg-gray-50" />
+              <div className="relative rounded-2xl overflow-hidden bg-[#252B33] border border-[#323A45]">
+                <img src={imgSrc} alt={listing.title} className="w-full aspect-[16/9] object-contain bg-[#252B33]" />
+                <CardImageOverlay />
               </div>
             )}
 
             {/* Title */}
-            <h1 className="text-2xl md:text-3xl font-black text-gray-900 text-center leading-tight">
+            <h1 className="text-2xl md:text-3xl font-black text-white text-center leading-tight">
               {listing.title}
             </h1>
 
             {/* Store + Location */}
-            <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
+            <div className="flex items-center justify-center gap-3 text-sm text-[#B8C2CC]">
               <span className="flex items-center gap-1">
                 <Crown className="h-3.5 w-3.5 text-amber-400" /> {storeName || "Loja"}
               </span>
               {listing.city && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-emerald-400" />
+                  <MapPin className="h-3.5 w-3.5 text-[#00C58E]" />
                   {listing.neighborhood ? `${listing.neighborhood}, ` : ""}{listing.city}
                 </span>
               )}
@@ -342,13 +343,13 @@ export default function AuctionPublicPage() {
             {/* Description */}
             {listing.description && (
               <div className="text-center">
-                <p className={`text-sm text-gray-600 whitespace-pre-wrap ${descExpanded ? "" : "line-clamp-3"}`}>
+                <p className={`text-sm text-[#B8C2CC] whitespace-pre-wrap ${descExpanded ? "" : "line-clamp-3"}`}>
                   {listing.description}
                 </p>
                 {(listing.description.length > 120 || listing.description.split("\n").length > 3) && (
                   <button
                     onClick={() => setDescExpanded(v => !v)}
-                    className="mt-1 text-xs font-bold text-orange-600 hover:text-orange-700"
+                    className="mt-1 text-xs font-bold text-[#FF7A00] hover:text-[#FF8E1F]"
                   >
                     {descExpanded ? "Ver menos" : "Ver descrição completa"}
                   </button>
@@ -364,19 +365,19 @@ export default function AuctionPublicPage() {
               return (
             <div
               className={`text-center py-4 rounded-2xl border shadow-md ${
-                isCrit ? "bg-red-50 border-red-300"
-                : isWarn ? "bg-amber-50 border-amber-300"
+                isCrit ? "bg-red-500/10 border-red-500/40"
+                : isWarn ? "bg-amber-500/10 border-amber-500/40"
                 : "border-transparent"
               }`}
               style={isNormal ? { backgroundColor: "#00a300" } : undefined}
             >
               <p className={`text-[10px] uppercase tracking-widest mb-1 flex items-center justify-center gap-1 ${
-                isNormal ? "text-white/85" : "text-gray-500"
+                isNormal ? "text-white/85" : "text-[#8E98A3]"
               }`}>
                 <Timer className="h-3 w-3" /> Encerra em
               </p>
               <p className={`text-4xl md:text-5xl font-black tracking-tight ${
-                isCrit ? "text-red-600 animate-pulse" : isWarn ? "text-amber-600" : "text-white"
+                isCrit ? "text-red-400 animate-pulse" : isWarn ? "text-amber-400" : "text-white"
               }`}>
                 {timeLeft}
               </p>
@@ -387,13 +388,13 @@ export default function AuctionPublicPage() {
             {/* Current price */}
             <div className="text-center space-y-1">
               {buyNowPrice && buyNowPrice > currentBid && (
-                <p className="text-sm text-gray-400 line-through">{formatBRL(buyNowPrice)}</p>
+                <p className="text-sm text-[#8E98A3] line-through">{formatBRL(buyNowPrice)}</p>
               )}
-              <p className="text-4xl font-black text-gray-900">{formatBRL(currentBid)}</p>
+              <p className="text-4xl font-black text-[#FF7A00]">{formatBRL(currentBid)}</p>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-xs text-gray-500">{totalBids} lance(s)</span>
+                <span className="text-xs text-[#8E98A3]">{totalBids} lance(s)</span>
                 {savings && savings > 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 text-xs font-bold">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#00C58E]/15 text-[#00C58E] text-xs font-bold">
                     <TrendingUp className="h-3 w-3" /> {savings}% abaixo
                   </span>
                 )}
@@ -402,27 +403,24 @@ export default function AuctionPublicPage() {
 
             {/* Min next bid */}
             {isActive && (
-              <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-3 border border-orange-200 text-center shadow-sm">
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Próximo lance mínimo</p>
-                <p className="text-xl font-black text-orange-600">{formatBRL(minNextBid)}</p>
-              </div>
+              <CardHighlight className="text-center" label="Próximo lance mínimo" value={formatBRL(minNextBid)} />
             )}
 
             {/* CTAs */}
             {isActive && (
               <div className="space-y-3">
                 {/* Place bid — opens modal */}
-                <Button
-                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl shadow-lg shadow-orange-500/30"
+                <DarkButton
+                  className="w-full h-14 text-base flex items-center justify-center"
                   onClick={handleBid}
                 >
                   <Gavel className="h-5 w-5 mr-2" /> Dar Lance
-                </Button>
+                </DarkButton>
 
                 {/* Buy now */}
                 {buyNowPrice && (
                   <Button
-                    className="w-full h-14 text-base font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl shadow-lg shadow-emerald-500/20"
+                    className="w-full h-14 text-base font-bold bg-[#00C58E] hover:bg-[#00B583] text-white rounded-xl shadow-lg shadow-[#00C58E]/20"
                     onClick={handleBuyNow}
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
@@ -433,40 +431,40 @@ export default function AuctionPublicPage() {
             )}
 
             {!isActive && (
-              <div className="text-center py-6 rounded-2xl bg-gray-50 border border-gray-200">
-                <p className="text-lg font-bold text-gray-500">Leilão encerrado</p>
-              </div>
+              <CardInfo className="text-center py-6 rounded-2xl">
+                <p className="text-lg font-bold text-[#B8C2CC]">Leilão encerrado</p>
+              </CardInfo>
             )}
-          </div>
+          </CardDark>
         </div>
       </div>
 
       {/* ── STATS ── */}
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
         <div className="grid grid-cols-3 gap-3">
-          <div className="text-center p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
-            <Eye className="h-4 w-4 text-blue-500 mx-auto mb-1" />
-            <p className="text-lg font-black text-gray-900">{listing.views_count || 0}</p>
-            <p className="text-[10px] text-gray-500">Visualizações</p>
-          </div>
-          <div className="text-center p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
-            <Users className="h-4 w-4 text-violet-500 mx-auto mb-1" />
-            <p className="text-lg font-black text-gray-900">{listing.watchers_count || 0}</p>
-            <p className="text-[10px] text-gray-500">Observando</p>
-          </div>
-          <div className="text-center p-3 rounded-xl bg-white border border-gray-200 shadow-sm">
-            <Flame className="h-4 w-4 text-orange-500 mx-auto mb-1" />
-            <p className="text-lg font-black text-gray-900">{totalBids}</p>
-            <p className="text-[10px] text-gray-500">Lances</p>
-          </div>
+          <CardInfo className="text-center p-3">
+            <Eye className="h-4 w-4 text-[#00C58E] mx-auto mb-1" />
+            <p className="text-lg font-black text-white">{listing.views_count || 0}</p>
+            <p className="text-[10px] text-[#8E98A3]">Visualizações</p>
+          </CardInfo>
+          <CardInfo className="text-center p-3">
+            <Users className="h-4 w-4 text-[#B8C2CC] mx-auto mb-1" />
+            <p className="text-lg font-black text-white">{listing.watchers_count || 0}</p>
+            <p className="text-[10px] text-[#8E98A3]">Observando</p>
+          </CardInfo>
+          <CardInfo className="text-center p-3">
+            <Flame className="h-4 w-4 text-[#FF7A00] mx-auto mb-1" />
+            <p className="text-lg font-black text-white">{totalBids}</p>
+            <p className="text-[10px] text-[#8E98A3]">Lances</p>
+          </CardInfo>
         </div>
 
         {/* Social proof */}
         <div className="space-y-2">
           {totalBids > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200">
-              <Zap className="h-3.5 w-3.5 text-orange-500 shrink-0" />
-              <p className="text-xs text-orange-700">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-[#FF7A00]/40">
+              <Zap className="h-3.5 w-3.5 text-[#FF7A00] shrink-0" />
+              <p className="text-xs text-orange-300">
                 {totalBids > 5
                   ? `🔥 Produto disputado — ${totalBids} lances registrados`
                   : `Lance mais recente: ${bids[0] ? formatBRL(bids[0].amount_cents ? bids[0].amount_cents / 100 : 0) : formatBRL(currentBid)}`}
@@ -474,15 +472,15 @@ export default function AuctionPublicPage() {
             </div>
           )}
           {urgency === "critical" && isActive && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-              <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-              <p className="text-xs text-red-700">⏰ Encerrando em breve — últimas chances!</p>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-red-500/40">
+              <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+              <p className="text-xs text-red-300">⏰ Encerrando em breve — últimas chances!</p>
             </div>
           )}
           {listing.city && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
-              <MapPin className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-              <p className="text-xs text-emerald-700">📍 Produto da sua região — {listing.neighborhood || listing.city}</p>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1A1F24] border border-[#00C58E]/40">
+              <MapPin className="h-3.5 w-3.5 text-[#00C58E] shrink-0" />
+              <p className="text-xs text-[#00C58E]">📍 Produto da sua região — {listing.neighborhood || listing.city}</p>
             </div>
           )}
         </div>
@@ -499,26 +497,24 @@ export default function AuctionPublicPage() {
               <div
                 key={bid.id}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
-                  i === 0 ? "bg-orange-50 border-orange-300 shadow-sm" : "bg-white border-gray-200"
+                  i === 0 ? "bg-[#1A1F24] border-[#FF7A00]/50 shadow-sm" : "bg-[#1A1F24] border-[#323A45]"
                 }`}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black ${
-                  i === 0 ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500"
+                  i === 0 ? "bg-[#FF7A00] text-white" : "bg-[#323A45] text-[#B8C2CC]"
                 }`}>
                   {i + 1}º
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`font-bold ${i === 0 ? "text-orange-600" : "text-gray-900"}`}>
+                  <p className={`font-bold ${i === 0 ? "text-[#FF7A00]" : "text-white"}`}>
                     {formatBRL(bid.amount_cents ? bid.amount_cents / 100 : 0)}
                   </p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[10px] text-[#8E98A3]">
                     {new Date(bid.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                   </p>
                 </div>
                 {bid.is_winning && (
-                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
-                    Vencendo
-                  </span>
+                  <DarkBadge tone="green">Vencendo</DarkBadge>
                 )}
               </div>
             ))}
@@ -529,23 +525,23 @@ export default function AuctionPublicPage() {
       {/* ── DETAILS ── */}
       <div className="max-w-lg mx-auto px-4 pb-12 space-y-4">
         {listing.description && (
-          <div className="rounded-xl bg-white border border-gray-200 p-4 space-y-2 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-700">Descrição</h3>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">{listing.description}</p>
-          </div>
+          <CardInfo className="p-4 space-y-2">
+            <h3 className="text-sm font-bold text-white">Descrição</h3>
+            <p className="text-sm text-[#B8C2CC] whitespace-pre-wrap">{listing.description}</p>
+          </CardInfo>
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-            <p className="text-[10px] text-gray-500 uppercase mb-1">Condição</p>
-            <p className="text-sm font-bold text-gray-900 capitalize">{(listing as any).condition || "—"}</p>
-          </div>
-          <div className="rounded-xl bg-white border border-gray-200 p-3 text-center shadow-sm">
-            <p className="text-[10px] text-gray-500 uppercase mb-1">Retirada</p>
-            <p className="text-sm font-bold text-gray-900 capitalize">
+          <CardInfo className="p-3 text-center">
+            <p className="text-[10px] text-[#8E98A3] uppercase mb-1">Condição</p>
+            <p className="text-sm font-bold text-white capitalize">{(listing as any).condition || "—"}</p>
+          </CardInfo>
+          <CardInfo className="p-3 text-center">
+            <p className="text-[10px] text-[#8E98A3] uppercase mb-1">Retirada</p>
+            <p className="text-sm font-bold text-white capitalize">
               {(listing as any).fulfillment_type === "both" ? "Entrega & Retirada" : (listing as any).fulfillment_type === "delivery" ? "Entrega" : "Retirada"}
             </p>
-          </div>
+          </CardInfo>
         </div>
 
         {/* Trust signals */}

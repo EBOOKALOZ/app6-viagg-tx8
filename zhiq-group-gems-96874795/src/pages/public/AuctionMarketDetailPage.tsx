@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
+import { CardDark, CardInfo, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 
@@ -152,16 +153,16 @@ export default function AuctionMarketDetailPage() {
 
   // Formatar mensagem de urgência
   const urgencyClass = remaining.total > 0 && remaining.total < 3600000
-    ? "text-red-600 animate-pulse"
+    ? "text-red-400 animate-pulse"
     : remaining.total > 0 && remaining.total < 86400000
-    ? "text-amber-600"
-    : "text-[#FF6A00]";
+    ? "text-amber-400"
+    : "text-[#FF7A00]";
 
   const urgencyBg = remaining.total > 0 && remaining.total < 3600000
-    ? "bg-red-50 border-red-200"
+    ? "bg-red-500/10 border-red-500/40"
     : remaining.total > 0 && remaining.total < 86400000
-    ? "bg-amber-50 border-amber-200"
-    : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200";
+    ? "bg-amber-500/10 border-amber-500/40"
+    : "bg-[#252B33] border-[#323A45]";
 
   // Stats
   const totalBids = listing?.total_bids || 0;
@@ -235,26 +236,25 @@ export default function AuctionMarketDetailPage() {
             </button>
 
             {/* Main card */}
-            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-[#FF6A00] ring-4 ring-[#FF6A00]/10">
+            <CardDark className="rounded-3xl ring-1 ring-[#FF7A00]/20">
 
               {/* Image area */}
               {imgSrc && (
-                <div className="relative aspect-[16/9] bg-[#F5F7FA] overflow-hidden">
+                <div className="relative aspect-[16/9] bg-[#252B33] overflow-hidden">
                   <img src={imgSrc} alt={listing.title} className="w-full h-full object-contain" />
+                  <CardImageOverlay />
                   <div className="absolute top-4 left-4">
-                    <Badge className={cn(
-                      "font-black uppercase tracking-widest text-[10px] px-3 py-1.5 shadow-lg",
-                      listing.listing_type === 'arremate'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] text-white'
-                    )}>
+                    <DarkBadge
+                      tone={listing.listing_type === 'arremate' ? 'green' : 'orange'}
+                      className="bg-[#1A1F24]/80 px-3 py-1.5 shadow-lg backdrop-blur-sm"
+                    >
                       {listing.listing_type === 'arremate' ? 'Arremate' : 'Leilão'}
-                    </Badge>
+                    </DarkBadge>
                   </div>
                   {remaining.ended && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <div className="bg-white/95 px-6 py-3 rounded-2xl">
-                        <p className="font-black text-xl text-gray-900 flex items-center gap-2">
+                      <div className="bg-[#1A1F24]/95 border border-[#323A45] px-6 py-3 rounded-2xl">
+                        <p className="font-black text-xl text-white flex items-center gap-2">
                           <Clock className="w-5 h-5" /> Encerrado
                         </p>
                       </div>
@@ -266,18 +266,18 @@ export default function AuctionMarketDetailPage() {
               <div className="p-6 md:p-8 space-y-6">
                 {/* Title & location */}
                 <div className="space-y-2">
-                  <h1 className="text-2xl md:text-3xl font-black text-[#1B1F24] leading-tight">
+                  <h1 className="text-2xl md:text-3xl font-black text-white leading-tight">
                     {listing.title}
                   </h1>
-                  <div className="flex items-center gap-4 text-sm font-bold text-[#A7B0BE]">
+                  <div className="flex items-center gap-4 text-sm font-bold text-[#B8C2CC]">
                     {storeName && (
                       <span className="flex items-center gap-1.5">
-                        <Store className="w-4 h-4 text-[#FF6A00]" /> {storeName}
+                        <Store className="w-4 h-4 text-[#FF7A00]" /> {storeName}
                       </span>
                     )}
                     {listing.city && (
                       <span className="flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4 text-blue-500" />
+                        <MapPin className="w-4 h-4 text-[#00C58E]" />
                         {listing.city}{listing.neighborhood ? `, ${listing.neighborhood}` : ''}
                       </span>
                     )}
@@ -287,7 +287,7 @@ export default function AuctionMarketDetailPage() {
                 {/* Urgency timer */}
                 {isActive && (
                   <div className={cn("rounded-2xl border-2 p-6 text-center", urgencyBg)}>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2 font-black">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E98A3] mb-2 font-black">
                       <Timer className="inline w-4 h-4 mr-1" /> Encerra em
                     </p>
                     <p className={cn("text-4xl md:text-5xl font-black tabular-nums tracking-tighter", urgencyClass)}>
@@ -305,63 +305,57 @@ export default function AuctionMarketDetailPage() {
                 )}
 
                 {/* Pricing block */}
-                <div className="bg-gradient-to-r from-[#FF6A00]/5 to-amber-50 rounded-2xl p-6 border-2 border-[#FF6A00]/20">
+                <CardInfo className="rounded-2xl p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1 font-black">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E98A3] mb-1 font-black">
                         {listing.listing_type === 'arremate' ? 'Preço' : 'Lance Atual'}
                       </p>
-                      <p className="text-3xl md:text-4xl font-black text-[#FF6A00] tracking-tighter">
+                      <p className="text-3xl md:text-4xl font-black text-[#FF7A00] tracking-tighter">
                         {formatCurrencyBRL(currentBid)}
                       </p>
                       {buyNowPrice && buyNowPrice > currentBid && (
-                        <p className="text-sm text-gray-400 line-through mt-1">
+                        <p className="text-sm text-[#8E98A3] line-through mt-1">
                           {formatCurrencyBRL(buyNowPrice)}
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1 font-black">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E98A3] mb-1 font-black">
                         {listing.listing_type === 'arremate' ? 'Oferta Mínima' : 'Próximo Lance'}
                       </p>
-                      <p className="text-xl font-black text-[#1B1F24]">
+                      <p className="text-xl font-black text-white">
                         {formatCurrencyBRL(minNextBid)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1 font-black">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E98A3] mb-1 font-black">
                         Participantes
                       </p>
-                      <p className="text-xl font-black text-[#1B1F24] flex items-center gap-2">
-                        <Users className="w-5 h-5 text-emerald-500" />
+                      <p className="text-xl font-black text-white flex items-center gap-2">
+                        <Users className="w-5 h-5 text-[#00C58E]" />
                         {totalBids}
                       </p>
                     </div>
                   </div>
 
                   {savings && savings > 0 && (
-                    <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-600 font-black text-sm">
+                    <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#00C58E]/15 text-[#00C58E] font-black text-sm">
                       <TrendingUp className="w-4 h-4" />
                       {savings}% de desconto!
                     </div>
                   )}
-                </div>
+                </CardInfo>
 
                 {/* CTAs */}
                 {isActive && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button
-                      size="lg"
+                    <DarkButton
                       onClick={handleBid}
                       disabled={placeBid.isPending}
-                      className={cn(
-                        "h-14 text-lg font-black rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2",
-                        listing.listing_type === 'arremate'
-                          ? "bg-blue-500 hover:bg-blue-600 text-white"
-                          : "bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] hover:from-[#FF7A1A] hover:to-[#FFA357] text-white"
-                      )}
+                      className="h-14 text-lg flex items-center justify-center gap-2 active:scale-95"
                     >
                       {placeBid.isPending ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -371,14 +365,14 @@ export default function AuctionMarketDetailPage() {
                           {listing.listing_type === 'arremate' ? 'Fazer Oferta' : 'Dar Lance'}
                         </>
                       )}
-                    </Button>
+                    </DarkButton>
 
                     {buyNowPrice && (
                       <Button
                         size="lg"
                         variant="outline"
                         onClick={() => {/* TODO: implement buy now */}}
-                        className="h-14 text-lg font-black rounded-2xl border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                        className="h-14 text-lg font-black rounded-2xl border-2 border-[#00C58E] bg-transparent text-[#00C58E] hover:bg-[rgba(0,197,142,0.12)] hover:text-[#00C58E]"
                       >
                         <Crown className="w-5 h-5 mr-2" />
                         Arrematar Agora
@@ -390,8 +384,8 @@ export default function AuctionMarketDetailPage() {
                 {/* Description */}
                 {listing.description && (
                   <div className="prose prose-sm max-w-none">
-                    <h3 className="text-lg font-black text-[#1B1F24] mb-2">Descrição</h3>
-                    <p className="text-[#A7B0BE] leading-relaxed whitespace-pre-wrap">
+                    <h3 className="text-lg font-black text-white mb-2">Descrição</h3>
+                    <p className="text-[#B8C2CC] leading-relaxed whitespace-pre-wrap">
                       {listing.description}
                     </p>
                   </div>
@@ -400,8 +394,8 @@ export default function AuctionMarketDetailPage() {
                 {/* Bids history */}
                 {bids.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="text-lg font-black text-[#1B1F24] flex items-center gap-2">
-                      <ArrowUp className="w-5 h-5 text-[#FF6A00]" />
+                    <h3 className="text-lg font-black text-white flex items-center gap-2">
+                      <ArrowUp className="w-5 h-5 text-[#FF7A00]" />
                       Últimos Lances
                     </h3>
                     <div className="space-y-2">
@@ -411,26 +405,26 @@ export default function AuctionMarketDetailPage() {
                           className={cn(
                             "flex items-center gap-4 p-4 rounded-2xl border",
                             i === 0
-                              ? "bg-gradient-to-r from-[#FF6A00]/10 to-amber-50 border-[#FF6A00]/30 shadow-md"
-                              : "bg-white border-gray-200"
+                              ? "bg-[#FF7A00]/10 border-[#FF7A00]/40 shadow-md"
+                              : "bg-[#252B33] border-[#323A45]"
                           )}
                         >
                           <div className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center text-sm font-black",
-                            i === 0 ? "bg-[#FF6A00] text-white" : "bg-gray-100 text-gray-500"
+                            i === 0 ? "bg-[#FF7A00] text-white" : "bg-[#323A45] text-[#B8C2CC]"
                           )}>
                             {i + 1}º
                           </div>
                           <div className="flex-1">
-                            <p className={cn("text-lg font-black", i === 0 ? "text-[#FF6A00]" : "text-[#1B1F24]")}>
+                            <p className={cn("text-lg font-black", i === 0 ? "text-[#FF7A00]" : "text-white")}>
                               {formatCurrencyBRL(bid.amount_cents ? bid.amount_cents / 100 : 0)}
                             </p>
-                            <p className="text-xs text-[#A7B0BE]">
+                            <p className="text-xs text-[#8E98A3]">
                               {new Date(bid.created_at).toLocaleString("pt-BR")}
                             </p>
                           </div>
                           {bid.is_winning && (
-                            <Badge className="bg-emerald-500 text-white">Vencendo</Badge>
+                            <DarkBadge tone="green">Vencendo</DarkBadge>
                           )}
                         </div>
                       ))}
@@ -440,20 +434,20 @@ export default function AuctionMarketDetailPage() {
 
                 {/* Conditions */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 text-center shadow-sm">
-                    <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Entrega</p>
-                    <p className="font-bold text-[#1B1F24] capitalize">
+                  <CardInfo className="p-4 text-center">
+                    <p className="text-xs uppercase tracking-wider text-[#8E98A3] mb-1">Entrega</p>
+                    <p className="font-bold text-white capitalize">
                       {(listing as any).fulfillment_type === "both" ? "Entrega/Retirada" : (listing as any).fulfillment_type || "Retirada"}
                     </p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200 text-center shadow-sm">
-                    <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Status</p>
-                    <p className="font-bold text-[#1B1F24] capitalize">{listing.status}</p>
-                  </div>
+                  </CardInfo>
+                  <CardInfo className="p-4 text-center">
+                    <p className="text-xs uppercase tracking-wider text-[#8E98A3] mb-1">Status</p>
+                    <p className="font-bold text-white capitalize">{listing.status}</p>
+                  </CardInfo>
                 </div>
 
               </div>
-            </div>
+            </CardDark>
           </div>
         </section>
 

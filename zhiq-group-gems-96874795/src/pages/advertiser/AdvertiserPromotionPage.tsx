@@ -898,8 +898,8 @@ Use [LINK DA LOJA] como placeholder para o link da loja do anunciante.`;
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-[#FF6A00]/25">
-            <Megaphone className="w-7 h-7 text-white" />
+          <div className="w-14 h-14 rounded-2xl bg-white/10 p-0.5 border border-white/20 overflow-hidden shadow-lg shadow-[#FF6A00]/25 shrink-0 flex items-center justify-center">
+            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-xl" />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-[#F5F7FA] tracking-tight">

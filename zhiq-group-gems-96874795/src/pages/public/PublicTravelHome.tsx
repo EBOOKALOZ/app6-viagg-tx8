@@ -135,24 +135,24 @@ export default function PublicTravelHome() {
           </div>
 
           {/* Subcategoria Header Indicator / Switcher */}
-          <div className="px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-sm border border-zinc-200/80 max-w-4xl mx-auto">
+          <div className="px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#1A1F24] rounded-2xl p-4 shadow-[0_8px_24px_rgba(0,0,0,0.35)] border border-[#323A45] max-w-4xl mx-auto">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate("/viagens")}
-                className="flex items-center gap-1.5 text-xs font-black text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-3 py-2 rounded-xl transition-all"
+                className="flex items-center gap-1.5 text-xs font-black text-[#00C58E] bg-transparent hover:bg-[rgba(0,197,142,0.12)] border border-[#00C58E] px-3 py-2 rounded-xl transition-all"
               >
                 ← Voltar à seleção de modalidade
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-zinc-500">Modalidade ativa:</span>
-              <div className="flex bg-zinc-100 p-1 rounded-xl border border-zinc-200">
+              <span className="text-xs font-bold text-[#8E98A3]">Modalidade ativa:</span>
+              <div className="flex bg-[#252B33] p-1 rounded-xl border border-[#323A45]">
                 <button
                   onClick={() => setSearchParams({ subcategoria: "Viagens" })}
                   className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
                     subcategoria === "Viagens"
-                      ? "bg-sky-600 text-white shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-[#FF7A00] text-white shadow-sm"
+                      : "text-[#8E98A3] hover:text-white"
                   }`}
                 >
                   ✈️ Viagens
@@ -161,8 +161,8 @@ export default function PublicTravelHome() {
                   onClick={() => setSearchParams({ subcategoria: "Turismo" })}
                   className={`px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
                     subcategoria === "Turismo"
-                      ? "bg-amber-600 text-white shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-[#00C58E] text-white shadow-sm"
+                      : "text-[#8E98A3] hover:text-white"
                   }`}
                 >
                   🏖️ Turismo
@@ -171,8 +171,8 @@ export default function PublicTravelHome() {
                   onClick={() => setSearchParams({})}
                   className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
                     !subcategoria
-                      ? "bg-zinc-800 text-white shadow-sm"
-                      : "text-zinc-600 hover:text-zinc-900"
+                      ? "bg-[#323A45] text-white shadow-sm"
+                      : "text-[#8E98A3] hover:text-white"
                   }`}
                 >
                   Todos
@@ -207,7 +207,7 @@ export default function PublicTravelHome() {
               <p className="text-zinc-500">Seja a primeira agência a anunciar aqui!</p>
               <button
                 onClick={() => navigate("/auth?entry=advertiser")}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-3 rounded-xl"
+                className="bg-[#FF7A00] hover:bg-[#FF8E1F] text-white font-bold px-6 py-3 rounded-xl"
               >
                 Anunciar viagem
               </button>

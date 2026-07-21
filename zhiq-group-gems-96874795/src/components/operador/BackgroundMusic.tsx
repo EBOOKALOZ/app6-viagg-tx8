@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Music, Music2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getRadioState, pauseRadio } from "@/lib/radioPlayer";
 
 const STORAGE_KEY = "bg-music";
 const AUDIO_SRC = "/audio/painel-ambiente.mp3";
@@ -24,6 +25,8 @@ export function BackgroundMusic() {
     if (localStorage.getItem(STORAGE_KEY) !== "on") return;
 
     const resume = () => {
+      // rádio no ar = áudio prioritário → a música do painel não entra sozinha
+      if (getRadioState().playing || getRadioState().loading) return;
       const audio = getAudio();
       audio.play().then(() => setPlaying(true)).catch(() => {});
       window.removeEventListener("click", resume);
@@ -53,6 +56,8 @@ export function BackgroundMusic() {
       setPlaying(false);
       localStorage.setItem(STORAGE_KEY, "off");
     } else {
+      // clique manual vence: pausa a rádio antes de tocar (nunca 2 áudios)
+      if (getRadioState().playing) pauseRadio();
       audio.play().then(() => {
         setPlaying(true);
         localStorage.setItem(STORAGE_KEY, "on");

@@ -274,8 +274,8 @@ export default function MerchantCreditWallet() {
             <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 rounded-2xl p-5 text-white shadow-lg">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <Coins className="h-7 w-7 text-white" />
+                        <div className="w-14 h-14 rounded-2xl bg-white/10 p-0.5 border border-white/20 backdrop-blur-sm overflow-hidden shadow-md flex items-center justify-center shrink-0">
+                            <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="w-full h-full object-cover rounded-xl" />
                         </div>
                         <div>
                             <p className="text-xs text-white/70 font-bold uppercase tracking-wider">Carteira de Créditos</p>

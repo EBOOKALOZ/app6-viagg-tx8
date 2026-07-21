@@ -4,9 +4,12 @@ import { useLocation } from 'react-router-dom';
 import { Volume2, VolumeX, Volume1 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { OrionAudioCenter } from '@/components/orion/OrionAudioCenter';
+import { RadioMiniPlayer } from '@/components/orion/RadioMiniPlayer';
 import {
   AudioSettings, loadAudioSettings, saveAudioSettings, ensureOrionGraph,
 } from '@/lib/orionAudioEngine';
+import { hasPendingRadioSession, resumeRadioAfterReload } from '@/lib/radioPlayer';
+import { initAudioManager } from '@/lib/audioManager';
 
 const AUDIO_URL = 'https://jifnpjnffhzosxrdhvxb.supabase.co/storage/v1/object/public/aaudio/background-music.mp3';
 // sessionStorage — sobrevive a window.location.href (full reload) dentro da mesma aba
@@ -186,6 +189,11 @@ export function GlobalAudioPlayer() {
     };
     window.addEventListener('stop-all-motoboy-audio', handleDeliveryStop);
 
+    // ORION UX AUDIO: coordenador de prioridade (autoplay de mídia nunca rouba a rádio)
+    // + retomada da rádio após full reload (window.location.href em 47 navegações)
+    initAudioManager();
+    void resumeRadioAfterReload();
+
     // ORION-AUDIO X: abrir o Audio Center na aba Rádio (barra premium → sem navegar)
     const handleOpenRadio = () => setIsPanelOpen(true);
     window.addEventListener('viagg:open-radio', handleOpenRadio);
@@ -259,6 +267,8 @@ export function GlobalAudioPlayer() {
   // Inicia música com fade-in de 0 → volume padrão em 3s
   const startMusic = useCallback(() => {
     if (isAudioPlaying() || !audioRef.current) return;
+    // PRIORIDADE: rádio ativa (ou retomando de um reload) → música de fundo NÃO entra
+    if (hasPendingRadioSession()) return;
 
     const audio = audioRef.current;
     const targetVolume = DEFAULT_VOLUME;
@@ -426,6 +436,8 @@ export function GlobalAudioPlayer() {
     <>
       {portalTarget ? createPortal(buttonWrapper, portalTarget) : buttonWrapper}
       {createPortal(panelContent, document.body)}
+      {/* Mini Player global da rádio — visível em toda navegação (some com o painel aberto) */}
+      <RadioMiniPlayer hidden={isPanelOpen} onOpenCenter={() => setIsPanelOpen(true)} />
     </>
   );
 }

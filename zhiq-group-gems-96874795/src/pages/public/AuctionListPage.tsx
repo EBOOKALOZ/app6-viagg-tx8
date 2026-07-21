@@ -14,6 +14,7 @@ import {
   Sparkles, Trophy, ShieldCheck, BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CardDark, CardInfo, DarkBadge, DarkButton, DarkMapButton, CardImageOverlay } from "@/components/ui/dark-card";
 import type { AuctionListing } from "@/hooks/useAuctions";
 
 // ─── Helpers ────────────────────────────
@@ -86,9 +87,9 @@ function CountdownPremium({ endsAt }: { endsAt: string }) {
   const { days, hours, minutes, seconds, ended, total } = useCountdown(endsAt);
   if (ended) {
     return (
-      <div className="rounded-xl bg-gray-100 border border-gray-200 py-2.5 text-center">
-        <span className="text-xs font-black uppercase tracking-wider text-gray-500">🔒 Leilão Encerrado</span>
-      </div>
+      <CardInfo className="py-2.5 text-center">
+        <span className="text-xs font-black uppercase tracking-wider text-[#B8C2CC]">🔒 Leilão Encerrado</span>
+      </CardInfo>
     );
   }
   const urgent = total > 0 && total < 3600000; // < 1h
@@ -155,49 +156,50 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
 
   return (
     <button
-      className="w-full text-left bg-white rounded-2xl shadow-md hover:shadow-xl transition-all border border-gray-100 overflow-hidden group flex flex-col h-full"
+      className="w-full text-left bg-[#1A1F24] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.45)] transition-all border border-[#323A45] overflow-hidden group flex flex-col h-full"
       onClick={onClick}
     >
       {/* Product image */}
       {imgSrc ? (
-        <div className="relative overflow-hidden bg-gray-50">
+        <div className="relative overflow-hidden bg-[#252B33]">
           <img
             src={imgSrc}
             alt={listing.title}
             className="w-full aspect-[16/9] object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
+          <CardImageOverlay />
           {/* Type badge overlay */}
           <div className="absolute top-2 left-2">
             {isAuction ? (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/90 text-white text-[10px] font-bold uppercase backdrop-blur-sm">
+              <DarkBadge tone="orange" className="bg-[#1A1F24]/80 backdrop-blur-sm">
                 <Gavel className="h-3 w-3" /> Leilão
-              </span>
+              </DarkBadge>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-500/90 text-white text-[10px] font-bold uppercase backdrop-blur-sm">
+              <DarkBadge tone="green" className="bg-[#1A1F24]/80 backdrop-blur-sm">
                 <Tag className="h-3 w-3" /> Arremate
-              </span>
+              </DarkBadge>
             )}
           </div>
         </div>
       ) : (
         <>
-          <div className={`h-2 ${isAuction ? "bg-gradient-to-r from-orange-400 to-amber-400" : "bg-gradient-to-r from-violet-400 to-purple-500"}`} />
+          <div className={`h-2 ${isAuction ? "bg-gradient-to-r from-orange-400 to-amber-400" : "bg-gradient-to-r from-[#00C58E] to-emerald-400"}`} />
           <div className="flex items-start justify-between gap-2 px-4 pt-3">
             <div className="flex items-center gap-1.5">
               {isAuction ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold uppercase">
+                <DarkBadge tone="orange">
                   <Gavel className="h-3 w-3" /> Leilão
-                </span>
+                </DarkBadge>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-600 text-[10px] font-bold uppercase">
+                <DarkBadge tone="green">
                   <Tag className="h-3 w-3" /> Arremate
-                </span>
+                </DarkBadge>
               )}
               {isEnding && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold animate-pulse">
+                <DarkBadge tone="red" className="animate-pulse">
                   <Flame className="h-3 w-3" /> Encerrando!
-                </span>
+                </DarkBadge>
               )}
             </div>
           </div>
@@ -206,32 +208,32 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
 
       <div className="p-4 space-y-3 flex-1 flex flex-col">
         {/* Title */}
-        <h3 className="font-bold text-gray-800 text-base leading-tight group-hover:text-gray-900 min-h-[44px]">
+        <h3 className="font-bold text-white text-base leading-tight min-h-[44px]">
           {listing.title}
         </h3>
 
         {/* Description */}
         {listing.description && (
-          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-[#B8C2CC] line-clamp-2 leading-relaxed">
             {listing.description}
           </p>
         )}
 
         {/* Price */}
         <div className="flex items-baseline gap-2">
-          <p className="text-xl font-black text-gray-900">{formatBRL(price)}</p>
+          <p className="text-xl font-black text-[#FF7A00]">{formatBRL(price)}</p>
           {originalPrice && originalPrice > price && (
-            <p className="text-sm text-gray-400 line-through">{formatBRL(originalPrice)}</p>
+            <p className="text-sm text-[#8E98A3] line-through">{formatBRL(originalPrice)}</p>
           )}
           {savings && savings > 0 && (
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+            <span className="text-xs font-bold text-[#00C58E] bg-[#00C58E]/15 px-1.5 py-0.5 rounded">
               -{savings}%
             </span>
           )}
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center gap-4 text-xs text-gray-400">
+        <div className="flex items-center gap-4 text-xs text-[#8E98A3]">
           {isAuction && (
             <span className="flex items-center gap-1">
               <Gavel className="h-3 w-3" /> {listing.total_bids || 0} lances
@@ -253,27 +255,18 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
         {/* CTA indicator - Standardized Footer */}
         <div className="mt-auto space-y-2.5">
           {/* Store Location + Google Maps */}
-          <div className="space-y-1.5 pt-2 border-t border-gray-50">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500 uppercase tracking-tight">
-              <MapPin className="h-3 w-3 text-blue-500 shrink-0" />
+          <div className="space-y-1.5 pt-2 border-t border-[#323A45]">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-[#B8C2CC] uppercase tracking-tight">
+              <MapPin className="h-3 w-3 text-[#00C58E] shrink-0" />
               {listing.city || "Região"}
             </div>
 
-            <button className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-all shadow-sm group/map">
-              <MapPin className="h-3.5 w-3.5" />
-              <span>📍 Ver no Mapa</span>
-            </button>
+            <DarkMapButton className="w-full text-[11px]">📍 Ver no Mapa</DarkMapButton>
           </div>
 
-          <button
-            className={`w-full py-2.5 rounded-xl text-xs font-black text-white shadow-lg transition-all active:scale-95 ${
-              isAuction
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                : "bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600"
-            }`}
-          >
+          <DarkButton className="w-full py-2.5 text-xs">
             {isAuction ? "🔨 Dar Lance" : "⚡ Fazer Oferta"}
-          </button>
+          </DarkButton>
         </div>
       </div>
     </button>
@@ -486,7 +479,7 @@ export default function AuctionListPage() {
                 <span className={cn(
                   "absolute -top-1.5 -right-1.5 text-[9px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 ring-2",
                   filter === key
-                    ? "bg-white text-[#FF6A00] ring-orange-200/40"
+                    ? "bg-[#1A1F24] text-[#FF7A00] ring-white/20"
                     : "bg-[#FF6A00] text-white ring-[#0a0a12] shadow-[0_0_8px_rgba(255,106,0,0.7)]"
                 )}>
                   {count}
@@ -508,25 +501,25 @@ export default function AuctionListPage() {
               </div>
             </div>
           ) : filteredListings.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-xl shadow-sm">
-              <Gavel className="h-16 w-16 text-gray-200 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-gray-600">
+            <CardDark className="text-center py-20">
+              <Gavel className="h-16 w-16 text-[#323A45] mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-white">
                 {filter === "auction" ? "Nenhum leilão ativo" :
                  filter === "arremate" ? "Nenhum arremate disponível" :
                  "Nenhum leilão ou arremate ativo"}
               </h2>
-              <p className="text-sm text-gray-400 mt-2 max-w-sm mx-auto">
+              <p className="text-sm text-[#B8C2CC] mt-2 max-w-sm mx-auto">
                 {search ? `Nenhum resultado para "${search}"` : "Volte em breve para novas oportunidades!"}
               </p>
               {filter !== "all" && (
                 <button
-                  className="mt-4 text-sm font-semibold text-orange-500 hover:text-orange-600 underline underline-offset-2"
+                  className="mt-4 text-sm font-semibold text-[#FF7A00] hover:text-[#FF8E1F] underline underline-offset-2"
                   onClick={() => handleFilterChange("all")}
                 >
                   ← Ver todos
                 </button>
               )}
-            </div>
+            </CardDark>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
               {filteredListings.map((listing) => (

@@ -188,22 +188,22 @@ export const PublicRealEstateHome = () => {
 
       {/* ── CTA para anunciantes ── */}
       <div className="w-full px-4 lg:px-6 pb-4 pt-2">
-        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="bg-[#1A1F24] border border-[#323A45] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
           <div className="text-white space-y-1">
-            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para proprietários e corretores</p>
-            <h3 className="text-xl font-black leading-tight">🏠 Anuncie seu imóvel aqui!</h3>
-            <p className="text-sm text-sky-100">Alcance compradores e inquilinos na sua região. Cadastro rápido e gratuito.</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[#00C58E]">Para proprietários e corretores</p>
+            <h3 className="text-xl font-black leading-tight text-white">🏠 Anuncie seu imóvel aqui!</h3>
+            <p className="text-sm text-[#B8C2CC]">Alcance compradores e inquilinos na sua região. Cadastro rápido e gratuito.</p>
           </div>
           <button
             onClick={() => navigate("/auth")}
-            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+            className="shrink-0 bg-[#FF7A00] hover:bg-[#FF8E1F] text-white font-black text-sm px-6 py-3 rounded-2xl shadow-[0_6px_18px_rgba(255,122,0,0.30)] transition-all whitespace-nowrap"
           >
             Anunciar meu imóvel →
           </button>
         </div>
       </div>
 
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[#10151A]">
         {/* Hero */}
         <section className="relative h-[480px] flex items-center justify-center overflow-hidden bg-zinc-950">
           <div className="absolute inset-0 opacity-40">
@@ -248,8 +248,8 @@ export const PublicRealEstateHome = () => {
           {/* Listings Grid */}
           <div className="space-y-12">
             <div className="flex flex-col gap-3 items-center text-center">
-              <h3 className="text-4xl font-black tracking-tighter uppercase">Vitrine de Oportunidades</h3>
-              <div className="h-1.5 w-24 bg-primary rounded-full" />
+              <h3 className="text-4xl font-black tracking-tighter uppercase text-white">Vitrine de Oportunidades</h3>
+              <div className="h-1.5 w-24 bg-[#FF7A00] rounded-full" />
             </div>
 
             {isLoading ? (
@@ -273,7 +273,7 @@ export const PublicRealEstateHome = () => {
               </div>
             ) : (
               <div className="relative w-screen left-1/2 -translate-x-1/2">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-amber-50/40 -z-10" />
+                <div className="absolute inset-0 bg-[#151B21] -z-10" />
                 <div className="px-4 md:px-8 py-6 md:py-10">
                   {propertyTypeFilter !== "all" ? (
                     /* Categoria selecionada → um card abaixo do outro (posição fixa). */
@@ -307,8 +307,8 @@ export const PublicRealEstateHome = () => {
                 <ShieldCheck className="w-8 h-8 text-black" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-2xl font-black tracking-tight uppercase">Contato Protegido</h4>
-                <p className="text-zinc-500 font-medium leading-relaxed">
+                <h4 className="text-2xl font-black tracking-tight uppercase text-white">Contato Protegido</h4>
+                <p className="text-[#8E98A3] font-medium leading-relaxed">
                   Seu telefone e e-mail nunca são expostos. Nós gerenciamos os interessados via plataforma segura e anônima.
                 </p>
               </div>
@@ -318,8 +318,8 @@ export const PublicRealEstateHome = () => {
                 <Zap className="w-8 h-8 text-white" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-2xl font-black tracking-tight uppercase">Viagg-TX8™ Sentinela Visual</h4>
-                <p className="text-zinc-500 font-medium leading-relaxed">
+                <h4 className="text-2xl font-black tracking-tight uppercase text-white">Viagg-TX8™ Sentinela Visual</h4>
+                <p className="text-[#8E98A3] font-medium leading-relaxed">
                   O Viagg-TX8™ inspeciona cada foto para garantir imagens limpas e profissionais, removendo poluições visuais e contatos.
                 </p>
               </div>
@@ -329,8 +329,8 @@ export const PublicRealEstateHome = () => {
                 <Users className="w-8 h-8 text-white" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-2xl font-black tracking-tight uppercase">Leads Qualificados</h4>
-                <p className="text-zinc-500 font-medium leading-relaxed">
+                <h4 className="text-2xl font-black tracking-tight uppercase text-white">Leads Qualificados</h4>
+                <p className="text-[#8E98A3] font-medium leading-relaxed">
                   Focamos em compradores reais da região, conectando você a quem realmente tem interesse e poder de compra local.
                 </p>
               </div>
