@@ -1830,7 +1830,10 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     const cur = (selectedAuction.current_bid || selectedAuction.starting_bid || 0);
     const ini = (selectedAuction.starting_bid || 0);
     return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 backdrop-blur-md transition-all duration-300"
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 backdrop-blur-xl transition-all duration-300"
+         style={{
+             background: `radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.9) 60%, rgba(3,4,6,0.97) 100%), radial-gradient(ellipse 90% 80% at 50% 50%, ${accent2}22 0%, transparent 55%)`
+         }}
          onClick={() => setAuctionModalOpen(false)}>
         <div
             onClick={(e) => e.stopPropagation()}
