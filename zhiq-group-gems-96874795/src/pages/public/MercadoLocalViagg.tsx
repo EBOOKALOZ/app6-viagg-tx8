@@ -1987,12 +1987,16 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                                     {/* Image */}
                                     <div className="relative overflow-hidden bg-gray-50">
-                                        {/* Condition Badge */}
+                                        {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
+                                        <div className="absolute top-2 left-2 z-20 inline-flex items-center rounded-lg bg-zinc-900/75 backdrop-blur-md px-1.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
+                                            <img src="/images/viagg-tx8-logo.png" alt="Viagg-TX8" width={36} height={20} loading="lazy" decoding="async" className="h-5 w-auto object-contain opacity-95" />
+                                        </div>
+                                        {/* Condition Badge (movido p/ direita p/ não colidir com o logo) */}
                                         {product.condition && (
-                                            <div className="absolute top-2 left-2 z-10">
+                                            <div className="absolute top-2 right-2 z-10">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${
-                                                    product.condition.toLowerCase().includes('novo') 
-                                                    ? 'bg-emerald-500 text-white' 
+                                                    product.condition.toLowerCase().includes('novo')
+                                                    ? 'bg-emerald-500 text-white'
                                                     : 'bg-amber-500 text-white'
                                                 }`}>
                                                     {product.condition}
@@ -2077,10 +2081,10 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                         <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
                                             <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-5xl sm:text-6xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
                                         </div>
-                                        {/* Selo Oficial (canto inf-esquerdo). Logo é BRANCO -> pill ESCURA sólida garante contraste */}
-                                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-full bg-zinc-900/80 backdrop-blur-md pl-1.5 pr-2 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
-                                            <img src="/images/viagg-tx8-logo.png" alt="Viagg-TX8" width={26} height={15} loading="lazy" decoding="async" className="h-4 w-auto object-contain" />
-                                            <span className="text-[8px] font-black uppercase tracking-wider text-white/95">Oficial</span>
+                                        {/* Selo Oficial (canto inf-esquerdo) — texto (logo largo ficava ilegível em px) */}
+                                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full bg-zinc-900/80 backdrop-blur-md px-2.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[#68c7f2] shrink-0" aria-hidden="true" />
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-white/95">Oficial Viagg-TX8</span>
                                         </div>
 
                                         {/* WhatsApp Share */}

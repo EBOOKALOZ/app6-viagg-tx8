@@ -143,8 +143,22 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </div>
         )}
 
-        {/* Top Badges (Left) */}
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10 pointer-events-none">
+        {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
+        {/* Logo é arte branca -> chip escuro garante visibilidade. h-5 (~20px, faixa 20-28px) */}
+        <div className="absolute top-2.5 left-2.5 z-20 inline-flex items-center rounded-lg bg-zinc-900/75 backdrop-blur-md px-1.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
+          <img
+            src="/images/viagg-tx8-logo.png"
+            alt="Viagg-TX8"
+            width={36}
+            height={20}
+            loading="lazy"
+            decoding="async"
+            className="h-5 w-auto object-contain opacity-95"
+          />
+        </div>
+
+        {/* Top Badges (movidos p/ direita, abaixo do favoritar, p/ não colidir com o logo) */}
+        <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
           {badges.map((badge, idx) => (
             <Badge 
               key={idx} 
@@ -184,18 +198,10 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </span>
         </div>
 
-        {/* Selo institucional — canto inferior esquerdo. Logo é BRANCO -> pill ESCURA sólida garante contraste */}
-        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1.5 rounded-full bg-zinc-900/80 backdrop-blur-md pl-1.5 pr-2 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
-          <img
-            src="/images/viagg-tx8-logo.png"
-            alt="Viagg-TX8"
-            width={26}
-            height={15}
-            loading="lazy"
-            decoding="async"
-            className="h-4 w-auto object-contain"
-          />
-          <span className="text-[8px] font-black uppercase tracking-wider text-white/95">Oficial</span>
+        {/* Selo institucional — canto inferior esquerdo. Texto (logo largo ficava ilegível em px) */}
+        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1 rounded-full bg-zinc-900/80 backdrop-blur-md px-2.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#68c7f2] shrink-0" aria-hidden="true" />
+          <span className="text-[9px] font-black uppercase tracking-wider text-white/95">Oficial Viagg-TX8</span>
         </div>
 
         {/* Subtle Bottom Gradient */}
