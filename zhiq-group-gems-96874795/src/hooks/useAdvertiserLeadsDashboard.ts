@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { unlockContact } from "@/lib/credits/unlockContact";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -183,7 +184,9 @@ export function useAdvertiserLeadsDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id, queryClient]);
 
-  // ── Unlock via RPC blindada ────────────────────────────────────────────────
+  // ── Unlock via Carteira de Créditos (Wallet Core) ──────────────────────────
+  //  Rota ÚNICA: wallet_unlock_contact (2% do valor anunciado, permanente).
+  //  Resolve módulo/anúncio/comprador a partir da própria intenção.
   const unlockLead = useCallback(
     async (intentionId: string): Promise<{
       success: boolean;
@@ -193,32 +196,40 @@ export function useAdvertiserLeadsDashboard() {
       required?: number;
       available?: number;
     }> => {
-      const { data: rpcResult, error } = await supabase.rpc(
-        "unlock_advertiser_contact_intention" as any,
-        { p_intention_id: intentionId }
-      );
+      const { data: intent } = await (supabase.from("advertiser_contact_intentions") as any)
+        .select("listing_module, listing_id, visitor_phone")
+        .eq("id", intentionId)
+        .maybeSingle();
+      if (!intent) return { success: false, error: "intention_not_found" };
 
-      const result = rpcResult as any;
+      const buyerKey = String((intent as any).visitor_phone ?? "").replace(/\D/g, "") || intentionId;
+      const r = await unlockContact((intent as any).listing_module, (intent as any).listing_id, buyerKey);
 
-      if (error || !result?.success) {
-        // Invalida após falha para refletir estado atual
+      if (!r.success) {
         queryClient.invalidateQueries({ queryKey: ["advertiser-leads-dashboard", user?.id] });
         return {
           success: false,
-          error: result?.error || error?.message || "unknown",
-          buy_credits_cta: result?.buy_credits_cta ?? false,
-          required: result?.required,
-          available: result?.available,
+          error: r.error,
+          buy_credits_cta: r.buy_credits_cta ?? (r.error === "insufficient_credits"),
+          required: r.required_cents != null ? r.required_cents / 100 : undefined,
+          available: r.available_cents != null ? r.available_cents / 100 : undefined,
         };
       }
 
-      // Invalida saldo + lista de leads após desbloqueio bem-sucedido
+      // Marca a intenção como desbloqueada (best-effort) para refletir na UI
+      try {
+        await (supabase.from("advertiser_contact_intentions") as any)
+          .update({ status: "unlocked", unlock_paid_at: new Date().toISOString() })
+          .eq("id", intentionId);
+      } catch { /* RLS/estado — não bloqueia o desbloqueio já pago */ }
+
       queryClient.invalidateQueries({ queryKey: ["advertiser-leads-dashboard", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["advertiser-pending-summary", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["advertiser-leads-list", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["advertiser-credits"] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
 
-      return { success: true, credits_charged: result.credits_charged };
+      return { success: true, credits_charged: r.charged_cents != null ? r.charged_cents / 100 : 0 };
     },
     [user?.id, queryClient]
   );

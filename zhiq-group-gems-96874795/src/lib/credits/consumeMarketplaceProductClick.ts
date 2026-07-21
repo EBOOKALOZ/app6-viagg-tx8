@@ -32,19 +32,19 @@ export interface ConsumeProductClickResult {
 }
 
 /**
- * Fire-and-forget: dispara o débito de créditos do lojista quando o visitante
- * clica num card do /mercado e entra na loja. Toda a lógica (saldo, dedup,
- * skip-do-dono) é resolvida no backend pela RPC `consume_marketplace_product_click`.
+ * Fire-and-forget: registra o CLIQUE do visitante (analytics de Visualizações).
  *
- * Não bloqueia a navegação — erros e saldo insuficiente apenas são logados;
- * o visitante segue para a loja normalmente.
+ * ⚠️ CARTEIRA DE CRÉDITOS (FASE 2): o clique NÃO cobra mais créditos.
+ * A política oficial é única — só há consumo ao LIBERAR O CONTATO do comprador
+ * (2% do valor anunciado, via wallet_unlock_contact). Receber/visualizar
+ * interessados é GRÁTIS. Mantemos apenas o tracking do evento (não financeiro).
  */
 export async function consumeMarketplaceProductClick(
   args: ConsumeProductClickArgs
 ): Promise<ConsumeProductClickResult | null> {
   if (!args.productId || !args.storeId) return null;
 
-  // Registra evento de "click" pra alimentar o card de Visualizações do dashboard
+  // Analytics (não financeiro): alimenta o card de Visualizações do dashboard.
   trackProductEvent({
     product_id: args.productId,
     store_id: args.storeId,
@@ -54,23 +54,6 @@ export async function consumeMarketplaceProductClick(
     neighborhood: args.neighborhood,
   });
 
-  try {
-    const { data, error } = await (supabase.rpc as any)("consume_marketplace_product_click", {
-      p_product_id: args.productId,
-      p_store_id: args.storeId,
-      p_anon_id: getAnonId(),
-      p_city: args.city ?? null,
-      p_neighborhood: args.neighborhood ?? null,
-      p_source: args.source ?? "card",
-    });
-
-    if (error) {
-      console.warn("[credits] consume_marketplace_product_click error", error);
-      return null;
-    }
-    return data as ConsumeProductClickResult;
-  } catch (err) {
-    console.warn("[credits] consume_marketplace_product_click threw", err);
-    return null;
-  }
+  // Sem cobrança de crédito no clique (visitor_click removido na FASE 2).
+  return { charged: false, reason: "free_view" };
 }

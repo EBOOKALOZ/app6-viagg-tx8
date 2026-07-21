@@ -231,71 +231,22 @@ export default function AdvertiserMessagesPage() {
   const stripContactEmail = (msg: string | null) =>
     (msg || "").replace(/\n*\s*e-?mail:\s*[^\s]+@[^\s]+/i, "").trim();
 
-  // ── Handlers (lógica inalterada) ──────────────────────────────────────
+  // ── Desbloqueio unificado (Carteira de Créditos) ──────────────────────────
+  //  API ÚNICA: unlockIntention → wallet_unlock_contact (2% do valor anunciado,
+  //  permanente por anúncio+comprador). O módulo/anúncio/comprador é resolvido
+  //  a partir da própria intenção — sem lógica por módulo aqui.
   const handleUnlock = async (id: string) => {
-    const p = window.location.pathname;
-    const isImoveisMode  = p.startsWith("/anunciante/imoveis");
-    const isVeiculosMode = p.startsWith("/anunciante/veiculos");
-    const isServicosMode = p.startsWith("/anunciante/servicos");
-    const isFretesMode   = p.startsWith("/anunciante/fretes");
-    const isViagensMode  = p.startsWith("/anunciante/viagens");
-
-    const cost   = isImoveisMode ? reUnlockCost : isVeiculosMode ? veUnlockCost : isServicosMode ? seUnlockCost : isFretesMode ? frUnlockCost : isViagensMode ? trUnlockCost : UNLOCK_COST;
-    const curBal = isImoveisMode ? reBalance     : isVeiculosMode ? veBalance     : isServicosMode ? seBalance     : isFretesMode ? frBalance     : isViagensMode ? trBalance     : (balance?.available_credits ?? fallbackBalance);
-
-    if (isImoveisMode) {
-      if (curBal < cost) { toast.error(`Sem saldo de imóveis (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200); return; }
-      const { data, error } = await supabase.rpc("unlock_real_estate_intention" as any, { p_intention_id: id });
-      const r = data as any;
-      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["real-estate-balance-msgs", user?.id] }); }
-      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/imoveis/creditos"), 1200); }
-      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
-      return;
-    }
-    if (isVeiculosMode) {
-      if (curBal < cost) { toast.error(`Sem saldo de veículos (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200); return; }
-      const { data, error } = await supabase.rpc("unlock_vehicle_intention" as any, { p_intention_id: id });
-      const r = data as any;
-      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["vehicle-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["veiculos-painel-saldo", user?.id] }); }
-      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/veiculos/creditos"), 1200); }
-      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
-      return;
-    }
-    if (isServicosMode) {
-      if (curBal < cost) { toast.error(`Sem saldo de serviços (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200); return; }
-      const { data, error } = await supabase.rpc("unlock_service_intention" as any, { p_intention_id: id });
-      const r = data as any;
-      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["service-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["servicos-painel-saldo", user?.id] }); }
-      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/servicos/creditos"), 1200); }
-      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
-      return;
-    }
-    if (isFretesMode) {
-      if (curBal < cost) { toast.error(`Sem saldo de fretes (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200); return; }
-      const { data, error } = await supabase.rpc("unlock_freight_intention" as any, { p_intention_id: id });
-      const r = data as any;
-      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["freight-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["fretes-painel-saldo", user?.id] }); }
-      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/fretes/creditos"), 1200); }
-      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
-      return;
-    }
-    if (isViagensMode) {
-      if (curBal < cost) { toast.error(`Sem saldo de viagens (precisa ${cost}, tem ${curBal}). Redirecionando...`, { duration: 3000 }); setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200); return; }
-      const { data, error } = await supabase.rpc("unlock_travel_intention" as any, { p_intention_id: id });
-      const r = data as any;
-      if (!error && r?.success) { toast.success(r.credits_charged ? `Contato desbloqueado! ${r.credits_charged} créditos debitados.` : "Contato desbloqueado!"); queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] }); queryClient.invalidateQueries({ queryKey: ["travel-balance-msgs", user?.id] }); queryClient.invalidateQueries({ queryKey: ["viagens-painel-saldo", user?.id] }); }
-      else if (r?.buy_credits_cta || r?.error === "insufficient_credits") { toast.error(`Saldo insuficiente: ${r.available}/${r.required}. Redirecionando...`); setTimeout(() => navigate("/anunciante/viagens/creditos"), 1200); }
-      else { toast.error("Erro ao desbloquear: " + (r?.error || error?.message || "desconhecido")); }
-      return;
-    }
-    // ── Loja (anunciante) ──
-    const lojaBal = balance?.available_credits ?? fallbackBalance;
-    if (lojaBal < UNLOCK_COST) { toast.error(`Sem saldo (precisa ${UNLOCK_COST}, tem ${lojaBal}). Redirecionando para compra...`, { duration: 3000 }); setTimeout(() => navigate(creditosRouteFor(id)), 1200); return; }
-    const result = await unlockIntention(id, UNLOCK_COST);
-    if (result.success) { toast.success(`Contato desbloqueado! ${result.credits_charged} créditos debitados.`); }
-    else {
-      if (result.buy_credits_cta) { toast.error(`Saldo insuficiente: ${result.available}/${result.required}. Redirecionando...`); setTimeout(() => navigate(creditosRouteFor(id)), 1200); }
-      else { toast.error("Erro ao desbloquear: " + result.error); }
+    const result = await unlockIntention(id);
+    if (result.success) {
+      const brl = (result.credits_charged ?? 0) > 0 ? ` R$ ${(result.credits_charged ?? 0).toFixed(2)} debitados.` : "";
+      toast.success(`Comprador liberado!${brl}`);
+      queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
+    } else if (result.buy_credits_cta || result.error === "insufficient_credits") {
+      toast.error(`Saldo insuficiente. Adicione créditos à sua carteira.`);
+      setTimeout(() => navigate("/anunciante/carteira"), 1400);
+    } else {
+      toast.error("Erro ao liberar comprador: " + (result.error ?? "desconhecido"));
     }
   };
 
