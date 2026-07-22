@@ -24,6 +24,11 @@ interface MarketFreightCardProps {
     state: string;
     thumbnail_url?: string;
     is_featured?: boolean;
+    // ── Sinais institucionais (só exibem badge quando VIEREM do banco) ──
+    ai_status?: string | null;        // moderação IA → "Verificado"
+    ai_verdict?: string | null;
+    is_premium?: boolean | null;      // preparado p/ ativação futura (campo ainda não existe)
+    responds_fast?: boolean | null;   // idem
   };
 }
 
@@ -61,11 +66,21 @@ export const MarketFreightCard: React.FC<MarketFreightCardProps> = ({ freight })
     });
   }
 
-  const badges: CardBadge[] = [
-    { label: 'Verificado', tone: 'green' }
-  ];
-  if (freight.is_featured) {
-    badges.push({ label: 'Destaque', tone: 'orange' });
+  // Badges institucionais — SÓ quando há dado real que os justifique.
+  const badges: CardBadge[] = [];
+  // ⭐ Premium (campo ainda não existe no banco → nunca dispara hoje; pronto p/ futuro)
+  if (freight.is_premium) badges.push({ label: '⭐ Premium', tone: 'orange' });
+  // ✅ Verificado — só se a moderação IA aprovou de fato
+  const aiOk = (freight.ai_status && ['approved', 'aprovado', 'verified', 'ok'].includes(String(freight.ai_status).toLowerCase()))
+    || (freight.ai_verdict && ['approved', 'aprovado', 'safe', 'ok'].includes(String(freight.ai_verdict).toLowerCase()));
+  if (aiOk) badges.push({ label: '✅ Verificado', tone: 'green' });
+  // 🔥 Em Destaque
+  if (freight.is_featured) badges.push({ label: '🔥 Destaque', tone: 'orange' });
+  // 🚀 Responde Rápido (campo ainda não existe → pronto p/ futuro)
+  if (freight.responds_fast) badges.push({ label: '🚀 Responde Rápido', tone: 'green' });
+  // 🇧🇷 Atendimento Nacional — derivado de coverage_routes real
+  if (freight.coverage_routes && /nacional|brasil|todo o pa[ií]s|interestadual/i.test(freight.coverage_routes)) {
+    badges.push({ label: '🇧🇷 Nacional', tone: 'gray' });
   }
 
   let parsedPrice: number | null = null;

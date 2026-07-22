@@ -93,13 +93,13 @@ export default function PublicFreightHome() {
       if (cityFilter !== "all" && s.city?.trim().toLowerCase() !== cityFilter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (
-          !s.title?.toLowerCase().includes(q) &&
-          !s.city?.toLowerCase().includes(q) &&
-          !s.neighborhood?.toLowerCase().includes(q) &&
-          !s.subcategoria?.toLowerCase().includes(q)
-        )
-          return false;
+        // Busca inteligente: título, empresa, cidade, estado, bairro,
+        // tipo de veículo, tipo de serviço (subcategoria) e rotas de cobertura.
+        const haystack = [
+          s.title, s.city, s.state, s.neighborhood, s.subcategoria,
+          s.vehicle_type, s.coverage_routes, s.public_address_label,
+        ].filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
       return true;
     });
@@ -121,22 +121,58 @@ export default function PublicFreightHome() {
     if (!showShelves) return [] as Array<{ key: string; title: string; items: any[] }>;
     const out: Array<{ key: string; title: string; items: any[] }> = [];
 
+    // ⭐ EMPRESAS PREMIUM — GATE de dados: só aparece se existir o sinal de
+    // premium no banco (is_premium). O campo ainda NÃO existe → hoje fica
+    // oculta automaticamente; pronta p/ ativar sem tocar no código.
+    const premium = baseFiltered.filter((s) => s.is_premium === true);
+    if (premium.length) out.push({ key: "premium", title: "⭐ Empresas Premium", items: premium });
+
+    // 📍 PRÓXIMOS DE VOCÊ — GATE: precisa de geolocalização (lat/lng no
+    // anúncio). Campos ainda não existem → seção oculta automaticamente.
+    const geoReady = baseFiltered.filter((s) => s.latitude != null && s.longitude != null);
+    if (geoReady.length >= 3) {
+      // (ordenação por distância entra quando houver a posição do usuário)
+      out.push({ key: "proximos", title: "📍 Próximos de Você", items: geoReady.slice(0, 12) });
+    }
+
+    // 🔥 MAIS PROCURADOS — GATE: usa métricas reais (views/contatos/interesses).
+    // Nenhuma existe hoje → oculta. Pronta p/ ativar quando o backend expuser.
+    const metric = (s: any) => Number(s.views_count ?? s.contact_count ?? s.interest_count ?? NaN);
+    const withMetric = baseFiltered.filter((s) => Number.isFinite(metric(s)));
+    if (withMetric.length >= 3) {
+      const top = [...withMetric].sort((a, b) => metric(b) - metric(a)).slice(0, 12);
+      out.push({ key: "mais_procurados", title: "🔥 Mais Procurados", items: top });
+    }
+
+    // 🚛 FRETES EM DESTAQUE (dado real: is_featured)
     const featured = baseFiltered.filter((s) => s.is_featured);
     if (featured.length) out.push({ key: "destaque", title: "🚛 Fretes em Destaque", items: featured });
 
-    // Novos anúncios: mais recentes primeiro
+    // 🆕 NOVOS ANÚNCIOS (dado real: published_at)
     const novos = [...baseFiltered]
       .sort((a, b) => new Date(b.published_at || b.created_at || 0).getTime() - new Date(a.published_at || a.created_at || 0).getTime())
       .slice(0, 12);
     if (novos.length >= 3) out.push({ key: "novos", title: "🆕 Novos Anúncios", items: novos });
 
-    // Uma vitrine por tipo de veículo com anúncios
+    // Uma vitrine por tipo de veículo com anúncios (dado real: vehicle_type)
     for (const { type } of activeVehicleTypes) {
       const items = baseFiltered.filter((s) => s.vehicle_type === type.value);
       if (items.length >= 3) out.push({ key: `veh_${type.value}`, title: `🚚 ${type.label}`, items });
     }
     return out;
   }, [showShelves, baseFiltered, activeVehicleTypes]);
+
+  // ── Indicadores institucionais do hero (SÓ dados reais; oculta se 0) ──
+  const heroStats = useMemo(() => {
+    const total = rawFreightListings.length;
+    const cidades = new Set(rawFreightListings.map((s) => (s.city || "").trim().toLowerCase()).filter(Boolean)).size;
+    const tipos = new Set(rawFreightListings.map((s) => s.vehicle_type).filter(Boolean)).size;
+    return [
+      { label: "Anúncios disponíveis", value: total },
+      { label: "Cidades atendidas", value: cidades },
+      { label: "Tipos de serviço", value: tipos },
+    ].filter((s) => s.value > 0);
+  }, [rawFreightListings]);
 
   return (
     <MarketLayout
@@ -165,6 +201,18 @@ export default function PublicFreightHome() {
           <p className="text-zinc-600 font-medium max-w-xl">
             Encontre empresas, caminhoneiros e profissionais para fretes, mudanças e transporte de cargas em todo o Brasil.
           </p>
+
+          {/* Indicadores institucionais — só dados reais; some se 0 */}
+          {heroStats.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+              {heroStats.map((s) => (
+                <div key={s.label} className="flex items-baseline gap-1.5 rounded-full bg-white/70 border border-black/5 px-3 py-1 shadow-sm">
+                  <span className="text-sm font-black text-zinc-900 tabular-nums">{s.value}</span>
+                  <span className="text-[11px] font-bold text-zinc-500">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Filtros rápidos: modalidade */}
           <div className="flex bg-white/70 p-1 rounded-xl border border-black/5 shadow-sm mt-1">
