@@ -158,15 +158,15 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
         <img
           src="/viagg-logo.png"
           alt="Viagg-TX8"
-          width={28}
-          height={28}
+          width={44}
+          height={44}
           loading="lazy"
           decoding="async"
-          className="absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+          className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
         />
 
         {/* Badge de Categoria/Propósito no topo (ao lado do logo) */}
-        <div className="absolute top-2.5 left-12 z-20 flex items-center gap-1.5 pointer-events-none">
+        <div className="absolute top-2.5 left-16 z-20 flex items-center gap-1.5 pointer-events-none">
           <DarkBadge tone={getPropertyTypeTone(property.property_type)} className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">
             {property.purpose ? (isAluguel ? 'Aluguel' : 'Venda') : 'Imóvel'} • {getPropertyTypeLabel(property.property_type)}
           </DarkBadge>

@@ -140,15 +140,15 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
         <img
           src="/viagg-logo.png"
           alt="Viagg-TX8"
-          width={28}
-          height={28}
+          width={44}
+          height={44}
           loading="lazy"
           decoding="async"
-          className="absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+          className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
         />
 
         {/* Badge de Categoria/Tipo no topo (ao lado do logo) */}
-        <div className="absolute top-2.5 left-12 z-20 flex items-center gap-1.5 pointer-events-none">
+        <div className="absolute top-2.5 left-16 z-20 flex items-center gap-1.5 pointer-events-none">
           {isAuction ? (
             <DarkBadge tone="orange" className="shadow-md backdrop-blur-md bg-[#FF6A00] text-white font-black">
               LEILÃO

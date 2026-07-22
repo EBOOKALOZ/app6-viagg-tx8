@@ -149,11 +149,11 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         <img
           src="/viagg-logo.png"
           alt="Viagg-TX8"
-          width={28}
-          height={28}
+          width={44}
+          height={44}
           loading="lazy"
           decoding="async"
-          className="absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+          className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
         />
 
         {/* Top Badges (movidos p/ direita, abaixo do favoritar, p/ não colidir com o logo) */}

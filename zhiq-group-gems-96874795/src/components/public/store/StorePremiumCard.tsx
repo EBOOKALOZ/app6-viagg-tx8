@@ -96,8 +96,19 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     </div>
                 )}
 
-                {/* Top Left Badges */}
-                <div className="absolute top-2 left-2 flex flex-col gap-1.5 pointer-events-none">
+                {/* Logo oficial Viagg-TX8 — topo-interno (mesmo padrão dos demais cards, +60%) */}
+                <img
+                    src="/viagg-logo.png"
+                    alt="Viagg-TX8"
+                    width={44}
+                    height={44}
+                    loading="lazy"
+                    decoding="async"
+                    className="absolute top-2 left-2 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+                />
+
+                {/* Top Left Badges — ao lado do logo, sem sobrepor */}
+                <div className="absolute top-2 left-14 flex flex-col gap-1.5 pointer-events-none">
                     {product.condition === 'new' && (
                         <Badge className="bg-emerald-500 text-white text-[8px] font-black uppercase px-2 h-5 rounded-md border-none ring-1 ring-white/20 shadow-sm">
                             Novo
@@ -169,8 +180,14 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                         )}
                         onClick={(e) => {
                             e.stopPropagation();
-                            const isImovel = product.cta_label === "Ver Imóvel" || product.cta_label === "Conhecer" || product.category?.toLowerCase().includes("imóvei") || product.category?.toLowerCase().includes("imovei");
-                            if (isImovel) {
+                            // Imóveis e Veículos não vão para a cesta — abrem a página de detalhes
+                            const cat = product.category?.toLowerCase() || "";
+                            const isViewOnly =
+                                product.cta_label === "Ver Imóvel" || product.cta_label === "Conhecer" ||
+                                product.cta_label === "Ver Veículo" ||
+                                cat.includes("imóvei") || cat.includes("imovei") ||
+                                cat.includes("veícul") || cat.includes("veicul");
+                            if (isViewOnly) {
                                 onClick(product);
                             } else {
                                 onAddToCart(product);

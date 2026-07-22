@@ -1557,7 +1557,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                     {/* gradiente inferior para fundir com o card */}
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#101216] via-[#101216]/70 to-transparent" />
                     {/* logo do app */}
-                    <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28}
+                    <img src="/viagg-logo.png" alt="Viagg-TX8" width={44} height={44}
                          className="absolute left-4 top-4 h-8 w-8 rounded-xl object-cover shadow-lg ring-1 ring-white/20" />
 
                     {/* Badge + cronômetro flutuando na base da imagem */}
@@ -1806,7 +1806,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                     {/* Image */}
                                     <div className="relative overflow-hidden bg-[#252B33]">
                                         {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
-                                        <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
+                                        <img src="/viagg-logo.png" alt="Viagg-TX8" width={44} height={44} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
                                         {/* Condition Badge (movido p/ direita p/ não colidir com o logo) */}
                                         {product.condition && (
                                             <div className="absolute top-2 right-2 z-10">
