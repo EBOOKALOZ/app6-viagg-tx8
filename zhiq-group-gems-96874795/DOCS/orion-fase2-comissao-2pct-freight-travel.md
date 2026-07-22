@@ -111,3 +111,29 @@ Fora do escopo (fase posterior): Leilões, Arremates.
   transversal que fecha o P2-1 da auditoria também para produto/imóvel/veículo.
 - Front: `src/lib/credits/unlockContact.ts` teve apenas os JSDoc atualizados (parâmetro marcado
   DEPRECATED/ignorado). Nenhuma mudança de lógica; caminho principal já não enviava hint.
+
+---
+
+## 6. FASE 2b — 2% VARIÁVEL para Fretes/Mudanças e Serviços (2026-07-22)
+
+Fecha a ressalva do §5: dá a Fretes/Mudanças/Serviços um **valor total oficial**, habilitando
+2% variável (antes só piso). **Migration:** `20260722_fase2b_freight_service_total_price.sql`.
+
+**Mudanças:**
+- **DB:** `ALTER TABLE ... ADD COLUMN IF NOT EXISTS total_price numeric` (nullable) em
+  `freight_listings` e `service_listings` (mesmo nome de `travel_listings`), com `COMMENT`
+  explicando que é a base dos 2% e que NULL → piso.
+- **Backend:** `wallet_unlock_charge_cents` ganhou os branches `freight` e `services` lendo
+  `total_price`. Valor ausente → piso (comportamento idêntico ao anterior → 100% compatível).
+  Continua **ignorando** `p_value_hint_cents`.
+- **Front:** campo "Valor total (opcional)" em `FreightForm.tsx` e `ServiceForm.tsx`
+  (state + load na edição + payload de insert/update + input numérico com nota de que é a
+  base da comissão de 2%). Sem valor, nada muda.
+
+**Testes (ao vivo, rollback):**
+- freight sem total → **piso 900**; freight total R$1.200 → **2% = R$24 (2400)** (hint 999M ignorado);
+  service total R$500 → **2% = R$10 (1000)**; freight total R$100 → 2%=R$2 < piso → **900**. ALL_PASS.
+- Regressão: homolog E2E travel **ALL_PASS**; suíte segurança **48/48**; `tsc` limpo.
+
+**Estado:** Fretes/Mudanças/Serviços agora cobram **2% do valor total quando informado**, com
+piso R$9 como padrão seguro. `price_per_km` (taxa) permanece só informativo — nunca é base de 2%.

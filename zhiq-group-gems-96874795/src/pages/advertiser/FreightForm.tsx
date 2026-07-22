@@ -85,6 +85,7 @@ export const FreightForm = () => {
     vehicle_type: '',
     price_label: '',
     price_per_km: '',
+    total_price: '',
     coverage_routes: '',
   });
 
@@ -165,6 +166,7 @@ export const FreightForm = () => {
             vehicle_type: l.vehicle_type || '',
             price_label: l.price_label || '',
             price_per_km: l.price_per_km != null ? String(l.price_per_km) : '',
+            total_price: l.total_price != null ? String(l.total_price) : '',
             coverage_routes: l.coverage_routes || '',
           });
           const loadedCities = String(l.coverage_routes || '').split(',').map((c: string) => c.trim()).filter(Boolean);
@@ -275,6 +277,7 @@ export const FreightForm = () => {
         vehicle_type: freightData.vehicle_type,
         price_label: freightData.price_label || null,
         price_per_km: freightData.price_per_km ? Number(freightData.price_per_km) : null,
+        total_price: freightData.total_price ? Number(freightData.total_price) : null,
         coverage_routes: routeCities.map(c => c.trim()).filter(Boolean).join(', ') || null,
         city: locationData.city.trim(),
         state: locationData.state.trim(),
@@ -518,6 +521,22 @@ export const FreightForm = () => {
                     value={freightData.price_per_km}
                     onChange={(e) => setFreightData(prev => ({ ...prev, price_per_km: e.target.value }))}
                   />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <InputLabel>Valor total do frete/mudança (opcional)</InputLabel>
+                  <Input
+                    placeholder="Ex.: 1200"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    className={INPUT_CLS}
+                    value={freightData.total_price}
+                    onChange={(e) => setFreightData(prev => ({ ...prev, total_price: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Base da comissão de 2% ao liberar o contato de um interessado. Sem valor: cobrança mínima.
+                  </p>
                 </div>
               </div>
             </Section>

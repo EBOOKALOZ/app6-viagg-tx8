@@ -84,6 +84,7 @@ export const ServiceForm = () => {
     description: '',
     service_type: '',
     price_label: '',
+    total_price: '',
   });
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
@@ -156,6 +157,7 @@ export const ServiceForm = () => {
             description: l.description || '',
             service_type: l.service_type || 'outro',
             price_label: l.price_label || '',
+            total_price: l.total_price != null ? String(l.total_price) : '',
           });
           setLocationData({
             city: l.city || 'Blumenau',
@@ -236,6 +238,7 @@ export const ServiceForm = () => {
         description: serviceData.description || null,
         service_type: serviceData.service_type,
         price_label: serviceData.price_label || null,
+        total_price: serviceData.total_price ? Number(serviceData.total_price) : null,
         city: locationData.city.trim(),
         state: locationData.state.trim(),
         neighborhood: locationData.neighborhood || null,
@@ -494,16 +497,34 @@ export const ServiceForm = () => {
                 />
               </div>
 
-              <div className="space-y-2 max-w-xs">
-                <InputLabel>
-                  <Coins className="h-3.5 w-3.5 inline mr-1" /> Valor (opcional)
-                </InputLabel>
-                <Input
-                  placeholder="Ex.: A partir de R$ 80 ou Consulte"
-                  className={INPUT_CLS}
-                  value={serviceData.price_label}
-                  onChange={(e) => setServiceData(prev => ({ ...prev, price_label: e.target.value }))}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                <div className="space-y-2">
+                  <InputLabel>
+                    <Coins className="h-3.5 w-3.5 inline mr-1" /> Valor (opcional)
+                  </InputLabel>
+                  <Input
+                    placeholder="Ex.: A partir de R$ 80 ou Consulte"
+                    className={INPUT_CLS}
+                    value={serviceData.price_label}
+                    onChange={(e) => setServiceData(prev => ({ ...prev, price_label: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <InputLabel>Valor total do serviço (opcional)</InputLabel>
+                  <Input
+                    placeholder="Ex.: 500"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    className={INPUT_CLS}
+                    value={serviceData.total_price}
+                    onChange={(e) => setServiceData(prev => ({ ...prev, total_price: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Base da comissão de 2% ao liberar o contato de um interessado. Sem valor: cobrança mínima.
+                  </p>
+                </div>
               </div>
             </Section>
 
