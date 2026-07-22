@@ -5,17 +5,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { FooterNeutral } from "@/components/FooterNeutral";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Tag, MapPin, Eye, Users, Zap, Clock, Shield, ChevronRight,
   Loader2, AlertTriangle, Crown, TrendingUp, ShoppingCart, Send,
-  Package, Timer, Flame, CheckCircle, Search, ShoppingBag, Truck,
-  Store, Gavel,
+  Package, Timer, Flame, CheckCircle, Search, Truck, Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
+import { MarketLayout } from "@/components/layout/MarketLayout";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { OfertaRapidaModal } from "@/components/public/MiniCadastroModal";
 import type { AuctionListing } from "@/hooks/useAuctions";
@@ -58,85 +57,25 @@ function useCountdown(endsAt: string) {
   return { timeLeft, urgency };
 }
 
-// ─── Top Bar ────────────────────────────
+// ─── Trust Row (chips de confiança do arremate) ────────────────────────────
+// O cabeçalho COMPLETO (logo/busca/categorias/conta/rádio) vem do MarketLayout;
+// aqui fica só a faixa de confiança específica do Arremate, logo abaixo.
 
-function TopBar({ navigate, globalCart, cartOpen, setCartOpen }: any) {
+function TrustRow() {
   return (
-    <>
-      <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] sticky top-0 z-50 shadow-md">
-        <div className="max-w-[1920px] mx-auto px-4 lg:px-6">
-          <div className="flex items-center gap-4 h-14">
-            <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={() => navigate("/mercado")}>
-              <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-9 w-9 rounded-lg object-contain" />
-              <span className="text-lg font-black text-white tracking-tight hidden sm:block">
-                Arremate <span className="text-yellow-200">Viagg-TX8</span>
-              </span>
-              <span className="text-lg font-black text-white tracking-tight sm:hidden">Arremate</span>
-            </div>
-
-            <div className="flex-1 max-w-2xl mx-auto">
-              <div className="relative flex cursor-pointer" onClick={() => navigate("/leiloes")}>
-                <Input
-                  placeholder="Buscar leilões, arremates..."
-                  readOnly
-                  className="w-full pl-4 pr-12 py-2 h-10 rounded-l-lg rounded-r-none border-0 bg-white text-gray-700 placeholder:text-gray-400 text-sm font-medium focus-visible:ring-0 cursor-pointer"
-                />
-                <button className="px-4 bg-[#e65c00] hover:bg-[#cc5200] transition-colors rounded-r-lg flex items-center">
-                  <Search className="h-5 w-5 text-white" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 text-white shrink-0">
-              <div className="hidden md:flex items-center gap-3">
-                <button onClick={() => navigate("/leiloes")} className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/15 hover:bg-white/25 transition-all flex items-center gap-1">
-                  <Gavel className="h-3 w-3" /> Leilões
-                </button>
-                <button onClick={() => navigate("/mercado")} className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/15 hover:bg-white/25 transition-all flex items-center gap-1">
-                  <Store className="h-3 w-3" /> Mercado
-                </button>
-              </div>
-              <button
-                onClick={() => setCartOpen(true)}
-                className={`relative flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                  globalCart.totalItems > 0
-                    ? "bg-[#1A1F24] text-[#FF7A00] shadow-lg hover:shadow-xl hover:scale-105"
-                    : "bg-white/15 text-white hover:bg-white/25"
-                }`}
-              >
-                <ShoppingBag className="h-5 w-5" />
-                {globalCart.totalItems > 0 ? (
-                  <>
-                    <span className="text-[11px] font-bold hidden sm:block">
-                      {globalCart.totalItems} {globalCart.totalItems === 1 ? "item" : "itens"}
-                    </span>
-                    <span className="absolute -top-1.5 -right-1.5 bg-[#FF6A00] text-white text-[10px] font-black rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-md">
-                      {globalCart.totalItems}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-[11px] font-bold hidden sm:block">Cesta</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className="bg-[#10151A] border-b border-[#323A45]">
+      <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-6 text-[11px] text-[#8E98A3]">
+        <span className="flex items-center gap-1.5 font-medium">
+          <Tag className="h-3.5 w-3.5 text-violet-500" /> Arremate Verificado
+        </span>
+        <span className="flex items-center gap-1.5 font-medium">
+          <Shield className="h-3.5 w-3.5 text-green-500" /> Pagamento Seguro
+        </span>
+        <span className="flex items-center gap-1.5 font-medium hidden sm:flex">
+          <Truck className="h-3.5 w-3.5 text-blue-500" /> Entrega Local
+        </span>
       </div>
-
-      <div className="bg-[#10151A] border-b border-[#323A45]">
-        <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-6 text-[11px] text-[#8E98A3]">
-          <span className="flex items-center gap-1.5 font-medium">
-            <Tag className="h-3.5 w-3.5 text-violet-500" /> Arremate Verificado
-          </span>
-          <span className="flex items-center gap-1.5 font-medium">
-            <Shield className="h-3.5 w-3.5 text-green-500" /> Pagamento Seguro
-          </span>
-          <span className="flex items-center gap-1.5 font-medium hidden sm:flex">
-            <Truck className="h-3.5 w-3.5 text-blue-500" /> Entrega Local
-          </span>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -157,6 +96,8 @@ export default function ArrematePublicPage() {
   // Cart
   const [cartOpen, setCartOpen] = useState(false);
   const globalCart = useGlobalCart();
+  // Busca do cabeçalho completo (MarketLayout)
+  const [search, setSearch] = useState("");
 
   const { timeLeft, urgency } = useCountdown(listing?.ends_at || new Date().toISOString());
 
@@ -213,32 +154,41 @@ export default function ArrematePublicPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <TopBar navigate={navigate} globalCart={globalCart} cartOpen={cartOpen} setCartOpen={setCartOpen} />
-        <div className="flex items-center justify-center flex-1" style={{ backgroundColor: '#F5E62B' }}>
+      <MarketLayout search={search} setSearch={setSearch} onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)} headerChildren={<MarketNavButtons />} mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Arremates" myAccountPath="/meus-lances">
+        <TrustRow />
+        <div className="flex items-center justify-center flex-1 py-24">
           <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
         </div>
-      </div>
+      </MarketLayout>
     );
   }
 
   if (!listing) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <TopBar navigate={navigate} globalCart={globalCart} cartOpen={cartOpen} setCartOpen={setCartOpen} />
-        <div className="flex flex-col items-center justify-center flex-1 gap-4" style={{ backgroundColor: '#F5E62B' }}>
+      <MarketLayout search={search} setSearch={setSearch} onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)} headerChildren={<MarketNavButtons />} mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Arremates" myAccountPath="/meus-lances">
+        <TrustRow />
+        <div className="flex flex-col items-center justify-center flex-1 gap-4 py-24">
           <AlertTriangle className="h-12 w-12 text-gray-300" />
           <p className="text-gray-600 font-medium">Arremate não encontrado</p>
           <Button variant="outline" onClick={() => navigate("/leiloes")}>Ver todos</Button>
         </div>
-      </div>
+      </MarketLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5E62B' }}>
-      {/* ═══ TOP BAR ═══ */}
-      <TopBar navigate={navigate} globalCart={globalCart} cartOpen={cartOpen} setCartOpen={setCartOpen} />
+    <MarketLayout
+      search={search}
+      setSearch={setSearch}
+      onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)}
+      headerChildren={<MarketNavButtons />}
+      mainClassName="flex flex-col bg-[#F5E62B]"
+      blueFooter
+      blueFooterLabel="🏷️ Arremates"
+      myAccountPath="/meus-lances"
+    >
+      {/* ═══ FAIXA DE CONFIANÇA DO ARREMATE (o cabeçalho completo vem do MarketLayout) ═══ */}
+      <TrustRow />
 
       {/* ── HERO ── */}
       <div className="relative overflow-hidden">
@@ -443,9 +393,8 @@ export default function ArrematePublicPage() {
         />
       )}
 
-      {/* ═══ FOOTER ═══ */}
+      {/* ═══ FOOTER ═══ (o rodapé azul vem do MarketLayout via blueFooter) */}
       <InstitutionalSafetyBanner />
-      <FooterNeutral compact />
-    </div>
+    </MarketLayout>
   );
 }

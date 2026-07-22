@@ -145,16 +145,33 @@ export function OfertaRapidaModal({
       });
 
       if (rpcError) {
-        // If special params not supported, try direct insert
-        if (rpcError.message.includes("p_customer_name") || rpcError.message.includes("unexpected")) {
-          // Fallback: direct insert into arremate_offers
+        // Fallback 1: Tentar RPC com 3 parâmetros padrão (p_listing_id, p_amount_cents, p_message)
+        const { data: fallbackData, error: fallbackError } = await supabase.rpc("submit_arremate_offer", {
+          p_listing_id: listingId,
+          p_amount_cents: amountCents,
+          p_message: `Oferta de: ${nome.trim()} (WhatsApp: ${digits})`,
+        });
+
+        if (!fallbackError) {
+          const result = fallbackData as any;
+          if (result && !result.success) {
+            setError(result.error || "Erro ao enviar oferta");
+            setSending(false);
+            return;
+          }
+          setSent(true);
+          return;
+        }
+
+        // Fallback 2: Se não suportado ou sem permissão na RPC, tenta insert direto
+        if (rpcError.message.includes("p_customer_name") || rpcError.message.includes("unexpected") || rpcError.message.includes("does not exist")) {
           const { error: insertError } = await (supabase.from("arremate_offers") as any).insert({
             arremate_listing_id: listingId,
             customer_name: nome.trim(),
             customer_whatsapp: digits,
             offer_amount: parsedAmount,
             quantity: 1,
-            note: null,
+            note: `Oferta rápida - ${nome.trim()} (${digits})`,
             status: "pending",
           });
           if (insertError) {
@@ -215,16 +232,20 @@ export function OfertaRapidaModal({
           >
             <X className="h-4 w-4" />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg"
-                 style={{ background: `linear-gradient(135deg, ${accentHex}, ${accentHex2})`, boxShadow: `0 8px 22px -8px ${accentHex}` }}>
-              <CtxIcon className="h-6 w-6" />
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-13 w-13 items-center justify-center rounded-2xl bg-black/40 p-1.5 border border-white/15 shadow-xl shrink-0 overflow-hidden"
+                 style={{ boxShadow: `0 8px 22px -8px ${accentHex}` }}>
+              <img src="/logo.png" alt="Viagg" className="w-10 h-10 object-contain drop-shadow" />
             </div>
-            <div className="min-w-0">
-              <h2 className="text-xl font-black leading-tight">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider mb-0.5" style={{ color: accentHex2 }}>
+                <CtxIcon className="h-3.5 w-3.5" />
+                <span>{isArremate ? "Oferta Direta • Arremate" : "Lance • Leilão"}</span>
+              </div>
+              <h2 className="text-xl font-black leading-tight text-white flex items-center gap-2">
                 {sent ? "Oferta enviada! ✅" : isArremate ? "Fazer Oferta" : "Dar Lance"}
               </h2>
-              <p className="truncate text-xs text-white/50">
+              <p className="truncate text-xs text-white/60 font-medium">
                 {sent ? "A loja entrará em contato" : listingTitle}
               </p>
             </div>
