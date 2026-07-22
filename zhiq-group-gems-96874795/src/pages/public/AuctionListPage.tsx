@@ -156,7 +156,7 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
 
   return (
     <button
-      className="w-full text-left bg-[#1A1F24] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.45)] transition-all border border-[#323A45] overflow-hidden group flex flex-col h-full"
+      className="w-full text-left bg-[#1A1F24] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:scale-[1.02] transition-all duration-200 border border-[#323A45] overflow-hidden group flex flex-col h-full"
       onClick={onClick}
     >
       {/* Product image */}
@@ -165,7 +165,7 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
           <img
             src={imgSrc}
             alt={listing.title}
-            className="w-full aspect-[16/9] object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full aspect-[4/5] object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
           <CardImageOverlay />
@@ -208,7 +208,7 @@ function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: (
 
       <div className="p-4 space-y-3 flex-1 flex flex-col">
         {/* Title */}
-        <h3 className="font-bold text-white text-base leading-tight min-h-[44px]">
+        <h3 className="font-bold text-white text-base leading-tight line-clamp-2 min-h-[44px]">
           {listing.title}
         </h3>
 
@@ -521,7 +521,7 @@ export default function AuctionListPage() {
               )}
             </CardDark>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
               {filteredListings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} onClick={() => handleClick(listing)} />
               ))}
