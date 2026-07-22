@@ -1,8 +1,10 @@
+import React, { useState } from "react";
 import { formatCurrencyBRL } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CardTopBar, type CardCondition } from "@/components/ui/CardTopBar";
 
 export interface StoreProduct {
     id: string;
@@ -43,6 +45,13 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
 
 export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClick, onAskQuestion, onMakeOffer }: StorePremiumCardProps) {
     const imgSrc = normalizeImageUrl(product.image_url);
+    const [favorited, setFavorited] = useState(false);
+    const handleShare = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const url = `${window.location.origin}/produto/${product.tracking_slug || product.id}`;
+        if (navigator.share) navigator.share({ title: product.title, url }).catch(() => {});
+        else if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+    };
     const hasDiscount = (product.original_price || 0) > product.price;
     const discountPct = hasDiscount && product.original_price 
         ? Math.round(((product.original_price - product.price) / product.original_price) * 100) 
@@ -96,30 +105,14 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     </div>
                 )}
 
-                {/* Logo oficial Viagg-TX8 — topo-interno (mesmo padrão dos demais cards, +60%) */}
-                <img
-                    src="/viagg-logo.png"
-                    alt="Viagg-TX8"
-                    width={44}
-                    height={44}
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute top-2 left-2 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+                {/* Header Universal do card — logo + modalidade + condição + verificado + ações */}
+                <CardTopBar
+                    modality="venda"
+                    condition={product.condition as CardCondition}
+                    favorited={favorited}
+                    onShare={handleShare}
+                    onFavorite={(e) => { e.stopPropagation(); setFavorited((v) => !v); }}
                 />
-
-                {/* Top Left Badges — ao lado do logo, sem sobrepor */}
-                <div className="absolute top-2 left-14 flex flex-col gap-1.5 pointer-events-none">
-                    {product.condition === 'new' && (
-                        <Badge className="bg-emerald-500 text-white text-[8px] font-black uppercase px-2 h-5 rounded-md border-none ring-1 ring-white/20 shadow-sm">
-                            Novo
-                        </Badge>
-                    )}
-                    {product.is_digital && (
-                        <Badge className="bg-zinc-900/90 text-white text-[8px] font-black uppercase px-2 h-5 rounded-md border-none ring-1 ring-white/20 shadow-sm">
-                            Digital
-                        </Badge>
-                    )}
-                </div>
 
                 {/* Discount Tag */}
                 {hasDiscount && (
