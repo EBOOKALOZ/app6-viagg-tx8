@@ -38,6 +38,12 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
   return trimmed;
 }
 
+// Presets de incremento mínimo do lance. O lojista escolhe um preset OU
+// "Personalizado" (campo numérico livre). O valor vira `form.minimum_increment`
+// e é ENFORÇADO no backend (place_auction_bid): todo lance deve ser múltiplo
+// exato do incremento a partir do lance inicial e >= próximo mínimo permitido.
+const INCREMENT_PRESETS = [1, 3, 6, 9, 12, 15, 18, 21, 25, 50, 100];
+
 function formatBRL(value: number) {
   return `R$ ${value.toFixed(2).replace(".", ",")}`;
 }
@@ -558,6 +564,10 @@ function EditListingModal({
 
   const [activeSection, setActiveSection] = useState<string>("basic");
 
+  // Modo do seletor de incremento: false = preset (botões), true = personalizado (input).
+  // Ao editar, se o valor salvo não bater com nenhum preset, entra em personalizado.
+  const [incrementCustom, setIncrementCustom] = useState(false);
+
   // ── ORION Leilões AI: sugestões de setup ──
   const [aiSug, setAiSug] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -611,6 +621,9 @@ function EditListingModal({
         city: listing.city || "",
         neighborhood: listing.neighborhood || "",
       });
+      // Se o incremento salvo não é um dos presets, o seletor abre em "Personalizado".
+      const inc = Number(listing.minimum_increment) || 1;
+      setIncrementCustom(!INCREMENT_PRESETS.includes(inc));
     }
   }, [listing]);
 
@@ -915,23 +928,88 @@ function EditListingModal({
                 <p className="text-[10px] text-[#A7B0BE]/60 ml-1">Valor mínimo secreto — abaixo deste, o leilão não é arrematado automaticamente</p>
               </div>
 
-              {/* Incremento Mínimo */}
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
-                  <ArrowUpDown className="h-3 w-3 text-blue-400" /> Incremento Mínimo (R$)
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-400 text-sm">R$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.minimum_increment}
-                    onChange={(e) => setForm(f => ({ ...f, minimum_increment: e.target.value }))}
-                    className="pl-12 h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] font-black text-[#F5F7FA] text-lg focus:border-blue-400/50 shadow-xl shadow-black/10"
-                  />
+              {/* Incremento Mínimo do Lance — presets + personalizado */}
+              {form.listing_type === "auction" && (() => {
+                const incValue = parseFloat(form.minimum_increment) || 0;
+                const baseValue = parseFloat(form.starting_bid) || 0;
+                const proximoEsperado = baseValue + (incValue || 1);
+                return (
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+                    <ArrowUpDown className="h-3 w-3 text-blue-400" /> Incremento Mínimo do Lance
+                  </Label>
+                  <p className="text-[11px] text-[#F5F7FA] font-bold ml-1 -mt-1">
+                    Você determina de quanto em quanto os lances vão subir.
+                  </p>
+                  <p className="text-[10px] text-[#A7B0BE]/70 ml-1 -mt-1">
+                    O valor que você escolher aqui será aplicado a <span className="font-black text-blue-300">todos</span> os lances deste leilão. Escolha um valor rápido ou personalize.
+                  </p>
+
+                  {/* Grade de presets + Personalizado */}
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {INCREMENT_PRESETS.map((preset) => {
+                      const selected = !incrementCustom && incValue === preset;
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => { setIncrementCustom(false); setForm(f => ({ ...f, minimum_increment: String(preset) })); }}
+                          className={cn(
+                            "h-12 rounded-xl border font-black text-sm transition-all active:scale-95",
+                            selected
+                              ? "bg-blue-500 border-blue-400 text-white shadow-lg shadow-blue-500/30"
+                              : "bg-[#1B1F24] border-[#2A3038] text-[#A7B0BE] hover:border-blue-400/50 hover:text-[#F5F7FA]"
+                          )}
+                        >
+                          R$ {preset},00
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => { setIncrementCustom(true); setForm(f => ({ ...f, minimum_increment: "" })); }}
+                      className={cn(
+                        "h-12 rounded-xl border font-black text-[11px] uppercase tracking-wider transition-all active:scale-95 col-span-3 sm:col-span-1",
+                        incrementCustom
+                          ? "bg-blue-500 border-blue-400 text-white shadow-lg shadow-blue-500/30"
+                          : "bg-[#1B1F24] border-[#2A3038] text-[#A7B0BE] hover:border-blue-400/50 hover:text-[#F5F7FA]"
+                      )}
+                    >
+                      Personalizado
+                    </button>
+                  </div>
+
+                  {/* Campo numérico do modo Personalizado */}
+                  {incrementCustom && (
+                    <div className="relative animate-in fade-in slide-in-from-top-1 duration-200">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-400 text-sm">R$</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        autoFocus
+                        placeholder="Digite o incremento personalizado"
+                        value={form.minimum_increment}
+                        onChange={(e) => setForm(f => ({ ...f, minimum_increment: e.target.value }))}
+                        className="pl-12 h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] font-black text-[#F5F7FA] text-lg focus:border-blue-400/50 shadow-xl shadow-black/10"
+                      />
+                    </div>
+                  )}
+
+                  {/* Feedback: regra definida pelo lojista + próximo lance esperado */}
+                  <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 px-3 py-2 space-y-0.5">
+                    <p className="text-[11px] text-blue-200 font-bold">
+                      Você definiu que cada lance subirá no mínimo <span className="font-black text-white">{formatBRL(incValue || 1)}</span> em relação ao anterior.
+                    </p>
+                    {baseValue > 0 && (
+                      <p className="text-[10px] text-blue-200/70">
+                        Ex.: da base de {formatBRL(baseValue)}, o próximo lance permitido será <span className="font-black text-white">{formatBRL(proximoEsperado)}</span>.
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[10px] text-[#A7B0BE]/60 ml-1">Cada lance deve ser pelo menos R$ {form.minimum_increment || "1,00"} maior que o atual</p>
-              </div>
+                );
+              })()}
 
               {/* Resumo visual */}
               <div className="bg-gradient-to-br from-[#FF6A00]/5 to-transparent border border-[#FF6A00]/20 rounded-2xl p-4 space-y-2">

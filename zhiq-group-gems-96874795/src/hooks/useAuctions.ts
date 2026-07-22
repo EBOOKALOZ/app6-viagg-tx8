@@ -216,7 +216,14 @@ export function useAuctions() {
       });
       if (error) throw error;
       const result = data as any;
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        // Mensagem clara com o próximo lance mínimo (o backend é a fonte de verdade).
+        const nm = result.next_min_cents;
+        const msg = nm != null
+          ? `O próximo lance mínimo permitido é ${(nm / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`
+          : (result.error || "Lance inválido");
+        throw new Error(msg);
+      }
       return result;
     },
     onSuccess: () => {
