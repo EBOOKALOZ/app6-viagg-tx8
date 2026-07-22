@@ -628,16 +628,9 @@ export default function MerchantStoreAppearance() {
             <Toggle label="Fundo fixo (parallax)" checked={theme.effects.parallax} onChange={(v) => up((d) => { d.effects.parallax = v; })} />
           </Section>
 
-          {/* Contato */}
-          <Section title="Botões de Contato" icon={Phone}>
-            <TextField label="WhatsApp (só números, com DDD)" value={theme.contact.whatsapp} placeholder="47999998888" onChange={(v) => up((d) => { d.contact.whatsapp = v; })} />
-            <TextField label="Telefone" value={theme.contact.phone} placeholder="4733334444" onChange={(v) => up((d) => { d.contact.phone = v; })} />
-            <TextField label="Instagram (sem @)" value={theme.contact.instagram} placeholder="minhaloja" onChange={(v) => up((d) => { d.contact.instagram = v; })} />
-            <TextField label="Facebook (URL)" value={theme.contact.facebook} placeholder="https://facebook.com/minhaloja" onChange={(v) => up((d) => { d.contact.facebook = v; })} />
-            <TextField label="Site (URL)" value={theme.contact.site} placeholder="https://minhaloja.com.br" onChange={(v) => up((d) => { d.contact.site = v; })} />
-            <TextField label="E-mail" value={theme.contact.email} placeholder="contato@minhaloja.com.br" onChange={(v) => up((d) => { d.contact.email = v; })} />
-            <p className="text-[10px] text-zinc-400">Aparecem como botões no banner da loja.</p>
-          </Section>
+          {/* Card "Botões de Contato" removido da Aparência da Loja (pedido do
+              usuário). Os dados theme.contact.* são preservados no estado/banco
+              e continuam alimentando o banner da loja se já estiverem salvos. */}
         </div>
 
         {/* ══ PREVIEW EM TEMPO REAL ══ */}
