@@ -29,6 +29,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
       return pathname.startsWith("/corridas") || pathname.startsWith("/solicitar-corrida") || pathname.startsWith("/corrida");
     }
     if (path === "/mercado") {
+      // Leilões/Arremates NÃO pertencem mais ao Mercado — vivem no botão Leilões.
       return (
         pathname === "/mercado" ||
         pathname === "/" ||
@@ -37,10 +38,7 @@ export function MarketNavButtons({ onMercadoClick, onMotoboyClick }: MarketNavBu
         pathname.startsWith("/p/") ||
         pathname.startsWith("/loja/") ||
         pathname.startsWith("/checkout/produto/") ||
-        pathname.startsWith("/pagamento/") ||
-        pathname.startsWith("/leiloes") ||
-        pathname.startsWith("/leilao/") ||
-        pathname.startsWith("/arremate/")
+        pathname.startsWith("/pagamento/")
       );
     }
     if (path === "/imoveis") {

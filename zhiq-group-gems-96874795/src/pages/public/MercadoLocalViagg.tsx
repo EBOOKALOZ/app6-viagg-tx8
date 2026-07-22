@@ -60,9 +60,8 @@ import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
-import { MercadoAuctionsSection } from "@/components/public/MercadoAuctionsSection";
-import { MarketAuctionCard } from "@/components/advertiser/MarketAuctionCard";
-import type { AuctionListing } from "@/hooks/useAuctions";
+// Leilões removidos do Mercado (07-22): MercadoAuctionsSection / MarketAuctionCard
+// só são usados no botão "Leilões" (/leiloes → AuctionListPage).
 import { AdvertiserCtaBanner } from "@/components/public/AdvertiserCtaBanner";
 import { CardDark, CardInfo, CardHighlight, DarkStat, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 
@@ -425,49 +424,11 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         navigate("/auth?entry=motoboy&signup=1");
     };
 
-    // ── Fetch active auction listings ──
-    const { data: auctionListings = [] } = useQuery<any[]>({
-        queryKey: ["landing-active-auctions"],
-        queryFn: async () => {
-            const now = new Date().toISOString();
-            const { data, error } = await (supabase.from("auction_listings") as any)
-                .select("*")
-                .eq("status", "active")
-                .gte("ends_at", now)
-                .lte("starts_at", now)
-                .order("ends_at", { ascending: true });
-            if (error) { console.error("[Landing] Auctions error:", error); return []; }
-            if (!data || data.length === 0) return [];
-
-            // Enrich with city from merchant_stores when auction.city is missing
-            const storeIds = [...new Set(data.map((a: any) => a.store_id).filter(Boolean))];
-            const cityMap: Record<string, string> = {};
-
-            for (const sid of storeIds) {
-                try {
-                    const { data: storeRow } = await (supabase.from("merchant_stores") as any)
-                        .select("cidade, user_id")
-                        .eq("id", sid)
-                        .single();
-                    if (storeRow?.cidade) {
-                        cityMap[sid as string] = storeRow.cidade;
-                    } else if (storeRow?.user_id) {
-                        const { data: profile } = await (supabase.from("profiles") as any)
-                            .select("cidade")
-                            .eq("id", storeRow.user_id)
-                            .single();
-                        if (profile?.cidade) cityMap[sid as string] = profile.cidade;
-                    }
-                } catch { /* ignore */ }
-            }
-
-            return data.map((a: any) => ({
-                ...a,
-                city: a.city || (a.store_id ? cityMap[a.store_id] : null) || null,
-            }));
-        },
-        refetchInterval: 30000,
-    });
+    // ── Leilões REMOVIDOS do Mercado (07-22) ──
+    // Leilões e Arremates agora vivem SÓ no botão "Leilões" (/leiloes → AuctionListPage).
+    // Mantemos a variável vazia para o restante da página compilar sem exibir leilão
+    // (grade de produtos renderiza produtos puros; nenhum badge/modal de leilão dispara).
+    const auctionListings: any[] = [];
 
     // ── Fetch categories from categorias_loja ──
     const { data: categories = [] } = useQuery<CategoriaLoja[]>({
@@ -1269,8 +1230,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                 <>
 <InstitutionalSafetyBanner />
 
-            {/* ═══ LEILÕES — vitrine (ativos; ao buscar "leilão" mostra TODOS) ═══ */}
-            <MercadoAuctionsSection search={search} />
+            {/* Leilões removidos do Mercado — agora só no botão "Leilões" (/leiloes). */}
 
             {/* (CTA de anunciante movido para o FINAL da página — padrão marketplace) */}
 
@@ -1551,43 +1511,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             {/* (CTA "Seja Parceiro/Quero Vender" movido para o FINAL da página) */}
 
-            {/* ═══ ACTIVE AUCTIONS SECTION ═══ */}
-            {auctionListings.filter((a: any) => {
-                if (listingTypeFilter === "all") return true;
-                const lt = String(a.listing_type || "").toLowerCase().trim();
-                if (listingTypeFilter === "leilao") return lt === "auction" || lt === "leilao" || lt === "leilão" || lt === "";
-                if (listingTypeFilter === "arremate") return lt === "arremate";
-                return true;
-            }).length > 0 && (
-                <div style={{ backgroundColor: '#F5E62B' }}>
-                    <div className="w-full px-4 lg:px-6 pt-6 pb-2">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-sm">
-                                <Gavel className="h-4 w-4 text-white" />
-                            </div>
-                            <h2 className="text-lg font-black text-gray-800">🔥 Leilões Ativos</h2>
-                            <span className="text-[10px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">AO VIVO</span>
-                        </div>
-                        <HorizontalCarousel gap="gap-4">
-                            {auctionListings.filter((a: any) => {
-                                if (listingTypeFilter === "all") return true;
-                                const lt = String(a.listing_type || "").toLowerCase().trim();
-                                if (listingTypeFilter === "leilao") return lt === "auction" || lt === "leilao" || lt === "leilão" || lt === "";
-                                if (listingTypeFilter === "arremate") return lt === "arremate";
-                                return true;
-                            }).map((auction: any) => (
-                                // Card ÚNICO oficial (padronização ORION 07-21) — mesmo componente
-                                // da vitrine e da página /leiloes. Navega sozinho (loja/detalhe).
-                                <MarketAuctionCard
-                                    key={auction.id}
-                                    listing={auction as AuctionListing}
-                                    variant="carousel"
-                                />
-                            ))}
-                        </HorizontalCarousel>
-                    </div>
-                </div>
-            )}
 {auctionModalOpen && selectedAuction && (() => {
     const isArr = selectedAuction.listing_type === "arremate";
     const accent = isArr ? "#7C3AED" : "#FF6A00";
