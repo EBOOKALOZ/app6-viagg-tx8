@@ -172,6 +172,7 @@ export const PassengerHistory = lazy(() => import("@/pages/PassengerHistory"));
 /* ── Anunciante ── */
 export const AdvertiserDashboard = lazy(() => import("@/pages/advertiser/AdvertiserDashboard"));
 export const MerchantMyStorePage = lazy(() => import("@/pages/merchant/MerchantMyStorePage"));
+export const MerchantStoreAppearance = lazy(() => import("@/pages/merchant/MerchantStoreAppearance"));
 export const AdvertiserListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserListingsPage"));
 export const AdvertiserNewListingPage = lazy(() => import("@/pages/advertiser/AdvertiserNewListingPage"));
 export const AdvertiserAccountPage = lazy(() => import("@/pages/advertiser/AdvertiserAccountPage"));

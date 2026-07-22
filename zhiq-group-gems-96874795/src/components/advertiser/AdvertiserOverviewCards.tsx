@@ -166,10 +166,17 @@ export function AdvertiserOverviewCards() {
             )}>
               <CardContent className="p-8 space-y-4 flex flex-col h-full">
                 <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center p-0.5 shadow-lg shadow-black/5 transition-all group-hover:scale-110",
+                  "relative w-12 h-12 rounded-2xl flex items-center justify-center p-0.5 shadow-lg shadow-black/5 transition-all group-hover:scale-110 overflow-hidden",
                   action.isPrimary ? "bg-orange-500 text-white" : `${action.color} text-white`
                 )}>
-                  <action.icon className="w-6 h-6" />
+                  <img
+                    src="/images/viagg-tx8-logo.jpg"
+                    alt="Viagg-TX8"
+                    className="w-full h-full object-cover rounded-[14px]"
+                  />
+                  <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-xl bg-[#0D0F12]/90 border border-white/15 flex items-center justify-center shadow-md">
+                    <action.icon className="w-3.5 h-3.5 text-white" />
+                  </span>
                 </div>
 
                 <div className="space-y-1 flex-1">

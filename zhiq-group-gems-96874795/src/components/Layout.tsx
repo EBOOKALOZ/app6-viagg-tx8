@@ -21,7 +21,6 @@ import {
   Headphones
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Footer } from '@/components/Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -240,7 +239,8 @@ export function Layout({ children }: LayoutProps) {
           <div className="container py-6 px-4 md:py-8 md:px-8 max-w-5xl flex-1 flex flex-col">
             {children}
           </div>
-          <Footer />
+          {/* Rodapé removido: o AppLayout externo já renderiza o GlobalFooter
+              único (evita rodapé duplicado nas páginas que embrulham <Layout>). */}
         </main>
       </div>
     </div>

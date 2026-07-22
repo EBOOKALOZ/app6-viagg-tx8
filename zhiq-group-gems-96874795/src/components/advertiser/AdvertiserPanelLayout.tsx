@@ -25,7 +25,8 @@ import { Building2,
   ShoppingBag,
   Eye,
   Headphones,
-  Trophy
+  Trophy,
+  Palette
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -234,6 +235,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     ...(showMerchantOnlyItems ? [
       { name: "Chamar Corridas", href: "/merchant/create-delivery", icon: Truck },
       { name: "Minha Loja", href: "/loja/minha-loja", icon: Store },
+      { name: "Aparência da Loja", href: "/anunciante/aparencia", icon: Palette },
     ] : []),
     { name: "Meus Produtos", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Leilões", href: "/anunciante/leiloes", icon: Gavel },

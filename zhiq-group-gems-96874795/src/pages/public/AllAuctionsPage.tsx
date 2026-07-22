@@ -233,6 +233,8 @@ export default function AllAuctionsPage() {
       setSearch={setSearch}
       showSearch={true}
       hideCart={true}
+      blueFooter
+      blueFooterLabel="🏷️ Leilões & Arremates"
       headerRight={null}
       headerChildren={null}
     >
@@ -442,7 +444,7 @@ export default function AllAuctionsPage() {
         </div>
       </main>
 
-      {/* FOOTER - usar o padrão ou FooterNeutral? */}
+      {/* Rodapé: GlobalFooter via blueFooter do MarketLayout (padrão único). */}
     </MarketLayout>
   );
 }

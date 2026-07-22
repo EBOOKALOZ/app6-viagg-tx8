@@ -6,6 +6,7 @@ import { DriverPanelHeader } from '@/components/driver/DriverPanelHeader';
 import DriverBottomNav from '@/components/driver/DriverBottomNav';
 import { WeatherEventsCard } from '@/components/motoboy/WeatherEventsCard';
 import { CentralImpulsionamentoBanner } from '@/components/ridv/CentralImpulsionamentoBanner';
+import { GlobalFooter } from '@/components/GlobalFooter';
 
 export function DriverLayout() {
   const { user, refreshProfiles } = useAuth();
@@ -80,6 +81,9 @@ export function DriverLayout() {
         
         <Outlet />
       </main>
+
+      {/* Rodapé global único (aparece acima da nav fixa) */}
+      <GlobalFooter label="Motorista" />
 
       {/* Espaçador para a nav fixa */}
       <div className="h-20" />

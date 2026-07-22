@@ -1,0 +1,113 @@
+/* ============================================================
+   store-theme.css — Personalização visual do Perfil Público
+   Todas as regras são ESCOPADAS em .st-skin: fora dele as
+   classes st-* são inertes e o visual padrão não muda.
+   Valores vêm exclusivamente de CSS variables geradas por
+   buildThemeVars() a partir de tokens sanitizados (sem CSS
+   arbitrário do usuário).
+   ============================================================ */
+
+.st-skin {
+  font-family: var(--st-font, inherit);
+}
+
+/* ── Cards de produto / superfícies de card ── */
+.st-skin .st-card {
+  background-color: var(--st-card-bg, #ffffff);
+  color: var(--st-card-text, #27272a);
+  border-radius: var(--st-card-radius, 24px);
+  border: var(--st-card-border-w, 1px) solid var(--st-card-border, rgba(228, 228, 231, 0.8));
+  box-shadow: var(--st-card-shadow, 0 4px 24px rgba(0, 0, 0, 0.05));
+}
+.st-skin .st-card:hover {
+  box-shadow: var(--st-card-shadow-hover, 0 16px 40px rgba(0, 0, 0, 0.12));
+  border-color: var(--st-card-border, rgba(228, 228, 231, 0.9));
+}
+.st-skin[data-glass="1"] .st-card {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.st-skin .st-card-title {
+  color: var(--st-card-text, #27272a);
+}
+.st-skin .st-card:hover .st-card-title {
+  color: var(--st-primary, #ff6a00);
+}
+.st-skin .st-price {
+  color: var(--st-price, #18181b);
+}
+.st-skin .st-muted {
+  color: var(--st-text, #71717a);
+}
+
+/* ── Títulos de seção ── */
+.st-skin .st-heading {
+  color: var(--st-heading, #18181b);
+  text-transform: var(--st-title-case, uppercase);
+  font-weight: var(--st-title-weight, 900);
+}
+
+/* ── Botões principais (comprar/CTA) ── */
+.st-skin .st-btn {
+  background-color: var(--st-btn-bg, #ff6a00);
+  background-image: var(--st-btn-bgi, none);
+  color: var(--st-btn-text, #ffffff);
+  border-radius: var(--st-btn-radius, 12px);
+  border: var(--st-btn-border, none);
+  box-shadow: var(--st-btn-shadow, none);
+}
+.st-skin .st-btn:hover {
+  background-color: var(--st-btn-bg, #e65c00);
+  filter: brightness(1.08);
+}
+
+/* ── Selos (desconto etc.) ── */
+.st-skin .st-badge {
+  background-color: var(--st-badge, #ff6a00);
+}
+
+/* ── Acentos (abas ativas, ícones, links) ── */
+.st-skin .st-accent {
+  color: var(--st-primary, #ff6a00);
+}
+.st-skin .st-tab-active {
+  color: var(--st-primary, #ff6a00) !important;
+  border-color: var(--st-primary, #ff6a00) !important;
+}
+.st-skin .st-chip-active {
+  background-color: var(--st-primary, #ff6a00) !important;
+  color: var(--st-btn-text, #ffffff) !important;
+}
+.st-skin .st-surface {
+  background-color: var(--st-surface, rgba(255, 255, 255, 0.88)) !important;
+}
+
+/* ── Banner superior (card da loja) ── */
+.st-skin .st-banner {
+  background-color: var(--st-banner-bg, #68c7f2) !important;
+  background-image: var(--st-banner-bgi, none);
+  background-size: cover;
+  background-position: center;
+  min-height: var(--st-banner-minh, 0);
+  color: var(--st-banner-text, #ffffff);
+  --tw-ring-color: transparent;
+}
+/* textos brancos do banner seguem a cor de texto do banner */
+.st-skin .st-banner [class*="text-white"] {
+  color: var(--st-banner-text, #ffffff);
+}
+
+/* ── Efeitos ── */
+@keyframes st-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.st-skin[data-fx-fade="1"] .st-card {
+  animation: st-fade-in 0.45s ease both;
+}
+.st-skin[data-fx-zoom="0"] .st-card img {
+  transition: none;
+}
+.st-skin[data-fx-zoom="0"] .st-card:hover img {
+  transform: none;
+}

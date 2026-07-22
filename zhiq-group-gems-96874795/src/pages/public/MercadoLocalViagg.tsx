@@ -1776,7 +1776,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                             return (
                                 <CardDark key={matchedAuction ? `${product.id}-${matchedAuction.id}` : product.id}
-                                    className={`cursor-pointer lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5 transition-all duration-300 group/card flex flex-col${carouselMode ? " snap-start snap-always shrink-0 w-[75vw] sm:w-[45vw] lg:w-[30vw] h-auto" : " h-full"}`}
+                                    className={`cursor-pointer lg:hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5 transition-all duration-300 group/card flex flex-col${carouselMode ? " w-full h-auto" : " h-full"}`}
                                     onClick={() => {
                                         trackProductEvent({
                                             product_id: product.id,

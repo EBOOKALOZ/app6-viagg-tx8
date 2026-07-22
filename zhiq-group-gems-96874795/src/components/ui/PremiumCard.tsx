@@ -39,7 +39,7 @@ export interface PremiumCardProps {
   primaryActionClass?: string;
   onPrimaryAction?: (e: React.MouseEvent) => void;
   className?: string;
-  aspectRatio?: 'video' | 'square' | 'portrait';
+  aspectRatio?: 'video' | 'video-tall' | 'square' | 'portrait';
   imageObjectFit?: 'cover' | 'contain';
   customOverlays?: React.ReactNode;
   merchant?: {
@@ -110,6 +110,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
 
   const aspectClass = {
     'video': 'aspect-video',
+    'video-tall': 'aspect-[16/11.7]', // 16:9 com +30% de altura (imagem desce mais no card)
     'square': 'aspect-square',
     'portrait': 'aspect-[3/4]'
   }[aspectRatio];
@@ -328,12 +329,12 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           <Button 
             onClick={handleActionClick}
             className={cn(
-              "w-full h-11 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-sm flex items-center justify-center",
+              "w-full h-10 sm:h-11 rounded-2xl font-black text-[11px] sm:text-[11.5px] uppercase tracking-normal sm:tracking-wide transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 px-2 text-center whitespace-normal",
               primaryActionClass || "bg-[#68c7f2] hover:opacity-90 text-zinc-900 shadow-[0_4px_14px_rgba(104,199,242,0.3)] hover:shadow-[0_6px_20px_rgba(104,199,242,0.4)] hover:-translate-y-0.5"
             )}
           >
-            {primaryActionIcon}
-            <span>{primaryActionLabel}</span>
+            {primaryActionIcon && <span className="shrink-0 flex items-center justify-center">{primaryActionIcon}</span>}
+            <span className="text-center leading-tight">{primaryActionLabel}</span>
           </Button>
 
           {/* ─── RODAPÉ INSTITUCIONAL (FASE 5): print compartilhado mantém a marca ─── */}

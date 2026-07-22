@@ -6,6 +6,7 @@ import { MotoboyPanelHeader } from '@/components/motoboy/MotoboyPanelHeader';
 import MototaxiBottomNav from '@/components/motoboy/MototaxiBottomNav';
 import { WeatherEventsCard } from '@/components/motoboy/WeatherEventsCard';
 import { CentralImpulsionamentoBanner } from '@/components/ridv/CentralImpulsionamentoBanner';
+import { GlobalFooter } from '@/components/GlobalFooter';
 
 export function MototaxiLayout() {
   const { user, refreshProfiles } = useAuth();
@@ -80,6 +81,9 @@ export function MototaxiLayout() {
         
         <Outlet />
       </main>
+
+      {/* Rodapé global único (aparece acima da nav fixa) */}
+      <GlobalFooter label="Moto-Táxi" />
 
       {/* Espaçador para nav fixa */}
       <div className="h-20" />

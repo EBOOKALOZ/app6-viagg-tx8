@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { FooterNeutral } from "@/components/FooterNeutral";
+import { GlobalFooter } from "@/components/GlobalFooter";
 import { StoreBottomNav } from "@/components/store/StoreBottomNav";
 import {
     Search,
@@ -166,7 +166,10 @@ export function MarketLayout({
     const handleToggleHeader = () => {
         if (headerCollapsed) {
             setHeaderCollapsed(false);
-            setUserOverride(window.scrollY <= 30 ? null : 'expanded');
+            setUserOverride(null);
+            // Volta ao topo para o conteúdo (ex.: card da loja) aparecer INTEIRO
+            // na tela — sem isso a página fica rolada e o card aparece cortado.
+            window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
             setHeaderCollapsed(true);
             setUserOverride('collapsed');
@@ -335,17 +338,14 @@ export function MarketLayout({
                 {children}
             </main>
 
-            {/* ═══ FOOTER / BOTTOM NAV ═══ */}
+            {/* ═══ FOOTER / BOTTOM NAV ═══
+                Rodapé = GlobalFooter (componente único). O merchant logado usa a
+                bottom-nav mobile no lugar; fora isso o rodapé global aparece sempre
+                (a menos que a página peça hideFooter explicitamente). */}
             {blueFooter ? (
-                <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
-                    <p className="flex items-center justify-center gap-1.5">
-                        <img src="/logo.png" alt="Viagg" className="h-8 w-auto object-contain rounded-lg shadow-sm mt-1" />
-                        Viagg-TX8™ · {blueFooterLabel}
-                    </p>
-                    <p className="text-zinc-900/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
-                </footer>
+                <GlobalFooter label={blueFooterLabel} compact />
             ) : (
-                isMerchant && !hideStoreNav ? <StoreBottomNav /> : (!hideFooter && <FooterNeutral />)
+                isMerchant && !hideStoreNav ? <StoreBottomNav /> : (!hideFooter && <GlobalFooter />)
             )}
 
             {/* ── Drawers/Modals ── */}

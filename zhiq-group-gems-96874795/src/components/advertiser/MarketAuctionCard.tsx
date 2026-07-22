@@ -22,9 +22,17 @@ interface MarketAuctionCardProps {
    *   mesmo visual/dados; só muda o envelope de largura.
    */
   variant?: 'grid' | 'carousel';
+  /**
+   * Destino do clique no card:
+   *  - 'store' (padrão): abre a LOJA PÚBLICA do vendedor com a aba correta
+   *    (Leilões/Arremates) — novo fluxo de navegação que valoriza a vitrine.
+   *  - 'detail': vai direto ao detalhe do leilão/arremate (dar lance/fazer oferta).
+   *    Usado DENTRO da própria loja (para não voltar à loja em loop).
+   */
+  linkTo?: 'store' | 'detail';
 }
 
-export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, variant = 'grid' }) => {
+export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, variant = 'grid', linkTo = 'store' }) => {
   const navigate = useNavigate();
   const [favorited, setFavorited] = React.useState(false);
 
@@ -53,7 +61,13 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
     } catch (err) {
       console.error('[CPC_ERROR]', err);
     }
-    navigate(`/mercado/leiloes/${listing.id}`);
+    // Novo fluxo: clique abre a LOJA do vendedor na aba correta (Leilões/Arremates).
+    // Dentro da própria loja usamos linkTo='detail' para ir direto ao lance.
+    if (linkTo === 'store' && listing.store_id) {
+      navigate(`/loja/${listing.store_id}?tab=${isAuction ? 'leiloes' : 'arremates'}`);
+    } else {
+      navigate(`/mercado/leiloes/${listing.id}`);
+    }
   };
 
   const formatTimeLeft = () => {
@@ -129,7 +143,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
           onFavorite={() => setFavorited(v => !v)}
           onClick={handleClick}
           primaryActionLabel={isEnded ? 'Encerrado' : isAuction ? 'Dar Lance Agora' : 'Fazer Oferta'}
-          primaryActionIcon={!isEnded && isAuction ? <Zap className="w-4 h-4 mr-1" /> : !isEnded ? <Tag className="w-4 h-4 mr-1" /> : undefined}
+          primaryActionIcon={!isEnded && isAuction ? <Zap className="w-3.5 h-3.5 shrink-0" /> : !isEnded ? <Tag className="w-3.5 h-3.5 shrink-0" /> : undefined}
           primaryActionClass={isEnded ? 'bg-gray-400' : isAuction ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] hover:from-[#FF7A1A] hover:to-[#FFA357] text-white border-0" : "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0"}
           customOverlays={timerOverlay}
           aspectRatio="portrait"

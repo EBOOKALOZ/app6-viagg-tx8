@@ -17,7 +17,7 @@ const BR_STATES = [
   { uf: 'RO', nome: 'Rondônia' }, { uf: 'RR', nome: 'Roraima' }, { uf: 'SC', nome: 'Santa Catarina' },
   { uf: 'SP', nome: 'São Paulo' }, { uf: 'SE', nome: 'Sergipe' }, { uf: 'TO', nome: 'Tocantins' },
 ];
-import { Store, Loader2, Upload, Save, Camera, MapPin } from 'lucide-react';
+import { Store, Loader2, Upload, Save, Camera, MapPin, Palette, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { StoreLocationPicker } from '@/components/merchant/StoreLocationPicker';
 import { CategoriaAutocomplete } from '@/components/merchant/CategoriaAutocomplete';
@@ -201,6 +201,25 @@ export default function MerchantSettingsContent() {
     <div className="p-4 space-y-6 lg:max-w-none mx-auto w-full lg:py-8 lg:px-4 xl:px-6">
 
       <MerchantRecentEvents module="store" />
+
+      {/* Aparência da Loja — personalização visual do perfil público */}
+      <a
+        href="/anunciante/aparencia"
+        className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-[#FF6A00]/30 bg-gradient-to-r from-[#FF6A00]/10 to-transparent hover:from-[#FF6A00]/20 transition-all group"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-xl bg-[#FF6A00]/15 flex items-center justify-center shrink-0">
+            <Palette className="h-5 w-5 text-[#FF6A00]" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-black text-foreground">Aparência da Loja</p>
+            <p className="text-xs text-muted-foreground truncate">
+              Cores, fundo, banner, cards e temas prontos da sua vitrine pública
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="h-5 w-5 text-[#FF6A00] shrink-0 group-hover:translate-x-1 transition-transform" />
+      </a>
 
       {/* Logo + Dados */}
       <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-8 space-y-6 lg:space-y-0">

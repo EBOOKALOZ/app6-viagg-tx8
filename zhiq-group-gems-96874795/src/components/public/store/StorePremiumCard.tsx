@@ -64,7 +64,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
         <div 
             onClick={() => onClick(product)}
             className={cn(
-                "group bg-white rounded-[24px] overflow-hidden transition-all duration-300 cursor-pointer flex flex-col shadow-[0_4px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] border border-zinc-100/80 hover:border-zinc-200/90",
+                "st-card group bg-white rounded-[24px] overflow-hidden transition-all duration-300 cursor-pointer flex flex-col shadow-[0_4px_24px_rgba(0,0,0,0.05)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.12)] border border-zinc-100/80 hover:border-zinc-200/90",
                 product.is_featured && "ring-2 ring-[#FF6A00]/20 shadow-[#FF6A00]/5"
             )}
         >
@@ -112,7 +112,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
 
                 {/* Discount Tag */}
                 {hasDiscount && (
-                    <div className="absolute top-0 right-0 bg-[#FF6A00] text-white font-black text-[11px] px-2.5 py-1 rounded-bl-xl shadow-lg border-l border-b border-white/20">
+                    <div className="st-badge absolute top-0 right-0 bg-[#FF6A00] text-white font-black text-[11px] px-2.5 py-1 rounded-bl-xl shadow-lg border-l border-b border-white/20">
                         -{discountPct}%
                     </div>
                 )}
@@ -120,7 +120,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
 
             {/* Content Area */}
             <div className="p-3 flex flex-col flex-1 gap-2">
-                <h3 className="text-zinc-800 text-xs sm:text-sm font-medium line-clamp-2 leading-tight min-h-[2.5em] group-hover:text-[#FF6A00] transition-colors">
+                <h3 className="st-card-title text-zinc-800 text-xs sm:text-sm font-medium line-clamp-2 leading-tight min-h-[2.5em] group-hover:text-[#FF6A00] transition-colors">
                     {product.title}
                 </h3>
 
@@ -129,7 +129,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                         <div className="space-y-0.5 min-w-0">
                         <p className="text-[10px] text-zinc-400 line-through truncate">R$ {product.original_price?.toFixed(2)}</p>
                         <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap min-w-0">
-                            <span className={cn("font-bold text-zinc-900 tracking-tight leading-tight italic break-words", priceSizeClass)}>
+                            <span className={cn("st-price font-bold text-zinc-900 tracking-tight leading-tight italic break-words", priceSizeClass)}>
                                 {formattedPrice}
                             </span>
                             <Badge className="bg-emerald-50 text-emerald-600 border-none text-[9px] h-4 font-black px-1.5 shrink-0">
@@ -138,7 +138,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                         </div>
                         </div>
                     ) : (
-                        <span className={cn("font-bold text-zinc-900 tracking-tight leading-tight italic block mt-2 break-words", priceSizeClass)}>
+                        <span className={cn("st-price font-bold text-zinc-900 tracking-tight leading-tight italic block mt-2 break-words", priceSizeClass)}>
                             {formattedPrice}
                         </span>
                     )}
@@ -162,10 +162,10 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                 <div className="flex flex-col gap-1.5 mt-2">
                     <Button 
                         className={cn(
-                            "w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all",
-                            isRecentlyAdded 
-                                ? "bg-emerald-500 text-white hover:bg-emerald-600" 
-                                : "bg-[#FF6A00] hover:bg-[#E65C00] text-white"
+                            "w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[10.5px] sm:text-[11px] tracking-normal sm:tracking-wide transition-all flex items-center justify-center gap-1.5 px-2 text-center whitespace-normal",
+                            isRecentlyAdded
+                                ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                                : "st-btn bg-[#FF6A00] hover:bg-[#E65C00] text-white"
                         )}
                         onClick={(e) => {
                             e.stopPropagation();

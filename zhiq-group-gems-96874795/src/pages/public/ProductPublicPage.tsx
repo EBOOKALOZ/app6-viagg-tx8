@@ -330,13 +330,13 @@ export default function ProductPublicPage() {
                             </Card>
 
                             {/* ADM TIP */}
-                            <div className="p-8 border-2 border-dashed border-zinc-200 rounded-[32px] flex items-center gap-6">
-                                <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center shrink-0">
-                                    <ShieldCheck className="w-7 h-7 text-emerald-600" />
-                                </div>
+                            <div className="p-6 sm:p-8 border-2 border-dashed border-zinc-200 rounded-[32px] flex flex-col items-center justify-center text-center gap-3">
                                 <div>
                                     <p className="text-xs font-black text-zinc-900 uppercase tracking-tight">Compra Segura Garantida</p>
                                     <p className="text-[10px] font-medium text-zinc-400">Proteção de dados e suporte total Viagg-TX8.</p>
+                                </div>
+                                <div className="flex items-center justify-center bg-emerald-100 p-2.5 rounded-xl shrink-0 mt-1">
+                                    <img src="/viagg-logo.png" alt="Viagg" className="w-8 h-8 object-contain rounded-md shadow-xs shrink-0" />
                                 </div>
                             </div>
                         </div>

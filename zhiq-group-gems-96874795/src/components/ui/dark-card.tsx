@@ -95,7 +95,7 @@ export const DarkButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
     <button
       ref={ref}
       className={cn(
-        'rounded-2xl bg-[#FF7A00] hover:bg-[#FF8E1F] text-white font-black uppercase tracking-wider px-5 py-3 shadow-[0_6px_18px_rgba(255,122,0,0.30)] transition-all active:scale-[0.98] disabled:opacity-50',
+        'rounded-2xl bg-[#FF7A00] hover:bg-[#FF8E1F] text-white font-black uppercase text-[11px] sm:text-[11.5px] tracking-normal sm:tracking-wide px-3 sm:px-4 py-2.5 shadow-[0_6px_18px_rgba(255,122,0,0.30)] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-1.5 text-center whitespace-normal',
         className
       )}
       {...props}

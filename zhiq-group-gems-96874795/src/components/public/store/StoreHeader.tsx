@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Store, ShieldCheck, Zap, Share2, Phone, MapPin, CheckCircle2, Star, Plus, Check } from "lucide-react";
+import { Store, ShieldCheck, Zap, Share2, Phone, MapPin, CheckCircle2, Star, Plus, Check, MessageCircle, Instagram, Facebook, Globe, Mail } from "lucide-react";
+import { useStoreTheme } from "@/components/public/store/StoreThemeScope";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -37,7 +38,23 @@ interface StoreHeaderProps {
 export function StoreHeader({ store, stats, productsCount, whatsappNumber, onShare, logoUrl, bannerUrl, compact = false, sidebarMode = false }: StoreHeaderProps) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const theme = useStoreTheme(); // null quando a loja não personalizou
     const effectiveLogoUrl = logoUrl || store?.logo_url || (store as any)?.avatar_url || null;
+
+    // Botões de contato personalizados (só com tema; valores já sanitizados)
+    const contactLinks = (() => {
+        const c = theme?.contact;
+        if (!c) return [];
+        const list: { key: string; icon: typeof Phone; href: string; label: string }[] = [];
+        const wa = c.whatsapp || whatsappNumber?.replace(/\D/g, "") || "";
+        if (wa) list.push({ key: "wa", icon: MessageCircle, href: `https://wa.me/${wa.startsWith("55") ? wa : `55${wa}`}`, label: "WhatsApp" });
+        if (c.phone) list.push({ key: "tel", icon: Phone, href: `tel:+55${c.phone}`, label: "Telefone" });
+        if (c.instagram) list.push({ key: "ig", icon: Instagram, href: `https://instagram.com/${c.instagram}`, label: "Instagram" });
+        if (c.facebook) list.push({ key: "fb", icon: Facebook, href: c.facebook, label: "Facebook" });
+        if (c.site) list.push({ key: "site", icon: Globe, href: c.site, label: "Site" });
+        if (c.email) list.push({ key: "mail", icon: Mail, href: `mailto:${c.email}`, label: "E-mail" });
+        return list;
+    })();
 
     // Chave única por loja
     const storeKey = (store.store_name || "default").trim().toLowerCase();
@@ -166,7 +183,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
             {/* Store Card */}
             <div className={cn("w-full px-2 lg:px-3 xl:px-4 relative z-10 mb-8 flex justify-center", compact ? "mt-0" : "mt-4 lg:mt-6")}>
                 <div className="w-full max-w-[1920px]">
-                <Card className="border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#68c7f2] ring-1 ring-[#68c7f2]/60 overflow-hidden">
+                <Card className="st-banner border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#68c7f2] ring-1 ring-[#68c7f2]/60 overflow-hidden">
                     <div className={cn("flex items-center", sidebarMode ? "flex-col text-center p-4 gap-3" : cn("flex-col xl:flex-row", compact ? "p-3 lg:p-4 gap-4 xl:items-end" : "p-6 lg:p-10 gap-6 lg:gap-10 xl:items-end"))}>
                         
                         {/* Logo Avatar */}
@@ -255,6 +272,22 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                             </div>
                         </div>
                         <div className={cn("flex items-center w-full", sidebarMode ? "gap-2 justify-center flex-wrap" : "gap-2 lg:gap-3 lg:w-auto justify-center lg:justify-end")}>
+                            {/* Contatos personalizados do tema da loja */}
+                            {contactLinks.map(({ key, icon: Icon, href, label }) => (
+                                <a
+                                    key={key}
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={label}
+                                    className={cn(
+                                        "st-btn flex items-center justify-center bg-white text-[#FF6A00] border border-[#FF6A00] shrink-0 transition-transform hover:scale-105",
+                                        compact ? "rounded-lg w-8 h-8 lg:w-9 lg:h-9" : "rounded-xl w-11 h-11 lg:w-12 lg:h-12"
+                                    )}
+                                >
+                                    <Icon className={cn(compact ? "w-3.5 h-3.5" : "w-4 h-4")} />
+                                </a>
+                            ))}
                             <Button
                                 variant="outline"
                                 onClick={toggleFollow}

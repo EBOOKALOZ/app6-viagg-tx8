@@ -9,6 +9,7 @@ import PageFallback from "@/components/PageFallback";
 import {
   AdvertiserDashboard,
   MerchantMyStorePage,
+  MerchantStoreAppearance,
   AdvertiserListingsPage,
   MerchantAuctions,
   MerchantArremate,
@@ -100,6 +101,7 @@ export const advertiserRoutes = (
     <Route path="/anunciante/viagens/anuncios/novo/viagem"             element={<Suspense fallback={<PageFallback />}><ViagemForm /></Suspense>} />
     <Route path="/anunciante/viagens/anuncios/editar/viagem/:listingId" element={<Suspense fallback={<PageFallback />}><ViagemForm /></Suspense>} />
     <Route path="/anunciante/minha-loja"      element={<Suspense fallback={<PageFallback />}><MerchantMyStorePage /></Suspense>} />
+    <Route path="/anunciante/aparencia"       element={<Suspense fallback={<PageFallback />}><MerchantStoreAppearance /></Suspense>} />
     <Route path="/anunciante/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserListingsPage /></Suspense>} />
     <Route path="/anunciante/leiloes"         element={<MerchantAuctions />} />
     <Route path="/anunciante/arremates"       element={<MerchantArremate />} />

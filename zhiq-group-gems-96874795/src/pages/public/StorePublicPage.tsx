@@ -995,12 +995,8 @@ export default function StorePublicPage() {
                 <div className="w-full px-4 lg:px-8 xl:px-12 mt-20 flex justify-center">
                     {/* Selo de conexão: a Viagg-TX8 é vitrine/plataforma — a negociação é
                         direta entre as partes (não vendedora nem intermediadora). */}
-                    <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 bg-white px-6 sm:px-9 py-4 sm:py-5 rounded-2xl shadow-lg border border-zinc-100 ring-2 ring-zinc-50 max-w-[95vw]">
-                        <div className="flex items-center gap-2.5 shrink-0">
-                            <img src="/viagg-logo.png" alt="Viagg-TX8" className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0" />
-                            <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" />
-                        </div>
-                        <div className="flex flex-col text-center sm:text-left leading-snug min-w-0">
+                    <div className="inline-flex flex-col items-center justify-center gap-2.5 bg-white px-6 sm:px-9 py-4 sm:py-5 rounded-xl shadow-lg border border-zinc-100 ring-2 ring-zinc-50 max-w-[95vw] text-center">
+                        <div className="flex flex-col leading-snug min-w-0">
                             <span className="font-black uppercase text-[11px] sm:text-sm tracking-[0.1em] text-zinc-900">
                                 A Plataforma Apresenta o Produto
                             </span>
@@ -1008,6 +1004,7 @@ export default function StorePublicPage() {
                                 A negociação acontece diretamente entre comprador e vendedor.
                             </span>
                         </div>
+                        <img src="/viagg-logo.png" alt="Viagg-TX8" className="w-8 h-8 sm:w-9 sm:h-9 object-contain rounded-md shadow-xs shrink-0 mt-1" />
                     </div>
                 </div>
 

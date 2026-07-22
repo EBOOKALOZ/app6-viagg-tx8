@@ -33,8 +33,9 @@ import {
   ShieldCheck,
   Loader2,
   Sparkles,
+  X,
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { Link } from "react-router-dom";
 import {
   useRegisterContactIntention,
   type ListingModule,
@@ -76,6 +77,18 @@ function maskPhone(value: string): string {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
+
+// ─── Tema do header por categoria (gradiente + rótulo) ────────────────────────
+// Identidade visual por módulo, alinhada às cores usadas nos cards da plataforma.
+const MODULE_THEME: Record<string, { label: string; gradient: string; accent: string; onDark: boolean }> = {
+  real_estate: { label: "Imóvel",  gradient: "from-emerald-500 via-emerald-600 to-teal-700",   accent: "text-emerald-100", onDark: true },
+  vehicles:    { label: "Veículo", gradient: "from-indigo-500 via-indigo-600 to-blue-700",     accent: "text-indigo-100",  onDark: true },
+  services:    { label: "Serviço", gradient: "from-violet-500 via-purple-600 to-fuchsia-700",  accent: "text-violet-100",  onDark: true },
+  freight:     { label: "Frete",   gradient: "from-blue-500 via-blue-600 to-sky-700",          accent: "text-blue-100",    onDark: true },
+  travel:      { label: "Viagem",  gradient: "from-sky-500 via-cyan-600 to-teal-600",          accent: "text-sky-100",     onDark: true },
+  product:     { label: "Produto", gradient: "from-orange-500 via-orange-600 to-amber-600",    accent: "text-orange-100",  onDark: true },
+};
+const DEFAULT_THEME = { label: "Anúncio", gradient: "from-zinc-700 via-zinc-800 to-zinc-900", accent: "text-zinc-300", onDark: true };
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
@@ -185,39 +198,44 @@ export function ContactIntentionModal({
     onClose();
   };
 
-  const moduleLabel =
-    listingModule === "real_estate" ? "Imóvel"
-    : listingModule === "vehicles" ? "Veículo"
-    : listingModule === "services" ? "Serviço"
-    : listingModule === "freight" ? "Frete"
-    : listingModule === "travel" ? "Viagem"
-    : "Anúncio";
+  const theme = MODULE_THEME[listingModule as string] || DEFAULT_THEME;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       {open && <SessionSafetyFlash />}
-      <DialogContent className="max-w-md max-h-[90vh] rounded-[32px] border-0 shadow-2xl p-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-md max-h-[90vh] rounded-[32px] border-0 shadow-2xl p-0 overflow-hidden flex flex-col gap-0">
 
-        {/* ── Header Amarelo ── */}
-        <div className="shrink-0 bg-gradient-to-br from-[#F5E62B] via-[#FFE800] to-[#F5E62B] px-6 pt-6 pb-5 space-y-4 border-b border-yellow-300">
+        {/* ── Header Padrão Oficial (gradiente por categoria) — FIXO ── */}
+        <div className={`shrink-0 relative bg-gradient-to-br ${theme.gradient} px-6 pt-6 pb-5 space-y-4`}>
 
-          {/* Linha superior: ícone + título */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center shrink-0 overflow-hidden">
-              <img src="/logo.png" alt="Viagg" className="w-[52px] h-[52px] rounded-xl object-contain" />
+          {/* Botão de fechar */}
+          <button
+            onClick={handleClose}
+            aria-label="Fechar"
+            className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white/90 backdrop-blur-md transition-all hover:bg-white/25 hover:text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          {/* Linha superior: logo + categoria + título */}
+          <div className="flex items-center gap-3 pr-10">
+            <div className="flex items-center justify-center shrink-0 overflow-hidden rounded-xl bg-white/90 p-1 shadow-md ring-1 ring-white/40">
+              <img src="/logo.png" alt="Viagg-TX8" className="w-11 h-11 rounded-lg object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black text-[#FF6A00] uppercase tracking-widest">{moduleLabel}</p>
-              <DialogTitle className="text-zinc-900 font-black text-lg leading-tight">
-                Demonstrar Interesse
+              <p className={`text-[10px] font-black uppercase tracking-widest ${theme.accent}`}>{theme.label}</p>
+              <DialogTitle className="text-white font-black text-lg leading-tight">
+                {listingTitle ? "Tenho Interesse" : "Demonstrar Interesse"}
               </DialogTitle>
+              {listingTitle && (
+                <p className="text-white/85 text-xs font-semibold leading-snug line-clamp-1 mt-0.5">{listingTitle}</p>
+              )}
             </div>
           </div>
 
-          {/* Mini card do anúncio */}
-          {(listingTitle || listingMeta) && (
-            <div className="bg-white/70 border border-yellow-200 rounded-2xl overflow-hidden shadow-sm">
-              {/* Thumbnail */}
+          {/* Mini card do anúncio (thumbnail + chips) */}
+          {(listingMeta?.image || (listingMeta?.chips && listingMeta.chips.length > 0)) && (
+            <div className="bg-white/90 border border-white/40 rounded-2xl overflow-hidden shadow-sm">
               {listingMeta?.image && (
                 <div className="w-full h-28 bg-zinc-100 overflow-hidden">
                   <img
@@ -227,12 +245,8 @@ export function ContactIntentionModal({
                   />
                 </div>
               )}
-              <div className="px-4 py-3 space-y-2">
-                {listingTitle && (
-                  <p className="text-zinc-900 font-black text-sm leading-tight line-clamp-2">{listingTitle}</p>
-                )}
-                {/* Chips de mini-info */}
-                {listingMeta?.chips && listingMeta.chips.length > 0 && (
+              {listingMeta?.chips && listingMeta.chips.length > 0 && (
+                <div className="px-4 py-3">
                   <div className="flex flex-wrap gap-1.5">
                     {listingMeta.chips.map((chip, i) => (
                       <span
@@ -245,8 +259,8 @@ export function ContactIntentionModal({
                       </span>
                     ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
         </div>

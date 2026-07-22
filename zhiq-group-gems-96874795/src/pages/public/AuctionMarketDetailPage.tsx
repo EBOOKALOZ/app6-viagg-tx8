@@ -199,6 +199,8 @@ export default function AuctionMarketDetailPage() {
       search=""
       setSearch={() => {}}
       hideCart={true}
+      blueFooter
+      blueFooterLabel="🏷️ Leilões"
       headerRight={
         <div className="flex items-center gap-2">
           <button
@@ -452,11 +454,6 @@ export default function AuctionMarketDetailPage() {
         </section>
 
         <InstitutionalSafetyBanner />
-
-        {/* FOOTER */}
-        <footer className="py-8 text-center text-[10px] font-bold text-[#A7B0BE] border-t border-[#FF6A00]/10 mt-8">
-          <p>© 2025 Viagg-TX8 • Marketplace Premium • Todos os direitos reservados</p>
-        </footer>
       </div>
     </MarketLayout>
   );

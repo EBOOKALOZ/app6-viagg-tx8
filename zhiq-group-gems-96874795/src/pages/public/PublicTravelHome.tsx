@@ -136,7 +136,8 @@ export default function PublicTravelHome() {
       showSearch
       headerChildren={<MarketNavButtons />}
       mainClassName="flex flex-col bg-[#F5E62B]"
-      hideFooter
+      blueFooter
+      blueFooterLabel="Viagens & Turismo"
       hideStoreNav
       myAccountPath="/viagens/minha-conta"
     >
@@ -264,14 +265,6 @@ export default function PublicTravelHome() {
         buttonLabel="Anunciar Pacote"
       />
 
-      {/* Footer minimalista do módulo de Viagens */}
-      <footer className="w-full bg-[#68c7f2] text-zinc-900 text-center py-1.5 text-xs font-medium space-y-0">
-        <p className="flex items-center justify-center gap-1.5">
-          <img src="/logo.png" alt="Viagg" className="h-8 w-auto object-contain rounded-lg shadow-sm mt-1" />
-          Viagg-TX8™ · Viagens &amp; Turismo
-        </p>
-        <p className="text-zinc-900/70 text-[10px]">© 2026 Desenvolvido por VIAGG-TX8</p>
-      </footer>
     </MarketLayout>
   );
 }
