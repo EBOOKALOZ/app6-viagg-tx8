@@ -9,8 +9,10 @@ import {
   Share2,
   Heart,
   Store,
+  Check,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { supabase } from '@/integrations/supabase/client';
 import type { AuctionListing } from '@/hooks/useAuctions';
@@ -35,6 +37,30 @@ interface MarketAuctionCardProps {
 export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, variant = 'grid', linkTo = 'store' }) => {
   const navigate = useNavigate();
   const [favorited, setFavorited] = React.useState(false);
+
+  // Buscar informações da loja / anunciante se existir store_id
+  const { data: storeInfo } = useQuery({
+    queryKey: ['auction-store-info', listing.store_id],
+    queryFn: async () => {
+      if (!listing.store_id) return null;
+      const { data } = await supabase
+        .from('merchant_stores')
+        .select('id, store_name, logo_url')
+        .eq('id', listing.store_id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!listing.store_id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const storeLogo = storeInfo?.logo_url || "/viagg-logo.png";
+  const storeName = storeInfo?.store_name || "Oficial Viagg-TX8";
+
+  // Identificar condição do item (Novo / Usado)
+  const rawCond = (listing as any).condition || (listing.title?.toLowerCase().includes('usado') || listing.description?.toLowerCase().includes('usado') ? 'used' : listing.title?.toLowerCase().includes('seminovo') ? 'seminovo' : 'new');
+  const condLabel = rawCond === 'used' || rawCond === 'usado' ? 'Usado' : rawCond === 'seminovo' ? 'Seminovo' : rawCond === 'recondicionado' ? 'Recondicionado' : 'Novo';
+  const condColor = rawCond === 'used' || rawCond === 'usado' ? 'bg-amber-500/90 border-amber-400/30 text-white' : rawCond === 'seminovo' ? 'bg-sky-500/90 border-sky-400/30 text-white' : rawCond === 'recondicionado' ? 'bg-[#8B5E3C]/90 border-[#8B5E3C]/30 text-white' : 'bg-emerald-500/90 border-emerald-400/30 text-white';
 
   const isAuction = listing.listing_type === 'auction';
 
@@ -147,7 +173,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
           className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
         />
 
-        {/* Badge de Categoria/Tipo no topo (ao lado do logo) */}
+        {/* Badge de Categoria/Tipo no topo (ao lado do logo) + Condição (Novo / Usado) */}
         <div className="absolute top-2.5 left-16 z-20 flex items-center gap-1.5 pointer-events-none">
           {isAuction ? (
             <DarkBadge tone="orange" className="shadow-md backdrop-blur-md bg-[#FF6A00] text-white font-black">
@@ -158,8 +184,8 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
               ARREMATE
             </DarkBadge>
           )}
-          <DarkBadge tone="green" className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">
-            Verificado
+          <DarkBadge tone="green" className={cn("shadow-md backdrop-blur-md font-black uppercase text-[10px] tracking-wide", condColor)}>
+            {condLabel}
           </DarkBadge>
         </div>
 
@@ -231,6 +257,14 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
               <span className="text-sm font-normal mr-1">R$</span>
               <span>{formattedPrice}</span>
             </p>
+            {isAuction && (
+              <p className="text-xs text-[#8E98A3] mt-1 font-semibold flex items-center gap-1.5">
+                <span>Lance mínimo:</span>
+                <span className="font-black text-[#00C58E] animate-blink-1hz inline-block">
+                  {formatCurrencyBRL(currentPrice + (listing.minimum_increment || 1))}
+                </span>
+              </p>
+            )}
           </div>
           {buyNowPrice && buyNowPrice > currentPrice && (
             <div className="text-xs text-[#8E98A3]">
@@ -261,19 +295,44 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
 
         {/* ─── 5. RODAPÉ & BOTÃO PRINCIPAL ─── */}
         <div className="pt-3 border-t border-[#323A45] mt-auto space-y-3">
-          <div className="flex items-center justify-between text-xs text-[#B8C2CC]">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-[#323A45] bg-[#252B33] shrink-0 flex items-center justify-center">
-                <Store className="w-3.5 h-3.5 text-[#00C58E]" />
+          <div className="flex flex-col gap-2.5 pt-1">
+            {/* Linha 1: Info do Anunciante com Logo (100% da largura para o nome ficar em uma única linha e Viagg-TX8 junto) */}
+            <div className="flex items-center gap-2.5 w-full">
+              <div className="w-7 h-7 rounded-full overflow-hidden border border-[#323A45] bg-[#252B33] shrink-0 flex items-center justify-center shadow-sm">
+                <img
+                  src={storeLogo}
+                  alt={storeName}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/viagg-logo.png";
+                  }}
+                />
               </div>
-              <div className="min-w-0 flex flex-col">
-                <span className="text-[10px] font-bold text-[#8E98A3] uppercase tracking-wider">Anunciante</span>
-                <span className="text-xs font-bold text-[#B8C2CC] truncate">
-                  Oficial Viagg-TX8
+              <div className="min-w-0 flex flex-col flex-1">
+                <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-wider">Anunciante</span>
+                <span
+                  className="text-xs sm:text-sm font-bold text-[#E2E8F0] whitespace-normal leading-tight"
+                  style={{ wordBreak: 'normal' }}
+                  title={storeName}
+                >
+                  {storeName.replace(/Viagg-TX8/gi, 'Viagg\u2011TX8')}
                 </span>
               </div>
             </div>
-            <DarkBadge tone="green" className="text-[9px] px-1.5 py-0.5">Oficial</DarkBadge>
+
+            {/* Linha 2: Selos Verificado & Oficial juntos em destaque */}
+            <div className="flex items-center gap-2 flex-wrap pt-0.5">
+              <DarkBadge
+                tone="green"
+                className="shadow-md backdrop-blur-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 text-[10px] sm:text-[11px] font-black px-2.5 py-1 w-fit"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 stroke-[3]" />
+                <span>Verificado</span>
+              </DarkBadge>
+              <DarkBadge tone="green" className="text-[10px] sm:text-[11px] font-black px-2.5 py-1 shadow-sm">
+                Oficial
+              </DarkBadge>
+            </div>
           </div>
 
           <button

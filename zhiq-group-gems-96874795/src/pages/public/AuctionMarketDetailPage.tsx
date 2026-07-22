@@ -348,8 +348,8 @@ export default function AuctionMarketDetailPage() {
                         {formatCurrencyBRL(minNextBid)}
                       </p>
                       {listing.listing_type !== 'arremate' && (
-                        <p className="text-[11px] text-[#8E98A3] mt-1">
-                          Incremento: <span className="font-black text-[#FF7A00]">{formatCurrencyBRL(listing.minimum_increment || 1)}</span>
+                        <p className="text-[18px] text-[#8E98A3] mt-1.5 font-bold">
+                          Seu lance será de <span className="font-black text-[#00C58E] animate-blink-3hz inline-block">{formatCurrencyBRL(listing.minimum_increment || 1)}</span>
                         </p>
                       )}
                     </div>

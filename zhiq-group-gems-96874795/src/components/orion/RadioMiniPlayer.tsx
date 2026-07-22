@@ -87,12 +87,12 @@ function MiniBar({ onOpenCenter, docked }: { onOpenCenter: () => void; docked?: 
           <Volume2 className="h-4 w-4" />
         </button>
         {showVol && (
-          <div className="absolute bottom-10 right-0 z-10 rounded-xl border border-white/15 bg-[#0a1f16]/95 p-2 shadow-xl">
+          <div className="absolute top-full mt-2 right-0 z-[9999] rounded-xl border border-white/15 bg-[#0a1f16]/95 p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-200">
             <input
               type="range" min={0} max={100} step={1}
               defaultValue={Math.round(radio.volume * 100)}
               onChange={(e) => setRadioVolume(Number(e.target.value) / 100)}
-              className="h-1.5 w-24 accent-emerald-400"
+              className="h-1.5 w-24 accent-emerald-400 cursor-pointer"
             />
           </div>
         )}
@@ -132,6 +132,7 @@ function MiniBar({ onOpenCenter, docked }: { onOpenCenter: () => void; docked?: 
 function MiniPill({ onExpand }: { onExpand: () => void }) {
   const [radio, setRadio] = useState<RadioState>(getRadioState());
   const [logoOk, setLogoOk] = useState(true);
+  const [showVol, setShowVol] = useState(false);
   useEffect(() => subscribeRadio(setRadio), []);
   useEffect(() => { setLogoOk(true); }, [radio.station?.stationuuid]);
 
@@ -158,6 +159,32 @@ function MiniPill({ onExpand }: { onExpand: () => void }) {
       )}
       <span className="max-w-[34vw] truncate text-[11px] font-black text-white sm:max-w-[160px]">
         {radio.station.name || 'Rádio'}
+      </span>
+      {/* volume direto na pílula */}
+      <span className="relative shrink-0 flex items-center">
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => { e.stopPropagation(); setShowVol(v => !v); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setShowVol(v => !v); } }}
+          title="Volume"
+          className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-zinc-200 hover:bg-white/20 active:scale-90"
+        >
+          <Volume2 className="h-3.5 w-3.5" />
+        </span>
+        {showVol && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-full mt-2 right-0 z-[9999] rounded-xl border border-white/15 bg-[#0a1f16]/95 p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-200"
+          >
+            <input
+              type="range" min={0} max={100} step={1}
+              defaultValue={Math.round(radio.volume * 100)}
+              onChange={(e) => setRadioVolume(Number(e.target.value) / 100)}
+              className="h-1.5 w-24 accent-emerald-400 cursor-pointer"
+            />
+          </div>
+        )}
       </span>
       {/* play/pause direto na pílula — não reexpande */}
       <span

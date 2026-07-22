@@ -1618,9 +1618,9 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             </p>
                         </div>
                         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                            <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-white/40">Lance Inicial</p>
-                            <p className="text-2xl font-black leading-none text-white/80">
-                                R$ {ini.toFixed(2).replace(".", ",")}
+                            <p className="mb-1 text-[10px] font-black uppercase tracking-wider text-white/40">{!isArr ? "Lance Mínimo" : "Lance Inicial"}</p>
+                            <p className={cn("text-2xl font-black leading-none", !isArr ? "text-[#00C58E] animate-blink-1hz" : "text-white/80")}>
+                                R$ {(!isArr ? cur + (item.minimum_increment || 1) : ini).toFixed(2).replace(".", ",")}
                             </p>
                         </div>
                     </div>

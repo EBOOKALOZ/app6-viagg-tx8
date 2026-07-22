@@ -16,6 +16,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { INCREMENT_PRESETS, isIncrementPreset } from "@/lib/auctions/incrementPresets";
 
 interface OfertaRapidaModalProps {
   open: boolean;
@@ -30,6 +31,10 @@ interface OfertaRapidaModalProps {
   allowCustomAmount?: boolean;
   /** "arremate" or "auction" for visual theming */
   context?: "arremate" | "auction";
+  /** Lance atual do leilão (R$) — usado para mostrar as regras e validar em tempo real. */
+  currentBid?: number;
+  /** Incremento mínimo configurado pelo vendedor (R$). */
+  minimumIncrement?: number;
   /** Callback after successful submission */
   onSuccess?: () => void;
 }
@@ -56,6 +61,8 @@ export function OfertaRapidaModal({
   defaultAmount,
   allowCustomAmount = true,
   context = "arremate",
+  currentBid,
+  minimumIncrement,
   onSuccess,
 }: OfertaRapidaModalProps) {
   const navigate = useNavigate();
@@ -67,6 +74,20 @@ export function OfertaRapidaModal({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+
+  // ── Regras de incremento do leilão (para exibir + validar em tempo real) ──
+  // Espelha a regra do backend (place_auction_bid): o lance deve ser pelo menos
+  // (lance atual + incremento configurado pelo vendedor). Só se aplica a leilão.
+  const incrementValue = minimumIncrement && minimumIncrement > 0 ? minimumIncrement : 1;
+  const baseBid = currentBid ?? 0;
+  const minNextBid = baseBid + incrementValue;
+  const hasBidRules = isAuction && (currentBid != null || minimumIncrement != null);
+  const isCustomIncrement = !isIncrementPreset(incrementValue);
+  const typedAmount = parseFloat(amount);
+  const amountEntered = amount.trim() !== "" && !isNaN(typedAmount);
+  // Válido = valor digitado atende ao mínimo permitido (backend confirma no envio).
+  const amountValid = amountEntered && typedAmount >= minNextBid - 1e-6;
+  const showBidValidation = hasBidRules && allowCustomAmount && amountEntered;
 
   // Auto-fill name/whatsapp from localStorage
   useEffect(() => {
@@ -90,6 +111,11 @@ export function OfertaRapidaModal({
   const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount);
     if (!parsedAmount || parsedAmount <= 0) { setError("Informe um valor válido"); return; }
+    // Guarda de incremento (defesa em profundidade — o botão já bloqueia; o backend confirma).
+    if (hasBidRules && allowCustomAmount && parsedAmount < minNextBid - 1e-6) {
+      setError(`O próximo lance mínimo permitido é ${formatBRL(minNextBid)}, conforme o incremento configurado pelo vendedor.`);
+      return;
+    }
 
     setSending(true);
     setError("");
@@ -333,6 +359,73 @@ export function OfertaRapidaModal({
                 )}
               </div>
 
+              {/* ═══ REGRAS DE INCREMENTO (definidas pelo vendedor) ═══
+                  Transparência: o participante vê a MESMA régua do lojista, o valor
+                  do vendedor destacado, o lance atual e o próximo mínimo permitido. */}
+              {hasBidRules && (
+                <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+                  <p className="flex items-center gap-1.5 text-xs font-black text-white/80">
+                    📈 Incremento dos lances
+                  </p>
+
+                  {/* Régua de presets (referência) — o valor do vendedor em azul */}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {INCREMENT_PRESETS.map((preset) => {
+                      const chosen = !isCustomIncrement && preset === incrementValue;
+                      return (
+                        <div
+                          key={preset}
+                          className={
+                            "h-8 rounded-lg border flex items-center justify-center text-[11px] font-black transition-colors " +
+                            (chosen
+                              ? "bg-blue-500 border-blue-400 text-white shadow-md shadow-blue-500/30"
+                              : "border-white/10 bg-white/[0.02] text-white/35")
+                          }
+                        >
+                          R${preset}
+                        </div>
+                      );
+                    })}
+                    {isCustomIncrement && (
+                      <div className="col-span-4 h-8 rounded-lg border border-blue-400 bg-blue-500 text-white flex items-center justify-center text-[11px] font-black shadow-md shadow-blue-500/30">
+                        Personalizado: {formatBRL(incrementValue)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lance atual · Incremento definido · Próximo mínimo */}
+                  <div className="grid grid-cols-3 gap-2 pt-0.5">
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Lance atual</p>
+                      <p className="text-sm font-black text-white">{formatBRL(baseBid)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Incremento</p>
+                      <p className="text-sm font-black text-blue-300">{formatBRL(incrementValue)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Próx. mínimo</p>
+                      <p className="text-sm font-black text-emerald-300">{formatBRL(minNextBid)}</p>
+                    </div>
+                  </div>
+
+                  {/* Validação em tempo real do valor digitado */}
+                  {showBidValidation && (
+                    amountValid ? (
+                      <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-bold text-emerald-300">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        Lance válido — atende ao incremento configurado pelo vendedor.
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2 rounded-xl border border-red-400/30 bg-red-500/15 px-3 py-2 text-xs font-medium text-red-300">
+                        <X className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>O próximo lance mínimo permitido é <b className="text-white">{formatBRL(minNextBid)}</b>, conforme o incremento configurado pelo vendedor.</span>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
               {isAuction ? (
                 /* ═══ LEILÃO: identidade pela conta (sem nome/WhatsApp) ═══ */
                 user ? (
@@ -401,6 +494,7 @@ export function OfertaRapidaModal({
                   disabled={
                     sending ||
                     (!amount && !defaultAmount) ||
+                    (showBidValidation && !amountValid) ||
                     (!isAuction && (!nome.trim() || whatsapp.replace(/\D/g, "").length < 10))
                   }
                   className="h-14 w-full rounded-2xl text-base font-black text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"

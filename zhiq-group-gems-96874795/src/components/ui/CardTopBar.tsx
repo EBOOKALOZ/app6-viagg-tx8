@@ -63,53 +63,61 @@ export function CardTopBar({
   className,
 }: CardTopBarProps) {
   return (
-    <div
-      className={cn(
-        "absolute inset-x-2 top-2 z-20 flex items-start justify-between gap-2 pointer-events-none",
-        className
-      )}
-    >
-      {/* ─── ESQUERDA: logo + badges (quebram em 2 linhas se faltar espaço) ─── */}
-      <div className="flex items-start flex-wrap gap-1.5 min-w-0">
-        <img
-          src="/viagg-logo.png"
-          alt="Viagg-TX8"
-          width={44}
-          height={44}
-          loading="lazy"
-          decoding="async"
-          className={cn(
-            "h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none shrink-0",
-            logoClassName
+    <>
+      <div
+        className={cn(
+          "absolute inset-x-2 top-2 z-20 flex items-start justify-between gap-2 pointer-events-none",
+          className
+        )}
+      >
+        {/* ─── ESQUERDA: logo + badges (com max-w para não invadir botões) ─── */}
+        <div className="flex items-start flex-wrap gap-1.5 max-w-[calc(100%-80px)] pointer-events-none">
+          <img
+            src="/viagg-logo.png"
+            alt="Viagg-TX8"
+            width={44}
+            height={44}
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              "h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none shrink-0",
+              logoClassName
+            )}
+          />
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {modality && (
+              <span className={cn(BADGE_BASE, MODALITY[modality].cls)}>{MODALITY[modality].label}</span>
+            )}
+            {condition && CONDITION[condition] && (
+              <span className={cn(BADGE_BASE, CONDITION[condition].cls)}>{CONDITION[condition].label}</span>
+            )}
+          </div>
+        </div>
+
+        {/* ─── DIREITA: compartilhar + favoritar ─── */}
+        <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto">
+          {onShare && (
+            <button type="button" onClick={onShare} className={ACTION_BTN} title="Compartilhar" aria-label="Compartilhar">
+              <Share2 className="w-4 h-4" />
+            </button>
           )}
-        />
-        {modality && (
-          <span className={cn(BADGE_BASE, MODALITY[modality].cls)}>{MODALITY[modality].label}</span>
-        )}
-        {condition && CONDITION[condition] && (
-          <span className={cn(BADGE_BASE, CONDITION[condition].cls)}>{CONDITION[condition].label}</span>
-        )}
-        {verified && (
-          <span className={cn(BADGE_BASE, "bg-teal-500/90 text-white")}>
-            <Check className="h-3 w-3" /> Verificado
-          </span>
-        )}
+          {onFavorite && (
+            <button type="button" onClick={onFavorite} className={ACTION_BTN} title="Favoritar" aria-label="Favoritar">
+              <Heart className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "")} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ─── DIREITA: compartilhar + favoritar ─── */}
-      <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto">
-        {onShare && (
-          <button type="button" onClick={onShare} className={ACTION_BTN} title="Compartilhar" aria-label="Compartilhar">
-            <Share2 className="w-4 h-4" />
-          </button>
-        )}
-        {onFavorite && (
-          <button type="button" onClick={onFavorite} className={ACTION_BTN} title="Favoritar" aria-label="Favoritar">
-            <Heart className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "")} />
-          </button>
-        )}
-      </div>
-    </div>
+      {/* ─── BADGE VERIFICADO POSICIONADO ABAIXO DO LOGO ─── */}
+      {verified && (
+        <div className="absolute top-[58px] left-2.5 z-20 pointer-events-none">
+          <span className={cn(BADGE_BASE, "bg-teal-500/90 text-white flex items-center gap-1 shadow-md border border-teal-400/30")}>
+            <Check className="h-3 w-3" /> Verificado
+          </span>
+        </div>
+      )}
+    </>
   );
 }
 

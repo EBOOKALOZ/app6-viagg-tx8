@@ -319,6 +319,21 @@
   50% { opacity: 0.25; }
 }
 
+@keyframes blink-3hz {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+@keyframes blink-2hz {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+@keyframes blink-1hz {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
 @keyframes shimmer {
   0%   { background-position: 200% center; }
   100% { background-position: -200% center; }
@@ -334,5 +349,14 @@
   }
   .animate-vtx-blink {
     animation: vtx-blink 1s ease-in-out infinite;
+  }
+  .animate-blink-3hz {
+    animation: blink-3hz 0.33s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .animate-blink-2hz {
+    animation: blink-2hz 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .animate-blink-1hz {
+    animation: blink-1hz 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

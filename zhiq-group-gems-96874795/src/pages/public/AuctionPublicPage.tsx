@@ -571,6 +571,8 @@ export default function AuctionPublicPage() {
           defaultAmount={ofertaFixedAmount}
           allowCustomAmount={ofertaAllowCustom}
           context="auction"
+          currentBid={currentBid}
+          minimumIncrement={minimumIncrement}
           onSuccess={fetchData}
         />
       )}

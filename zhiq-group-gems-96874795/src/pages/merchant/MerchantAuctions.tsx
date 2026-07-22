@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MerchantRecentEvents } from "@/components/merchant/MerchantRecentEvents";
 import { PromotionPlansModal } from "@/components/promotion/PromotionPlansModal";
 import { PromotionPlansGrid } from "@/components/promotion/PromotionPlansGrid";
+import { INCREMENT_PRESETS } from "@/lib/auctions/incrementPresets";
 
 // ─── Helpers ────────────────────────────
 
@@ -38,11 +39,10 @@ function normalizeImageUrl(url: string | null | undefined): string | null {
   return trimmed;
 }
 
-// Presets de incremento mínimo do lance. O lojista escolhe um preset OU
-// "Personalizado" (campo numérico livre). O valor vira `form.minimum_increment`
-// e é ENFORÇADO no backend (place_auction_bid): todo lance deve ser múltiplo
-// exato do incremento a partir do lance inicial e >= próximo mínimo permitido.
-const INCREMENT_PRESETS = [1, 3, 6, 9, 12, 15, 18, 21, 25, 50, 100];
+// Presets de incremento mínimo do lance — FONTE ÚNICA compartilhada com a página
+// pública (o participante vê a MESMA régua). O lojista escolhe um preset OU
+// "Personalizado". O valor vira `form.minimum_increment` e é ENFORÇADO no backend
+// (place_auction_bid): todo lance deve respeitar o incremento a partir da base.
 
 function formatBRL(value: number) {
   return `R$ ${value.toFixed(2).replace(".", ",")}`;
@@ -1090,7 +1090,7 @@ function EditListingModal({
                   <div><span className="text-[9px] text-[#A7B0BE] block">Base</span><span className="font-black text-[#F5F7FA]">{formatBRL(parseFloat(form.starting_bid) || 0)}</span></div>
                   <div><span className="text-[9px] text-[#A7B0BE] block">Compre Agora</span><span className="font-black text-amber-400">{form.buy_now_price ? formatBRL(parseFloat(form.buy_now_price)) : "—"}</span></div>
                   <div><span className="text-[9px] text-[#A7B0BE] block">Reserva</span><span className="font-black text-emerald-400">{form.reserve_price ? formatBRL(parseFloat(form.reserve_price)) : "—"}</span></div>
-                  <div><span className="text-[9px] text-[#A7B0BE] block">Incremento</span><span className="font-black text-blue-400">{formatBRL(parseFloat(form.minimum_increment) || 1)}</span></div>
+                  <div><span className="text-[9px] text-[#A7B0BE] block">Incremento</span><span className="font-black text-[#00C58E] animate-blink-3hz inline-block">{formatBRL(parseFloat(form.minimum_increment) || 1)}</span></div>
                 </div>
               </div>
             </div>
