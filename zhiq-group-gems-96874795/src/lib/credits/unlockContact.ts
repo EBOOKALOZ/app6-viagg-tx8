@@ -11,11 +11,13 @@
  * O Wallet Core legado (wallets/wallet_transactions) está DESATIVADO.
  * Proibido criar funções específicas por módulo — sempre esta.
  *
- * @param module        'product' | 'real_estate' | 'vehicles' | 'services' | 'freight' | ...
+ * @param module        'product' | 'real_estate' | 'vehicles' | 'services' | 'freight' | 'travel' | ...
  * @param listingId     id do anúncio
  * @param buyerKey      identidade estável do comprador (telefone normalizado ou user_id)
- * @param valueHintCents valor anunciado em CENTS — usado quando o anúncio não
- *                       resolve o valor numérico no banco (ex.: produtos com price_label livre)
+ * @param valueHintCents DEPRECATED (FASE 2, 2026-07-22): IGNORADO pelo banco. O
+ *                       valor do cálculo vem SEMPRE do anúncio oficial persistido;
+ *                       o frontend nunca informa o valor. Módulos sem valor numérico
+ *                       persistido (freight/services) usam o piso. Mantido só p/ compat.
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -53,8 +55,9 @@ export async function unlockContact(
  *
  * Chama a RPC oficial `wallet_unlock_charge_cents` (STABLE, autorizada p/
  * authenticated) que é a FONTE ÚNICA do valor: lê `orion_commission_policy`
- * (percentual + piso + teto) e aplica ao valor do anúncio/hint. O front NUNCA
- * calcula o percentual — apenas exibe o que o backend devolve.
+ * (percentual + piso + teto) e aplica ao valor OFICIAL do anúncio (banco). O
+ * front NUNCA calcula o percentual nem informa o valor — apenas exibe o que o
+ * backend devolve (o parâmetro valueHintCents é ignorado desde a FASE 2).
  *
  * Retorna o custo em CENTS (o mesmo que será debitado no unlock), ou null se
  * não houver política/valor. Idempotente e barato (pode ser chamado por card).
