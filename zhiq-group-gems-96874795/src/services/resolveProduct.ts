@@ -68,7 +68,7 @@ const REGISTRY: ModuleResolver[] = [
   {
     module: "vehicles", table: "vehicle_listings",
     select: "id, title, brand, model, description, price_brl, condition, owner_user_id",
-    map: (r, id) => ({ id, module: "vehicles", title: r.title ?? [r.brand, r.model].filter(Boolean).join(" ") || "Veículo", description: r.description ?? null, image_url: null, price: num(r.price_brl), price_label: null, condition: r.condition ?? null, store_id: null, owner_user_id: r.owner_user_id ?? null, category: "Veículos" }),
+    map: (r, id) => ({ id, module: "vehicles", title: r.title ?? ([r.brand, r.model].filter(Boolean).join(" ") || "Veículo"), description: r.description ?? null, image_url: null, price: num(r.price_brl), price_label: null, condition: r.condition ?? null, store_id: null, owner_user_id: r.owner_user_id ?? null, category: "Veículos" }),
   },
   {
     module: "services", table: "service_listings",
