@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -27,8 +27,21 @@ import DiscountRequestModal from "@/components/public/DiscountRequestModal";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
+import { MarketAuctionCard } from "@/components/advertiser/MarketAuctionCard";
+import { Gavel } from "lucide-react";
+import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
+import { StoreThemeScope } from "@/components/public/store/StoreThemeScope";
+import { sanitizeAppearance } from "@/lib/store-theme";
 
-type TabValue = "home" | "all" | "promo";
+type TabValue = "home" | "all" | "promo" | "leiloes" | "arremates";
+
+// Mapeia o ?tab= da URL (usado pelo novo fluxo card-de-leilão → loja) para a aba.
+function tabFromParam(p: string | null): TabValue | null {
+    if (p === "leiloes" || p === "leilao" || p === "leiloes" || p === "leilões") return "leiloes";
+    if (p === "arremates" || p === "arremate") return "arremates";
+    if (p === "all" || p === "promo" || p === "home") return p;
+    return null;
+}
 
 function normalizeImageUrl(url: string | null | undefined, bucket: string = 'marketing-materials'): string | null {
     if (!url || typeof url !== "string") return null;
@@ -45,12 +58,14 @@ function normalizeImageUrl(url: string | null | undefined, bucket: string = 'mar
 export default function StorePublicPage() {
     const { storeId } = useParams<{ storeId: string }>();
     const navigate = useNavigate();
-    
-    // UI State
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // UI State — aba inicial pode vir de ?tab= (novo fluxo: clicar num card de
+    // leilão/arremate abre a loja já na aba correta).
     const [search, setSearch] = useState("");
     const [cartOpen, setCartOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<Record<string, boolean>>({});
-    const [activeTab, setActiveTab] = useState<TabValue>("home");
+    const [activeTab, setActiveTab] = useState<TabValue>(() => tabFromParam(searchParams.get("tab")) ?? "home");
     const [activeCategory, setActiveCategory] = useState<string>("all");
     const [inquiryProduct, setInquiryProduct] = useState<StoreProduct | null>(null);
     const [offerProduct, setOfferProduct] = useState<StoreProduct | null>(null);
@@ -448,6 +463,42 @@ export default function StorePublicPage() {
         refetchOnWindowFocus: true,
     });
 
+    // Leilões e Arremates DESTA loja (novo fluxo: card de leilão/arremate abre a
+    // loja na aba correta). Mesma leitura pública de auction_listings já usada em
+    // /leiloes — só filtrada por store_id. Lazy: só busca quando a aba está ativa.
+    const { data: storeAuctions = [], isLoading: loadingAuctions } = useQuery<any[]>({
+        queryKey: ["public-store-auctions", storeId],
+        enabled: !!storeId && (activeTab === "leiloes" || activeTab === "arremates"),
+        refetchInterval: 15_000,
+        queryFn: async () => {
+            const { data } = await (supabase.from("auction_listings") as any)
+                .select("*")
+                .eq("store_id", storeId!)
+                .not("status", "in", "(canceled,cancelled,cancelado,deleted,removed,draft)")
+                .order("ends_at", { ascending: true });
+            return data || [];
+        },
+    });
+
+    const storeLeiloes = useMemo(
+        () => storeAuctions.filter((a: any) => (a.listing_type ?? "auction") === "auction"),
+        [storeAuctions]
+    );
+    const storeArremates = useMemo(
+        () => storeAuctions.filter((a: any) => a.listing_type === "arremate"),
+        [storeAuctions]
+    );
+
+    // Troca de aba + reflete o ?tab= na URL (compartilhável / sobrevive a refresh).
+    const selectTab = (tab: TabValue) => {
+        setActiveTab(tab);
+        setActiveCategory("all");
+        setSearch("");
+        const next = new URLSearchParams(searchParams);
+        if (tab === "home") next.delete("tab"); else next.set("tab", tab);
+        setSearchParams(next, { replace: true });
+    };
+
     // Tracking
     useEffect(() => {
         if (storeId && store) {
@@ -507,6 +558,16 @@ export default function StorePublicPage() {
     const homeFeatured = useMemo(() => products.filter(p => p.is_featured).slice(0, 6), [products]);
     const homeLatest = platformLatest;
 
+    // Tema visual da loja (merchant_stores.appearance) — sanitizado no load;
+    // null = visual padrão da plataforma (nada muda).
+    const appearance = useMemo(() => sanitizeAppearance((store as any)?.appearance), [store]);
+    const productLayout = appearance?.layout.products ?? "carousel";
+    const productGridClass =
+        productLayout === "grid" ? "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4"
+        : productLayout === "large" ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+        : productLayout === "compact" ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+        : null; // carousel (padrão)
+
     const handleAddToCart = (product: StoreProduct) => {
         cart.addItem(product.id, 1);
         globalCart.addItem(
@@ -556,14 +617,15 @@ export default function StorePublicPage() {
     }
 
     return (
-        <MarketLayout 
+        <MarketLayout
             search={search}
             setSearch={setSearch}
-            mainClassName="bg-[#F5E62B] flex flex-col" 
-            blueFooter 
+            mainClassName={appearance ? "flex flex-col" : "bg-[#F5E62B] flex flex-col"}
+            blueFooter
             blueFooterLabel={`Loja: ${store.store_name}`}
             headerChildren={<MarketNavButtons />}
         >
+            <StoreThemeScope appearance={appearance}>
             <div className="min-h-screen pb-24">
                 
                 {/* ─── HEADER PREMIUM ─── */}
@@ -582,24 +644,38 @@ export default function StorePublicPage() {
 
 
                 {/* ─── STICKY TABS NAVIGATION ─── */}
-                <div className="sticky top-[64px] lg:top-[80px] z-30 bg-white/80 backdrop-blur-md border-b border-zinc-200 mb-8 shadow-sm">
+                <div className="st-surface sticky top-[64px] lg:top-[80px] z-30 bg-white/80 backdrop-blur-md border-b border-zinc-200 mb-8 shadow-sm">
                     <div className="w-full px-4 lg:px-8 xl:px-12 flex items-center justify-between gap-4 overflow-x-auto no-scrollbar">
                         <div className="flex items-center gap-6 lg:gap-8 min-w-max">
-                            <button 
-                                onClick={() => { setActiveTab("home"); setActiveCategory("all"); setSearch(""); }}
-                                className={cn("py-4 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "home" ? "border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                            <button
+                                onClick={() => selectTab("home")}
+                                className={cn("py-4 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "home" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
                             >
                                 Página Principal
                             </button>
-                            <button 
-                                onClick={() => { setActiveTab("all"); setActiveCategory("all"); setSearch(""); }}
-                                className={cn("py-4 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "all" ? "border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                            <button
+                                onClick={() => selectTab("all")}
+                                className={cn("py-4 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "all" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
                             >
                                 Todos os Produtos
                             </button>
-                            <button 
-                                onClick={() => { setActiveTab("promo"); setActiveCategory("all"); setSearch(""); }}
-                                className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "promo" ? "border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                            <button
+                                onClick={() => selectTab("leiloes")}
+                                className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "leiloes" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                            >
+                                <Gavel className={cn("w-4 h-4", activeTab === "leiloes" ? "text-[#FF6A00]" : "")} />
+                                Leilões
+                            </button>
+                            <button
+                                onClick={() => selectTab("arremates")}
+                                className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "arremates" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                            >
+                                <Gavel className={cn("w-4 h-4", activeTab === "arremates" ? "text-blue-500" : "")} />
+                                Arremates
+                            </button>
+                            <button
+                                onClick={() => selectTab("promo")}
+                                className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "promo" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
                             >
                                 <Flame className={cn("w-4 h-4", activeTab === "promo" ? "text-orange-500" : "")} />
                                 Promoções
@@ -624,25 +700,25 @@ export default function StorePublicPage() {
                     {/* ─── SIDEBAR DE CATEGORIAS (Desktop) ─── */}
                     {categories.length > 0 && (
                         <aside className="hidden lg:block w-64 shrink-0">
-                            <div className="sticky top-[160px] bg-white p-6 rounded-3xl shadow-lg border border-zinc-100">
-                                <h3 className="text-xs font-black text-zinc-900 uppercase tracking-widest mb-6">Navegar por</h3>
+                            <div className="st-card sticky top-[160px] bg-white p-6 rounded-3xl shadow-lg border border-zinc-100">
+                                <h3 className="st-heading text-xs font-black text-zinc-900 uppercase tracking-widest mb-6">Navegar por</h3>
                                 <div className="space-y-1">
-                                    <button 
+                                    <button
                                         onClick={() => { setActiveCategory("all"); setActiveTab("all"); }}
                                         className={cn(
                                             "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[11px] tracking-wider font-black uppercase transition-all",
-                                            activeCategory === "all" ? "bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/20" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                                            activeCategory === "all" ? "st-chip-active bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/20" : "st-muted text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
                                         )}
                                     >
                                         <span>Todas as Categorias</span>
                                     </button>
                                     {categories.map(cat => (
-                                        <button 
+                                        <button
                                             key={cat}
                                             onClick={() => { setActiveCategory(cat); setActiveTab("all"); }}
                                             className={cn(
                                                 "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[11px] tracking-wider font-black uppercase transition-all text-left",
-                                                activeCategory === cat ? "bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/20" : "text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
+                                                activeCategory === cat ? "st-chip-active bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/20" : "st-muted text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900"
                                             )}
                                         >
                                             <span className="line-clamp-2">{cat}</span>
@@ -662,7 +738,7 @@ export default function StorePublicPage() {
                                 {categories.length > 0 && (
                                     <div className="space-y-4 lg:hidden">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight">Categorias da Loja</h3>
+                                        <h3 className="st-heading text-xl font-black text-zinc-900 uppercase tracking-tight">Categorias da Loja</h3>
                                     </div>
                                     <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
                                         <button 
@@ -694,10 +770,10 @@ export default function StorePublicPage() {
                             {homeFeatured.length > 0 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-2xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
-                                            <Sparkles className="w-6 h-6 text-[#FF6A00]" /> Produtos em Destaque
+                                        <h3 className="st-heading text-2xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
+                                            <Sparkles className="st-accent w-6 h-6 text-[#FF6A00]" /> Produtos em Destaque
                                         </h3>
-                                        <Button variant="ghost" className="text-[#FF6A00] font-bold text-xs uppercase" onClick={() => setActiveTab("all")}>
+                                        <Button variant="ghost" className="st-accent text-[#FF6A00] font-bold text-xs uppercase" onClick={() => setActiveTab("all")}>
                                             Ver Tudo
                                         </Button>
                                     </div>
@@ -731,7 +807,7 @@ export default function StorePublicPage() {
                             {homeLatest.length > 0 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-2xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
+                                        <h3 className="st-heading text-2xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
                                             Recém-Chegados
                                         </h3>
                                     </div>
@@ -772,8 +848,55 @@ export default function StorePublicPage() {
                         </div>
                     )}
 
+                        {/* ─── TAB: LEILÕES / ARREMATES (itens desta loja) ─── */}
+                        {(activeTab === "leiloes" || activeTab === "arremates") && (() => {
+                            const isLeiloes = activeTab === "leiloes";
+                            const items = isLeiloes ? storeLeiloes : storeArremates;
+                            return (
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn("w-11 h-11 rounded-2xl flex items-center justify-center shrink-0", isLeiloes ? "bg-[#FF6A00]/10 text-[#FF6A00]" : "bg-blue-500/10 text-blue-500")}>
+                                            <Gavel className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h2 className="st-heading text-2xl font-black text-zinc-900 uppercase tracking-tight">
+                                                {isLeiloes ? "Leilões da Loja" : "Arremates da Loja"}
+                                            </h2>
+                                            <p className="st-muted text-[11px] font-bold uppercase tracking-widest text-zinc-400">
+                                                {items.length} {items.length === 1 ? "item" : "itens"} · {store.store_name}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {loadingAuctions ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                            {[0, 1, 2].map(i => (
+                                                <div key={i} className="h-[420px] rounded-3xl bg-zinc-100 animate-pulse" />
+                                            ))}
+                                        </div>
+                                    ) : items.length === 0 ? (
+                                        <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-dashed border-zinc-200">
+                                            <Gavel className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
+                                            <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                                                {isLeiloes ? "Esta loja não tem leilões no momento." : "Esta loja não tem arremates no momento."}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                                            {items.map((a: any) => (
+                                                <MarketAuctionCard key={a.id} listing={a} variant="carousel" linkTo="detail" />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
                         {/* ─── TAB: ALL PRODUCTS / PROMOS / SEARCH ─── */}
-                        {(activeTab !== "home" || search) && (
+                        {/* Produtos aparecem nas abas de produto OU quando há busca ativa
+                            (busca vale em qualquer aba de produto), mas NUNCA nas abas
+                            Leilões/Arremates (que têm seu próprio render acima). */}
+                        {activeTab !== "leiloes" && activeTab !== "arremates" && (activeTab !== "home" || search) && (
                             <div className="space-y-6">
                                 
                                 {/* Category Filter Pills (Mobile Only if not promo) */}
@@ -805,31 +928,38 @@ export default function StorePublicPage() {
                                         Nenhum produto encontrado.
                                     </p>
                                 </div>
-                            ) : (
-                                <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
-                                    {filteredProducts.map(product => (
-                                        <StorePremiumCard 
-                                            key={product.id}
-                                            product={product}
-                                            isRecentlyAdded={recentlyAdded[product.id]}
-                                            onAddToCart={handleAddToCart}
-                                            onAskQuestion={handleAskQuestion}
-                                                onMakeOffer={handleMakeOffer}
-                                            onClick={() => {
-                                                if (storeId) {
-                                                    consumeMarketplaceProductClick({
-                                                        productId: product.id,
-                                                        storeId,
-                                                        source: "store_page",
-                                                    });
-                                                }
-                                                const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
-                                                navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
-                                            }}
-                                        />
-                                    ))}
-                                </HorizontalCarousel>
-                            )}
+                            ) : (() => {
+                                const cards = filteredProducts.map(product => (
+                                    <StorePremiumCard
+                                        key={product.id}
+                                        product={product}
+                                        isRecentlyAdded={recentlyAdded[product.id]}
+                                        onAddToCart={handleAddToCart}
+                                        onAskQuestion={handleAskQuestion}
+                                        onMakeOffer={handleMakeOffer}
+                                        onClick={() => {
+                                            if (storeId) {
+                                                consumeMarketplaceProductClick({
+                                                    productId: product.id,
+                                                    storeId,
+                                                    source: "store_page",
+                                                });
+                                            }
+                                            const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
+                                            navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
+                                        }}
+                                    />
+                                ));
+                                // Estilo dos produtos definido no tema da loja (grid/cards grandes/
+                                // compacto); carrossel = comportamento padrão da plataforma.
+                                return productGridClass ? (
+                                    <div className={productGridClass}>{cards}</div>
+                                ) : (
+                                    <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
+                                        {cards}
+                                    </HorizontalCarousel>
+                                );
+                            })()}
                         </div>
                     )}
                     </div>
@@ -862,14 +992,27 @@ export default function StorePublicPage() {
                     </button>
                 </div>
 
-                <div className="w-full px-4 lg:px-8 xl:px-12 mt-20 text-center space-y-8">
-                    <div className="inline-flex items-center gap-3 bg-white px-6 py-3 rounded-full shadow-lg border border-zinc-100 ring-2 ring-zinc-50">
-                        <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                        <span className="font-black uppercase text-[9px] tracking-[0.2em] text-zinc-900">Plataforma Viagg-TX8 • Compra Segura</span>
+                <div className="w-full px-4 lg:px-8 xl:px-12 mt-20 flex justify-center">
+                    {/* Selo de conexão: a Viagg-TX8 é vitrine/plataforma — a negociação é
+                        direta entre as partes (não vendedora nem intermediadora). */}
+                    <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 bg-white px-6 sm:px-9 py-4 sm:py-5 rounded-2xl shadow-lg border border-zinc-100 ring-2 ring-zinc-50 max-w-[95vw]">
+                        <div className="flex items-center gap-2.5 shrink-0">
+                            <img src="/viagg-logo.png" alt="Viagg-TX8" className="w-7 h-7 sm:w-8 sm:h-8 object-contain shrink-0" />
+                            <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-500 shrink-0" />
+                        </div>
+                        <div className="flex flex-col text-center sm:text-left leading-snug min-w-0">
+                            <span className="font-black uppercase text-[11px] sm:text-sm tracking-[0.1em] text-zinc-900">
+                                A Plataforma Apresenta o Produto
+                            </span>
+                            <span className="mt-0.5 text-[10.5px] sm:text-xs font-medium text-zinc-600 leading-snug">
+                                A negociação acontece diretamente entre comprador e vendedor.
+                            </span>
+                        </div>
                     </div>
                 </div>
 
             </div>
+            </StoreThemeScope>
 
             <ProductInquiryModal
                 open={!!inquiryProduct}
