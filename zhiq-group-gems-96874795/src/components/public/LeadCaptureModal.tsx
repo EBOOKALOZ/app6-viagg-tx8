@@ -15,10 +15,10 @@ import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Phone, Store, MapPin, ShoppingBag, MessageCircle, Loader2, CheckCircle, Shield } from "lucide-react";
+import { Phone, Store, MapPin, ShoppingBag, MessageCircle, Loader2, CheckCircle, X, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { trackProductEvent } from "@/skills/growth/trackProductEvent";
 import { displayPriceLabel } from "@/lib/utils";
 import { toast } from "sonner";
@@ -195,7 +195,35 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
 
     return (
         <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-            <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
+            <DialogContent className="sm:max-w-md max-h-[90vh] p-0 gap-0 overflow-hidden rounded-[28px] border-0 shadow-2xl flex flex-col">
+
+                {/* ═══ CABEÇALHO OFICIAL (fixo) — logo + categoria + título + fechar ═══ */}
+                <div className="shrink-0 relative bg-gradient-to-br from-[#FF6A00] via-[#FF7A1A] to-[#FF8A33] px-5 pt-5 pb-4">
+                    <button
+                        onClick={onClose}
+                        aria-label="Fechar"
+                        className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white/90 backdrop-blur-md transition-all hover:bg-white/25 hover:text-white"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                    <div className="flex items-center gap-3 pr-10">
+                        <div className="flex items-center justify-center shrink-0 overflow-hidden rounded-xl bg-white/90 p-1 shadow-md ring-1 ring-white/40">
+                            <img src="/logo.png" alt="Viagg-TX8" className="w-10 h-10 rounded-lg object-contain" />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-orange-100">Mercado</p>
+                            <DialogTitle className="text-white font-black text-lg leading-tight flex items-center gap-1.5">
+                                <MessageCircle className="h-4 w-4 shrink-0" /> Falar com o vendedor
+                            </DialogTitle>
+                            {product.title && (
+                                <p className="text-white/85 text-xs font-semibold leading-snug line-clamp-1 mt-0.5">{product.title}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ═══ CORPO (rolável) ═══ */}
+                <div className="flex-1 min-h-0 overflow-y-auto">
                 {submitted ? (
                     /* ── Success State ── */
                     <div className="p-8 text-center space-y-4">
@@ -221,41 +249,33 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                     </div>
                 ) : (
                     <>
-                        {/* ── Header with Store Info ── */}
-                        <div className="bg-gradient-to-r from-[#FF6A00] to-[#FF8A33] p-5">
-                            <DialogHeader>
-                                <DialogTitle className="text-lg font-black text-white flex items-center gap-2">
-                                    <MessageCircle className="h-5 w-5" />
-                                    Falar com o vendedor
-                                </DialogTitle>
-                            </DialogHeader>
-
-                            {/* Store info inside orange header */}
-                            {loading ? (
-                                <div className="flex justify-center py-2 mt-2">
-                                    <Loader2 className="h-5 w-5 animate-spin text-white/50" />
-                                </div>
-                            ) : store && (
-                                <div className="flex items-center gap-3 mt-3 bg-white/15 rounded-xl px-3 py-2.5 backdrop-blur-sm">
+                        {/* ── Store Info (loja do anúncio) ── */}
+                        {loading ? (
+                            <div className="flex justify-center py-4">
+                                <Loader2 className="h-5 w-5 animate-spin text-[#FF6A00]/50" />
+                            </div>
+                        ) : store && (
+                            <div className="px-5 pt-4">
+                                <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5">
                                     {store.logo_url ? (
-                                        <img src={store.logo_url} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-white/40 flex-shrink-0" />
+                                        <img src={store.logo_url} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-orange-200 flex-shrink-0" />
                                     ) : (
-                                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                                            <Store className="h-5 w-5 text-white" />
+                                        <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                            <Store className="h-5 w-5 text-[#FF6A00]" />
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-white truncate">{store.store_name}</p>
+                                        <p className="text-sm font-bold text-gray-800 truncate">{store.store_name}</p>
                                         {(store.city || store.bairro) && (
-                                            <p className="text-xs text-white/70 flex items-center gap-1 mt-0.5">
+                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
                                                 <MapPin className="h-3 w-3" />
                                                 {[store.bairro, store.city].filter(Boolean).join(", ")}
                                             </p>
                                         )}
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         {/* ── Product Info ── */}
                         <div className="px-5 pt-4 pb-3">
@@ -340,12 +360,12 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                             </div>
                         </div>
 
-                        {/* ── Disclaimer ── */}
+                        {/* ── Card de Segurança ── */}
                         <div className="px-5 pb-3 space-y-2">
-                            <div className="flex items-start gap-2 bg-blue-50 rounded-lg p-2.5">
-                                <Shield className="h-3.5 w-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
-                                <p className="text-[10px] text-blue-600 leading-relaxed">
-                                    Você está entrando em contato diretamente com a loja. Seus dados serão compartilhados apenas com o vendedor deste produto.
+                            <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-100 rounded-lg p-2.5">
+                                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-[10px] text-emerald-700 leading-relaxed">
+                                    🛡️ A plataforma apresenta o produto. A negociação acontece diretamente entre comprador e vendedor.
                                 </p>
                             </div>
                             <FormDisclaimerStrip />
@@ -368,6 +388,26 @@ export default function LeadCaptureModal({ product, open, onClose }: LeadCapture
                         </div>
                     </>
                 )}
+                </div>
+
+                {/* ═══ RODAPÉ OFICIAL (fixo, azul institucional) ═══ */}
+                <div className="shrink-0 bg-[#68c7f2] text-zinc-900 border-t border-white/20 px-5 py-3 space-y-1.5">
+                    <p className="flex items-center justify-center gap-1.5 text-[11px] font-black text-center leading-snug">
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                        VIAGG-TX8 • Plataforma de conexão entre compradores e vendedores
+                    </p>
+                    <p className="text-[10px] text-center text-zinc-900/75 leading-snug">
+                        A plataforma apresenta o produto. A negociação acontece diretamente entre comprador e vendedor.
+                    </p>
+                    <nav className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 pt-0.5 text-[10px] font-bold">
+                        <Link to="/privacidade" className="hover:underline">Política de Privacidade</Link>
+                        <span aria-hidden className="text-zinc-900/30">•</span>
+                        <Link to="/terms" className="hover:underline">Termos de Uso</Link>
+                        <span aria-hidden className="text-zinc-900/30">•</span>
+                        <Link to="/suporte" className="hover:underline">Central de Ajuda</Link>
+                    </nav>
+                    <p className="text-[9px] text-center text-zinc-900/60">© 2026 Viagg-TX8. Todos os direitos reservados.</p>
+                </div>
             </DialogContent>
         </Dialog>
     );
