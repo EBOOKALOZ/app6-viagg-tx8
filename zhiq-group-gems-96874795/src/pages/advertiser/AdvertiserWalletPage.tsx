@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useWalletCenter, WCTxn, WCKind } from "@/hooks/useWalletCenter";
 import { WalletTopupButton } from "@/components/merchant/WalletTopupButton";
+import { CommissionUnlockNotice } from "@/components/advertiser/CommissionUnlockNotice";
 import {
   Wallet, RefreshCw, ArrowUpRight, ArrowDownRight, QrCode, Receipt, ShoppingBag,
   AlertCircle, CheckCircle2, Clock, Eye, EyeOff, Loader2, Banknote, Settings,
@@ -219,6 +220,8 @@ export default function AdvertiserWalletPage() {
           <RefreshCw className={`h-4 w-4 ${wc.isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
+
+      <CommissionUnlockNotice />
 
       {wc.isError && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">

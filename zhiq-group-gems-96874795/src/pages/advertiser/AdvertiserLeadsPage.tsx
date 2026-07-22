@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { useContactIntentions } from "@/hooks/useContactIntentions";
+import { CommissionUnlockNotice } from "@/components/advertiser/CommissionUnlockNotice";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
 import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
 import { useAdvertiserPurchaseHistory } from "@/hooks/useAdvertiserCreditPurchase";
@@ -420,18 +421,7 @@ export default function AdvertiserLeadsPage() {
       </div>
 
       {/* ── Como funciona a comissão de 2% (liberação de contato) ── */}
-      <div className="rounded-xl border border-[#FF6A00]/30 bg-[#FF6A00]/[0.06] px-4 py-3 flex items-start gap-3">
-        <Unlock className="w-5 h-5 text-[#FF6A00] shrink-0 mt-0.5" />
-        <div className="text-[13px] leading-relaxed text-[#C7CFDA]">
-          <span className="font-black text-[#F5F7FA]">Como funciona a liberação de contato:</span>{" "}
-          ao liberar um interessado, debitamos da sua carteira uma comissão de{" "}
-          <span className="font-black text-[#FF6A00]">2% do valor anunciado</span>{" "}
-          (mínimo <span className="font-bold text-[#F5F7FA]">R$ 9</span>). É{" "}
-          <span className="font-bold text-emerald-400">cobrança única por interessado</span>{" "}
-          — o mesmo contato nunca é cobrado duas vezes, mesmo após recarregar a página.
-          O valor é calculado automaticamente pela plataforma a partir do preço do seu anúncio.
-        </div>
-      </div>
+      <CommissionUnlockNotice />
 
       {/* ── Ofertas via "Minha Oferta é..." ── */}
       <Card className="bg-[#0F1419] border-[#2A3038] overflow-hidden">

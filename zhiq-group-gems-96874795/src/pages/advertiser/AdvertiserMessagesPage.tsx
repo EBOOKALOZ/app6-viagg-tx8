@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CommissionUnlockNotice } from "@/components/advertiser/CommissionUnlockNotice";
 import { Badge } from "@/components/ui/badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -383,6 +384,7 @@ export default function AdvertiserMessagesPage() {
       </div>
 
       <div className="px-4 md:px-6 py-6 space-y-6 max-w-[1400px] mx-auto">
+        <CommissionUnlockNotice />
 
         {/* ── KPI Dashboard ── */}
         {!isLoading && stats.total > 0 && (
