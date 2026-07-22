@@ -137,3 +137,21 @@ Fecha a ressalva do §5: dá a Fretes/Mudanças/Serviços um **valor total ofici
 
 **Estado:** Fretes/Mudanças/Serviços agora cobram **2% do valor total quando informado**, com
 piso R$9 como padrão seguro. `price_per_km` (taxa) permanece só informativo — nunca é base de 2%.
+
+### 6.1 `total_price` é BASE INTERNA — não aparece no público
+Decisão de produto: o valor total serve **apenas** para calcular os 2%, não é exibido no
+card/detalhe público. Ações tomadas:
+- `FreightDetailPage.tsx` e `ServiceDetailPage.tsx` usavam `.select('*')` na tabela base
+  (retornava `total_price` no payload ao visitante). **Trocado por lista explícita de colunas
+  sem `total_price`** — o valor não sai mais do servidor para o público.
+- As views públicas `public_freight_listings`/`public_service_listings` já usam lista explícita
+  e **não** incluem `total_price` (verificado); as telas do anunciante também selecionam colunas
+  explícitas. O formulário de edição (dono autenticado) continua lendo o valor para pré-preencher.
+- Lockdown estrito opcional (não feito por ser desproporcional a um campo de preço, não-secreto):
+  como `anon` tem SELECT de tabela, um REVOKE por coluna só faria efeito trocando o grant de
+  tabela por grants por-coluna — alto custo/manutenção; a projeção explícita já cumpre o objetivo.
+
+### 6.2 Aviso dos 2% no painel do anunciante/vendedor
+Adicionado um banner informativo em `AdvertiserLeadsPage.tsx` (Mensagens & Leads), acima da lista
+de ofertas, explicando: comissão de **2% do valor anunciado** (mínimo R$ 9) na liberação de
+contato, **cobrança única por interessado**, valor calculado automaticamente pela plataforma.

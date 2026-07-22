@@ -43,7 +43,9 @@ export const ServiceDetailPage = () => {
     queryFn: async () => {
       const { data, error: fetchError } = await supabase
         .from('service_listings' as any)
-        .select('*')
+        // NÃO usar select('*'): total_price é base INTERNA da comissão de 2% e
+        // não pode vazar no payload público. Selecionar só o que a página exibe.
+        .select('id, title, description, service_type, price_label, city, state, neighborhood, public_address_label, visibility_status')
         .eq('id', id)
         .maybeSingle();
 

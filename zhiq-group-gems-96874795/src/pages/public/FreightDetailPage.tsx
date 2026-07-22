@@ -44,7 +44,9 @@ export const FreightDetailPage = () => {
     queryFn: async () => {
       const { data, error: fetchError } = await supabase
         .from('freight_listings' as any)
-        .select('*')
+        // NÃO usar select('*'): total_price é base INTERNA da comissão de 2% e
+        // não pode vazar no payload público. Selecionar só o que a página exibe.
+        .select('id, title, description, vehicle_type, price_label, price_per_km, coverage_routes, city, state, neighborhood, public_address_label, is_featured, subcategoria, visibility_status')
         .eq('id', id)
         .maybeSingle();
 
