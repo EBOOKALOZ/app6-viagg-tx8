@@ -434,7 +434,7 @@ export function OfertaRapidaModal({
         </div>
 
         {/* ═══ RODAPÉ OFICIAL (fixo, azul institucional) ═══ */}
-        <div className="shrink-0 bg-[#68c7f2] text-zinc-900 border-t border-white/20 px-5 py-3 space-y-1.5">
+        <div className="shrink-0 bg-[#68c7f2] text-zinc-900 border-t border-white/20 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-1.5">
           <p className="flex items-center justify-center gap-1.5 text-[11px] font-black text-center leading-snug">
             <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
             VIAGG-TX8 • Plataforma de conexão entre compradores e vendedores
