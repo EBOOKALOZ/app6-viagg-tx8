@@ -1,5 +1,5 @@
-import { useMemo, useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useMemo, useEffect, useState, useRef } from "react";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -19,6 +19,7 @@ import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking
 import { cn, parseBRLCurrency } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
+import { resolveProductById } from "@/services/resolveProduct";
 
 import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StorePremiumCard, StoreProduct } from "@/components/public/store/StorePremiumCard";
@@ -32,6 +33,9 @@ import { Gavel } from "lucide-react";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { StoreThemeScope } from "@/components/public/store/StoreThemeScope";
 import { sanitizeAppearance } from "@/lib/store-theme";
+import {
+    Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 type TabValue = "home" | "all" | "promo" | "leiloes" | "arremates";
 
@@ -70,11 +74,21 @@ export default function StorePublicPage() {
     const [inquiryProduct, setInquiryProduct] = useState<StoreProduct | null>(null);
     const [offerProduct, setOfferProduct] = useState<StoreProduct | null>(null);
 
+    // Carrossel "Mais produtos desta loja" (abaixo do produto em destaque)
+    const [moreCat, setMoreCat] = useState<string>("all");
+    const [moreLimit, setMoreLimit] = useState(12);
+
+    // Produto em DESTAQUE via ?product= (novo fluxo: clicar num produto abre a
+    // loja com ele em destaque; trocar de produto NÃO sai da loja). String estável.
+    // Aceita ?product= E ?produto= (compatibilidade PT/EN — mesmo comportamento).
+    const highlightedProductId = searchParams.get("product") ?? searchParams.get("produto");
+    const featuredRef = useRef<HTMLDivElement | null>(null);
+
     // Fetchers
     const cart = useStoreCart(storeId);
     const globalCart = useGlobalCart();
     const { settings: paySettings } = useStorePaymentSettings(storeId);
-    const { trackStoreVisit } = useMarketplaceTracking();
+    const { trackStoreVisit, trackProductVisit } = useMarketplaceTracking();
 
     const { data: store, isLoading: loadingStore } = useQuery({
         queryKey: ["public-store-info", storeId],
@@ -449,19 +463,9 @@ export default function StorePublicPage() {
         refetchInterval: 60_000,
     });
 
-    const { data: stats } = useQuery({
-        queryKey: ["public-store-rating-stats", storeId],
-        enabled: !!storeId,
-        queryFn: async () => {
-            const { data } = await supabase.from("product_rating_stats" as any).select("*").eq("merchant_store_id", storeId);
-            return data && data.length > 0 ? {
-                average: (data.reduce((acc: number, curr: any) => acc + curr.average_rating, 0) / data.length).toFixed(1),
-                count: data.reduce((acc: number, curr: any) => acc + curr.review_count, 0)
-            } : null;
-        },
-        refetchInterval: 10000,
-        refetchOnWindowFocus: true,
-    });
+    // Query de avaliação REMOVIDA: a tabela product_rating_stats não existe no
+    // banco (sempre 404 → stats null), então as estrelas nunca apareciam. Sem
+    // fonte real de rating, não exibimos avaliação (decisão de produto 07-21).
 
     // Leilões e Arremates DESTA loja (novo fluxo: card de leilão/arremate abre a
     // loja na aba correta). Mesma leitura pública de auction_listings já usada em
@@ -591,6 +595,79 @@ export default function StorePublicPage() {
         setOfferProduct(product);
     };
 
+    // ── PRODUTO EM DESTAQUE (?product=) ──────────────────────────────────────
+    // 1) Resolve pelo array já carregado (sem fetch novo no caso comum).
+    const featuredFromList = useMemo(
+        () => (highlightedProductId ? products.find(p => p.id === highlightedProductId) ?? null : null),
+        [products, highlightedProductId]
+    );
+    // 2) Fallback: produto ainda não veio no array (ex.: chegada via redirect
+    //    antes do refetch). Só dispara quando não achou na lista.
+    const { data: featuredFallback } = useQuery<StoreProduct | null>({
+        queryKey: ["store-featured-product", storeId, highlightedProductId],
+        enabled: !!highlightedProductId && !featuredFromList,
+        queryFn: async () => {
+            // CAMADA ÚNICA de resolução (multimódulo). A StorePublicPage NÃO conhece
+            // tabela: pede "encontre este produto" e recebe objeto padronizado.
+            // Novo módulo = registrar no resolveProductById; aqui nada muda.
+            const r = await resolveProductById(highlightedProductId!);
+            if (!r) return null;
+            return {
+                id: r.id, title: r.title, price: r.price, original_price: null,
+                image_url: normalizeImageUrl(r.image_url), short_description: r.description,
+                category: r.category, tracking_slug: null, is_featured: false,
+                cta_label: null, stock: null,
+            } as unknown as StoreProduct;
+        },
+    });
+    const featuredProduct: StoreProduct | null = featuredFromList ?? featuredFallback ?? null;
+
+    // Trocar de produto SEM sair da loja — só muda o ?product= (Voltar funciona).
+    const selectProduct = (id: string) => {
+        const next = new URLSearchParams(searchParams);
+        next.set("product", id);
+        setSearchParams(next, { replace: false });
+    };
+
+    // Scroll até o destaque — dep = ID (string estável), nunca o objeto (evita
+    // re-scroll a cada refetch de 15s da lista de produtos).
+    useEffect(() => {
+        if (highlightedProductId && featuredProduct) {
+            featuredRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [highlightedProductId, featuredProduct?.id]);
+
+    // ── Financeiro/tracking do PRODUTO em destaque (movido da ProductLandingPage
+    //    que virou redirect). RPC idempotente por sessão — não cobra em dobro. ──
+    useEffect(() => {
+        if (!featuredProduct?.id || !storeId) return;
+        // Tracking de clique/visita do produto (M1 + marketplace)
+        trackM1Event({
+            merchant_store_id: storeId, product_id: featuredProduct.id,
+            event_type: "product_click", city: store?.city, region: store?.region, bairro: store?.bairro,
+        });
+        trackProductVisit(featuredProduct.id, storeId, {
+            source: "store_highlight", page: window.location.pathname,
+            product_title: featuredProduct.title, store_name: store?.store_name,
+            category_name: featuredProduct.category, city: store?.city, state: store?.region, neighborhood: store?.bairro,
+        });
+        // Dedução de -1 crédito por view — MESMA RPC SECURITY DEFINER idempotente
+        // (guardada por sessionStorage). Front não calcula nada; só chama a RPC.
+        const deductKey = `credit_deducted_${featuredProduct.id}`;
+        if (sessionStorage.getItem(deductKey)) return;
+        (async () => {
+            try {
+                const { data: rpcResult, error } = await (supabase as any).rpc("deduct_store_product_view_credit", {
+                    p_product_id: featuredProduct.id, p_store_id: storeId,
+                    p_session_key: deductKey, p_product_title: featuredProduct.title ?? null,
+                });
+                if (!error && rpcResult?.success) sessionStorage.setItem(deductKey, "1");
+            } catch (err) { console.error("[CreditDeduct/store]", err); }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [featuredProduct?.id, storeId]);
+
     if (loadingStore || loadingProducts) {
         return (
             <MarketLayout>
@@ -629,9 +706,9 @@ export default function StorePublicPage() {
             <div className="min-h-screen pb-24">
                 
                 {/* ─── HEADER PREMIUM ─── */}
-                <StoreHeader 
-                    store={store} 
-                    stats={stats || null}
+                {/* stats (avaliação) removido: fonte product_rating_stats não existe → sempre vazio */}
+                <StoreHeader
+                    store={store}
                     productsCount={products.length}
                     whatsappNumber={paySettings?.store_whatsapp || null}
                     onShare={() => {
@@ -641,6 +718,170 @@ export default function StorePublicPage() {
                     logoUrl={normalizeImageUrl(store.logo_url, 'logos_lojas')}
                     bannerUrl={normalizeImageUrl(store.banner_url)}
                 />
+
+                {/* ─── BREADCRUMB: Início > Categoria > Loja > Produto ─── */}
+                <div className="w-full px-4 lg:px-8 xl:px-12 pt-4">
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbLink asChild><Link to="/mercado">Início</Link></BreadcrumbLink>
+                            </BreadcrumbItem>
+                            {featuredProduct?.category && (
+                                <>
+                                    <BreadcrumbSeparator />
+                                    <BreadcrumbItem>
+                                        <BreadcrumbLink asChild>
+                                            <Link to={`/mercado?q=${encodeURIComponent(featuredProduct.category)}`}>
+                                                {featuredProduct.category}
+                                            </Link>
+                                        </BreadcrumbLink>
+                                    </BreadcrumbItem>
+                                </>
+                            )}
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                {featuredProduct ? (
+                                    <BreadcrumbLink asChild><Link to={`/loja/${storeId}`}>{store.store_name}</Link></BreadcrumbLink>
+                                ) : (
+                                    <BreadcrumbPage>{store.store_name}</BreadcrumbPage>
+                                )}
+                            </BreadcrumbItem>
+                            {featuredProduct && (
+                                <>
+                                    <BreadcrumbSeparator />
+                                    <BreadcrumbItem>
+                                        <BreadcrumbPage className="line-clamp-1 max-w-[220px]">{featuredProduct.title}</BreadcrumbPage>
+                                    </BreadcrumbItem>
+                                </>
+                            )}
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                </div>
+
+                {/* ─── PRODUTO EM DESTAQUE (quando ?product=) ─── */}
+                {featuredProduct && (
+                    <div ref={featuredRef} className="w-full px-4 lg:px-8 xl:px-12 pt-6 scroll-mt-[120px]">
+                        <div className="bg-white rounded-3xl border border-zinc-200 shadow-lg overflow-hidden flex flex-col md:flex-row">
+                            <div className="md:w-2/5 aspect-square md:aspect-auto bg-zinc-50 shrink-0 overflow-hidden flex items-center justify-center">
+                                {featuredProduct.image_url ? (
+                                    <img src={featuredProduct.image_url} alt={featuredProduct.title} className="w-full h-full object-cover" />
+                                ) : (
+                                    <ShoppingBag className="w-16 h-16 text-zinc-200" />
+                                )}
+                            </div>
+                            <div className="flex-1 p-6 md:p-8 flex flex-col gap-3">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6A00]">Produto selecionado</span>
+                                <h1 className="text-2xl md:text-3xl font-black text-zinc-900 leading-tight">{featuredProduct.title}</h1>
+                                {featuredProduct.short_description && (
+                                    <p className="text-sm text-zinc-500 leading-relaxed line-clamp-4">{featuredProduct.short_description}</p>
+                                )}
+                                <div className="text-3xl font-black text-[#FF6A00] mt-1">
+                                    {featuredProduct.price > 0
+                                        ? featuredProduct.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                                        : "Consultar"}
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-auto pt-3">
+                                    <Button onClick={() => handleAddToCart(featuredProduct)} className="h-12 px-6 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest rounded-xl gap-2">
+                                        <ShoppingCart className="w-4 h-4" /> Adicionar à cesta
+                                    </Button>
+                                    <Button onClick={() => handleAskQuestion(featuredProduct)} variant="outline" className="h-12 px-6 font-black uppercase text-xs tracking-widest rounded-xl border-zinc-300">
+                                        Tenho Interesse
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── 🏪 MAIS PRODUTOS DESTA LOJA (carrossel; clique troca o destaque sem sair da loja) ─── */}
+                        {(() => {
+                            const others = products
+                                .filter(p => p.id !== featuredProduct.id)
+                                .sort((a, b) =>
+                                    (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0) ||
+                                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                                );
+                            if (others.length === 0) return null; // loja com um único produto → oculta
+
+                            const catCounts = new Map<string, number>();
+                            others.forEach(p => {
+                                const c = p.category || "Outros";
+                                catCounts.set(c, (catCounts.get(c) || 0) + 1);
+                            });
+                            const filtered = moreCat === "all" ? others : others.filter(p => (p.category || "Outros") === moreCat);
+                            const visible = filtered.slice(0, moreLimit);
+                            const hasMore = filtered.length > moreLimit;
+
+                            return (
+                                <div className="mt-8 space-y-4">
+                                    <div className="flex flex-wrap items-end justify-between gap-2">
+                                        <div>
+                                            <h3 className="st-heading text-xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
+                                                <Store className="st-accent w-5 h-5 text-[#FF6A00]" /> Mais produtos desta loja
+                                            </h3>
+                                            <p className="st-muted text-xs font-bold text-zinc-500 mt-0.5">
+                                                Esta loja possui {products.length} {products.length === 1 ? "produto anunciado" : "produtos anunciados"}.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Filtros rápidos por categoria (só quando há mais de uma) */}
+                                    {catCounts.size > 1 && (
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                                            <button
+                                                onClick={() => { setMoreCat("all"); setMoreLimit(12); }}
+                                                className={cn(
+                                                    "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
+                                                    moreCat === "all" ? "st-chip-active bg-[#FF6A00] text-white" : "bg-white border border-zinc-200 text-zinc-500 hover:border-[#FF6A00]/40"
+                                                )}
+                                            >
+                                                Todos ({others.length})
+                                            </button>
+                                            {[...catCounts.entries()].map(([cat, n]) => (
+                                                <button
+                                                    key={cat}
+                                                    onClick={() => { setMoreCat(cat); setMoreLimit(12); }}
+                                                    className={cn(
+                                                        "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
+                                                        moreCat === cat ? "st-chip-active bg-[#FF6A00] text-white" : "bg-white border border-zinc-200 text-zinc-500 hover:border-[#FF6A00]/40"
+                                                    )}
+                                                >
+                                                    {cat} ({n})
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4" alwaysShowArrows>
+                                        {[
+                                            ...visible.map(p => (
+                                                <StorePremiumCard
+                                                    key={p.id}
+                                                    product={p}
+                                                    isRecentlyAdded={recentlyAdded[p.id]}
+                                                    onAddToCart={handleAddToCart}
+                                                    onAskQuestion={handleAskQuestion}
+                                                    onMakeOffer={handleMakeOffer}
+                                                    onClick={() => selectProduct(p.id)}
+                                                />
+                                            )),
+                                            ...(hasMore ? [(
+                                                <button
+                                                    key="load-more"
+                                                    onClick={() => setMoreLimit(l => l + 12)}
+                                                    className="h-full min-h-[260px] w-full rounded-[24px] border-2 border-dashed border-zinc-300 bg-white/60 flex flex-col items-center justify-center gap-2 text-zinc-500 hover:border-[#FF6A00]/50 hover:text-[#FF6A00] transition-all"
+                                                >
+                                                    <Sparkles className="w-6 h-6" />
+                                                    <span className="text-xs font-black uppercase tracking-wider">
+                                                        Ver mais ({filtered.length - moreLimit})
+                                                    </span>
+                                                </button>
+                                            )] : []),
+                                        ]}
+                                    </HorizontalCarousel>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
 
 
                 {/* ─── STICKY TABS NAVIGATION ─── */}
@@ -777,7 +1018,7 @@ export default function StorePublicPage() {
                                             Ver Tudo
                                         </Button>
                                     </div>
-                                    <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4">
                                         {homeFeatured.map(product => (
                                             <StorePremiumCard 
                                                 key={product.id}
@@ -795,7 +1036,9 @@ export default function StorePublicPage() {
                                                         });
                                                     }
                                                     const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
-                                                    navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
+                                                    // Imóvel → rota própria; produto comum → destaca na PRÓPRIA loja (sem sair).
+                                                    if (isImovel) navigate(`/imoveis/${product.tracking_slug || product.id}`);
+                                                    else selectProduct(product.id);
                                                 }}
                                             />
                                         ))}
@@ -811,7 +1054,7 @@ export default function StorePublicPage() {
                                             Recém-Chegados
                                         </h3>
                                     </div>
-                                    <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4">
                                         {homeLatest.map(product => (
                                             <StorePremiumCard
                                                 key={product.id}
@@ -837,8 +1080,12 @@ export default function StorePublicPage() {
                                                             storeId: ownerStoreId,
                                                             source: "store_page_recem_chegados",
                                                         });
+                                                        // "Recém-Chegados" = plataforma toda → abre a loja DONA com o produto em destaque.
+                                                        if (ownerStoreId === storeId) selectProduct(product.id);
+                                                        else navigate(`/loja/${ownerStoreId}?product=${product.id}`);
+                                                    } else {
+                                                        navigate(`/produto/${product.id}`);
                                                     }
-                                                    navigate(`/produto/${product.id}`);
                                                 }}
                                             />
                                         ))}
@@ -945,8 +1192,14 @@ export default function StorePublicPage() {
                                                     source: "store_page",
                                                 });
                                             }
-                                            const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
-                                            navigate(isImovel ? `/imoveis/${product.tracking_slug || product.id}` : `/produto/${product.id}`);
+                                            const catNav = product.category?.toLowerCase() || "";
+                                            const isImovel = catNav === "imóveis" || catNav === "imoveis" || product.cta_label === "Conhecer";
+                                            const isVeiculo = catNav === "veículos" || catNav === "veiculos" || product.cta_label === "Ver Veículo";
+                                            // Imóvel/Veículo → rota própria (detalhe c/ mídia mascarada);
+                                            // produto comum → destaca na PRÓPRIA loja sem sair.
+                                            if (isImovel) navigate(`/imoveis/${product.tracking_slug || product.id}`);
+                                            else if (isVeiculo) navigate(`/veiculos/${product.tracking_slug || product.id}`);
+                                            else selectProduct(product.id);
                                         }}
                                     />
                                 ));
@@ -955,7 +1208,7 @@ export default function StorePublicPage() {
                                 return productGridClass ? (
                                     <div className={productGridClass}>{cards}</div>
                                 ) : (
-                                    <HorizontalCarousel cardWidth="w-[260px] sm:w-[280px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4">
                                         {cards}
                                     </HorizontalCarousel>
                                 );
