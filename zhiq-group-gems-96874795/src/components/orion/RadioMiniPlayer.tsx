@@ -9,12 +9,13 @@
  * "Música atual": streams icecast não expõem metadata ICY ao navegador — lacuna
  * declarada; mostramos emissora + status reais.
  *
- * AUTO-MINIMIZAR (07-21): a versão FLUTUANTE, após 3 s sem interação, colapsa
- * numa pílula compacta que flutua na PARTE SUPERIOR da tela (logo + status +
- * play/pause). Qualquer interação (hover/clique/toque) reexpande e reinicia o
- * timer. A versão encaixada (docked) nunca colapsa.
+ * SEMPRE MINIMIZADO NO TOPO (pedido do usuário 07-22): a versão FLUTUANTE fica
+ * PERMANENTEMENTE como uma pílula compacta na PARTE SUPERIOR da tela (logo +
+ * status + play/pause). Nunca expande para o rodapé; tocar no corpo da pílula
+ * abre o Audio Center (rádio completa). A versão encaixada (docked) mostra a
+ * barra completa no lugar do card de clima do Mercado.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, Pause, X, Loader2, Volume2, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,8 +23,6 @@ import viaggLogo from '@/assets/logo.png';
 import {
   subscribeRadio, togglePlay, closeRadio, setRadioVolume, type RadioState, getRadioState,
 } from '@/lib/radioPlayer';
-
-const IDLE_MS = 3000; // 3 s sem interação → minimiza
 
 declare global {
   interface Window {
@@ -181,8 +180,6 @@ function MiniPill({ onExpand }: { onExpand: () => void }) {
 export function RadioMiniPlayer({ hidden, onOpenCenter }: { hidden?: boolean; onOpenCenter: () => void }) {
   const [radio, setRadio] = useState<RadioState>(getRadioState());
   const [docks, setDocksState] = useState<number>(window.__viagg_radio_docks__ || 0);
-  const [collapsed, setCollapsed] = useState(false);
-  const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => subscribeRadio(setRadio), []);
   useEffect(() => {
@@ -191,44 +188,14 @@ export function RadioMiniPlayer({ hidden, onOpenCenter }: { hidden?: boolean; on
     return () => window.removeEventListener(DOCK_EVT, onDock);
   }, []);
 
-  // Timer de inatividade: 3 s sem interação → minimiza. `bump` reinicia.
-  const clearIdle = () => { if (idleRef.current) { clearTimeout(idleRef.current); idleRef.current = null; } };
-  const bump = () => {
-    clearIdle();
-    idleRef.current = setTimeout(() => setCollapsed(true), IDLE_MS);
-  };
-  // Sempre que o card está expandido e visível, arma o timer (e rearma ao trocar de estação).
-  useEffect(() => {
-    if (collapsed || hidden || docks > 0 || !radio.station) return;
-    bump();
-    return () => { if (idleRef.current) clearTimeout(idleRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collapsed, hidden, docks, radio.station?.stationuuid]);
-
-  const expand = () => { setCollapsed(false); bump(); };
-
   if (!radio.station || hidden || docks > 0) return null;
 
-  // MINIMIZADO → pílula flutuando no TOPO (onde foi orientado)
-  if (collapsed) {
-    return createPortal(
-      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[9980] animate-in fade-in slide-in-from-top-2 duration-300">
-        <MiniPill onExpand={expand} />
-      </div>,
-      document.body
-    );
-  }
-
-  // EXPANDIDO → card completo no rodapé; qualquer interação reinicia o timer de 3 s
+  // SEMPRE minimizado, na PARTE SUPERIOR (pedido do usuário 07-22).
+  // Play/pause direto na pílula; tocar no corpo abre o Audio Center (rádio
+  // completa) — nunca expande no rodapé.
   return createPortal(
-    <div
-      className="fixed bottom-20 sm:bottom-4 left-1/2 -translate-x-1/2 z-[9980] w-[min(94vw,420px)] animate-in fade-in slide-in-from-bottom-2 duration-300"
-      onPointerDown={bump}
-      onTouchStart={bump}
-      onMouseEnter={clearIdle}
-      onMouseLeave={bump}
-    >
-      <MiniBar onOpenCenter={onOpenCenter} />
+    <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[9980] animate-in fade-in slide-in-from-top-2 duration-300">
+      <MiniPill onExpand={onOpenCenter} />
     </div>,
     document.body
   );
