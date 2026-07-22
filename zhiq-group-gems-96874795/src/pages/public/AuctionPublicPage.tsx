@@ -402,9 +402,13 @@ export default function AuctionPublicPage() {
               </div>
             </div>
 
-            {/* Min next bid */}
+            {/* Incremento configurado + próximo lance mínimo — para o participante
+                saber exatamente qual valor pode ofertar. */}
             {isActive && (
-              <CardHighlight className="text-center" label="Próximo lance mínimo" value={formatBRL(minNextBid)} />
+              <div className="grid grid-cols-2 gap-3">
+                <CardHighlight className="text-center" label="Incremento configurado" value={formatBRL(minimumIncrement)} />
+                <CardHighlight className="text-center" label="Próximo lance mínimo" value={formatBRL(minNextBid)} />
+              </div>
             )}
 
             {/* CTAs */}

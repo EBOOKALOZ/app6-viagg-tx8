@@ -241,20 +241,47 @@ export default function MerchantStoreAppearance() {
     setSaving(true);
     try {
       const payload = sanitizeAppearance(theme);
-      const { data, error } = await (supabase.rpc as any)("set_store_appearance", { p_appearance: payload });
-      if (error) {
-        if (String(error.code) === "PGRST202") {
-          toast.error("Backend ainda não atualizado: aplique a migration 20260722_store_appearance.sql no SQL Editor.");
+      let rpcError = null;
+      let rpcSuccess = false;
+
+      // 1) Tentar salvar via RPC (com p_store_id e p_appearance)
+      try {
+        const { data, error } = await (supabase.rpc as any)("set_store_appearance", { p_appearance: payload, p_store_id: store?.id });
+        if (error) {
+          rpcError = error;
+          // Tenta assinatura antiga (caso a migration ainda esteja na v1 sem p_store_id)
+          if (String(error.code) === "PGRST202" || String(error.message).includes("function") || String(error.code) === "42883") {
+            const { data: dOld, error: eOld } = await (supabase.rpc as any)("set_store_appearance", { p_appearance: payload });
+            if (!eOld && (dOld as any)?.success) { rpcSuccess = true; rpcError = null; }
+            else { rpcError = eOld || new Error((dOld as any)?.error || "Erro no RPC"); }
+          }
+        } else if (!(data as any)?.success) {
+          rpcError = new Error((data as any)?.error || "Erro retornado pelo RPC");
         } else {
-          toast.error("Erro ao salvar: " + error.message);
+          rpcSuccess = true;
         }
+      } catch (err: any) {
+        rpcError = err;
+      }
+
+      // 2) Tentar salvar via update direto em merchant_stores (garante persistência no store.id exato)
+      let directError = null;
+      if (store?.id) {
+        const { error: dErr } = await (supabase.from("merchant_stores") as any)
+          .update({ appearance: payload })
+          .eq("id", store.id);
+        directError = dErr;
+      }
+
+      // Se ambos falharem, exibe erro
+      if (!rpcSuccess && directError) {
+        toast.error("Erro ao salvar: " + (rpcError?.message || directError.message || "Verifique as permissões/migration."));
         return;
       }
-      if (!(data as any)?.success) {
-        toast.error("Não foi possível salvar: " + ((data as any)?.error || "erro desconhecido"));
-        return;
-      }
+
       setSavedJson(JSON.stringify(payload));
+      await queryClient.invalidateQueries({ queryKey: ["store-appearance-editor"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-store-info"] });
       toast.success("Aparência da loja salva! 🎨 Já está valendo no seu perfil público.");
     } finally {
       setSaving(false);
@@ -265,11 +292,18 @@ export default function MerchantStoreAppearance() {
     if (!window.confirm("Restaurar o visual padrão da plataforma? Sua personalização será removida.")) return;
     setSaving(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("set_store_appearance", { p_appearance: null });
-      if (error) { toast.error("Erro ao restaurar: " + error.message); return; }
-      if (!(data as any)?.success) { toast.error("Não foi possível restaurar: " + ((data as any)?.error || "")); return; }
+      if (store?.id) {
+        await (supabase.from("merchant_stores") as any).update({ appearance: null }).eq("id", store.id);
+      }
+      try {
+        await (supabase.rpc as any)("set_store_appearance", { p_appearance: null, p_store_id: store?.id });
+      } catch (e) {
+        try { await (supabase.rpc as any)("set_store_appearance", { p_appearance: null }); } catch {}
+      }
       setTheme(DEFAULT_APPEARANCE);
       setSavedJson("null");
+      await queryClient.invalidateQueries({ queryKey: ["store-appearance-editor"] });
+      await queryClient.invalidateQueries({ queryKey: ["public-store-info"] });
       toast.success("Visual padrão restaurado.");
     } finally {
       setSaving(false);

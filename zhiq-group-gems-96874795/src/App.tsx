@@ -10,6 +10,7 @@ import { SoundSettingsProvider } from "@/contexts/SoundSettingsContext";
 import { FloatingCartButton } from "@/components/public/FloatingCartButton";
 import { FloatingSupportButton } from "@/components/public/FloatingSupportButton";
 import { GlobalAudioPlayer } from "@/components/GlobalAudioPlayer";
+import { AuthGateProvider } from "@/components/auth/AuthGateProvider";
 import { GlobalRealtime } from "@/components/GlobalRealtime";
 import { SeoManager } from "@/lib/seo/SeoManager";
 import { installGlobalErrorReporter } from "@/lib/telemetry/errorReporter";
@@ -108,6 +109,9 @@ export default function App() {
 
                   {/* Carrinho flutuante global para páginas públicas */}
                   <FloatingCartButton />
+
+                  {/* Modal global "faça login para continuar" + retomada da ação */}
+                  <AuthGateProvider />
 
                   {/* Player de música de fundo — todas as páginas */}
                   <GlobalAudioPlayer />

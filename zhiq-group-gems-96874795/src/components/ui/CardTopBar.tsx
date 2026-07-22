@@ -15,13 +15,14 @@ import React from "react";
 import { Share2, Heart, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type CardModality = "venda" | "leilao" | "arremate";
+export type CardModality = "venda" | "leilao" | "arremate" | "aluguel";
 export type CardCondition = "new" | "used" | "seminovo" | "recondicionado";
 
 const MODALITY: Record<CardModality, { label: string; cls: string }> = {
   venda:    { label: "Venda",    cls: "bg-[#FF6A00]/90 text-white" },   // 🟠
   leilao:   { label: "Leilão",   cls: "bg-purple-600/90 text-white" },  // 🟣
   arremate: { label: "Arremate", cls: "bg-blue-600/90 text-white" },    // 🔵
+  aluguel:  { label: "Aluguel",  cls: "bg-sky-600/90 text-white" },     // 🔑
 };
 
 const CONDITION: Record<CardCondition, { label: string; cls: string }> = {

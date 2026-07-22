@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Car, Heart, MapPin, Settings, Store } from 'lucide-react';
+import { Car, MapPin, Settings, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CardDark, CardHighlight, CardImageOverlay, DarkBadge, DarkButton } from '@/components/ui/dark-card';
-import { cn, formatCurrencyBRL } from '@/lib/utils';
+import { formatCurrencyBRL } from '@/lib/utils';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { CardTopBar } from '@/components/ui/CardTopBar';
+import { shareCardLink } from '@/hooks/useCardTopBarActions';
 
 interface MarketVehicleCardProps {
   vehicle: {
@@ -23,6 +26,7 @@ interface MarketVehicleCardProps {
 
 export const MarketVehicleCard: React.FC<MarketVehicleCardProps> = ({ vehicle }) => {
   const navigate = useNavigate();
+  const requireAuth = useRequireAuth();
   const [favorited, setFavorited] = useState(false);
 
   const getVehicleTypeLabel = (type: string) => {
@@ -43,7 +47,12 @@ export const MarketVehicleCard: React.FC<MarketVehicleCardProps> = ({ vehicle })
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorited(v => !v);
+    // ação pessoal → exige login (deslogado abre o modal e retoma após autenticar)
+    requireAuth(() => setFavorited(v => !v), {
+      kind: 'favorite',
+      label: 'favoritar este anúncio',
+      payload: { id: vehicle.id },
+    });
   };
 
   return (
@@ -68,31 +77,14 @@ export const MarketVehicleCard: React.FC<MarketVehicleCardProps> = ({ vehicle })
               </div>
             )}
 
-            {/* Logo oficial da plataforma (topo, canto superior esquerdo) */}
-            <img
-              src="/viagg-logo.png"
-              alt="Viagg-TX8"
-              width={44}
-              height={44}
-              loading="lazy"
-              decoding="async"
-              className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+            {/* Header Universal do card (logo + modalidade + verificado + ações) */}
+            <CardTopBar
+              modality="venda"
+              verified
+              favorited={favorited}
+              onShare={(e) => { e.stopPropagation(); shareCardLink(vehicle.title, `${window.location.origin}/veiculos/${vehicle.id}`); }}
+              onFavorite={handleFavoriteClick}
             />
-
-            {/* Badges (direita, abaixo do favoritar) */}
-            <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
-              <DarkBadge tone="green">Verificado</DarkBadge>
-            </div>
-
-            {/* Favoritar */}
-            <button
-              onClick={handleFavoriteClick}
-              className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md transition-all duration-200"
-            >
-              <Heart
-                className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "text-[#B8C2CC]")}
-              />
-            </button>
 
             {/* Watermark central VX — reforço de marca */}
             <div

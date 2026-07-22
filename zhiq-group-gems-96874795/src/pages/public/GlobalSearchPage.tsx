@@ -4,6 +4,9 @@ import { Search, Loader2, Package, Home, Car, Wrench, Plane, Gavel, ArrowRight }
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { GlobalSearchService, GlobalSearchResult, SearchCategory } from "@/services/GlobalSearchService";
 import { formatCurrencyBRL } from "@/lib/utils";
+import { CardTopBar } from "@/components/ui/CardTopBar";
+import { shareCardLink } from "@/hooks/useCardTopBarActions";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 export function GlobalSearchPage() {
   const [searchParams] = useSearchParams();
@@ -13,6 +16,20 @@ export function GlobalSearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<GlobalSearchResult[]>([]);
   const [activeTab, setActiveTab] = useState<SearchCategory | 'all'>('all');
+
+  // Header Universal dos cards: favoritos locais + porta única de autenticação
+  const requireAuth = useRequireAuth();
+  const [favIds, setFavIds] = useState<Set<string>>(new Set());
+  const toggleFav = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    requireAuth(() => {
+      setFavIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      });
+    }, { kind: "favorite", label: "favoritar este anúncio", payload: { id } });
+  };
 
   useEffect(() => {
     if (!query || query.trim().length < 2) {
@@ -140,8 +157,17 @@ export function GlobalSearchPage() {
                       {getCategoryIcon(item.category)}
                     </div>
                   )}
-                  {/* Category Badge */}
-                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur text-zinc-900 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
+
+                  {/* Header Universal do card (logo + modalidade + ações) */}
+                  <CardTopBar
+                    modality={item.category === 'leiloes' ? 'leilao' : 'venda'}
+                    favorited={favIds.has(item.id)}
+                    onFavorite={toggleFav(item.id)}
+                    onShare={(e) => { e.stopPropagation(); shareCardLink(item.title, `${window.location.origin}${item.routePath}`); }}
+                  />
+
+                  {/* Category Badge — abaixo da barra universal */}
+                  <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur text-zinc-900 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
                     {getCategoryIcon(item.category)}
                     {item.categoryLabel}
                   </div>

@@ -1,8 +1,11 @@
 import React from 'react';
-import { Heart, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { cn, formatCurrencyBRL } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CardTopBar, type CardModality, type CardCondition } from '@/components/ui/CardTopBar';
+import { shareCardLink } from '@/hooks/useCardTopBarActions';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 export type PremiumBadgeVariant = 'verified' | 'featured' | 'new' | 'premium' | 'sponsored' | 'free' | 'hot';
 
@@ -42,6 +45,12 @@ export interface PremiumCardProps {
   aspectRatio?: 'video' | 'video-tall' | 'square' | 'portrait';
   imageObjectFit?: 'cover' | 'contain';
   customOverlays?: React.ReactNode;
+  /** Header Universal: modalidade explícita (senão é derivada dos badges) */
+  modality?: CardModality;
+  /** Header Universal: condição do produto (novo/usado/seminovo/recondicionado) */
+  condition?: CardCondition | null;
+  /** Header Universal: URL usada no botão Compartilhar (default: página atual) */
+  shareUrl?: string;
   merchant?: {
     name: string;
     avatarUrl?: string | null;
@@ -76,7 +85,28 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
   imageObjectFit = 'cover',
   customOverlays,
   merchant,
+  modality,
+  condition,
+  shareUrl,
 }) => {
+  const requireAuth = useRequireAuth();
+
+  // ── Header Universal: deriva modalidade/verificado dos badges legados,
+  //    para todos os consumidores ficarem padronizados sem mudar call sites.
+  const derivedModality: CardModality =
+    modality ??
+    (badges.some((b) => /leil/i.test(b.label)) ? 'leilao'
+      : badges.some((b) => /arremate/i.test(b.label)) ? 'arremate'
+      : 'venda');
+  const derivedVerified = badges.some((b) => b.variant === 'verified' || /verificado/i.test(b.label));
+  const extraBadges = badges.filter(
+    (b) => b.variant !== 'verified' && !/verificado|leil|arremate/i.test(b.label)
+  );
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    shareCardLink(title, shareUrl || window.location.href);
+  };
   const getBadgeStyle = (variant: PremiumBadgeVariant) => {
     switch (variant) {
       case 'verified': return 'bg-emerald-500 text-white backdrop-blur-md border-emerald-400/30';
@@ -105,7 +135,12 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onFavorite) onFavorite(e);
+    // Favoritar é ação pessoal → porta única useRequireAuth (deslogado abre o
+    // modal de login e a ação é retomada automaticamente após autenticar).
+    requireAuth(() => onFavorite?.(e), {
+      kind: 'favorite',
+      label: 'favoritar este anúncio',
+    });
   };
 
   const aspectClass = {
@@ -144,43 +179,31 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </div>
         )}
 
-        {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
-        {/* Logo oficial quadrado (verde+dourado, fundo próprio) — ~28px */}
-        <img
-          src="/viagg-logo.png"
-          alt="Viagg-TX8"
-          width={44}
-          height={44}
-          loading="lazy"
-          decoding="async"
-          className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+        {/* ─── HEADER UNIVERSAL DOS CARDS (logo + modalidade + condição + verificado + ações) ─── */}
+        <CardTopBar
+          modality={derivedModality}
+          condition={condition}
+          verified={derivedVerified}
+          favorited={isFavorited}
+          onShare={handleShare}
+          onFavorite={handleFavoriteClick}
         />
 
-        {/* Top Badges (movidos p/ direita, abaixo do favoritar, p/ não colidir com o logo) */}
-        <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
-          {badges.map((badge, idx) => (
-            <Badge 
-              key={idx} 
-              className={cn(
-                "rounded-lg px-2.5 py-1 text-[10px] font-bold shadow-sm border",
-                badge.overrideClasses || getBadgeStyle(badge.variant)
-              )}
-            >
-              {badge.label}
-            </Badge>
-          ))}
-        </div>
-
-        {/* Favorite Button (Right) */}
-        {onFavorite && (
-          <button 
-            onClick={handleFavoriteClick}
-            className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-white/80 hover:bg-white text-zinc-700 hover:text-red-500 shadow-sm backdrop-blur-md transition-all duration-200"
-          >
-            <Heart 
-              className={cn("w-4 h-4 transition-all duration-300", isFavorited ? "fill-red-500 text-red-500 scale-110" : "text-zinc-600")} 
-            />
-          </button>
+        {/* Badges extras dos consumidores (fora do padrão universal) — abaixo da barra */}
+        {extraBadges.length > 0 && (
+          <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
+            {extraBadges.map((badge, idx) => (
+              <Badge
+                key={idx}
+                className={cn(
+                  "rounded-lg px-2.5 py-1 text-[10px] font-bold shadow-sm border",
+                  badge.overrideClasses || getBadgeStyle(badge.variant)
+                )}
+              >
+                {badge.label}
+              </Badge>
+            ))}
+          </div>
         )}
 
         {/* Custom Overlays (e.g., Timer / Auction countdown) */}

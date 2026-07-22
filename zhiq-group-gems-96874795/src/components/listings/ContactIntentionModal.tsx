@@ -22,8 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FormDisclaimerStrip } from "@/components/public/FormDisclaimerStrip";
 import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
+import { GlobalFooter } from "@/components/GlobalFooter";
 import { Textarea } from "@/components/ui/textarea";
 import {
   MessageSquare,
@@ -34,6 +34,7 @@ import {
   Loader2,
   Sparkles,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -398,8 +399,6 @@ export function ContactIntentionModal({
                   </p>
                 </div>
 
-                <FormDisclaimerStrip />
-                
                 <Button
                   onClick={handleSubmit}
                   disabled={!isValid || isLoading}
@@ -421,6 +420,48 @@ export function ContactIntentionModal({
               </div>
             </div>
           )}
+
+          {/* ── Aviso de responsabilidade (acima do rodapé, visual integrado) ── */}
+          <div className="px-6 pb-4">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 space-y-1.5 shadow-sm">
+              <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-amber-700">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Importante
+              </p>
+              <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                A Viagg-TX8 é uma plataforma de divulgação e conexão entre compradores e
+                vendedores. A plataforma apresenta os anúncios, mas{" "}
+                <strong className="font-black">não intermedeia pagamentos, entregas ou negociações</strong>.
+                A responsabilidade pela negociação é exclusivamente das partes envolvidas.
+              </p>
+            </div>
+          </div>
+
+          {/* ── Faixa institucional ── */}
+          <div className="bg-zinc-900 px-5 py-3 text-center space-y-1">
+            <p className="flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#68c7f2] shrink-0" />
+              VIAGG-TX8 • Plataforma de conexão entre compradores e vendedores
+            </p>
+            <p className="text-[10px] text-white/70 leading-snug">
+              A plataforma apresenta o produto. A negociação acontece diretamente entre
+              comprador e vendedor.
+            </p>
+          </div>
+        </div>
+
+        {/* ── Rodapé Oficial Viagg-TX8 (componente único do sistema; fixo na base) ── */}
+        <div className="shrink-0">
+          <GlobalFooter
+            compact
+            label="Compradores & Vendedores"
+            links={[
+              { label: "Política de Privacidade", to: "/privacidade" },
+              { label: "Termos de Uso", to: "/terms" },
+              { label: "Central de Ajuda", to: "/suporte" },
+              { label: "Contato", to: "/suporte/novo" },
+            ]}
+            version="Todos os direitos reservados."
+          />
         </div>
       </DialogContent>
     </Dialog>

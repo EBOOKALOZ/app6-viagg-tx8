@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Heart, MapPin, Store } from 'lucide-react';
+import React from 'react';
+import { MapPin, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { CardTopBar } from '@/components/ui/CardTopBar';
+import { useCardTopBarActions } from '@/hooks/useCardTopBarActions';
 import {
   CardDark,
   CardHighlight,
@@ -36,7 +38,11 @@ interface CardBadge {
 
 export const MarketServiceCard: React.FC<MarketServiceCardProps> = ({ service }) => {
   const navigate = useNavigate();
-  const [favorited, setFavorited] = useState(false);
+  const { favorited, onShare, onFavorite } = useCardTopBarActions(
+    service.title,
+    `${window.location.origin}/servicos/${service.id}`,
+    { id: service.id }
+  );
 
   const typeLabel = resolveServiceTypeLabel(service.service_type);
   const TypeIcon = resolveServiceTypeIcon(service.service_type);
@@ -47,10 +53,6 @@ export const MarketServiceCard: React.FC<MarketServiceCardProps> = ({ service })
 
   const features: CardFeature[] = [
     { icon: <TypeIcon className="w-full h-full" />, label: typeLabel }
-  ];
-
-  const badges: CardBadge[] = [
-    { label: 'Verificado', tone: 'green' }
   ];
 
   // Try to parse price_label as number if possible, or leave as null for "Preço sob consulta"
@@ -84,31 +86,14 @@ export const MarketServiceCard: React.FC<MarketServiceCardProps> = ({ service })
               </div>
             )}
 
-            {/* Logo da plataforma (topo, canto superior esquerdo) */}
-            <img
-              src="/viagg-logo.png"
-              alt="Viagg-TX8"
-              width={44}
-              height={44}
-              loading="lazy"
-              decoding="async"
-              className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+            {/* Header Universal do card (logo + modalidade + verificado + ações) */}
+            <CardTopBar
+              modality="venda"
+              verified
+              favorited={favorited}
+              onShare={onShare}
+              onFavorite={onFavorite}
             />
-
-            {/* Badges (direita, abaixo do favoritar) */}
-            <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
-              {badges.map((badge, idx) => (
-                <DarkBadge key={idx} tone={badge.tone}>{badge.label}</DarkBadge>
-              ))}
-            </div>
-
-            {/* Favoritar */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setFavorited(v => !v); }}
-              className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-[#1A1F24]/80 border border-[#323A45] hover:bg-[#252B33] shadow-sm backdrop-blur-md transition-all duration-200"
-            >
-              <Heart className={favorited ? 'w-4 h-4 fill-red-500 text-red-500 scale-110 transition-all duration-300' : 'w-4 h-4 text-[#B8C2CC] transition-all duration-300'} />
-            </button>
 
             {/* Watermark VX */}
             <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[5]">

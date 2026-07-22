@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { BedDouble, Bath, Car, Heart, MapPin, Maximize2, Share2, Store } from 'lucide-react';
+import { BedDouble, Bath, Car, MapPin, Maximize2, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFallbackUrl } from '@/lib/real-estate/mediaUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { CardDark, CardImageOverlay, DarkBadge } from '@/components/ui/dark-card';
 import { cn, formatCurrencyBRL } from '@/lib/utils';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { CardTopBar } from '@/components/ui/CardTopBar';
 
 interface MarketPropertyCardProps {
   property: {
@@ -47,6 +49,7 @@ interface MarketPropertyCardProps {
 export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property, variant = 'default' }) => {
   const isFeatured = variant === 'featured';
   const navigate = useNavigate();
+  const requireAuth = useRequireAuth();
   const [favorited, setFavorited] = useState(false);
 
   const completeAddress = (() => {
@@ -106,7 +109,11 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
 
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFavorited(v => !v);
+    requireAuth(() => setFavorited(v => !v), {
+      kind: 'favorite',
+      label: 'favoritar este anúncio',
+      payload: { id: property.id },
+    });
   };
 
   const handleShareClick = (e: React.MouseEvent) => {
@@ -154,43 +161,21 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
           </div>
         )}
 
-        {/* Logo oficial Viagg-TX8 no topo superior esquerdo */}
-        <img
-          src="/viagg-logo.png"
-          alt="Viagg-TX8"
-          width={44}
-          height={44}
-          loading="lazy"
-          decoding="async"
-          className="absolute top-2.5 left-2.5 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
+        {/* Header Universal do card (logo + modalidade + verificado + ações) */}
+        <CardTopBar
+          modality={isAluguel ? 'aluguel' : 'venda'}
+          verified
+          favorited={favorited}
+          onShare={handleShareClick}
+          onFavorite={handleFavoriteClick}
         />
 
-        {/* Badge de Categoria/Propósito no topo (ao lado do logo) */}
-        <div className="absolute top-2.5 left-16 z-20 flex items-center gap-1.5 pointer-events-none">
+        {/* Tipo do imóvel + Destaque — abaixo da barra universal */}
+        <div className="absolute top-16 left-2.5 z-10 flex items-center gap-1.5 pointer-events-none">
           <DarkBadge tone={getPropertyTypeTone(property.property_type)} className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">
-            {property.purpose ? (isAluguel ? 'Aluguel' : 'Venda') : 'Imóvel'} • {getPropertyTypeLabel(property.property_type)}
+            {getPropertyTypeLabel(property.property_type)}
           </DarkBadge>
           {isFeatured && <DarkBadge tone="orange" className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">Destaque</DarkBadge>}
-        </div>
-
-        {/* Botão Compartilhar e Favoritar no topo direito */}
-        <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1.5">
-          <button
-            onClick={handleShareClick}
-            className="p-2 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md text-white/90 hover:text-white transition-all duration-200 hover:scale-105"
-            title="Compartilhar imóvel"
-          >
-            <Share2 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleFavoriteClick}
-            className="p-2 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-105"
-            title="Favoritar imóvel"
-          >
-            <Heart
-              className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "text-white/90 hover:text-white")}
-            />
-          </button>
         </div>
 
         {/* Watermark central VX — reforço de marca */}

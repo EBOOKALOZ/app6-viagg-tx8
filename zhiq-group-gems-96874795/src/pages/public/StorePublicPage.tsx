@@ -112,7 +112,12 @@ export default function StorePublicPage() {
                 const targetUserId = advData?.user_id || storeId; // Se não for adv, testamos se o próprio ID é o user_id
 
                 if (targetUserId) {
-                    const { data: realStore } = await supabase.from("merchant_stores").select("*").eq("user_id", targetUserId).maybeSingle();
+                    const { data: realStore } = await supabase.from("merchant_stores")
+                        .select("*")
+                        .eq("user_id", targetUserId)
+                        .order("created_at", { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
                     if (realStore) {
                         data = realStore;
                     } else {

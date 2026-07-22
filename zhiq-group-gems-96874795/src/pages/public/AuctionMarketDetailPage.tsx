@@ -15,6 +15,8 @@ import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { CardDark, CardInfo, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { registerResumeHandler } from '@/components/auth/AuthGateProvider';
 
 // ─── Helpers ────────────────────────────
 
@@ -47,6 +49,7 @@ function useLiveCountdown(endsAt: string) {
 export default function AuctionMarketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const requireAuth = useRequireAuth();
   const [favorited, setFavorited] = useState(false);
 
   // Fetch listing
@@ -146,10 +149,24 @@ export default function AuctionMarketDetailPage() {
     },
   });
 
-  const handleBid = () => {
+  const doBid = () => {
     const amount = minNextBid * 100; // convert to cents
     placeBid.mutate({ amountCents: amount });
   };
+
+  const handleBid = () => {
+    // dar lance é ação pessoal → exige login (o backend também valida auth.uid()).
+    // Deslogado: abre o modal e, após autenticar, o lance é dado sozinho.
+    requireAuth(doBid, { kind: 'auction_bid', label: 'dar seu lance neste leilão', payload: { id } });
+  };
+
+  // retoma o lance após login (registrado enquanto a página está montada)
+  useEffect(() => {
+    return registerResumeHandler('auction_bid', (payload) => {
+      if (payload?.id === id) doBid();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, minNextBid]);
 
   // Formatar mensagem de urgência
   const urgencyClass = remaining.total > 0 && remaining.total < 3600000
@@ -330,6 +347,11 @@ export default function AuctionMarketDetailPage() {
                       <p className="text-xl font-black text-white">
                         {formatCurrencyBRL(minNextBid)}
                       </p>
+                      {listing.listing_type !== 'arremate' && (
+                        <p className="text-[11px] text-[#8E98A3] mt-1">
+                          Incremento: <span className="font-black text-[#FF7A00]">{formatCurrencyBRL(listing.minimum_increment || 1)}</span>
+                        </p>
+                      )}
                     </div>
 
                     <div>

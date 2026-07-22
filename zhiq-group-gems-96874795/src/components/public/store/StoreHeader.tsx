@@ -183,7 +183,10 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
             {/* Store Card */}
             <div className={cn("w-full px-2 lg:px-3 xl:px-4 relative z-10 mb-8 flex justify-center", compact ? "mt-0" : "mt-4 lg:mt-6")}>
                 <div className="w-full max-w-[1920px]">
-                <Card className="st-banner border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#68c7f2] ring-1 ring-[#68c7f2]/60 overflow-hidden">
+                <Card 
+                    className="st-banner border-none shadow-2xl rounded-3xl lg:rounded-[40px] bg-[#68c7f2] ring-1 ring-[#68c7f2]/60 overflow-hidden"
+                    style={!theme?.banner?.imageUrl && bannerUrl ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url("${bannerUrl}")`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+                >
                     <div className={cn("flex items-center", sidebarMode ? "flex-col text-center p-4 gap-3" : cn("flex-col xl:flex-row", compact ? "p-3 lg:p-4 gap-4 xl:items-end" : "p-6 lg:p-10 gap-6 lg:gap-10 xl:items-end"))}>
                         
                         {/* Logo Avatar */}
@@ -250,13 +253,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                 </p>
                                 <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
                             </div>
-                            <div className={cn("bg-white/30 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
-                            <div className="text-center">
-                                <p className={cn("font-black text-white tracking-tight flex items-center justify-center", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
-                                    98<span className={compact ? "text-xs" : "text-sm"}>%</span>
-                                </p>
-                                <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Resposta</p>
-                            </div>
+                            {/* "98% Resposta" REMOVIDO (07-21): era hardcoded/falso, sem fonte de dado. */}
                         </div>
 
                     </div>
