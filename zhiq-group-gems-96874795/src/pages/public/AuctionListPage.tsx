@@ -3,280 +3,37 @@
  * Usa o MESMO MarketLayout do Mercado (cabeçalho completo: clima, logo, busca,
  * MarketNavButtons — incluindo o botão Leilões — carrinho, áudio e rodapé).
  */
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import {
-  Gavel, Tag, Timer, MapPin, Eye, Flame,
-  Loader2, Users, Truck, Shield, LayoutGrid,
+  Gavel, MapPin, Loader2, Truck,
   Sparkles, Trophy, ShieldCheck, BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CardDark, CardInfo, DarkBadge, DarkButton, DarkMapButton, CardImageOverlay } from "@/components/ui/dark-card";
+import { CardDark } from "@/components/ui/dark-card";
+import { MarketAuctionCard } from "@/components/advertiser/MarketAuctionCard";
 import type { AuctionListing } from "@/hooks/useAuctions";
 
 // ─── Helpers ────────────────────────────
-
-function formatBRL(value: number | undefined | null) {
-  if (value == null || isNaN(value)) return "R$ 0,00";
-  if (value > 10000) return `R$ ${(value / 100).toFixed(2).replace(".", ",")}`;
-  return `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
-}
-
-// ─── Live Countdown Hook ────────────────
-function useCountdown(endsAt: string) {
-  const calcRemaining = useCallback(() => {
-    const diff = new Date(endsAt).getTime() - Date.now();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, ended: true, total: 0 };
-    return {
-      days: Math.floor(diff / 86400000),
-      hours: Math.floor((diff % 86400000) / 3600000),
-      minutes: Math.floor((diff % 3600000) / 60000),
-      seconds: Math.floor((diff % 60000) / 1000),
-      ended: false,
-      total: diff,
-    };
-  }, [endsAt]);
-
-  const [remaining, setRemaining] = useState(calcRemaining);
-
-  useEffect(() => {
-    const tick = () => setRemaining(calcRemaining());
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [calcRemaining]);
-
-  return remaining;
-}
-
-function CountdownDisplay({ endsAt }: { endsAt: string }) {
-  const { days, hours, minutes, seconds, ended, total } = useCountdown(endsAt);
-  const isUrgent = total > 0 && total < 3600000; // less than 1 hour
-
-  if (ended) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-500/90 text-white text-[10px] font-bold backdrop-blur-sm">
-        <Timer className="h-3 w-3" /> Encerrado
-      </span>
-    );
-  }
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  return (
-    <span className={cn(
-      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm font-mono tracking-wider",
-      isUrgent ? "bg-red-500/90 text-white animate-pulse" : "bg-emerald-600/90 text-white"
-    )}>
-      <Timer className="h-3 w-3" />
-      {isUrgent && <Flame className="h-3 w-3" />}
-      {days > 0 ? (
-        <>{days}d {pad(hours)}:{pad(minutes)}:{pad(seconds)}</>
-      ) : (
-        <>{pad(hours)}:{pad(minutes)}:{pad(seconds)}</>
-      )}
-    </span>
-  );
-}
-
-// Contador regressivo PREMIUM — 4 caixas (Dias/Hrs/Min/Seg), ao vivo
-function CountdownPremium({ endsAt }: { endsAt: string }) {
-  const { days, hours, minutes, seconds, ended, total } = useCountdown(endsAt);
-  if (ended) {
-    return (
-      <CardInfo className="py-2.5 text-center">
-        <span className="text-xs font-black uppercase tracking-wider text-[#B8C2CC]">🔒 Leilão Encerrado</span>
-      </CardInfo>
-    );
-  }
-  const urgent = total > 0 && total < 3600000; // < 1h
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const units = [
-    { v: days, l: "Dias" },
-    { v: hours, l: "Hrs" },
-    { v: minutes, l: "Min" },
-    { v: seconds, l: "Seg" },
-  ];
-  return (
-    <div className={cn(
-      "rounded-2xl p-2.5 border shadow-md",
-      urgent
-        ? "bg-gradient-to-r from-red-600 via-red-500 to-orange-500 border-red-400"
-        : "bg-gradient-to-br from-[#00a300] via-[#009200] to-[#007a00] border-[#00c400]/40"
-    )}>
-      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/75 text-center mb-1.5 flex items-center justify-center gap-1">
-        <Timer className="h-3 w-3" /> Encerra em {urgent && <Flame className="h-3 w-3 text-yellow-300" />}
-      </p>
-      <div className="grid grid-cols-4 gap-1.5">
-        {units.map((u) => (
-          <div key={u.l} className="rounded-lg bg-white/10 backdrop-blur-sm py-1.5 text-center ring-1 ring-white/10">
-            <p className={cn("text-xl font-black leading-none tabular-nums text-white", urgent && "animate-pulse")}>{pad(u.v)}</p>
-            <p className="text-[8px] font-bold uppercase tracking-wider text-white/60 mt-0.5">{u.l}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// (formatBRL "/100" e useCountdown saíram com o card local — o MarketAuctionCard
+//  já formata preço em reais e roda seu próprio timer ao vivo.)
 
 function getListingType(listing: any): "auction" | "arremate" {
   if (listing.listing_type === "arremate") return "arremate";
   return "auction";
 }
 
-function getPrice(listing: any): number {
-  return listing.current_price_cents || listing.current_bid || listing.starting_bid || 0;
-}
-function getOriginalPrice(listing: any): number | null {
-  return listing.original_price_cents || listing.buy_now_price || null;
-}
-
-function normalizeImageUrl(url: string | null | undefined): string | null {
-  if (!url || typeof url !== "string") return null;
-  const trimmed = url.trim();
-  if (!trimmed) return null;
-  if (!/^https?:\/\//i.test(trimmed)) return null;
-  return trimmed;
-}
-
-// ─── ListingCard ─────────────────────────
-
-function ListingCard({ listing, onClick }: { listing: AuctionListing; onClick: () => void }) {
-  const isAuction = getListingType(listing) === "auction";
-  const price = getPrice(listing);
-  const originalPrice = getOriginalPrice(listing);
-  const savings = originalPrice && price
-    ? Math.round(((originalPrice - price) / originalPrice) * 100)
-    : null;
-  const isEnding = new Date(listing.ends_at).getTime() - Date.now() < 3600000;
-  const imgSrc = normalizeImageUrl((listing as any).product_image_url);
-
-  return (
-    <button
-      className="w-full text-left bg-[#1A1F24] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:scale-[1.02] transition-all duration-200 border border-[#323A45] overflow-hidden group flex flex-col h-full"
-      onClick={onClick}
-    >
-      {/* Product image */}
-      {imgSrc ? (
-        <div className="relative overflow-hidden bg-[#252B33]">
-          <img
-            src={imgSrc}
-            alt={listing.title}
-            className="w-full aspect-[4/5] object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => { e.currentTarget.style.display = "none"; }}
-          />
-          <CardImageOverlay />
-          {/* Type badge overlay */}
-          <div className="absolute top-2 left-2">
-            {isAuction ? (
-              <DarkBadge tone="orange" className="bg-[#1A1F24]/80 backdrop-blur-sm">
-                <Gavel className="h-3 w-3" /> Leilão
-              </DarkBadge>
-            ) : (
-              <DarkBadge tone="green" className="bg-[#1A1F24]/80 backdrop-blur-sm">
-                <Tag className="h-3 w-3" /> Arremate
-              </DarkBadge>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className={`h-2 ${isAuction ? "bg-gradient-to-r from-orange-400 to-amber-400" : "bg-gradient-to-r from-[#00C58E] to-emerald-400"}`} />
-          <div className="flex items-start justify-between gap-2 px-4 pt-3">
-            <div className="flex items-center gap-1.5">
-              {isAuction ? (
-                <DarkBadge tone="orange">
-                  <Gavel className="h-3 w-3" /> Leilão
-                </DarkBadge>
-              ) : (
-                <DarkBadge tone="green">
-                  <Tag className="h-3 w-3" /> Arremate
-                </DarkBadge>
-              )}
-              {isEnding && (
-                <DarkBadge tone="red" className="animate-pulse">
-                  <Flame className="h-3 w-3" /> Encerrando!
-                </DarkBadge>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      <div className="p-4 space-y-3 flex-1 flex flex-col">
-        {/* Title */}
-        <h3 className="font-bold text-white text-base leading-tight line-clamp-2 min-h-[44px]">
-          {listing.title}
-        </h3>
-
-        {/* Description */}
-        {listing.description && (
-          <p className="text-xs text-[#B8C2CC] line-clamp-2 leading-relaxed">
-            {listing.description}
-          </p>
-        )}
-
-        {/* Price */}
-        <div className="flex items-baseline gap-2">
-          <p className="text-xl font-black text-[#FF7A00]">{formatBRL(price)}</p>
-          {originalPrice && originalPrice > price && (
-            <p className="text-sm text-[#8E98A3] line-through">{formatBRL(originalPrice)}</p>
-          )}
-          {savings && savings > 0 && (
-            <span className="text-xs font-bold text-[#00C58E] bg-[#00C58E]/15 px-1.5 py-0.5 rounded">
-              -{savings}%
-            </span>
-          )}
-        </div>
-
-        {/* Stats row */}
-        <div className="flex items-center gap-4 text-xs text-[#8E98A3]">
-          {isAuction && (
-            <span className="flex items-center gap-1">
-              <Gavel className="h-3 w-3" /> {listing.total_bids || 0} lances
-            </span>
-          )}
-          {!isAuction && (
-            <span className="flex items-center gap-1">
-              <Users className="h-3 w-3" /> {listing.offer_count || 0} ofertas
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <Eye className="h-3 w-3" /> {listing.views_count || 0}
-          </span>
-        </div>
-
-        {/* Contador regressivo premium */}
-        <CountdownPremium endsAt={listing.ends_at} />
-
-        {/* CTA indicator - Standardized Footer */}
-        <div className="mt-auto space-y-2.5">
-          {/* Store Location + Google Maps */}
-          <div className="space-y-1.5 pt-2 border-t border-[#323A45]">
-            <div className="flex items-center gap-1 text-[11px] font-bold text-[#B8C2CC] uppercase tracking-tight">
-              <MapPin className="h-3 w-3 text-[#00C58E] shrink-0" />
-              {listing.city || "Região"}
-            </div>
-
-            <DarkMapButton className="w-full text-[11px]">📍 Ver no Mapa</DarkMapButton>
-          </div>
-
-          <DarkButton className="w-full py-2.5 text-xs">
-            {isAuction ? "🔨 Dar Lance" : "⚡ Fazer Oferta"}
-          </DarkButton>
-        </div>
-      </div>
-    </button>
-  );
-}
+// ─── ListingCard (Modelo 2) REMOVIDO na padronização ORION 07-21 ─────────────
+// TODA vitrine de leilão usa o componente ÚNICO MarketAuctionCard (sobre
+// PremiumCard). Não reintroduzir card local aqui. O antigo formatBRL "/100"
+// (bug de unidade) saiu junto — auction_listings guarda valores em REAIS.
 
 // ─── Page ────────────────────────────────
 
 export default function AuctionListPage() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [listings, setListings] = useState<AuctionListing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -389,13 +146,6 @@ export default function AuctionListPage() {
     });
   }, [listings, filter, cityFilter, search]);
 
-  const handleClick = (listing: AuctionListing) => {
-    if (getListingType(listing) === "auction") {
-      navigate(`/leilao/${listing.id}`);
-    } else {
-      navigate(`/arremate/${listing.id}`);
-    }
-  };
 
   const auctionCount = listings.filter(l => getListingType(l) === "auction").length;
   const arremateCount = listings.filter(l => getListingType(l) === "arremate").length;
@@ -523,7 +273,7 @@ export default function AuctionListPage() {
           ) : (
             <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
               {filteredListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} onClick={() => handleClick(listing)} />
+                <MarketAuctionCard key={listing.id} listing={listing} />
               ))}
             </div>
           )}

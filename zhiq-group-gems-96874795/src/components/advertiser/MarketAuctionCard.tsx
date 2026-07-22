@@ -15,9 +15,16 @@ import { cn } from '@/lib/utils';
 
 interface MarketAuctionCardProps {
   listing: AuctionListing;
+  /**
+   * 'grid' (padrão): card centralizado com max-w-md — para páginas em grade.
+   * 'carousel': ocupa 100% do contêiner (sem max-width/centralização) — para
+   *   faixas horizontais de largura fixa (ex.: vitrine do Mercado). MESMO card,
+   *   mesmo visual/dados; só muda o envelope de largura.
+   */
+  variant?: 'grid' | 'carousel';
 }
 
-export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing }) => {
+export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, variant = 'grid' }) => {
   const navigate = useNavigate();
   const [favorited, setFavorited] = React.useState(false);
 
@@ -104,10 +111,9 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing })
     if (listing.neighborhood) location += `, ${listing.neighborhood}`;
   }
 
-  return (
-    <div className="flex justify-center w-full">
-      <div className="w-full max-w-md">
+  const card = (
         <PremiumCard
+          className="hover:scale-[1.02]"
           imageUrl={listing.product_image_url}
           fallbackIcon={<Gavel className="w-16 h-16 text-[#FF6A00]/20" />}
           category={isAuction ? 'Leilão' : 'Arremate'}
@@ -126,9 +132,17 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing })
           primaryActionIcon={!isEnded && isAuction ? <Zap className="w-4 h-4 mr-1" /> : !isEnded ? <Tag className="w-4 h-4 mr-1" /> : undefined}
           primaryActionClass={isEnded ? 'bg-gray-400' : isAuction ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] hover:from-[#FF7A1A] hover:to-[#FFA357] text-white border-0" : "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0"}
           customOverlays={timerOverlay}
-          aspectRatio="video"
+          aspectRatio="portrait"
         />
-      </div>
+  );
+
+  // 'carousel' → ocupa 100% do slot de largura fixa da faixa; 'grid' → centralizado.
+  if (variant === 'carousel') {
+    return <div className="w-full h-full">{card}</div>;
+  }
+  return (
+    <div className="flex justify-center w-full">
+      <div className="w-full max-w-md">{card}</div>
     </div>
   );
 };
