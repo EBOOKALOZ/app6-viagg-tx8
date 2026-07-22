@@ -61,6 +61,9 @@ import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { MercadoAuctionsSection } from "@/components/public/MercadoAuctionsSection";
+import { MarketAuctionCard } from "@/components/advertiser/MarketAuctionCard";
+import type { AuctionListing } from "@/hooks/useAuctions";
+import { AdvertiserCtaBanner } from "@/components/public/AdvertiserCtaBanner";
 import { CardDark, CardInfo, CardHighlight, DarkStat, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 
 // ─── Helpers ────────────────────────────
@@ -1269,24 +1272,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             {/* ═══ LEILÕES — vitrine (ativos; ao buscar "leilão" mostra TODOS) ═══ */}
             <MercadoAuctionsSection search={search} />
 
-            {/* CTA para anunciantes */}
-            <div className="w-full px-4 lg:px-6 pb-4 pt-6 lg:pt-8">
-                <div className="max-w-[1920px] mx-auto">
-                    <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                        <div className="text-white space-y-1">
-                            <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para lojistas e comerciantes</p>
-                            <h3 className="text-xl font-black leading-tight">🛍️ Anuncie seu produto aqui!</h3>
-                            <p className="text-sm text-sky-100">Alcance compradores na sua região. Cadastro rápido e gratuito.</p>
-                        </div>
-                        <button
-                            onClick={() => navigate("/auth?entry=advertiser")}
-                            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
-                        >
-                            Anunciar meu produto →
-                        </button>
-                    </div>
-                </div>
-            </div>
+            {/* (CTA de anunciante movido para o FINAL da página — padrão marketplace) */}
 
             {/* ═══ REAL ESTATE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
@@ -1317,21 +1303,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                 {propertyListings.length > 0 ? 'Ver todos os imóveis' : 'Anunciar meu imóvel'}
                                 <ArrowRight className="w-4 h-4" />
                             </Button>
-                        </div>
-
-                        {/* CTA Imóveis */}
-                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                            <div className="text-white space-y-1">
-                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para corretores e proprietários</p>
-                                <h3 className="text-xl font-black leading-tight">🏢 Anuncie seu imóvel aqui!</h3>
-                                <p className="text-sm text-sky-100">Encontre compradores e inquilinos na sua região. Cadastro rápido e gratuito.</p>
-                            </div>
-                            <button
-                                onClick={() => navigate("/auth?entry=advertiser")}
-                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
-                            >
-                                Anunciar meu imóvel →
-                            </button>
                         </div>
 
                         <HorizontalCarousel>
@@ -1389,21 +1360,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             </Button>
                         </div>
 
-                        {/* CTA Serviços */}
-                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                            <div className="text-white space-y-1">
-                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para prestadores de serviço</p>
-                                <h3 className="text-xl font-black leading-tight">🔧 Anuncie seu serviço aqui!</h3>
-                                <p className="text-sm text-sky-100">Alcance clientes na sua região. Cadastro rápido e gratuito.</p>
-                            </div>
-                            <button
-                                onClick={() => navigate("/auth?entry=advertiser")}
-                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
-                            >
-                                Anunciar meu serviço →
-                            </button>
-                        </div>
-
                         <HorizontalCarousel>
                             {serviceListings.length > 0 ? (
                                 serviceListings.map((serv) => (
@@ -1457,21 +1413,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                 {freightListings.length > 0 ? 'Ver todos os fretes' : 'Anuncie agora'}
                                 <ArrowRight className="w-4 h-4" />
                             </Button>
-                        </div>
-
-                        {/* CTA Fretes */}
-                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                            <div className="text-white space-y-1">
-                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para transportadoras e motoristas</p>
-                                <h3 className="text-xl font-black leading-tight">🚚 Anuncie seu frete aqui!</h3>
-                                <p className="text-sm text-sky-100">Encontre clientes precisando de transporte na sua região. Cadastro rápido e gratuito.</p>
-                            </div>
-                            <button
-                                onClick={() => navigate("/auth?entry=advertiser")}
-                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
-                            >
-                                Anunciar meu frete →
-                            </button>
                         </div>
 
                         <HorizontalCarousel>
@@ -1529,21 +1470,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             </Button>
                         </div>
 
-                        {/* CTA Viagens */}
-                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                            <div className="text-white space-y-1">
-                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para agências e guias</p>
-                                <h3 className="text-xl font-black leading-tight">✈️ Anuncie sua viagem aqui!</h3>
-                                <p className="text-sm text-sky-100">Venda pacotes e excursões para clientes. Cadastro rápido e gratuito.</p>
-                            </div>
-                            <button
-                                onClick={() => navigate("/auth?entry=advertiser")}
-                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
-                            >
-                                Anunciar minha viagem →
-                            </button>
-                        </div>
-
                         <HorizontalCarousel>
                             {travelListings.length > 0 ? (
                                 travelListings.map((tr) => (
@@ -1599,21 +1525,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                             </Button>
                         </div>
 
-                        {/* CTA Automóveis */}
-                        <div className="bg-[#68c7f2] rounded-3xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                            <div className="text-white space-y-1">
-                                <p className="text-xs font-black uppercase tracking-widest text-sky-200">Para concessionárias e vendedores</p>
-                                <h3 className="text-xl font-black leading-tight">🚗 Anuncie seu veículo aqui!</h3>
-                                <p className="text-sm text-sky-100">Venda carros, motos e caminhões rapidamente. Cadastro rápido e gratuito.</p>
-                            </div>
-                            <button
-                                onClick={() => navigate("/auth?entry=advertiser")}
-                                className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
-                            >
-                                Anunciar meu veículo →
-                            </button>
-                        </div>
-
                         <HorizontalCarousel>
                             {vehicleListings.length > 0 ? (
                                 vehicleListings.map((veh) => (
@@ -1638,50 +1549,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                 </div>
             )}
 
-            {/* ═══ REAL ESTATE MODULE PROMO ═══ */}
-            <div className="max-w-[1920px] mx-auto px-4 lg:px-6 mt-4">
-                <div 
-                    className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#00a300] to-[#008c00] p-6 md:p-10 border border-white/10 shadow-xl group cursor-pointer"
-                    onClick={() => {
-                        supabase.from('analytics_events' as any).insert({ 
-                            event_name: 'market_sell_cta_clicked', 
-                            user_id: user?.id || null, 
-                            metadata: { position: 'hero_banner' } 
-                        } as any);
-                        if (user) {
-                          localStorage.setItem("viagg_auth_entry", "advertiser");
-                          // Tela de vendas: escolher Lojista ou Imóveis.
-                          navigate("/select-profile");
-                        } else {
-                          navigate("/auth");
-                        }
-                    }}
-                >
-                    {/* Background glow */}
-                    <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-[#F5E62B]/25 rounded-full blur-[80px] animate-pulse" />
-                    
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="flex-1 space-y-3 text-center md:text-left">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/20 text-yellow-400 text-[10px] font-black uppercase tracking-widest">
-                                <Sparkles className="w-3 h-3" />
-                                Seja um Parceiro Viagg
-                            </div>
-                            <h2 className="text-2xl md:text-4xl font-black text-white tracking-tighter leading-tight">
-                                ANUNCIE SEUS PRODUTOS E ALCANCE <br />
-                                <span className="text-[#F5E62B]">COMPRADORES DA SUA REGIÃO</span>
-                            </h2>
-                        </div>
-                        <div className="shrink-0">
-                           <div className="bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xl px-10 py-5 rounded-2xl shadow-2xl transition-all flex items-center justify-center text-center gap-3 group-hover:scale-105">
-                                <img src="/assets/brand/viagg-tx8-logo-premium.png" alt="Viagg-TX8" className="w-8 h-8 shrink-0 rounded-md group-hover:scale-110 transition-transform" />
-                                <span className="leading-tight">QUERO<br />VENDER</span>
-                           </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Categoria Bar Movida para baixo */}
+            {/* (CTA "Seja Parceiro/Quero Vender" movido para o FINAL da página) */}
 
             {/* ═══ ACTIVE AUCTIONS SECTION ═══ */}
             {auctionListings.filter((a: any) => {
@@ -1707,118 +1575,15 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                 if (listingTypeFilter === "leilao") return lt === "auction" || lt === "leilao" || lt === "leilão" || lt === "";
                                 if (listingTypeFilter === "arremate") return lt === "arremate";
                                 return true;
-                            }).map((auction: any) => {
-                                const imgSrc = normalizeImageUrl(auction.product_image_url);
-                                const isAuction = auction.listing_type !== "arremate";
-                                return (
-                                    <CardDark
-                                        key={auction.id}
-                                        className="hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer group flex flex-col h-full"
-                                        onClick={() => { setSelectedAuction(auction); setAuctionModalOpen(true); }}
-                                    >
-                                        {/* Image + type badge */}
-                                        <div className="relative">
-                                            {imgSrc ? (
-                                                <div className="aspect-square bg-[#252B33] overflow-hidden">
-                                                    <img src={imgSrc} alt={auction.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                                                </div>
-                                            ) : (
-                                                <div className="aspect-square bg-[#252B33] flex items-center justify-center">
-                                                    <Gavel className="h-12 w-12 text-[#8E98A3]" />
-                                                </div>
-                                            )}
-                                            <CardImageOverlay />
-                                            {/* ─── LOGO DA PLATAFORMA (topo-esquerdo — FASE 2) ─── */}
-                                            <img src="/viagg-logo.png" alt="Viagg-TX8" width={28} height={28} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
-                                            {/* Watermark central VX (marca / anti-print) */}
-                                            <div aria-hidden="true" className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[6]">
-                                                <span className="font-black tracking-tighter text-white/[0.08] mix-blend-overlay text-5xl sm:text-6xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">VX</span>
-                                            </div>
-                                            {/* Type badge (movido p/ direita, abaixo do countdown, p/ não colidir com o logo) */}
-                                            <DarkBadge tone={isAuction ? "orange" : "green"} className="absolute top-2 right-2 shadow-md backdrop-blur-md bg-[#1A1F24]/85">
-                                                {isAuction ? "🔨 Leilão" : "⚡ Arremate"}
-                                            </DarkBadge>
-                                            {/* Countdown badge */}
-                                            <div className="absolute bottom-2 right-2 flex items-center gap-1.5 bg-black/75 text-white text-sm px-3.5 py-2 rounded-xl backdrop-blur-sm">
-                                                <Timer className="h-4 w-4 text-red-400 animate-pulse" />
-                                                <AuctionCountdown endsAt={auction.ends_at} />
-                                            </div>
-                                        </div>
-                                        {/* Info */}
-                                        <div className="p-4 space-y-2.5 flex-1 flex flex-col">
-                                            <h3 className="font-bold text-sm text-white line-clamp-2 leading-snug min-h-[40px]">{auction.title}</h3>
-
-
-
-                                            {/* Description */}
-                                            {auction.description && (
-                                                <p className="text-[12px] text-[#B8C2CC] line-clamp-2 leading-relaxed">{auction.description}</p>
-                                            )}
-
-                                            {/* Prices */}
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <CardHighlight
-                                                    label={isAuction ? "Lance atual" : "Preço"}
-                                                    value={<>R$ {(auction.current_bid || auction.starting_bid || 0).toFixed(2).replace(".", ",")}</>}
-                                                    className="p-2"
-                                                />
-                                                <DarkStat
-                                                    label="Lance inicial"
-                                                    value={<>R$ {(auction.starting_bid || 0).toFixed(2).replace(".", ",")}</>}
-                                                    className="p-2"
-                                                />
-                                            </div>
-
-                                            {/* Dates */}
-                                            <CardInfo className="flex items-center gap-2 text-[10px] px-3 py-2">
-                                                <div className="flex-1">
-                                                    <span className="text-[#8E98A3] font-bold uppercase">Início </span>
-                                                    <span className="font-semibold text-[#B8C2CC]">
-                                                        {auction.starts_at ? new Date(auction.starts_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : auction.created_at ? new Date(auction.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
-                                                    </span>
-                                                </div>
-                                                <div className="w-px h-3 bg-[#323A45]" />
-                                                <div className="flex-1">
-                                                    <span className="text-[#8E98A3] font-bold uppercase">Término </span>
-                                                    <span className="font-semibold text-[#B8C2CC]">
-                                                        {auction.ends_at ? new Date(auction.ends_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
-                                                    </span>
-                                                </div>
-                                            </CardInfo>
-
-                                            <div className="mt-auto space-y-2.5">
-                                                {/* Store Location + Google Maps */}
-                                                <div className="space-y-1.5 pt-2 border-t border-[#323A45]">
-                                                    {auction.city && (
-                                                        <div className="flex items-center gap-1.5 text-[11px] text-[#B8C2CC]">
-                                                            <MapPin className="h-3 w-3 text-[#00C58E] shrink-0" />
-                                                            <span className="font-semibold truncate">{auction.city}</span>
-                                                        </div>
-                                                    )}
-                                                    <a
-                                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(auction.city || auction.title || 'loja')}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold text-white border border-[#00C58E] bg-transparent hover:bg-[rgba(0,197,142,0.12)] transition-all"
-                                                    >
-                                                        <MapPin className="h-3.5 w-3.5 text-[#00C58E]" />
-                                                        📍 Ver no Mapa
-                                                    </a>
-                                                </div>
-
-                                                {/* CTA */}
-                                                <DarkButton
-                                                    onClick={() => { setSelectedAuction(auction); setAuctionModalOpen(true); }}
-                                                    className="w-full py-2.5 text-sm"
-                                                >
-                                                    {isAuction ? "🔨 Dar Lance" : "⚡ Fazer Oferta"}
-                                                </DarkButton>
-                                            </div>
-                                        </div>
-                                    </CardDark>
-                                );
-                            })}
+                            }).map((auction: any) => (
+                                // Card ÚNICO oficial (padronização ORION 07-21) — mesmo componente
+                                // da vitrine e da página /leiloes. Navega sozinho (loja/detalhe).
+                                <MarketAuctionCard
+                                    key={auction.id}
+                                    listing={auction as AuctionListing}
+                                    variant="carousel"
+                                />
+                            ))}
                         </HorizontalCarousel>
                     </div>
                 </div>
@@ -2354,6 +2119,16 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             </div>
           </>
         )}
+
+            {/* ═══ ÁREA DO ANUNCIANTE — só no FINAL da página (padrão marketplace) ═══ */}
+            {!isAdvertiser && (
+              <AdvertiserCtaBanner
+                eyebrow="Seja um parceiro Viagg-TX8"
+                title="Sua loja ainda não anuncia na Viagg-TX8?"
+                subtitle="Cadastre seus produtos e serviços e alcance milhares de compradores da sua região todos os dias."
+                buttonLabel="Quero vender"
+              />
+            )}
 
             {/* ── Modals ── */}
             <LeadCaptureModal
