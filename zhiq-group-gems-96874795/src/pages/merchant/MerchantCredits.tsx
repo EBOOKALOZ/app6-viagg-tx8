@@ -679,7 +679,7 @@ export default function MerchantCredits() {
       {/* ═══ SECTION TABS ═══ */}
       <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
         {[
-          { key: "plans", label: "Planos e Pacotes", icon: Crown },
+          { key: "plans", label: "Impulsionamento", icon: Crown },
           { key: "results", label: "Resultado", icon: BarChart3 },
           { key: "statement", label: "Extrato", icon: Clock },
           { key: "wallet", label: "Carteira PAY", icon: CreditCard },
@@ -701,6 +701,9 @@ export default function MerchantCredits() {
       {activeSection === "plans" && (
         <div className="space-y-8">
 
+          {/* PACOTES DE COMUNICAÇÃO REMOVIDOS (FASE 3 — Marketplace usa modelo Saldo 2%).
+              Consumo por evento/plano de comunicação aposentado; mantido só Promoção/Impulsionamento. */}
+          {false && (<>
           <div className="bg-gradient-to-br from-emerald-800 via-emerald-900 to-teal-900 rounded-2xl p-6 text-white shadow-xl overflow-hidden relative">
             <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-400/15 rounded-full blur-3xl -translate-y-10 translate-x-10" />
             <div className="relative z-10">
@@ -985,6 +988,7 @@ export default function MerchantCredits() {
               </div>
             </div>
           )}
+          </>)}
 
           {/* ═══ Pacotes de Anúncios e Impulsionamento (Mercado) ═══ */}
           <div className="bg-gradient-to-br from-[#1B1F24] to-[#14171B] rounded-2xl p-6 border border-[#FF6A00]/30 shadow-2xl">
@@ -997,7 +1001,8 @@ export default function MerchantCredits() {
             />
           </div>
 
-          {/* Savings comparison table */}
+          {/* Economia/comparação entre pacotes REMOVIDA (FASE 3 — Marketplace usa modelo Saldo 2%). */}
+          {false && (
           <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100">
             <h3 className="text-sm font-black text-violet-700 flex items-center gap-2 mb-3">
               <BadgePercent className="h-4 w-4" />
@@ -1049,6 +1054,7 @@ export default function MerchantCredits() {
               </table>
             </div>
           </div>
+          )}
         </div>
       )}
 
