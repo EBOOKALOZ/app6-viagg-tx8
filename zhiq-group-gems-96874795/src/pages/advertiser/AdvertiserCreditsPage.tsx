@@ -811,7 +811,7 @@ export default function AdvertiserCreditsPage() {
           </div>
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-[#F5F7FA] tracking-tighter uppercase leading-none">
-              Carteira de Créditos
+              {isSpecialModule ? "Carteira de Créditos" : "Saldo da Carteira"}
             </h1>
             <div className="flex items-center gap-2">
               <div className={cn("flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border", seg.bgColor, seg.borderColor, seg.color)}>
@@ -820,7 +820,9 @@ export default function AdvertiserCreditsPage() {
               </div>
             </div>
             <p className="text-[#A7B0BE] font-bold text-sm leading-relaxed">
-              Potencialize seus anúncios e compre créditos somente quando precisar.
+              {isSpecialModule
+                ? "Potencialize seus anúncios e compre créditos somente quando precisar."
+                : "Mantenha saldo na sua carteira e libere compradores quando quiser."}
             </p>
           </div>
         </div>
@@ -828,7 +830,7 @@ export default function AdvertiserCreditsPage() {
         {!isSpecialModule && (
           <div className="ml-0 md:ml-16 p-5 bg-[#FF6A00]/10 border-l-4 border-[#FF6A00] rounded-r-2xl max-w-2xl">
             <p className="text-[#FF6A00] text-lg font-extrabold tracking-tight leading-tight">
-              Adicione créditos à sua carteira e libere compradores quando quiser — você paga apenas 2% do valor anunciado por comprador, uma única vez.
+              Adicione saldo à sua carteira e libere compradores quando quiser — você paga apenas 2% do valor anunciado por comprador, uma única vez.
             </p>
           </div>
         )}

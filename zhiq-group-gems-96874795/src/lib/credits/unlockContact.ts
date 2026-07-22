@@ -1,11 +1,15 @@
 /**
- * 🔓 unlockContact — API ÚNICA de desbloqueio de contato (Wallet Core)
+ * 🔓 unlockContact — API ÚNICA de desbloqueio de contato (motor pay_*)
  *
  * TODA a plataforma usa esta função para liberar um comprador interessado.
- * Debita 2% do valor anunciado da carteira do VENDEDOR (`wallets`, via
- * `wallet_reserve` + `wallet_confirm`), de forma PERMANENTE por
- * (módulo, anúncio, comprador). Nunca recobra o mesmo comprador no mesmo
- * anúncio. Proibido criar funções específicas por módulo — sempre esta.
+ * Fluxo oficial (unificação AI-75.3, 2026-07-21):
+ *   wallet_reveal_contact → wallet_unlock_contact → pay_post_transaction
+ * Debita 2% do valor anunciado (orion_commission_policy; piso/teto no banco)
+ * da CARTEIRA OFICIAL do vendedor (pay_financial_accounts, customer_wallet)
+ * com partida dobrada p/ platform_main — PERMANENTE por (módulo, anúncio,
+ * comprador). Nunca recobra o mesmo comprador no mesmo anúncio.
+ * O Wallet Core legado (wallets/wallet_transactions) está DESATIVADO.
+ * Proibido criar funções específicas por módulo — sempre esta.
  *
  * @param module        'product' | 'real_estate' | 'vehicles' | 'services' | 'freight' | ...
  * @param listingId     id do anúncio

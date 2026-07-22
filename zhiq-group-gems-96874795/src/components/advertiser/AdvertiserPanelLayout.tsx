@@ -24,7 +24,8 @@ import { Building2,
   MessageSquare,
   ShoppingBag,
   Eye,
-  Headphones
+  Headphones,
+  Trophy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -131,6 +132,20 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     },
   });
 
+  // Contagem de ARREMATES em aberto (deals pós-arremate não concluídos do vendedor)
+  const { data: arrematesCount = 0 } = useQuery({
+    queryKey: ["sidebar-arremates-count", user?.id],
+    enabled: !!user?.id,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { count } = await (supabase.from("orion_alc_deals" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("seller_user_id", user!.id)
+        .not("status", "in", "(concluida,cancelada)")) as any;
+      return count || 0;
+    },
+  });
+
   // Contagem de VISITAS da loja (marketplace_product_click_events — visitas cobradas)
   const { data: visitsCount = 0 } = useQuery({
     queryKey: ["sidebar-visits-count", user?.id],
@@ -222,6 +237,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     ] : []),
     { name: "Meus Produtos", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Leilões", href: "/anunciante/leiloes", icon: Gavel },
+    { name: "Arremates", href: "/anunciante/arremates/gestao", icon: Trophy },
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     ...(showMerchantOnlyItems ? [
@@ -230,8 +246,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
       { name: "Visitas", href: "/anunciante/visitas", icon: Eye },
       { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     ] : []),
-    { name: "Créditos", href: "/anunciante/creditos", icon: Coins },
-    { name: "Carteira", href: "/anunciante/carteira", icon: Wallet },
+    { name: "Saldo da Carteira", href: "/anunciante/carteira", icon: Wallet },
     { name: "Minha Conta", href: "/anunciante/conta", icon: User },
     { name: "Suporte", href: "/anunciante/suporte", icon: Headphones },
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
@@ -271,6 +286,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
             item.name === "Ofertas Recebidas" ? pendingOffersCount :
             item.name === "Pedidos" ? pendingOrdersCount :
             item.name === "Visitas" ? visitsCount :
+            item.name === "Arremates" ? arrematesCount :
             0;
           if (!badge || badge <= 0) return null;
           return (

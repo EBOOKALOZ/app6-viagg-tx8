@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { unlockContact, centsToBRL } from "@/lib/credits/unlockContact";
+import { unlockContact, quoteUnlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { formatCurrencyBRL } from "@/lib/utils";
 
 interface OfferCard {
@@ -28,29 +28,24 @@ export default function AdvertiserOffersPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Saldo da CARTEIRA ÚNICA (wallets / pay_financial_accounts, em cents) — fonte financeira única
+  // Saldo da CARTEIRA OFICIAL (pay_* / customer_wallet) — é exatamente a conta
+  // que a wallet_unlock_contact v3 debita (unificação AI-75.3, 2026-07-21).
   const { data: walletCents = 0 } = useQuery({
     queryKey: ["wallet-balance", user?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("wallets" as any)
-        .select("balance_cents").eq("owner_uid", user!.id).maybeSingle()) as any;
-      let cents = Number((data as any)?.balance_cents ?? 0);
-      if (cents === 0) {
-        const { data: payAccounts } = await (supabase.from("pay_financial_accounts" as any)
-          .select("available_balance").eq("owner_id", user!.id)) as any;
-        if (payAccounts && Array.isArray(payAccounts)) {
-          const totalPayReais = payAccounts.reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
-          cents = Math.round(totalPayReais * 100);
-        }
-      }
-      return cents;
+      const { data } = await (supabase.from("pay_financial_accounts" as any)
+        .select("available_balance")
+        .eq("owner_id", user!.id)
+        .eq("account_type", "customer_wallet")
+        .maybeSingle()) as any;
+      return Math.round(Number((data as any)?.available_balance ?? 0) * 100);
     },
   });
-  // 2% do valor anunciado (política oficial) em cents
-  const unlockCostCents = (priceStr: string | null) =>
-    Math.round(Number(priceStr ?? 0) * 0.02 * 100);
+  // NOTA: o custo da liberação NÃO é calculado no front. Ele vem do backend
+  // (wallet_unlock_charge_cents → orion_commission_policy: %, piso e teto).
+  // Ver o `unlockCosts` abaixo, populado após carregar as ofertas.
 
   // Ofertas
   const { data: offers = [], isLoading } = useQuery<OfferCard[]>({
@@ -121,6 +116,30 @@ export default function AdvertiserOffersPage() {
     },
   });
 
+  // Custo (comissão) de liberação de CADA oferta — vindo do BACKEND, nunca
+  // calculado no front. Chama wallet_unlock_charge_cents (fonte oficial:
+  // orion_commission_policy: %, piso e teto). Mapa id_da_oferta → cents.
+  const offerIds = offers.map((o) => o.id).join(",");
+  const { data: unlockCosts = {} } = useQuery<Record<string, number>>({
+    queryKey: ["offer-unlock-costs", offerIds],
+    enabled: offers.length > 0,
+    queryFn: async () => {
+      const out: Record<string, number> = {};
+      await Promise.all(
+        offers.map(async (o) => {
+          if (!o.product_id) return;
+          const cents = await quoteUnlockContact(
+            "product",
+            o.product_id,
+            Math.round(Number(o.product_price ?? 0) * 100),
+          );
+          if (cents != null) out[o.id] = cents;
+        }),
+      );
+      return out;
+    },
+  });
+
   const handleAccept = async (offer: OfferCard) => {
     if (!offer.product_id) { toast.error("Oferta sem produto vinculado."); return; }
     // Liberar comprador = desbloqueio de contato via Wallet Core (2% do valor anunciado).
@@ -134,7 +153,7 @@ export default function AdvertiserOffersPage() {
     );
     if (!res.success) {
       if (res.error === "insufficient_credits") {
-        const reqCents = Number(res.required_cents || unlockCostCents(offer.product_price));
+        const reqCents = Number(res.required_cents || unlockCosts[offer.id] || 0);
         const availCents = Number(res.available_cents || walletCents);
         const lackCents = Math.max(0, reqCents - availCents);
         toast.error(
@@ -241,8 +260,9 @@ export default function AdvertiserOffersPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {offers.map((offer) => {
-            const costCents = Math.max(unlockCostCents(offer.product_price), 900); // 2% ou piso R$9
-            const hasEnough = walletCents >= costCents;
+            // custo vindo do backend (null = cotação ainda carregando; front nunca calcula)
+            const costCents = Object.prototype.hasOwnProperty.call(unlockCosts, offer.id) ? unlockCosts[offer.id] : null;
+            const hasEnough = costCents != null && walletCents >= costCents;
             return (
               <div
                 key={offer.id}
@@ -337,7 +357,7 @@ export default function AdvertiserOffersPage() {
                       onClick={() => handleAccept(offer)}
                       className="flex-1 h-11 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
                     >
-                      <CheckCheck className="w-4 h-4" /> Liberar comprador (-{centsToBRL(costCents)})
+                      <CheckCheck className="w-4 h-4" /> Liberar comprador {costCents != null ? `(-${centsToBRL(costCents)})` : "(…)"}
                     </Button>
                     <Button
                       onClick={() => handleReject(offer)}

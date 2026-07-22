@@ -52,11 +52,19 @@ const FIN_TABLES = [
   "pay_payout_events", "pay_split_transactions", "payment_intents", "payment_splits",
   "profile_wallets", "store_credit_wallet", "credit_transactions", "financial_transactions",
   "commissions_local", "delivery_splits", "professional_wallet_ledger", "bank_webhook_events",
+  // Débito de 2% por interessado (AI-75.3, 2026-07-21): PII + carteiras
+  "advertiser_contact_intentions", "orion_marketplace_contact_charges",
+  "orion_contact_reveal_log", "wallets", "wallet_transactions",
 ];
 const FIN_FUNCTIONS = [
   "admin_wallet_credit", "append_ledger_entry", "pay_settle_delivery", "settle_delivery",
   "credit_merchant_credits", "track_admin_profit_event", "admin_get_auth_emails",
   "admin_apply_financial_adjustment", "release_service_payment_split",
+  // Débito de 2% por interessado (AI-75.3): cobrança/PII anon-BLOQUEADAS +
+  // Wallet Core legado desativado (deprecated)
+  "wallet_unlock_contact", "wallet_reveal_contact", "wallet_unlock_charge_cents",
+  "wallet_credit", "wallet_reserve", "wallet_confirm", "wallet_migrate_legacy_balances",
+  "unlock_reconcile",
 ];
 const FIN_VIEWS_NONINVOKER = [
   "v_pay_platform_ledger_summary", "platform_financial_dashboard", "v_account_balances",

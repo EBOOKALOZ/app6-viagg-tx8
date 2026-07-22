@@ -138,12 +138,12 @@ export function AdvertiserOverviewCards() {
       href: "/anunciante/conta",
     },
     {
-      title: "CRÉDITOS / PLANOS",
-      description: "Acompanhe seus créditos e assinaturas.",
+      title: "SALDO DA CARTEIRA",
+      description: "Acompanhe seu saldo e adicione mais quando precisar.",
       icon: CreditCard,
       color: "bg-emerald-600",
-      href: "/anunciante/creditos",
-      stats: `${credits.toLocaleString('pt-BR')} créditos`,
+      href: "/anunciante/carteira",
+      stats: (credits ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
     },
     {
       title: "MENSAGENS / LEADS",

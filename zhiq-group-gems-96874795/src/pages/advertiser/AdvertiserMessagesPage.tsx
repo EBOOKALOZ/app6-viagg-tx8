@@ -55,13 +55,6 @@ export default function AdvertiserMessagesPage() {
   const { user } = useAuth();
   const { intentions, isLoading, unlockIntention, deleteIntention } = useContactIntentions();
 
-  const creditosRouteFor = (id: string) => {
-    const it = intentions.find((i) => i.id === id);
-    const isImovel =
-      it?.listing_module === "real_estate" ||
-      location.pathname.startsWith("/anunciante/imoveis");
-    return isImovel ? "/anunciante/imoveis/creditos" : "/anunciante/creditos";
-  };
   const { balance } = useAdvertiserCredits();
   const queryClient = useQueryClient();
 
@@ -213,6 +206,12 @@ export default function AdvertiserMessagesPage() {
   });
 
   const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : viagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
+  // Mercado/Produtos: saldo é a CARTEIRA ÚNICA em R$ (balance.available_credits já vem em reais).
+  // Demais segmentos mantêm o modelo de créditos por-unidade (fora do escopo desta política).
+  const isMercado = !imoveisMode && !veiculosMode && !servicosMode && !fretesMode && !viagensMode;
+  const saldoLabel = isMercado
+    ? (creditBalance ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    : `${creditBalance}`;
   const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : viagensMode ? trUnlockCost : UNLOCK_COST);
 
   // ── Máscaras ──────────────────────────────────────────────────────────
@@ -243,7 +242,7 @@ export default function AdvertiserMessagesPage() {
       queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
     } else if (result.buy_credits_cta || result.error === "insufficient_credits") {
-      toast.error(`Saldo insuficiente. Adicione créditos à sua carteira.`);
+      toast.error(`Saldo insuficiente. Adicione saldo à sua carteira.`);
       setTimeout(() => navigate("/anunciante/carteira"), 1400);
     } else {
       toast.error("Erro ao liberar comprador: " + (result.error ?? "desconhecido"));
@@ -373,8 +372,12 @@ export default function AdvertiserMessagesPage() {
         <div className="mt-5 flex items-center gap-3 bg-white/10 border border-white/20 rounded-2xl px-4 py-3">
           <Coins className="w-5 h-5 text-white/80 shrink-0" />
           <div>
-            <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">Saldo disponível</p>
-            <p className="text-white text-2xl font-black leading-none">{creditBalance} <span className="text-sm font-bold text-white/70">créditos</span></p>
+            <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">{isMercado ? "Saldo da Carteira" : "Saldo disponível"}</p>
+            {isMercado ? (
+              <p className="text-white text-2xl font-black leading-none">{saldoLabel}</p>
+            ) : (
+              <p className="text-white text-2xl font-black leading-none">{creditBalance} <span className="text-sm font-bold text-white/70">créditos</span></p>
+            )}
           </div>
         </div>
       </div>
@@ -588,10 +591,10 @@ export default function AdvertiserMessagesPage() {
                   {/* Balance indicator */}
                   <div className={cn("mx-4 mb-3 flex items-center justify-between px-3 py-2.5 rounded-xl border", hasEnough ? "bg-emerald-950/30 border-emerald-700/30" : "bg-red-950/30 border-red-700/30")}>
                     <span className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", hasEnough ? "text-emerald-400" : "text-red-400")}>
-                      <Coins className="h-3.5 w-3.5" /> Saldo atual
+                      <Coins className="h-3.5 w-3.5" /> {isMercado ? "Saldo da carteira" : "Saldo atual"}
                     </span>
                     <span className={cn("text-xl font-black", hasEnough ? "text-emerald-300" : "text-red-400")}>
-                      {creditBalance} cr
+                      {isMercado ? saldoLabel : `${creditBalance} cr`}
                     </span>
                   </div>
 

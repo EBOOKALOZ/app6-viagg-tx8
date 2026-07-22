@@ -87,6 +87,7 @@ export const MerchantPaymentSettings = lazy(() => import("@/pages/merchant/Merch
 export const MerchantCredits = lazy(() => import("@/pages/merchant/MerchantCredits"));
 export const MerchantAuctions = lazy(() => import("@/pages/merchant/MerchantAuctions"));
 export const MerchantArremate = lazy(() => import("@/pages/merchant/MerchantArremate"));
+export const MerchantArrematesPanel = lazy(() => import("@/pages/merchant/MerchantArrematesPanel"));
 export const MerchantPayPremium = lazy(() => import("@/pages/merchant/MerchantPayPremium"));
 export const MerchantConversions = lazy(() => import("@/pages/merchant/MerchantConversions"));
 

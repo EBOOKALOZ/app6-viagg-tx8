@@ -340,40 +340,31 @@ export default function AdvertiserLeadsPage() {
     }
   };
 
-  // Lojista tem acesso quando JÁ comprou pacote OU já tem créditos no saldo
-  // (cobre tanto compras pendentes/processadas quanto grants administrativos).
-  const hasPaidPackage = purchaseHistory.some(p => p.payment_status === 'paid');
-  const hasCreditsOrPackage = hasPaidPackage || (balance.available_credits ?? 0) > 0;
-
+  // O custo do desbloqueio é 2% do valor anunciado, calculado no BACKEND
+  // (wallet_reveal_contact). O front NUNCA fixa valor nem recalcula %: só chama
+  // e reage ao resultado. Se faltar saldo, o backend devolve insufficient_credits
+  // com os valores exatos (em R$).
   const handleUnlock = async (id: string) => {
-    const currentBalance = balance.available_credits ?? 0;
-    // Gate único: precisa ter pacote OU créditos no saldo, e pelo menos 13 créditos
-    if (!hasCreditsOrPackage || currentBalance < 13) {
-      toast.error(
-        currentBalance < 13 && hasCreditsOrPackage
-          ? `Saldo insuficiente: você tem ${currentBalance} créd., precisa de 13. Redirecionando…`
-          : 'Adquira um pacote de créditos pra liberar a leitura de mensagens.',
-        { duration: 3500 }
-      );
-      setTimeout(() => navigate('/anunciante/creditos'), 800);
-      return;
-    }
     try {
-      // Feedback imediato: já avisa que começou a descontar
-      toast.loading('Descontando 13 créditos do seu saldo…', { id: `unlock-${id}`, duration: 2000 });
-      const result = await unlockIntention(id, 13);
+      toast.loading('Liberando contato…', { id: `unlock-${id}`, duration: 2000 });
+      const result = await unlockIntention(id); // valor = 2% no banco
       if (result.success) {
-        toast.success(`Contato desbloqueado! ${result.credits_charged} créditos debitados do seu pacote.`, { id: `unlock-${id}` });
+        toast.success(
+          (result.credits_charged ?? 0) > 0
+            ? `Contato liberado! ${centsToBRL(Math.round((result.credits_charged ?? 0) * 100))} debitados da sua carteira.`
+            : 'Contato liberado!',
+          { id: `unlock-${id}` }
+        );
+      } else if (result.buy_credits_cta) {
+        const precisa = centsToBRL(Math.round((result.required ?? 0) * 100));
+        const tem = centsToBRL(Math.round((result.available ?? 0) * 100));
+        toast.error(`Saldo insuficiente: você tem ${tem}, precisa de ${precisa}. Redirecionando para adicionar saldo…`, { id: `unlock-${id}`, duration: 3000 });
+        setTimeout(() => navigate('/anunciante/carteira'), 900);
       } else {
-        if (result.buy_credits_cta) {
-          toast.error(`Saldo insuficiente: ${result.available} créd., precisa ${result.required}. Redirecionando…`, { id: `unlock-${id}`, duration: 3000 });
-          setTimeout(() => navigate('/anunciante/creditos'), 800);
-        } else {
-          toast.error("Erro ao desbloquear contato: " + result.error, { id: `unlock-${id}` });
-        }
+        toast.error("Erro ao liberar contato: " + result.error, { id: `unlock-${id}` });
       }
     } catch (err: any) {
-      toast.error("Erro inesperado ao desbloquear contato.", { id: `unlock-${id}` });
+      toast.error("Erro inesperado ao liberar contato.", { id: `unlock-${id}` });
     }
   };
 
@@ -409,14 +400,14 @@ export default function AdvertiserLeadsPage() {
               <span className="text-[11px] font-black text-[#FF6A00] uppercase tracking-wider">{accountData?.plan?.name || "Básico / Gratuito"}</span>
             </div>
             <div className="bg-[#1B1F24] border border-[#2A3038] px-3 py-1.5 rounded-lg flex items-center gap-2">
-              <span className="text-[11px] font-medium text-[#A7B0BE] uppercase tracking-wider">Créditos Ativos:</span>
-              <span className="text-[11px] font-black text-emerald-400">{balance.available_credits}</span>
+              <span className="text-[11px] font-medium text-[#A7B0BE] uppercase tracking-wider">Saldo da Carteira:</span>
+              <span className="text-[11px] font-black text-emerald-400">{centsToBRL(Math.round((balance.available_credits ?? 0) * 100))}</span>
             </div>
-            <Button 
-              onClick={() => navigate('/anunciante/creditos')}
+            <Button
+              onClick={() => navigate('/anunciante/carteira')}
               className="h-8 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-[10px] tracking-widest px-4 ml-1"
             >
-              Adquirir Créditos
+              Adicionar Saldo
             </Button>
           </div>
           {pendingCount > 0 && (
@@ -586,16 +577,16 @@ export default function AdvertiserLeadsPage() {
               <ShoppingBag className="w-5 h-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">PACOTES ADQUIRIDOS</h2>
+              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">HISTÓRICO DE RECARGAS</h2>
               <p className="text-[10px] sm:text-xs text-[#A7B0BE] uppercase tracking-widest">
-                Créditos usados pra ler mensagens e desbloquear leads
+                Recargas da carteira usadas para liberar contatos de compradores
               </p>
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto">
             <div className="bg-emerald-500/10 border border-emerald-500/30 px-[30.5px] py-[13px] rounded-xl text-center shadow-lg shadow-emerald-500/10">
-              <p className="text-[18.5px] font-bold uppercase tracking-widest text-emerald-300">Saldo atual</p>
-              <p className="text-[37px] font-black text-emerald-400 leading-tight">{balance.available_credits} <span className="text-[20.7px] text-emerald-300">créd.</span></p>
+              <p className="text-[18.5px] font-bold uppercase tracking-widest text-emerald-300">Saldo da Carteira</p>
+              <p className="text-[37px] font-black text-emerald-400 leading-tight">{centsToBRL(Math.round((balance.available_credits ?? 0) * 100))}</p>
             </div>
           </div>
         </CardHeader>
@@ -605,12 +596,12 @@ export default function AdvertiserLeadsPage() {
           ) : purchaseHistory.length === 0 ? (
             <div className="p-6 text-center space-y-3">
               <Package className="w-10 h-10 text-[#A7B0BE]/40 mx-auto" />
-              <p className="text-sm text-[#A7B0BE]">Você ainda não comprou nenhum pacote de créditos.</p>
+              <p className="text-sm text-[#A7B0BE]">Você ainda não fez nenhuma recarga na carteira.</p>
               <Button
-                onClick={() => navigate('/anunciante/creditos')}
+                onClick={() => navigate('/anunciante/carteira')}
                 className="bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-bold uppercase text-[11px] tracking-wider h-auto py-3 px-5 leading-tight whitespace-normal text-center max-w-[280px] mx-auto"
               >
-                Adquira pacotes<br className="sm:hidden" />
+                Adicionar saldo<br className="sm:hidden" />
                 <span className="hidden sm:inline"> </span>
                 e feche suas vendas
               </Button>
@@ -760,39 +751,62 @@ export default function AdvertiserLeadsPage() {
                   </div>
 
                   {pi.customer_whatsapp && (() => {
+                    // Estimativa do débito (2% do valor, piso R$9). O valor REAL debitado
+                    // vem do backend (charged_cents) e é exibido no toast pós-operação —
+                    // aqui é só a prévia para o lojista decidir antes de liberar.
                     const orderCostCents = Math.max(Math.round(Number(pi.subtotal ?? 0) * 0.02 * 100), 900);
+                    const saldoCents = Math.round((balance.available_credits ?? 0) * 100);
+                    const hasEnough = saldoCents >= orderCostCents;
+                    const restanteCents = saldoCents - orderCostCents; // saldo após a operação
+                    const faltamCents = orderCostCents - saldoCents;   // quanto falta
                     return (
                     <div className="mt-auto space-y-2">
-                      <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-yellow-100 border border-yellow-400">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800 flex items-center gap-1">
-                          ⚠️ Liberar comprador custa {centsToBRL(orderCostCents)} (2%)
-                        </span>
-                        <span className="text-[10px] font-bold text-yellow-800">
-                          Saldo: {centsToBRL(Math.round((balance.available_credits ?? 0) * 100))}
-                        </span>
+                      {/* Resumo financeiro transparente: produto → comissão → débito → saldo → restante */}
+                      <div className="rounded-xl bg-yellow-100 border border-yellow-400 divide-y divide-yellow-300/70 overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Valor do pedido</span>
+                          <span className="text-[11px] font-black text-yellow-900">{centsToBRL(Math.round(Number(pi.subtotal ?? 0) * 100))}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Comissão (2%)</span>
+                          <span className="text-[11px] font-black text-yellow-900">{centsToBRL(orderCostCents)}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Saldo disponível</span>
+                          <span className="text-[11px] font-black text-yellow-900">{centsToBRL(saldoCents)}</span>
+                        </div>
+                        {hasEnough && (
+                          <div className="flex items-center justify-between px-3 py-1.5 bg-emerald-50/60">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Saldo após liberar</span>
+                            <span className="text-[11px] font-black text-emerald-800">{centsToBRL(restanteCents)}</span>
+                          </div>
+                        )}
                       </div>
                       <Button
+                        disabled={!hasEnough}
                         onClick={async () => {
                           const ok = await debitOrderCallCredits(pi);
                           if (!ok) return;
                           markOrderUnlocked(pi.id);
                           window.open(`https://wa.me/55${pi.customer_whatsapp!.replace(/\D/g, "")}`, "_blank");
                         }}
+                        title={hasEnough ? `O desbloqueio deste contato consumirá ${centsToBRL(orderCostCents)} da sua carteira.` : undefined}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 disabled:text-zinc-500 text-white font-black uppercase text-[11px] tracking-widest h-11 gap-2"
                       >
                         <MessageSquare className="w-4 h-4" /> Liberar comprador (-{centsToBRL(orderCostCents)})
                       </Button>
-                      {((balance.available_credits ?? 0) * 100) < orderCostCents && (
+                      {!hasEnough && (
                         <div className="space-y-1.5">
-                          <p className="text-[10px] text-red-600 font-bold uppercase tracking-wider text-center">
-                            saldo insuficiente
-                          </p>
+                          <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-red-50 border border-red-200">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-red-700">Faltam</span>
+                            <span className="text-[11px] font-black text-red-700">{centsToBRL(faltamCents)}</span>
+                          </div>
                           <Button
                             size="sm"
-                            onClick={() => navigate('/anunciante/creditos')}
-                            className="w-full h-9 rounded-lg bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[10px] uppercase tracking-widest gap-1 shadow-lg shadow-orange-500/40 animate-pulse"
+                            onClick={() => navigate('/anunciante/carteira')}
+                            className="w-full h-9 rounded-lg bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] hover:from-[#FF7A1A] hover:to-[#FF9A1A] text-white font-black text-[10px] uppercase tracking-widest gap-1 shadow-lg shadow-orange-500/40"
                           >
-                            🪙 Comprar Créditos
+                            💰 Adicionar Saldo
                           </Button>
                         </div>
                       )}
@@ -970,6 +984,7 @@ export default function AdvertiserLeadsPage() {
                           const firstName = lead.visitor_name?.trim().split(/\s+/)[0] || "cliente";
                           // Mostra primeiro nome mascarado pro contexto, mas o lojista sabe quem é só após desbloquear
                           const maskedName = firstName.slice(0, 2) + "***";
+                          const saldoCents = Math.round((balance.available_credits ?? 0) * 100);
                           return (
                             <>
                               <Button
@@ -981,11 +996,11 @@ export default function AdvertiserLeadsPage() {
                                   Falar com {maskedName}
                                 </span>
                                 <span className="text-[10px] font-bold tracking-widest opacity-90">
-                                  custo: 13 créditos
+                                  custo: 2% do valor anunciado
                                 </span>
                               </Button>
                               <div className="text-center text-sm sm:text-base font-black text-zinc-700 uppercase tracking-wider mt-1">
-                                Saldo Atual: <span className={hasEnoughCredits ? "text-emerald-700" : "text-red-600"}>{balance.available_credits} Créditos</span>
+                                Saldo da Carteira: <span className="text-emerald-700">{centsToBRL(saldoCents)}</span>
                               </div>
                             </>
                           );

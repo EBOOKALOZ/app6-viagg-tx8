@@ -37,24 +37,19 @@ export default function StoreOrdersPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Saldo da CARTEIRA ÚNICA (wallets / pay_financial_accounts, em cents)
+  // Saldo da CARTEIRA OFICIAL (pay_* / customer_wallet) — é exatamente a conta
+  // que a wallet_unlock_contact v3 debita (unificação AI-75.3, 2026-07-21).
   const { data: walletCents = 0 } = useQuery({
     queryKey: ["wallet-balance", user?.id],
     enabled: !!user?.id,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("wallets" as any)
-        .select("balance_cents").eq("owner_uid", user!.id).maybeSingle()) as any;
-      let cents = Number((data as any)?.balance_cents ?? 0);
-      if (cents === 0) {
-        const { data: payAccounts } = await (supabase.from("pay_financial_accounts" as any)
-          .select("available_balance").eq("owner_id", user!.id)) as any;
-        if (payAccounts && Array.isArray(payAccounts)) {
-          const totalPayReais = payAccounts.reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
-          cents = Math.round(totalPayReais * 100);
-        }
-      }
-      return cents;
+      const { data } = await (supabase.from("pay_financial_accounts" as any)
+        .select("available_balance")
+        .eq("owner_id", user!.id)
+        .eq("account_type", "customer_wallet")
+        .maybeSingle()) as any;
+      return Math.round(Number((data as any)?.available_balance ?? 0) * 100);
     },
   });
   // NOTA: o custo da liberação NÃO é calculado no front. Ele vem do backend

@@ -28,6 +28,16 @@ import { PromotionPlansGrid } from "@/components/promotion/PromotionPlansGrid";
 
 // ─── Helpers ────────────────────────────
 
+function normalizeImageUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  const driveMatch = trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch) return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`;
+  if (!/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed;
+}
+
 function formatBRL(value: number) {
   return `R$ ${value.toFixed(2).replace(".", ",")}`;
 }
@@ -1296,21 +1306,39 @@ export default function MerchantAuctions() {
     queryKey: ["merchant-store-auctions", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
+      const { data: profile } = await (supabase.from("profiles") as any)
+        .select("full_name, nome_loja, avatar_url, logo_url")
+        .eq("id", user!.id)
+        .maybeSingle();
+
       const { data } = await (supabase.from("merchant_stores") as any)
-        .select("id, city, region")
+        .select("id, city, region, logo_url, nome_loja")
         .eq("user_id", user!.id)
         .limit(1)
         .maybeSingle();
-      if (data) return data;
-      const { data: profile } = await (supabase.from("profiles") as any)
-        .select("full_name, nome_loja")
-        .eq("id", user!.id)
-        .single();
+
+      if (data) {
+        return {
+          ...data,
+          logo_url: data.logo_url || profile?.logo_url || profile?.avatar_url || null,
+          nome_loja: data.nome_loja || profile?.nome_loja || profile?.full_name || "Minha Loja",
+        };
+      }
+
       const { data: newStore } = await (supabase.from("merchant_stores") as any)
-        .insert({ user_id: user!.id, nome_loja: profile?.nome_loja || profile?.full_name || "Minha Loja" })
-        .select("id, city, region")
+        .insert({
+          user_id: user!.id,
+          nome_loja: profile?.nome_loja || profile?.full_name || "Minha Loja",
+          logo_url: profile?.logo_url || profile?.avatar_url || null,
+        })
+        .select("id, city, region, logo_url, nome_loja")
         .single();
-      return newStore || null;
+
+      return {
+        ...newStore,
+        logo_url: newStore?.logo_url || profile?.logo_url || profile?.avatar_url || null,
+        nome_loja: newStore?.nome_loja || profile?.nome_loja || profile?.full_name || "Minha Loja",
+      };
     },
   });
 
@@ -1374,11 +1402,27 @@ export default function MerchantAuctions() {
       {/* ═══ HEADER ═══ */}
       <div className="flex items-center justify-between bg-[#1B1F24] border border-[#2A3038] p-6 rounded-3xl shadow-2xl shadow-black/40">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-[#FF6A00]/20">
-            <Gavel className="h-8 w-8 text-white stroke-[2.5px]" />
-          </div>
+          {(() => {
+            const storeImage = normalizeImageUrl(merchantStore?.logo_url);
+            return storeImage ? (
+              <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-[#FF6A00]/40 bg-[#121418] shadow-lg shadow-[#FF6A00]/20 flex items-center justify-center shrink-0">
+                <img src={storeImage} alt={merchantStore?.nome_loja || "Loja"} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-[#FF6A00]/20 shrink-0">
+                <Gavel className="h-8 w-8 text-white stroke-[2.5px]" />
+              </div>
+            );
+          })()}
           <div>
-            <h1 className="text-2xl font-black text-[#F5F7FA] uppercase tracking-tight">Meus Leilões</h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl font-black text-[#F5F7FA] uppercase tracking-tight">Meus Leilões</h1>
+              {merchantStore?.nome_loja && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FF6A00]/10 border border-[#FF6A00]/30 text-[#FF6A00] text-xs font-bold uppercase tracking-wider">
+                  {merchantStore.nome_loja}
+                </span>
+              )}
+            </div>
             <p className="text-sm font-bold text-[#A7B0BE]">Gerencie seus leilões e arremates</p>
           </div>
         </div>
