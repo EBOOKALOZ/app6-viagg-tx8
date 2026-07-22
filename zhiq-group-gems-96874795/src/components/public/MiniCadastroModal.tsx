@@ -12,7 +12,7 @@ import {
   Loader2, Sparkles, CheckCircle2, User, Phone, X, Tag, Gavel,
   DollarSign, Send, ShieldCheck, LogIn,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -218,13 +218,13 @@ export function OfertaRapidaModal({
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
 
       {/* Modal — visual premium escuro (consistente com o detalhe do leilão) */}
-      <div className="relative w-full sm:max-w-md overflow-hidden rounded-t-[28px] border border-white/10 bg-gradient-to-b from-[#15181E] via-[#101216] to-[#0B0D10] text-white shadow-[0_30px_80px_-12px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-bottom-4 duration-300 sm:rounded-[28px]">
+      <div className="relative flex max-h-[92vh] w-full sm:max-w-md flex-col overflow-hidden rounded-t-[28px] border border-white/10 bg-gradient-to-b from-[#15181E] via-[#101216] to-[#0B0D10] text-white shadow-[0_30px_80px_-12px_rgba(0,0,0,0.8)] animate-in fade-in slide-in-from-bottom-4 duration-300 sm:rounded-[28px]">
         {/* glow decorativo colorido pela categoria */}
         <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[130%] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
              style={{ background: `radial-gradient(ellipse at center, ${accentHex}66, transparent 70%)` }} />
 
-        {/* ── Header ── */}
-        <div className="relative px-6 pb-4 pt-6">
+        {/* ── Header (fixo) ── */}
+        <div className="relative shrink-0 px-6 pb-4 pt-6">
           <button
             onClick={onClose}
             aria-label="Fechar"
@@ -252,8 +252,8 @@ export function OfertaRapidaModal({
           </div>
         </div>
 
-        {/* ── Content ── */}
-        <div className="space-y-4 px-6 pb-6">
+        {/* ── Content (rolável) ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-4 px-6 pb-6">
           {sent ? (
             /* ═══ SUCCESS STATE ═══ */
             <div className="space-y-4 py-2 text-center">
@@ -431,6 +431,25 @@ export function OfertaRapidaModal({
               </div>
             </>
           )}
+        </div>
+
+        {/* ═══ RODAPÉ OFICIAL (fixo, azul institucional) ═══ */}
+        <div className="shrink-0 bg-[#68c7f2] text-zinc-900 border-t border-white/20 px-5 py-3 space-y-1.5">
+          <p className="flex items-center justify-center gap-1.5 text-[11px] font-black text-center leading-snug">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+            VIAGG-TX8 • Plataforma de conexão entre compradores e vendedores
+          </p>
+          <p className="text-[10px] text-center text-zinc-900/75 leading-snug">
+            A plataforma apresenta o produto. A negociação acontece diretamente entre comprador e vendedor.
+          </p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 pt-0.5 text-[10px] font-bold">
+            <Link to="/privacidade" className="hover:underline">Política de Privacidade</Link>
+            <span aria-hidden className="text-zinc-900/30">•</span>
+            <Link to="/terms" className="hover:underline">Termos de Uso</Link>
+            <span aria-hidden className="text-zinc-900/30">•</span>
+            <Link to="/suporte" className="hover:underline">Central de Ajuda</Link>
+          </nav>
+          <p className="text-[9px] text-center text-zinc-900/60">© 2026 Viagg-TX8. Todos os direitos reservados.</p>
         </div>
       </div>
     </div>
