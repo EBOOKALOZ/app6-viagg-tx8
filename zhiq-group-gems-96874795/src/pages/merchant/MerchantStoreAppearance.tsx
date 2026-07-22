@@ -159,11 +159,17 @@ export default function MerchantStoreAppearance() {
   const { data: store, isLoading } = useQuery({
     queryKey: ["store-appearance-editor", user?.id],
     enabled: !!user?.id,
+    refetchOnMount: "always", // sempre recarrega a aparência salva ao abrir o editor
+    staleTime: 0,
     queryFn: async () => {
+      // .limit(1) em vez de maybeSingle direto: lojista com >1 loja não zera o
+      // resultado (maybeSingle falha com múltiplas linhas → perderia a aparência salva).
       const { data } = await supabase
         .from("merchant_stores")
         .select("*")
         .eq("user_id", user!.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
         .maybeSingle();
       return data as any;
     },

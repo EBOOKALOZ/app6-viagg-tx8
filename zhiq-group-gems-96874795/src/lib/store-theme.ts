@@ -177,6 +177,8 @@ function emailStr(v: unknown): string {
 
 /** Normaliza QUALQUER json em um StoreAppearance válido. Retorna null se não há tema. */
 export function sanitizeAppearance(raw: unknown): StoreAppearance | null {
+  // Defensivo: se a aparência voltar como JSON string (double-encoded), parseia.
+  if (typeof raw === "string") { try { raw = JSON.parse(raw); } catch { return null; } }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw as any;
   const D = DEFAULT_APPEARANCE;
