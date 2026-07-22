@@ -5,29 +5,29 @@ import {
   Timer,
   Flame,
   Zap,
+  MapPin,
+  Share2,
+  Heart,
+  Store,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PremiumCard, PremiumBadge, PremiumFeature } from '@/components/ui/PremiumCard';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { supabase } from '@/integrations/supabase/client';
 import type { AuctionListing } from '@/hooks/useAuctions';
-import { cn } from '@/lib/utils';
+import { CardDark, CardImageOverlay, DarkBadge } from '@/components/ui/dark-card';
+import { cn, formatCurrencyBRL } from '@/lib/utils';
 
 interface MarketAuctionCardProps {
   listing: AuctionListing;
   /**
-   * 'grid' (padrão): card centralizado com max-w-md — para páginas em grade.
-   * 'carousel': ocupa 100% do contêiner (sem max-width/centralização) — para
-   *   faixas horizontais de largura fixa (ex.: vitrine do Mercado). MESMO card,
-   *   mesmo visual/dados; só muda o envelope de largura.
+   * 'grid' (padrão): card ocupa o slot ou grade.
+   * 'carousel': ocupa 100% do contêiner para faixas horizontais.
    */
   variant?: 'grid' | 'carousel';
   /**
    * Destino do clique no card:
    *  - 'store' (padrão): abre a LOJA PÚBLICA do vendedor com a aba correta
-   *    (Leilões/Arremates) — novo fluxo de navegação que valoriza a vitrine.
    *  - 'detail': vai direto ao detalhe do leilão/arremate (dar lance/fazer oferta).
-   *    Usado DENTRO da própria loja (para não voltar à loja em loop).
    */
   linkTo?: 'store' | 'detail';
 }
@@ -61,8 +61,6 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
     } catch (err) {
       console.error('[CPC_ERROR]', err);
     }
-    // Novo fluxo: clique abre a LOJA do vendedor na aba correta (Leilões/Arremates).
-    // Dentro da própria loja usamos linkTo='detail' para ir direto ao lance.
     if (linkTo === 'store' && listing.store_id) {
       navigate(`/loja/${listing.store_id}?tab=${isAuction ? 'leiloes' : 'arremates'}`);
     } else {
@@ -70,8 +68,23 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
     }
   };
 
+  const handleFavoriteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavorited(v => !v);
+  };
+
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/mercado/leiloes/${listing.id}`;
+    if (navigator.share) {
+      navigator.share({ title: listing.title, url }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
+  };
+
   const formatTimeLeft = () => {
-    if (isEnded) return { text: 'Encerrado', className: 'bg-gray-500/90 text-white' };
+    if (isEnded) return { text: 'Encerrado', className: 'bg-gray-600/90 text-white border-gray-500' };
 
     const days = Math.floor(diff / 86400000);
     const hours = Math.floor((diff % 86400000) / 3600000);
@@ -80,8 +93,8 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
 
     const isUrgent = diff < 3600000; // < 1 hora
     const className = isUrgent
-      ? 'bg-red-500/90 text-white animate-pulse'
-      : 'bg-emerald-600/90 text-white';
+      ? 'bg-red-500/95 text-white animate-pulse border-red-400'
+      : 'bg-[#1A1F24]/90 text-[#00C58E] border-[#323A45]';
 
     let text = '';
     if (days > 0) {
@@ -95,70 +108,197 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
 
   const timeLeft = formatTimeLeft();
 
-  const features: PremiumFeature[] = [
-    { icon: <Gavel className="w-full h-full" />, label: `${listing.total_bids || 0} lances` }
-  ];
-
-  const badges: PremiumBadge[] = [
-    { label: 'Verificado', variant: 'verified' }
-  ];
-  
-  if (isAuction) {
-    badges.push({ label: 'Leilão', variant: 'featured', overrideClasses: 'bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] text-white font-black uppercase tracking-widest text-[10px] shadow-lg border-0' });
-  } else {
-    badges.push({ label: 'Arremate', variant: 'featured', overrideClasses: 'bg-gradient-to-r from-blue-500 to-purple-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg border-0' });
-  }
-
-  const timerOverlay = !isEnded && (
-    <div className="absolute bottom-3 right-3 z-20 pointer-events-none">
-      <div className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black backdrop-blur-md shadow-lg", timeLeft.className)}>
-        <Timer className="w-3.5 h-3.5" />
-        {isEndingSoon && <Flame className="w-3.5 h-3.5 animate-pulse" />}
-        <span className="font-mono tracking-wider">{timeLeft.text}</span>
-      </div>
-    </div>
-  );
-
   let location = '';
   if (listing.city) {
     location += listing.city;
     if (listing.neighborhood) location += `, ${listing.neighborhood}`;
   }
 
+  const formattedPrice = formatCurrencyBRL(currentPrice).replace(/^R\$\s*/, '');
+
   const card = (
-        <PremiumCard
-          className="hover:scale-[1.02]"
-          imageUrl={listing.product_image_url}
-          fallbackIcon={<Gavel className="w-16 h-16 text-[#FF6A00]/20" />}
-          category={isAuction ? 'Leilão' : 'Arremate'}
-          categoryColor={isAuction ? 'bg-[#FF6A00]' : 'bg-blue-500'}
-          title={listing.title}
-          description={listing.description}
-          location={location || undefined}
-          price={currentPrice}
-          oldPrice={buyNowPrice && buyNowPrice > currentPrice ? buyNowPrice : undefined}
-          features={features}
-          badges={badges}
-          isFavorited={favorited}
-          onFavorite={() => setFavorited(v => !v)}
-          onClick={handleClick}
-          primaryActionLabel={isEnded ? 'Encerrado' : isAuction ? 'Dar Lance Agora' : 'Fazer Oferta'}
-          primaryActionIcon={!isEnded && isAuction ? <Zap className="w-3.5 h-3.5 shrink-0" /> : !isEnded ? <Tag className="w-3.5 h-3.5 shrink-0" /> : undefined}
-          primaryActionClass={isEnded ? 'bg-gray-400' : isAuction ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] hover:from-[#FF7A1A] hover:to-[#FFA357] text-white border-0" : "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0"}
-          customOverlays={timerOverlay}
-          aspectRatio="portrait"
+    <CardDark
+      onClick={handleClick}
+      className="group relative flex flex-col w-full h-full cursor-pointer transition-all duration-300 ease-out hover:border-[#3E4854] hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5"
+    >
+      {/* ─── 1. IMAGEM PRINCIPAL (~55% do card) ─── */}
+      <div className="relative w-full aspect-[4/3] sm:aspect-[1.15] overflow-hidden bg-[#252B33] shrink-0">
+        {listing.product_image_url ? (
+          <img
+            src={listing.product_image_url}
+            alt={listing.title}
+            loading="lazy"
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[#8E98A3]">
+            <Gavel className="w-16 h-16 text-[#FF6A00]/20" />
+          </div>
+        )}
+
+        {/* Logo oficial Viagg-TX8 no topo superior esquerdo */}
+        <img
+          src="/viagg-logo.png"
+          alt="Viagg-TX8"
+          width={28}
+          height={28}
+          loading="lazy"
+          decoding="async"
+          className="absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
         />
+
+        {/* Badge de Categoria/Tipo no topo (ao lado do logo) */}
+        <div className="absolute top-2.5 left-12 z-20 flex items-center gap-1.5 pointer-events-none">
+          {isAuction ? (
+            <DarkBadge tone="orange" className="shadow-md backdrop-blur-md bg-[#FF6A00] text-white font-black">
+              LEILÃO
+            </DarkBadge>
+          ) : (
+            <DarkBadge tone="orange" className="shadow-md backdrop-blur-md bg-gradient-to-r from-blue-500 to-purple-500 text-white font-black">
+              ARREMATE
+            </DarkBadge>
+          )}
+          <DarkBadge tone="green" className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">
+            Verificado
+          </DarkBadge>
+        </div>
+
+        {/* Botões Compartilhar e Favoritar no topo direito */}
+        <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1.5">
+          <button
+            onClick={handleShareClick}
+            className="p-2 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md text-white/90 hover:text-white transition-all duration-200 hover:scale-105"
+            title="Compartilhar"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleFavoriteClick}
+            className="p-2 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-105"
+            title="Favoritar"
+          >
+            <Heart
+              className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "text-white/90 hover:text-white")}
+            />
+          </button>
+        </div>
+
+        {/* Watermark central VX — reforço de marca */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-[5]"
+        >
+          <span className="font-black tracking-tighter text-white/[0.07] mix-blend-overlay text-6xl sm:text-7xl drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]">
+            VX
+          </span>
+        </div>
+
+        {/* Selo institucional no canto inferior esquerdo */}
+        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1.5 pointer-events-none">
+          <div className="flex items-center gap-1 rounded-full bg-[#1A1F24]/85 backdrop-blur-md px-2.5 py-1 shadow-md ring-1 ring-white/10">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00C58E] shrink-0" aria-hidden="true" />
+            <span className="text-[9px] font-black uppercase tracking-wider text-white/95">Oficial Viagg-TX8</span>
+          </div>
+        </div>
+
+        {/* Contador / Timer no canto inferior direito */}
+        <div className="absolute bottom-2.5 right-2.5 z-20 pointer-events-none">
+          <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black backdrop-blur-md shadow-lg border", timeLeft.className)}>
+            <Timer className="w-3.5 h-3.5 shrink-0" />
+            {isEndingSoon && <Flame className="w-3.5 h-3.5 animate-pulse text-amber-300 shrink-0" />}
+            <span className="font-mono tracking-wider">{timeLeft.text}</span>
+          </div>
+        </div>
+
+        {/* Gradiente de leitura suave sobre a foto */}
+        <CardImageOverlay className="z-10" />
+      </div>
+
+      {/* ─── CORPO DO CARD ─── */}
+      <div className="flex flex-col flex-1 p-5 sm:p-6 space-y-3">
+        {/* 2. Nome do Item */}
+        <h3 className="text-lg font-bold text-white leading-tight line-clamp-2 group-hover:text-[#FF7A00] transition-colors">
+          {listing.title}
+        </h3>
+
+        {/* 3. Valor em destaque */}
+        <div className="pt-0.5 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#8E98A3] block mb-0.5">
+              {isAuction ? 'Lance Atual' : 'Preço de Arremate'}
+            </span>
+            <p className={cn("text-2xl font-black tracking-tight flex items-baseline", isAuction ? "text-[#FF6A00]" : "text-blue-400")}>
+              <span className="text-sm font-normal mr-1">R$</span>
+              <span>{formattedPrice}</span>
+            </p>
+          </div>
+          {buyNowPrice && buyNowPrice > currentPrice && (
+            <div className="text-xs text-[#8E98A3]">
+              <span className="block text-[10px]">Preço Original:</span>
+              <span className="line-through font-semibold text-gray-400">{formatCurrencyBRL(buyNowPrice)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 4. Informações Rápidas */}
+        <div className="flex items-center flex-wrap gap-2 pt-1.5 text-xs font-semibold text-[#B8C2CC]">
+          {location && (
+            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl max-w-full truncate" title={location}>
+              <MapPin className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
+          )}
+          {isAuction && (
+            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
+              <Gavel className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
+              <span>{listing.total_bids || 0} {(listing.total_bids || 0) === 1 ? 'lance' : 'lances'}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* ─── 5. RODAPÉ & BOTÃO PRINCIPAL ─── */}
+        <div className="pt-3 border-t border-[#323A45] mt-auto space-y-3">
+          <div className="flex items-center justify-between text-xs text-[#B8C2CC]">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-[#323A45] bg-[#252B33] shrink-0 flex items-center justify-center">
+                <Store className="w-3.5 h-3.5 text-[#00C58E]" />
+              </div>
+              <div className="min-w-0 flex flex-col">
+                <span className="text-[10px] font-bold text-[#8E98A3] uppercase tracking-wider">Anunciante</span>
+                <span className="text-xs font-bold text-[#B8C2CC] truncate">
+                  Oficial Viagg-TX8
+                </span>
+              </div>
+            </div>
+            <DarkBadge tone="green" className="text-[9px] px-1.5 py-0.5">Oficial</DarkBadge>
+          </div>
+
+          <button
+            onClick={handleClick}
+            className={cn(
+              "w-full h-11 text-white font-black text-xs sm:text-sm rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all duration-200 active:scale-[0.98]",
+              isEnded
+                ? "bg-gray-600 hover:bg-gray-500 cursor-not-allowed"
+                : isAuction
+                ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C33] hover:from-[#FF7A1A] hover:to-[#FFA357] shadow-[#FF6A00]/20"
+                : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-blue-500/20"
+            )}
+          >
+            {!isEnded && (isAuction ? <Zap className="w-4 h-4 shrink-0" /> : <Tag className="w-4 h-4 shrink-0" />)}
+            <span>{isEnded ? 'Encerrado' : isAuction ? 'Dar Lance Agora' : 'Fazer Oferta'}</span>
+          </button>
+        </div>
+      </div>
+    </CardDark>
   );
 
-  // 'carousel' → ocupa 100% do slot de largura fixa da faixa; 'grid' → centralizado.
   if (variant === 'carousel') {
     return <div className="w-full h-full">{card}</div>;
   }
-  return (
-    <div className="flex justify-center w-full">
-      <div className="w-full max-w-md">{card}</div>
-    </div>
-  );
+  return <div className="w-full">{card}</div>;
 };
 
 export default MarketAuctionCard;

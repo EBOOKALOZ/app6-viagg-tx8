@@ -112,13 +112,13 @@ export function MercadoAuctionsSection({ search = "" }: { search?: string }) {
         </div>
 
         {loading ? (
-          <div className="flex gap-3 overflow-hidden">
+          <div className="flex gap-4 overflow-hidden">
             {[0, 1, 2, 3].map(i => (
-              <div key={i} className="shrink-0 w-[280px] sm:w-[300px] h-[260px] rounded-2xl bg-gray-100 animate-pulse" />
+              <div key={i} className="shrink-0 w-[90vw] sm:w-[340px] md:w-[360px] lg:w-[380px] h-[420px] rounded-2xl bg-[#252B33] animate-pulse" />
             ))}
           </div>
         ) : (
-          <HorizontalCarousel cardWidth="w-[280px] sm:w-[300px]" gap="gap-3">
+          <HorizontalCarousel cardWidth="w-[90vw] sm:w-[340px] md:w-[360px] lg:w-[380px]" gap="gap-4">
             {[
               ...displayRows.map(a => (
                 <MarketAuctionCard key={a.id} listing={a as unknown as AuctionListing} variant="carousel" />
@@ -126,7 +126,7 @@ export function MercadoAuctionsSection({ search = "" }: { search?: string }) {
               <button
                 key="ver-todos"
                 onClick={() => navigate("/leiloes")}
-                className="w-full h-full min-h-[260px] rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50/60 hover:bg-orange-100 transition-all flex flex-col items-center justify-center gap-2 text-orange-600 font-black text-xs uppercase"
+                className="w-full h-full min-h-[420px] rounded-2xl border-2 border-dashed border-[#323A45] bg-[#252B33]/60 hover:bg-[#252B33] transition-all flex flex-col items-center justify-center gap-2 text-[#FF6A00] font-black text-xs sm:text-sm uppercase"
               >
                 <Users className="h-6 w-6" />
                 Ver todos os leilões

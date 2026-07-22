@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { BedDouble, Heart, MapPin, Maximize2 } from 'lucide-react';
+import { BedDouble, Bath, Car, Heart, MapPin, Maximize2, Share2, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getMediaFallbackUrl } from '@/lib/real-estate/mediaUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
-import { CardDark, CardHighlight, CardImageOverlay, DarkBadge, DarkButton } from '@/components/ui/dark-card';
+import { CardDark, CardImageOverlay, DarkBadge } from '@/components/ui/dark-card';
 import { cn, formatCurrencyBRL } from '@/lib/utils';
 
 interface MarketPropertyCardProps {
@@ -13,10 +13,22 @@ interface MarketPropertyCardProps {
     title: string;
     description?: string | null;
     property_type: string;
+    purpose?: 'venda' | 'aluguel' | string;
     price_brl: number;
     total_area_m2: number;
+    built_area_m2?: number | null;
+    land_area_m2?: number | null;
     bedrooms?: number;
+    suites?: number;
     bathrooms?: number;
+    parking_spots?: number;
+    garage_spots?: number;
+    accepts_financing?: boolean;
+    condo_fee_brl?: number | null;
+    iptu_brl?: number | null;
+    construction_year?: number | null;
+    property_code?: string | null;
+    seller_label?: string | null;
     public_location: string;
     public_address_label?: string | null;
     neighborhood?: string | null;
@@ -61,19 +73,22 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
   const getPropertyTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       'sitio': 'Sítio', 'fazenda': 'Fazenda', 'chacara': 'Chácara',
-      'terreno': 'Terreno', 'lote': 'Lote Urbano'
+      'terreno': 'Terreno', 'lote': 'Lote Urbano', 'casa': 'Casa',
+      'apartamento': 'Apartamento', 'comercial': 'Comercial'
     };
-    return labels[type] || type;
+    return labels[type] || type || 'Imóvel';
   };
 
-  /* Tons permitidos no dark premium: verde/laranja/vermelho/cinza. */
   const getPropertyTypeTone = (type: string): 'green' | 'orange' | 'gray' => {
     const tones: Record<string, 'green' | 'orange' | 'gray'> = {
       'sitio': 'green',
       'fazenda': 'orange',
       'chacara': 'green',
+      'casa': 'green',
+      'apartamento': 'green',
       'terreno': 'gray',
-      'lote': 'gray'
+      'lote': 'gray',
+      'comercial': 'orange'
     };
     return tones[type] || 'green';
   };
@@ -94,23 +109,38 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
     setFavorited(v => !v);
   };
 
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/imoveis/${property.id}`;
+    if (navigator.share) {
+      navigator.share({ title: property.title, url }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
+  };
+
   const isLoteArea = ['lote', 'terreno'].includes(String(property.property_type || '').toLowerCase());
-  const areaLabel = property.total_area_m2
-    ? (isLoteArea
-        ? `${property.total_area_m2.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m²`
-        : `${(property.total_area_m2 / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ha`)
+  const areaValue = property.total_area_m2 || property.land_area_m2 || property.built_area_m2;
+  const areaLabel = areaValue
+    ? (isLoteArea || areaValue < 10000
+        ? `${areaValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} m²`
+        : `${(areaValue / 10000).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ha`)
     : '—';
+
+  const isAluguel = String(property.purpose || '').toLowerCase() === 'aluguel';
+  const formattedPrice = formatCurrencyBRL(property.price_brl).replace(/^R\$\s*/, '');
+  const totalSpots = property.parking_spots ?? property.garage_spots ?? 0;
 
   return (
     <CardDark
       onClick={goToDetail}
       className={cn(
-        "group relative flex flex-col w-full cursor-pointer transition-all duration-300 ease-out hover:border-[#3E4854] hover:shadow-[0_12px_32px_rgba(0,0,0,0.45)]",
+        "group relative flex flex-col w-full h-full cursor-pointer transition-all duration-300 ease-out hover:border-[#3E4854] hover:shadow-[0_16px_40px_rgba(0,0,0,0.5)] lg:hover:-translate-y-0.5",
         isFeatured && "md:col-span-2 lg:col-span-2"
       )}
     >
-      {/* ─── 1. IMAGEM ─── */}
-      <div className={cn("relative w-full overflow-hidden bg-[#252B33] shrink-0", isFeatured ? "aspect-video" : "aspect-square")}>
+      {/* ─── 1. IMAGEM PRINCIPAL (~55% do card) ─── */}
+      <div className={cn("relative w-full aspect-[4/3] sm:aspect-[1.15] overflow-hidden bg-[#252B33] shrink-0")}>
         {property.thumbnail_url ? (
           <img
             src={property.thumbnail_url}
@@ -124,7 +154,7 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
           </div>
         )}
 
-        {/* Logo oficial da plataforma (topo, canto superior esquerdo) */}
+        {/* Logo oficial Viagg-TX8 no topo superior esquerdo */}
         <img
           src="/viagg-logo.png"
           alt="Viagg-TX8"
@@ -135,21 +165,33 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
           className="absolute top-2.5 left-2.5 z-20 h-7 w-7 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none"
         />
 
-        {/* Badges (direita, abaixo do favoritar) */}
-        <div className="absolute top-14 right-3 flex flex-col items-end flex-wrap gap-1.5 z-10 pointer-events-none">
-          {isFeatured && <DarkBadge tone="orange">Destaque</DarkBadge>}
-          <DarkBadge tone="green">Verificado</DarkBadge>
+        {/* Badge de Categoria/Propósito no topo (ao lado do logo) */}
+        <div className="absolute top-2.5 left-12 z-20 flex items-center gap-1.5 pointer-events-none">
+          <DarkBadge tone={getPropertyTypeTone(property.property_type)} className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">
+            {property.purpose ? (isAluguel ? 'Aluguel' : 'Venda') : 'Imóvel'} • {getPropertyTypeLabel(property.property_type)}
+          </DarkBadge>
+          {isFeatured && <DarkBadge tone="orange" className="shadow-md backdrop-blur-md bg-[#1A1F24]/85">Destaque</DarkBadge>}
         </div>
 
-        {/* Favoritar */}
-        <button
-          onClick={handleFavoriteClick}
-          className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md transition-all duration-200"
-        >
-          <Heart
-            className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "text-[#B8C2CC]")}
-          />
-        </button>
+        {/* Botão Compartilhar e Favoritar no topo direito */}
+        <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1.5">
+          <button
+            onClick={handleShareClick}
+            className="p-2 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md text-white/90 hover:text-white transition-all duration-200 hover:scale-105"
+            title="Compartilhar imóvel"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleFavoriteClick}
+            className="p-2 rounded-full bg-[#1A1F24]/80 hover:bg-[#1A1F24] border border-[#323A45] shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-105"
+            title="Favoritar imóvel"
+          >
+            <Heart
+              className={cn("w-4 h-4 transition-all duration-300", favorited ? "fill-red-500 text-red-500 scale-110" : "text-white/90 hover:text-white")}
+            />
+          </button>
+        </div>
 
         {/* Watermark central VX — reforço de marca */}
         <div
@@ -161,71 +203,77 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
           </span>
         </div>
 
-        {/* Selo institucional — canto inferior esquerdo */}
-        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1 rounded-full bg-[#1A1F24]/85 backdrop-blur-md px-2.5 py-1 pointer-events-none shadow-md ring-1 ring-white/10">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#00C58E] shrink-0" aria-hidden="true" />
-          <span className="text-[9px] font-black uppercase tracking-wider text-white/95">Oficial Viagg-TX8</span>
+        {/* Selo institucional e Código no canto inferior esquerdo */}
+        <div className="absolute bottom-2.5 left-2.5 z-20 flex items-center gap-1.5 pointer-events-none">
+          <div className="flex items-center gap-1 rounded-full bg-[#1A1F24]/85 backdrop-blur-md px-2.5 py-1 shadow-md ring-1 ring-white/10">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00C58E] shrink-0" aria-hidden="true" />
+            <span className="text-[9px] font-black uppercase tracking-wider text-white/95">Oficial Viagg-TX8</span>
+          </div>
+          {property.property_code && (
+            <span className="rounded-full bg-[#1A1F24]/85 backdrop-blur-md px-2 py-0.5 text-[9px] font-bold text-[#8E98A3] ring-1 ring-white/10">
+              COD: {property.property_code}
+            </span>
+          )}
         </div>
 
-        {/* Gradiente de leitura sobre a foto */}
-        <CardImageOverlay />
+        {/* Gradiente de leitura suave sobre a foto */}
+        <CardImageOverlay className="z-10" />
       </div>
 
-      {/* ─── CORPO ─── */}
+      {/* ─── CORPO DO CARD ─── */}
       <div className="flex flex-col flex-1 p-5 sm:p-6 space-y-3">
-        {/* 2. Vendedor + Título */}
-        <div className="space-y-1.5">
-          {property.merchant && (
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-6 h-6 rounded-full overflow-hidden border border-[#323A45] bg-[#252B33] shrink-0 flex items-center justify-center">
-                {property.merchant.avatarUrl ? (
-                  <img src={property.merchant.avatarUrl} className="w-full h-full object-cover" alt={property.merchant.name} />
-                ) : (
-                  <span className="text-[10px] font-bold text-[#8E98A3]">{property.merchant.name.charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="min-w-0 flex items-center gap-1.5 flex-1">
-                <span className="text-xs font-bold text-[#B8C2CC] truncate">{property.merchant.name}</span>
-                {property.merchant.isOfficial && (
-                  <span className="text-[9px] font-black bg-[#FF7A00]/15 text-[#FF7A00] px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0">
-                    Oficial
-                  </span>
-                )}
-              </div>
+        {/* 2. Nome do Imóvel (Fonte grande e forte) */}
+        <h3 className="text-lg font-bold text-white leading-tight line-clamp-2 group-hover:text-[#00C58E] transition-colors">
+          {property.title}
+        </h3>
+
+        {/* 3. Valor em destaque (Fonte maior, cor verde institucional) */}
+        <div className="pt-0.5">
+          <p className="text-2xl font-black text-[#00C58E] tracking-tight flex items-baseline">
+            <span className="text-sm font-normal mr-1">R$</span>
+            <span>{formattedPrice}</span>
+            {isAluguel && <span className="text-xs font-normal text-[#B8C2CC] ml-1">/mês</span>}
+          </p>
+        </div>
+
+        {/* 4. Informações Rápidas (Ícones no mesmo padrão visual) */}
+        <div className="flex items-center flex-wrap gap-2 pt-1.5 text-xs font-semibold text-[#B8C2CC]">
+          {/* Localização / Bairro */}
+          <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl max-w-full truncate" title={completeAddress}>
+            <MapPin className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+            <span className="truncate">{completeAddress}</span>
+          </div>
+
+          {/* Área m² */}
+          <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
+            <Maximize2 className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+            <span>{areaLabel}</span>
+          </div>
+
+          {/* Dormitórios */}
+          {(property.bedrooms ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
+              <BedDouble className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+              <span>
+                {property.bedrooms} {property.bedrooms === 1 ? 'Quarto' : 'Quartos'}
+                {property.suites ? ` (${property.suites} suíte${property.suites > 1 ? 's' : ''})` : ''}
+              </span>
             </div>
           )}
 
-          <h3 className="text-base sm:text-lg font-black text-white leading-snug line-clamp-2 group-hover:text-[#FF7A00] transition-colors">
-            {property.title}
-          </h3>
-        </div>
+          {/* Banheiros */}
+          {(property.bathrooms ?? 0) > 0 && (
+            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
+              <Bath className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+              <span>{property.bathrooms} {property.bathrooms === 1 ? 'Banheiro' : 'Banheiros'}</span>
+            </div>
+          )}
 
-        {/* 3. Preço em destaque */}
-        <CardHighlight label="Preço" value={formatCurrencyBRL(property.price_brl)} />
-
-        {/* 4. Categoria */}
-        <div className="pt-1">
-          <DarkBadge tone={getPropertyTypeTone(property.property_type)}>
-            {getPropertyTypeLabel(property.property_type)}
-          </DarkBadge>
-        </div>
-
-        {/* 5. Localização — ícone verde + texto cinza claro */}
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <MapPin className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
-          <span className="text-xs font-medium text-[#B8C2CC] truncate">{completeAddress}</span>
-        </div>
-
-        {/* 6. Especificações */}
-        <div className="flex items-center flex-wrap gap-2 pt-1.5">
-          <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl">
-            <Maximize2 className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
-            <span className="text-xs font-semibold text-[#B8C2CC] truncate max-w-[140px]">{areaLabel}</span>
-          </div>
-          {(property.bedrooms ?? 0) > 0 && (
-            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl">
-              <BedDouble className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
-              <span className="text-xs font-semibold text-[#B8C2CC] truncate max-w-[140px]">{property.bedrooms} Quartos</span>
+          {/* Vagas */}
+          {totalSpots > 0 && (
+            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
+              <Car className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+              <span>{totalSpots} {totalSpots === 1 ? 'Vaga' : 'Vagas'}</span>
             </div>
           )}
         </div>
@@ -233,31 +281,40 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* 7. Ação */}
-        <div className="pt-3 border-t border-[#323A45] mt-auto">
-          <DarkButton
+        {/* ─── 5. VENDEDOR & 6. BOTÃO PRINCIPAL ─── */}
+        <div className="pt-3 border-t border-[#323A45] mt-auto space-y-3">
+          {/* Vendedor */}
+          <div className="flex items-center justify-between text-xs text-[#B8C2CC]">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-[#323A45] bg-[#252B33] shrink-0 flex items-center justify-center">
+                {property.merchant?.avatarUrl ? (
+                  <img src={property.merchant.avatarUrl} className="w-full h-full object-cover" alt={property.merchant?.name || 'Anunciante'} />
+                ) : (
+                  <Store className="w-3.5 h-3.5 text-[#00C58E]" />
+                )}
+              </div>
+              <div className="min-w-0 flex flex-col">
+                <span className="text-[10px] font-bold text-[#8E98A3] uppercase tracking-wider">Anunciante</span>
+                <span className="text-xs font-bold text-[#B8C2CC] truncate">
+                  {property.merchant?.name || property.seller_label || 'Corretor / Proprietário'}
+                </span>
+              </div>
+            </div>
+            {property.merchant?.isOfficial && (
+              <DarkBadge tone="green" className="text-[9px] px-1.5 py-0.5">Oficial</DarkBadge>
+            )}
+          </div>
+
+          {/* Botão Principal — Cor azul institucional da Viagg-TX8, bordas arredondadas, hover premium */}
+          <button
             onClick={goToDetail}
-            className="w-full h-11 py-0 text-xs flex items-center justify-center"
+            className="w-full h-11 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs sm:text-sm rounded-xl flex items-center justify-center gap-1.5 shadow-md hover:shadow-blue-500/20 transition-all duration-200 active:scale-[0.98]"
           >
             Tenho Interesse
-          </DarkButton>
-
-          {/* Rodapé institucional */}
-          <div className="mt-2.5 flex items-center justify-center gap-1.5 select-none pointer-events-none opacity-80">
-            <img
-              src="/viagg-logo.png"
-              alt=""
-              aria-hidden="true"
-              width={16}
-              height={16}
-              loading="lazy"
-              decoding="async"
-              className="h-4 w-4 rounded object-cover"
-            />
-            <span className="text-[9px] font-bold tracking-wide text-[#8E98A3]">Marketplace Oficial Viagg-TX8™</span>
-          </div>
+          </button>
         </div>
       </div>
     </CardDark>
   );
 };
+

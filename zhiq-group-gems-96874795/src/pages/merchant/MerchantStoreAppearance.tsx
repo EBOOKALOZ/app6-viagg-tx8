@@ -13,7 +13,7 @@
  *    dentro do StoreThemeScope da vitrine.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -145,13 +145,15 @@ function TextField({ label, value, placeholder, onChange }: {
 
 export default function MerchantStoreAppearance() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [theme, setTheme] = useState<StoreAppearance>(DEFAULT_APPEARANCE);
   const [savedJson, setSavedJson] = useState<string>("null");
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState<"bg" | "banner" | null>(null);
+  const [uploading, setUploading] = useState<"bg" | "banner" | "logo" | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const bgFileRef = useRef<HTMLInputElement>(null);
   const bannerFileRef = useRef<HTMLInputElement>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
 
   // Loja do lojista (dados p/ preview + appearance salva)
   const { data: store, isLoading } = useQuery({
@@ -288,6 +290,28 @@ export default function MerchantStoreAppearance() {
     }
   };
 
+  const uploadLogo = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("Selecione uma imagem válida"); return; }
+    if (file.size > 3 * 1024 * 1024) { toast.error("Máximo 3MB"); return; }
+    if (!store?.id) { toast.error("Loja não encontrada"); return; }
+    setUploading("logo");
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+      const path = `logos/${user!.id}/logo-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("logos_lojas").upload(path, file, { upsert: true });
+      if (error) throw new Error(error.message);
+      const { data: { publicUrl } } = supabase.storage.from("logos_lojas").getPublicUrl(path);
+      const { error: dbError } = await (supabase.from("merchant_stores") as any).update({ logo_url: publicUrl }).eq("id", store.id);
+      if (dbError) throw new Error(dbError.message);
+      await queryClient.invalidateQueries({ queryKey: ["store-appearance-editor"] });
+      toast.success("Logo da loja atualizada!");
+    } catch (e: any) {
+      toast.error(e.message || "Erro no upload da logo");
+    } finally {
+      setUploading(null);
+    }
+  };
+
   const storeName = store?.nome_loja || "Minha Loja";
 
   if (isLoading) {
@@ -303,10 +327,31 @@ export default function MerchantStoreAppearance() {
     <div className="px-4 pt-4 pb-28 lg:px-8 max-w-[1500px] w-full mx-auto space-y-5">
       {/* HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-zinc-200 p-5 rounded-3xl shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-[#FF6A00]/20">
-            <Palette className="h-7 w-7 text-white" />
+        <div className="flex items-center gap-3.5">
+          <div
+            onClick={() => logoFileRef.current?.click()}
+            title="Clique para alterar a logo da loja"
+            className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C33] flex items-center justify-center shadow-lg shadow-[#FF6A00]/20 cursor-pointer group shrink-0 overflow-hidden border border-zinc-200/80"
+          >
+            {store?.logo_url ? (
+              <img src={store.logo_url} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Palette className="h-7 w-7 text-white" />
+            )}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              {uploading === "logo" ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <span className="text-[8px] font-black uppercase text-white tracking-tight text-center leading-tight px-1">Mudar Logo</span>
+              )}
+            </div>
+            {store?.logo_url && (
+              <div className="absolute bottom-0 right-0 p-1 bg-[#FF6A00] text-white rounded-tl-lg shadow">
+                <Palette className="w-3 h-3" />
+              </div>
+            )}
           </div>
+          <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.target.value = ""; }} />
           <div>
             <h1 className="text-xl font-black text-zinc-900 uppercase tracking-tight">🎨 Aparência da Loja</h1>
             <p className="text-xs font-bold text-zinc-500">
@@ -367,6 +412,31 @@ export default function MerchantStoreAppearance() {
                   <span className="text-[10px] font-black text-zinc-700 uppercase leading-tight">{p.label}</span>
                 </button>
               ))}
+            </div>
+          </Section>
+
+          {/* Logo da Loja */}
+          <Section title="Logo da Loja" icon={StoreIcon}>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-xl border border-zinc-200 overflow-hidden bg-zinc-50 flex items-center justify-center shrink-0">
+                {store?.logo_url ? (
+                  <img src={store.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <StoreIcon className="w-6 h-6 text-zinc-400" />
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => logoFileRef.current?.click()}
+                  disabled={uploading === "logo"}
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-dashed border-zinc-300 text-[11px] font-black uppercase tracking-wider text-zinc-600 hover:border-[#FF6A00] hover:text-[#FF6A00] transition-all bg-white shadow-2xs"
+                >
+                  {uploading === "logo" ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FF6A00]" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                  {store?.logo_url ? "Trocar logo" : "Enviar logo"}
+                </button>
+                <span className="text-[10px] font-bold text-zinc-400">Clique para enviar imagem (PNG ou JPG)</span>
+              </div>
             </div>
           </Section>
 

@@ -234,13 +234,33 @@
     @apply border-border;
   }
 
+  html, body, #root {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   html {
     font-size: 109%;
+  }
+
+  /* Garantir que imagens, cards, textos e divs não iniciem arrasto de arquivo (drag-and-drop) bloqueando o Touch Scroll */
+  img, picture, video, canvas, svg {
+    pointer-events: auto;
+    touch-action: manipulation;
+    -webkit-user-drag: none;
+  }
+
+  /* Permitir rolagem vertical fluida ao tocar em qualquer elemento da UI */
+  div, section, article, main, header, footer, nav, span, p, h1, h2, h3, h4, h5, h6, label, a, button {
+    touch-action: manipulation;
   }
 }
 

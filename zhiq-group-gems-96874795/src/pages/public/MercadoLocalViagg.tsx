@@ -2025,7 +2025,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                         return (
                             <div ref={gridRef}>
                                 {carouselMode ? (
-                                    <HorizontalCarousel cardWidth="w-[280px] sm:w-[320px] lg:w-[340px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-[90vw] sm:w-[340px] md:w-[360px] lg:w-[380px]" gap="gap-4">
                                         {renderedCards}
                                     </HorizontalCarousel>
                                 ) : (
