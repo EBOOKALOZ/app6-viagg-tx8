@@ -21,6 +21,9 @@ import { StoreCartDrawer } from "@/components/public/StoreCartDrawer";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { CardTopBar } from "@/components/ui/CardTopBar";
+import { shareCardLink } from "@/hooks/useCardTopBarActions";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function normalizeImageUrl(url: string | null | undefined, bucket: string = 'marketing-materials'): string | null {
@@ -131,6 +134,20 @@ export default function ProductLandingPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [showContactModal, setShowContactModal] = useState(false);
+
+    // Header Universal dos cards relacionados: favoritos + porta única de auth
+    const requireAuthAction = useRequireAuth();
+    const [favIds, setFavIds] = useState<Set<string>>(new Set());
+    const toggleFav = (id: string) => (e: React.MouseEvent) => {
+        e.stopPropagation();
+        requireAuthAction(() => {
+            setFavIds(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+            });
+        }, { kind: "favorite", label: "favoritar este anúncio", payload: { id } });
+    };
     const [showDiscountModal, setShowDiscountModal] = useState(false);
     const [showLeadModal, setShowLeadModal] = useState(false);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -227,6 +244,9 @@ export default function ProductLandingPage() {
                 }
             }
 
+            // store_resolved = achamos uma merchant_stores REAL (não o mock abaixo).
+            // Usado pelo redirect: só redireciona para /loja/:id quando a loja existe.
+            const storeResolved = !!storeRow;
             if (!storeRow) {
                 storeRow = { id: realStoreId, user_id: resolvedUserId };
             }
@@ -267,6 +287,7 @@ export default function ProductLandingPage() {
                 categoria: profile.categoria || null,
                 store_id: realStoreId, // ID corrigido para direcionar pra loja real
                 merchant_user_id: finalUserId,
+                store_resolved: storeResolved,
             };
         },
         enabled: !!product?.merchant_store_id,
@@ -471,13 +492,25 @@ export default function ProductLandingPage() {
         }
     };
 
-    // â”€â”€ Loading â”€â”€
-    if (isLoading) {
+    // ── NOVO FLUXO (07-21): /produto/:id REDIRECIONA para a loja com o produto
+    //    em destaque (/loja/:storeId?product=:id). Só redireciona quando a loja
+    //    REAL foi resolvida (store_resolved) — produtos sem loja caem no fallback
+    //    abaixo (renderiza a página de produto). Resolução robusta preservada
+    //    (advertiser_listings → advertiser_account_id → merchant_stores).
+    const canRedirect = !!store?.store_id && (store as any)?.store_resolved === true;
+    useEffect(() => {
+        if (canRedirect && id) {
+            navigate(`/loja/${store!.store_id}?product=${id}`, { replace: true });
+        }
+    }, [canRedirect, store?.store_id, id, navigate]);
+
+    // â”€â”€ Loading / Redirecionando â”€â”€
+    if (isLoading || canRedirect) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
                 <div className="text-center space-y-3">
                     <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
-                    <p className="text-sm text-gray-400">Carregando produto...</p>
+                    <p className="text-sm text-gray-400">{canRedirect ? "Abrindo a loja..." : "Carregando produto..."}</p>
                 </div>
             </div>
         );
@@ -630,7 +663,7 @@ export default function ProductLandingPage() {
                                     </div>
                                 </div>
                                 {store.store_id && (
-                                    <button onClick={(e) => { e.preventDefault(); navigate(`/loja/${store.store_id}`); }} className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-colors">
+                                    <button onClick={(e) => { e.preventDefault(); navigate(`/loja/${store.store_id}?product=${id}`); }} className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-colors">
                                         <Store className="h-4 w-4" /> Visitar a Loja
                                     </button>
                                 )}
@@ -648,8 +681,16 @@ export default function ProductLandingPage() {
                                 return (
                                     <div key={rp.id} onClick={() => { if (product?.merchant_store_id) { trackM1Event({ merchant_store_id: product.merchant_store_id, product_id: rp.id, event_type: "product_click", city: store?.city, region: store?.region, bairro: store?.bairro }); } navigate(`/produto/${rp.id}`); }}
                                         className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden cursor-pointer hover:shadow-lg transition-all group">
-                                        <div className="w-full aspect-square bg-zinc-100 overflow-hidden">
+                                        <div className="relative w-full aspect-square bg-zinc-100 overflow-hidden">
                                             {rpImg ? (<img src={rpImg} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />) : (<div className="w-full h-full flex items-center justify-center"><ShoppingBag className="h-8 w-8 text-zinc-300" /></div>)}
+                                            {/* Header Universal do card (compacto p/ thumbs pequenos) */}
+                                            <CardTopBar
+                                                modality="venda"
+                                                favorited={favIds.has(rp.id)}
+                                                onFavorite={toggleFav(rp.id)}
+                                                onShare={(e) => { e.stopPropagation(); shareCardLink(rp.title, `${window.location.origin}/produto/${rp.id}`); }}
+                                                logoClassName="h-7 w-7"
+                                            />
                                         </div>
                                         <div className="p-3">
                                             <p className="text-sm font-bold text-zinc-900 leading-snug line-clamp-2 group-hover:text-[#FF6A00] transition-colors">{rp.title}</p>

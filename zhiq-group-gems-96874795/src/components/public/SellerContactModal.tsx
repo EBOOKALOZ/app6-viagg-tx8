@@ -136,7 +136,7 @@ export default function SellerContactModal({ product, open, onClose }: SellerCon
     const handleViewStore = () => {
         onClose();
         if (product.merchant_store_id) {
-            navigate(`/loja/${product.merchant_store_id}`);
+            navigate(`/loja/${product.merchant_store_id}?product=${product.id}`);
         }
     };
 

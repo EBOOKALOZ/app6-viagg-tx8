@@ -64,6 +64,8 @@ import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafe
 // só são usados no botão "Leilões" (/leiloes → AuctionListPage).
 import { AdvertiserCtaBanner } from "@/components/public/AdvertiserCtaBanner";
 import { CardDark, CardInfo, CardHighlight, DarkStat, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
+import { CardTopBar } from "@/components/ui/CardTopBar";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 // ─── Helpers ────────────────────────────
 const STORAGE_BUCKET_CANDIDATES = ['marketing-materials', 'merchant-products', 'product-images', 'merchant-marketing'];
@@ -416,6 +418,20 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
     const { user } = useAuth();
 
     const [carouselMode, setCarouselMode] = useState(true);
+
+    // Header Universal dos cards: favoritos locais + porta única de autenticação
+    const requireAuthAction = useRequireAuth();
+    const [favIds, setFavIds] = useState<Set<string>>(new Set());
+    const toggleFav = (id: string) => (e: React.MouseEvent) => {
+        e.stopPropagation();
+        requireAuthAction(() => {
+            setFavIds(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+            });
+        }, { kind: "favorite", label: "favoritar este anúncio", payload: { id } });
+    };
 
 
     // Botão Motoboy do topo: sempre manda pra tela de cadastro/login do motoboy.
@@ -1794,9 +1810,14 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                 source: "card",
                                             });
                                         }
-                                        /* Clique no produto → página do produto (ou tracking slug).
-                                           O clique na loja no rodapé do card vai para a loja do ofertante. */
-                                        if (product.tracking_slug) {
+                                        /* NOVO FLUXO (07-21): clicar no produto abre a LOJA do
+                                           vendedor com o produto em destaque (/loja/:id?product=:id).
+                                           merchant_store_id já vem resolvido na query desta página.
+                                           Sem loja (raro) → cai no /produto/:id (que redireciona ou
+                                           renderiza como fallback). */
+                                        if (product.merchant_store_id) {
+                                            navigate(`/loja/${product.merchant_store_id}?product=${product.id}`);
+                                        } else if (product.tracking_slug) {
                                             navigate(`/p/${product.tracking_slug}`);
                                         } else {
                                             navigate(`/produto/${product.id}`);
@@ -1805,16 +1826,6 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                                     {/* Image */}
                                     <div className="relative overflow-hidden bg-[#252B33]">
-                                        {/* ─── LOGO DA PLATAFORMA (topo, canto superior esquerdo — FASE 2) ─── */}
-                                        <img src="/viagg-logo.png" alt="Viagg-TX8" width={44} height={44} loading="lazy" decoding="async" className="absolute top-2 left-2 z-20 h-11 w-11 rounded-lg object-cover shadow-md ring-1 ring-white/20 pointer-events-none" />
-                                        {/* Condition Badge (movido p/ direita p/ não colidir com o logo) */}
-                                        {product.condition && (
-                                            <div className="absolute top-2 right-2 z-10">
-                                                <DarkBadge tone={product.condition.toLowerCase().includes('novo') ? 'green' : 'orange'} className="shadow-sm backdrop-blur-md bg-[#1A1F24]/85">
-                                                    {product.condition}
-                                                </DarkBadge>
-                                            </div>
-                                        )}
                                         {imgSrc ? (
                                             <div className="relative w-full aspect-square flex items-center justify-center bg-[#252B33]">
                                                 <ShoppingBag className="absolute h-8 w-8 text-[#8E98A3] z-0" />
@@ -1897,21 +1908,14 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                         {/* Overlay padrão do DS para leitura sobre a foto */}
                                         <CardImageOverlay className="z-[11]" />
 
-                                        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 items-start">
-                                            {matchedAuction ? (
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wide bg-[#FF6A00] text-white shadow-lg shadow-orange-500/30">
-                                                    <Gavel className="h-3 w-3" />
-                                                    {matchedAuction.listing_type === "arremate" ? "🔥 Arremate Agora" : "⚡ Em Leilão"}
-                                                </span>
-                                            ) : (
-                                                <DarkBadge variant={product.condition === "novo" ? "new" : "used"} className="shadow-md">
-                                                    {product.condition === "novo" ? "Novo" : "Usado"}
-                                                </DarkBadge>
-                                            )}
-                                        </div>
-
-                                        <button
-                                            onClick={(e) => {
+                                        {/* Header Universal do card (logo + modalidade + condição + ações) */}
+                                        <CardTopBar
+                                            className="z-20"
+                                            modality={matchedAuction ? (matchedAuction.listing_type === "arremate" ? "arremate" : "leilao") : "venda"}
+                                            condition={product.condition ? (/novo/i.test(String(product.condition)) ? "new" : "used") : undefined}
+                                            favorited={favIds.has(product.id)}
+                                            onFavorite={toggleFav(product.id)}
+                                            onShare={(e) => {
                                                 e.stopPropagation();
                                                 const priceText = price ? ` — R$ ${price.integer},${price.decimal}` : "";
                                                 const storeUrl = product.merchant_store_id
@@ -1920,10 +1924,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                 const text = `🔥 *${product.title}*${priceText}\n\n${product.store_name ? `🏪 ${product.store_name}` : ""}${product.city ? ` • 🚚 Entrega em ${product.city}` : ""}\n✅ Pronta Entrega!\n\n👉 Confira: ${storeUrl}`;
                                                 window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                                             }}
-                                            className="absolute top-2.5 right-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2 rounded-full shadow-lg transition-all z-10"
-                                        >
-                                            <Share2 className="h-4 w-4" />
-                                        </button>
+                                        />
                                     </div>
 
                                     <div className="p-4 space-y-3 flex-1 flex flex-col">
@@ -1945,7 +1946,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                     onClick={(e) => {
                                                         if (product.merchant_store_id) {
                                                             e.stopPropagation();
-                                                            navigate(`/loja/${product.merchant_store_id}`);
+                                                            navigate(`/loja/${product.merchant_store_id}?product=${product.id}`);
                                                         }
                                                     }}
                                                 >
