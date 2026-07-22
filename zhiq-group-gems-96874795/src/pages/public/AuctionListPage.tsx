@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CardDark } from "@/components/ui/dark-card";
 import { MarketAuctionCard } from "@/components/advertiser/MarketAuctionCard";
+import { AuctionCarousel } from "@/components/public/AuctionCarousel";
 import type { AuctionListing } from "@/hooks/useAuctions";
 
 // ─── Helpers ────────────────────────────
@@ -271,11 +272,7 @@ export default function AuctionListPage() {
               )}
             </CardDark>
           ) : (
-            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 items-stretch">
-              {filteredListings.map((listing) => (
-                <MarketAuctionCard key={listing.id} listing={listing} />
-              ))}
-            </div>
+            <AuctionCarousel listings={filteredListings} />
           )}
         </div>
       </div>
