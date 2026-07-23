@@ -101,6 +101,37 @@ Seja objetivo e confirme se o preço é justo ou faça uma observação relevant
   },
 
   /**
+   * Gera a descrição pública de um negócio (loja/imobiliária/revenda/agência…)
+   * para o campo "Descrição" do perfil. Retorna SÓ o texto, pronto para salvar.
+   */
+  async generateBusinessDescription(params: {
+    /** ex.: "Agência que anuncia pacotes de viagem" */
+    businessType: string;
+    name?: string;
+    city?: string;
+    state?: string;
+    /** títulos de anúncios publicados — dão contexto real à IA */
+    listings?: string[];
+    /** texto atual (se houver) — a IA melhora em vez de partir do zero */
+    currentText?: string;
+  }): Promise<string> {
+    const prompt = `
+Escreva a descrição pública de um negócio para o perfil dele em um marketplace local (Viagg-TX8).
+- Tipo de negócio: ${params.businessType}
+- Nome: ${params.name || "não informado"}
+- Cidade/UF: ${[params.city, params.state].filter(Boolean).join("/") || "não informada"}
+${params.listings?.length ? `- Anúncios publicados: ${params.listings.slice(0, 6).join("; ")}` : ""}
+${params.currentText ? `- Texto atual (melhore mantendo a essência): ${params.currentText}` : ""}
+Regras: português do Brasil; tom profissional e acolhedor; 2 a 3 frases (máx. 400 caracteres);
+destaque o que o negócio oferece e a região atendida; sem hashtags, sem emojis, sem aspas.
+Responda APENAS com o texto da descrição.`.trim();
+
+    const text = await viaggAI.ask(prompt, { maxTokens: 220 });
+    // Defesa: remove aspas/prefixos que alguns modelos insistem em colocar.
+    return text.trim().replace(/^["“”']+|["“”']+$/g, "").replace(/^descri[çc][ãa]o:\s*/i, "").slice(0, 600);
+  },
+
+  /**
    * Assistente de solicitação: valida/orienta o preenchimento do formulário.
    */
   async validateRideRequest(fields: {

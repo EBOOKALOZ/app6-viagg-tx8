@@ -47,6 +47,11 @@ import {
   ViagemForm,
   AdvertiserSupportPage,
   AdvertiserPostingMonitorPage,
+  BusinessProfilePage,
+  BusinessAppearancePage,
+  AdvertiserFreightOpportunitiesPage,
+  AdvertiserFleetPage,
+  AdvertiserRoutesPage,
 } from "./lazyPages";
 
 export const advertiserRoutes = (
@@ -63,6 +68,9 @@ export const advertiserRoutes = (
     {/* Form de imóvel SOB o prefixo /imoveis → mantém o menu lateral de imóveis */}
     <Route path="/anunciante/imoveis/anuncios/novo/imovel"             element={<Suspense fallback={<PageFallback />}><LazyPropertyForm /></Suspense>} />
     <Route path="/anunciante/imoveis/anuncios/editar/imovel/:listingId" element={<Suspense fallback={<PageFallback />}><LazyPropertyForm /></Suspense>} />
+    {/* Minha Imobiliária + Aparência (mesmo modelo do lojista, genérico) */}
+    <Route path="/anunciante/imoveis/minha-imobiliaria" element={<Suspense fallback={<PageFallback />}><BusinessProfilePage /></Suspense>} />
+    <Route path="/anunciante/imoveis/aparencia"         element={<Suspense fallback={<PageFallback />}><BusinessAppearancePage /></Suspense>} />
     {/* Sub-rotas do painel de VEÍCULOS (menu enxuto) — espelham o de imóveis */}
     <Route path="/anunciante/veiculos"         element={<Suspense fallback={<PageFallback />}><AdvertiserVeiculosPage /></Suspense>} />
     <Route path="/anunciante/veiculos/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserVeiculosListingsPage /></Suspense>} />
@@ -73,6 +81,9 @@ export const advertiserRoutes = (
     {/* Form de veículo SOB o prefixo /veiculos → mantém o menu lateral de veículos */}
     <Route path="/anunciante/veiculos/anuncios/novo/veiculo"             element={<Suspense fallback={<PageFallback />}><VehicleForm /></Suspense>} />
     <Route path="/anunciante/veiculos/anuncios/editar/veiculo/:listingId" element={<Suspense fallback={<PageFallback />}><VehicleForm /></Suspense>} />
+    {/* Minha Revenda + Aparência */}
+    <Route path="/anunciante/veiculos/minha-revenda" element={<Suspense fallback={<PageFallback />}><BusinessProfilePage /></Suspense>} />
+    <Route path="/anunciante/veiculos/aparencia"     element={<Suspense fallback={<PageFallback />}><BusinessAppearancePage /></Suspense>} />
     {/* Sub-rotas do painel de SERVIÇOS (menu enxuto) — espelham o de veículos */}
     <Route path="/anunciante/servicos"         element={<Suspense fallback={<PageFallback />}><AdvertiserServicesPage /></Suspense>} />
     <Route path="/anunciante/servicos/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserServicesListingsPage /></Suspense>} />
@@ -91,6 +102,13 @@ export const advertiserRoutes = (
     <Route path="/anunciante/fretes/suporte"         element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
     <Route path="/anunciante/fretes/anuncios/novo/frete"             element={<Suspense fallback={<PageFallback />}><FreightForm /></Suspense>} />
     <Route path="/anunciante/fretes/anuncios/editar/frete/:listingId" element={<Suspense fallback={<PageFallback />}><FreightForm /></Suspense>} />
+    {/* Minha Empresa (fretes) + Aparência */}
+    <Route path="/anunciante/fretes/minha-empresa" element={<Suspense fallback={<PageFallback />}><BusinessProfilePage /></Suspense>} />
+    <Route path="/anunciante/fretes/aparencia"     element={<Suspense fallback={<PageFallback />}><BusinessAppearancePage /></Suspense>} />
+    {/* Marketplace de cotações V2 — Oportunidades + Minha Frota + Minhas Rotas */}
+    <Route path="/anunciante/fretes/oportunidades" element={<Suspense fallback={<PageFallback />}><AdvertiserFreightOpportunitiesPage /></Suspense>} />
+    <Route path="/anunciante/fretes/frota"         element={<Suspense fallback={<PageFallback />}><AdvertiserFleetPage /></Suspense>} />
+    <Route path="/anunciante/fretes/rotas"         element={<Suspense fallback={<PageFallback />}><AdvertiserRoutesPage /></Suspense>} />
     {/* Sub-rotas do painel de VIAGENS (menu enxuto) — espelham o de fretes */}
     <Route path="/anunciante/viagens"         element={<Suspense fallback={<PageFallback />}><AdvertiserViagemPage /></Suspense>} />
     <Route path="/anunciante/viagens/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserViagemListingsPage /></Suspense>} />
@@ -100,12 +118,20 @@ export const advertiserRoutes = (
     <Route path="/anunciante/viagens/suporte"         element={<Suspense fallback={<PageFallback />}><AdvertiserSupportPage /></Suspense>} />
     <Route path="/anunciante/viagens/anuncios/novo/viagem"             element={<Suspense fallback={<PageFallback />}><ViagemForm /></Suspense>} />
     <Route path="/anunciante/viagens/anuncios/editar/viagem/:listingId" element={<Suspense fallback={<PageFallback />}><ViagemForm /></Suspense>} />
+    {/* Minha Agência (viagens) + Aparência */}
+    <Route path="/anunciante/viagens/minha-agencia" element={<Suspense fallback={<PageFallback />}><BusinessProfilePage /></Suspense>} />
+    <Route path="/anunciante/viagens/aparencia"     element={<Suspense fallback={<PageFallback />}><BusinessAppearancePage /></Suspense>} />
     <Route path="/anunciante/minha-loja"      element={<Suspense fallback={<PageFallback />}><MerchantMyStorePage /></Suspense>} />
     <Route path="/anunciante/aparencia"       element={<Suspense fallback={<PageFallback />}><MerchantStoreAppearance /></Suspense>} />
     <Route path="/anunciante/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserListingsPage /></Suspense>} />
     <Route path="/anunciante/leiloes"         element={<MerchantAuctions />} />
     <Route path="/anunciante/arremates"       element={<MerchantArremate />} />
     <Route path="/anunciante/arremates/gestao" element={<Suspense fallback={<PageFallback />}><MerchantArrematesPanel /></Suspense>} />
+    {/* Meus Leilões / Meus Arremates (perfil público) + Aparência */}
+    <Route path="/anunciante/leiloes/perfil"      element={<Suspense fallback={<PageFallback />}><BusinessProfilePage /></Suspense>} />
+    <Route path="/anunciante/leiloes/aparencia"   element={<Suspense fallback={<PageFallback />}><BusinessAppearancePage /></Suspense>} />
+    <Route path="/anunciante/arremates/perfil"    element={<Suspense fallback={<PageFallback />}><BusinessProfilePage /></Suspense>} />
+    <Route path="/anunciante/arremates/aparencia" element={<Suspense fallback={<PageFallback />}><BusinessAppearancePage /></Suspense>} />
     <Route path="/anunciante/conversoes"      element={<MerchantConversions />} />
     <Route path="/anunciante/anuncios/novo"   element={<Suspense fallback={<PageFallback />}><AdvertiserNewListingPage /></Suspense>} />
     <Route path="/anunciante/anuncios/novo/imovel"  element={<Suspense fallback={<PageFallback />}><LazyPropertyForm /></Suspense>} />

@@ -16,15 +16,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useContactIntentions, INTEREST_TYPE_LABELS } from "@/hooks/useContactIntentions";
 import { useAdvertiserCredits } from "@/hooks/useAdvertiserCredits";
+import { quoteUnlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-// ── Custos padrão de desbloqueio ────────────────────────────────────────────
+// ── Custos padrão de desbloqueio (segmentos ainda no modelo de créditos) ────
+//    Fretes NÃO usa custo fixo: cobra % do valor anunciado convertida em R$
+//    (wallet_unlock_charge_cents — cotado por anúncio, exibido no botão).
 const UNLOCK_COST        = 12;
 const RE_UNLOCK_DEFAULT  = 12;
 const VE_UNLOCK_DEFAULT  = 12;
 const SE_UNLOCK_DEFAULT  = 12;
-const FR_UNLOCK_DEFAULT  = 12;
 const TR_UNLOCK_DEFAULT  = 12;
 
 
@@ -156,28 +158,18 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  // ── Saldo fretes ──────────────────────────────────────────────────────
-  const { data: frBalance = 0 } = useQuery({
-    queryKey: ["freight-balance-msgs", user?.id],
+  // ── Saldo fretes — CARTEIRA ÚNICA em R$ (motor pay_*) ─────────────────
+  //    É a mesma conta que a wallet_unlock_contact debita. O modelo antigo
+  //    (freight_credit_balances + custo fixo freight_unlock_whatsapp) saiu
+  //    da leitura de mensagens: agora é % do anúncio convertida em reais.
+  const { data: frWalletBRL = 0 } = useQuery({
+    queryKey: ["wallet-balance", user?.id],
     enabled: !!user?.id && fretesMode,
     refetchInterval: 15_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("freight_credit_balances") as any)
-        .select("available_credits").eq("owner_user_id", user!.id).maybeSingle();
-      return Number((data as any)?.available_credits ?? 0);
-    },
-  });
-
-  const { data: frUnlockCost = FR_UNLOCK_DEFAULT } = useQuery({
-    queryKey: ["freight-unlock-whatsapp-cost"],
-    enabled: fretesMode,
-    queryFn: async () => {
-      const { data } = await (supabase.from("merchant_credit_usage_rules") as any)
-        .select("credits_cost, is_active")
-        .eq("feature_code", "freight_unlock_whatsapp")
-        .maybeSingle();
-      if (!data) return FR_UNLOCK_DEFAULT;
-      return (data as any).is_active === false ? 0 : (Number((data as any).credits_cost) || FR_UNLOCK_DEFAULT);
+      const { data } = await (supabase.from("pay_financial_accounts") as any)
+        .select("available_balance").eq("owner_id", user!.id);
+      return ((data || []) as any[]).reduce((s: number, a: any) => s + Number(a.available_balance || 0), 0);
     },
   });
 
@@ -206,14 +198,15 @@ export default function AdvertiserMessagesPage() {
     },
   });
 
-  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frBalance : viagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
-  // Mercado/Produtos: saldo é a CARTEIRA ÚNICA em R$ (balance.available_credits já vem em reais).
-  // Demais segmentos mantêm o modelo de créditos por-unidade (fora do escopo desta política).
+  const creditBalance = imoveisMode ? reBalance : veiculosMode ? veBalance : servicosMode ? seBalance : fretesMode ? frWalletBRL : viagensMode ? trBalance : (balance?.available_credits ?? fallbackBalance);
+  // Mercado/Produtos e Fretes: saldo é a CARTEIRA ÚNICA em R$ (motor pay_*).
+  // Demais segmentos ainda exibem o modelo de créditos por-unidade.
   const isMercado = !imoveisMode && !veiculosMode && !servicosMode && !fretesMode && !viagensMode;
-  const saldoLabel = isMercado
+  const walletMode = isMercado || fretesMode;
+  const saldoLabel = walletMode
     ? (creditBalance ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
     : `${creditBalance}`;
-  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : fretesMode ? frUnlockCost : viagensMode ? trUnlockCost : UNLOCK_COST);
+  const costForLead = (_lead: any): number => (imoveisMode ? reUnlockCost : veiculosMode ? veUnlockCost : servicosMode ? seUnlockCost : viagensMode ? trUnlockCost : UNLOCK_COST);
 
   // ── Máscaras ──────────────────────────────────────────────────────────
   const maskName = (n: string | null) => {
@@ -275,6 +268,29 @@ export default function AdvertiserMessagesPage() {
           : viagensMode
             ? intentions.filter((i) => i.listing_module === "travel")
             : intentions.filter((i) => !["real_estate", "vehicles", "services", "freight", "travel"].includes(i.listing_module));
+
+  // ── Cotação de desbloqueio (fretes): % convertida em R$, direto do banco ──
+  //    wallet_unlock_charge_cents é a fonte única (orion_commission_policy:
+  //    percentual + piso/teto sobre o valor oficial do anúncio). O front só
+  //    exibe o valor cotado — nunca calcula nem informa percentual.
+  const freightQuoteIds = useMemo(
+    () => fretesMode
+      ? Array.from(new Set(visibleIntentions.filter((i) => i.status === "pending_unlock").map((i) => i.listing_id)))
+      : [],
+    [fretesMode, visibleIntentions],
+  );
+  const { data: freightQuotes = {} } = useQuery({
+    queryKey: ["freight-unlock-quotes", user?.id, freightQuoteIds],
+    enabled: fretesMode && freightQuoteIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const entries = await Promise.all(freightQuoteIds.map(async (id) => {
+        const cents = await quoteUnlockContact("freight", id);
+        return [id, cents] as const;
+      }));
+      return Object.fromEntries(entries) as Record<string, number | null>;
+    },
+  });
 
   // ── NOVAS funcionalidades de UI ─────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
@@ -373,8 +389,8 @@ export default function AdvertiserMessagesPage() {
         <div className="mt-5 flex items-center gap-3 bg-white/10 border border-white/20 rounded-2xl px-4 py-3">
           <Coins className="w-5 h-5 text-white/80 shrink-0" />
           <div>
-            <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">{isMercado ? "Saldo da Carteira" : "Saldo disponível"}</p>
-            {isMercado ? (
+            <p className="text-white/60 text-[11px] font-bold uppercase tracking-wider">{walletMode ? "Saldo da Carteira" : "Saldo disponível"}</p>
+            {walletMode ? (
               <p className="text-white text-2xl font-black leading-none">{saldoLabel}</p>
             ) : (
               <p className="text-white text-2xl font-black leading-none">{creditBalance} <span className="text-sm font-bold text-white/70">créditos</span></p>
@@ -465,8 +481,11 @@ export default function AdvertiserMessagesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredIntentions.map((lead) => {
               const isUnlocked = lead.status === "unlocked";
-              const leadCost   = costForLead(lead);
-              const hasEnough  = creditBalance >= leadCost;
+              // Fretes: custo é a cotação em R$ (null = ainda carregando; o
+              // banco decide e cobra de qualquer forma). Demais: créditos fixos.
+              const quoteCents = fretesMode ? (freightQuotes[lead.listing_id] ?? null) : null;
+              const leadCost   = fretesMode ? (quoteCents != null ? quoteCents / 100 : null) : costForLead(lead);
+              const hasEnough  = leadCost == null ? true : creditBalance >= leadCost;
               const isFav      = favorites.has(lead.id);
               const ITypeIcon  = INTEREST_ICON[lead.interest_type] || MessageSquare;
 
@@ -593,10 +612,10 @@ export default function AdvertiserMessagesPage() {
                   {/* Balance indicator */}
                   <div className={cn("mx-4 mb-3 flex items-center justify-between px-3 py-2.5 rounded-xl border", hasEnough ? "bg-emerald-950/30 border-emerald-700/30" : "bg-red-950/30 border-red-700/30")}>
                     <span className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1", hasEnough ? "text-emerald-400" : "text-red-400")}>
-                      <Coins className="h-3.5 w-3.5" /> {isMercado ? "Saldo da carteira" : "Saldo atual"}
+                      <Coins className="h-3.5 w-3.5" /> {walletMode ? "Saldo da carteira" : "Saldo atual"}
                     </span>
                     <span className={cn("text-xl font-black", hasEnough ? "text-emerald-300" : "text-red-400")}>
-                      {isMercado ? saldoLabel : `${creditBalance} cr`}
+                      {walletMode ? saldoLabel : `${creditBalance} cr`}
                     </span>
                   </div>
 
@@ -607,7 +626,10 @@ export default function AdvertiserMessagesPage() {
                         onClick={() => handleUnlock(lead.id)}
                         className="w-full h-11 bg-emerald-700 hover:bg-emerald-600 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
                       >
-                        <Unlock className="w-4 h-4" /> Desbloquear (−{leadCost} cr)
+                        <Unlock className="w-4 h-4" />
+                        {fretesMode
+                          ? (quoteCents != null ? `Desbloquear (−${centsToBRL(quoteCents)})` : "Desbloquear")
+                          : `Desbloquear (−${leadCost} cr)`}
                       </Button>
                     ) : (
                       lead.visitor_phone && (

@@ -33,7 +33,7 @@ export default function PublicTravelHome() {
     queryKey: ["public-travel-home"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("travel_listings") as any)
-        .select("id, title, subcategoria, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, visibility_status, published_at, created_at")
+        .select("id, title, subcategoria, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, visibility_status, published_at, created_at, owner_user_id")
         .eq("visibility_status", "published")
         .order("is_featured", { ascending: false })
         .order("created_at", { ascending: false });

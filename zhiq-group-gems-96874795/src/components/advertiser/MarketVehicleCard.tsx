@@ -6,6 +6,7 @@ import { formatCurrencyBRL } from '@/lib/utils';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { CardTopBar } from '@/components/ui/CardTopBar';
 import { shareCardLink } from '@/hooks/useCardTopBarActions';
+import { publicAdvertiserPath } from '@/lib/business-modules';
 
 interface MarketVehicleCardProps {
   vehicle: {
@@ -21,6 +22,7 @@ interface MarketVehicleCardProps {
     city: string;
     state: string;
     thumbnail_url?: string;
+    owner_user_id?: string | null;
   };
 }
 
@@ -37,7 +39,13 @@ export const MarketVehicleCard: React.FC<MarketVehicleCardProps> = ({ vehicle })
   };
 
   const handleNavigate = () => {
-    navigate(`/veiculos/${vehicle.id}`);
+    // Novo fluxo: abre a página pública da REVENDA com o veículo em destaque;
+    // sem dono conhecido, cai na página de detalhe isolada.
+    if (vehicle.owner_user_id) {
+      navigate(publicAdvertiserPath('veiculos', vehicle.owner_user_id, vehicle.id));
+    } else {
+      navigate(`/veiculos/${vehicle.id}`);
+    }
   };
 
   const handleActionClick = (e: React.MouseEvent) => {

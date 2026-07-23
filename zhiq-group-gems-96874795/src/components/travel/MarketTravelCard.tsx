@@ -14,6 +14,7 @@ import {
 import { formatCurrencyBRL } from '@/lib/utils';
 import { resolveTravelCategoryEmoji } from '@/lib/viagem/travelCategories';
 import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
+import { publicAdvertiserPath } from '@/lib/business-modules';
 
 interface MarketTravelCardProps {
   travel: {
@@ -29,6 +30,7 @@ interface MarketTravelCardProps {
     departure_date?: string | null;
     duration_days?: number | null;
     thumbnail_url?: string | null;
+    owner_user_id?: string | null;
     is_featured?: boolean;
     is_promoted?: boolean;
   };
@@ -56,7 +58,13 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
   const emoji = resolveTravelCategoryEmoji(travel.category);
 
   const handleNavigate = () => {
-    navigate(`/viagens/${travel.id}`);
+    // Novo fluxo: abre a página pública da AGÊNCIA com o pacote em destaque;
+    // sem dono conhecido, cai na página de detalhe isolada.
+    if (travel.owner_user_id) {
+      navigate(publicAdvertiserPath('viagem', travel.owner_user_id, travel.id));
+    } else {
+      navigate(`/viagens/${travel.id}`);
+    }
   };
 
   const handleInterest = (e: React.MouseEvent) => {

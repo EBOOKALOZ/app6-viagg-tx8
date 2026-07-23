@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -214,6 +214,28 @@ export default function PublicFreightHome() {
             </div>
           )}
 
+          {/* MODALIDADES: Encontrar um Frete (vitrine atual) × Solicitar Cotações (novo) */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-2 w-full max-w-2xl">
+            <a
+              href="#anuncios-fretes"
+              className="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-500 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 transition-all"
+            >
+              🟢 Encontrar um Frete
+            </a>
+            <Link
+              to="/fretes/solicitar"
+              className="flex-1 min-w-[220px] flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-[#FF7A00] text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-[#FF7A00]/25 hover:bg-[#E65C00] transition-all"
+            >
+              🟠 Solicitar Cotações
+            </Link>
+            <Link
+              to="/fretes/minhas-solicitacoes"
+              className="w-full sm:w-auto text-[11px] font-black uppercase tracking-wider text-zinc-600 underline underline-offset-4 hover:text-[#FF7A00] py-1"
+            >
+              📋 Minhas solicitações e propostas
+            </Link>
+          </div>
+
           {/* Filtros rápidos: modalidade */}
           <div className="flex bg-white/70 p-1 rounded-xl border border-black/5 shadow-sm mt-1">
             <button
@@ -241,7 +263,7 @@ export default function PublicFreightHome() {
 
       {/* Faixa de tipos de veículo (chips) — nunca vazia */}
       {activeVehicleTypes.length > 0 && (
-        <div className="w-full bg-emerald-900 py-3 px-4 lg:px-6 mt-6">
+        <div id="anuncios-fretes" className="w-full bg-emerald-900 py-3 px-4 lg:px-6 mt-6 scroll-mt-24">
           <CategoryFilterBar
             categories={activeVehicleTypes.map(({ type, count }) => ({
               value: type.value,

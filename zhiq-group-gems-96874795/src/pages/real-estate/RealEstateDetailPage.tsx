@@ -16,6 +16,7 @@ import { ContactIntentionModal } from '@/components/listings/ContactIntentionMod
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { MarketLayout } from '@/components/layout/MarketLayout';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
+import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
@@ -274,17 +275,10 @@ export const RealEstateDetailPage = () => {
           ) : undefined}
           extras={(
             <>
-              {storeInfo && (
-                <StoreHeader
-                  store={storeInfo}
-                  stats={null}
-                  productsCount={0}
-                  whatsappNumber={null}
-                  onShare={handleShare}
-                  logoUrl={storeInfo.logo_url || null}
-                  bannerUrl={storeInfo.banner_url || null}
-                />
-              )}
+              <AdvertiserSummaryCard
+                advertiserId={storeInfo?.id || property.owner_user_id}
+                profileType="imoveis"
+              />
               <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>

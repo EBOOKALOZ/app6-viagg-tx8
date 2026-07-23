@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dark-card';
 import { formatCurrencyBRL } from '@/lib/utils';
 import { resolveFreightVehicleIcon } from '@/lib/freight/vehicleTypes';
+import { publicAdvertiserPath } from '@/lib/business-modules';
 
 interface MarketFreightCardProps {
   freight: {
@@ -25,6 +26,7 @@ interface MarketFreightCardProps {
     city: string;
     state: string;
     thumbnail_url?: string;
+    owner_user_id?: string | null;
     is_featured?: boolean;
     // ── Sinais institucionais (só exibem badge quando VIEREM do banco) ──
     ai_status?: string | null;        // moderação IA → "Verificado"
@@ -55,7 +57,13 @@ export const MarketFreightCard: React.FC<MarketFreightCardProps> = ({ freight })
   const TypeIcon = resolveFreightVehicleIcon(freight.vehicle_type);
 
   const handleNavigate = () => {
-    navigate(`/fretes/${freight.id}`);
+    // Novo fluxo: abre a página pública da EMPRESA DE FRETES com o anúncio em
+    // destaque; sem dono conhecido, cai na página de detalhe isolada.
+    if (freight.owner_user_id) {
+      navigate(publicAdvertiserPath('freteiro', freight.owner_user_id, freight.id));
+    } else {
+      navigate(`/fretes/${freight.id}`);
+    }
   };
 
   const features: CardFeature[] = [];

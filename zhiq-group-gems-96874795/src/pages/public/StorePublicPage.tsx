@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -33,17 +33,24 @@ import { Gavel } from "lucide-react";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { StoreThemeScope } from "@/components/public/store/StoreThemeScope";
 import { sanitizeAppearance } from "@/lib/store-theme";
+import { moduleKeyFromPublicContext, BUSINESS_MODULES, publicAdvertiserPath } from "@/lib/business-modules";
+import { TravelFullView } from "@/components/travel/TravelFullView";
 import {
     Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-type TabValue = "home" | "all" | "promo" | "leiloes" | "arremates";
+type TabValue = "home" | "all" | "promo" | "leiloes" | "arremates" | "imoveis" | "veiculos" | "servicos" | "fretes" | "viagens";
 
 // Mapeia o ?tab= da URL (usado pelo novo fluxo card-de-leilão → loja) para a aba.
 function tabFromParam(p: string | null): TabValue | null {
-    if (p === "leiloes" || p === "leilao" || p === "leiloes" || p === "leilões") return "leiloes";
+    if (p === "leiloes" || p === "leilao" || p === "leilões") return "leiloes";
     if (p === "arremates" || p === "arremate") return "arremates";
-    if (p === "all" || p === "promo" || p === "home") return p;
+    if (p === "imoveis" || p === "imobiliaria") return "imoveis";
+    if (p === "veiculos" || p === "revenda") return "veiculos";
+    if (p === "servicos" || p === "prestador") return "servicos";
+    if (p === "fretes" || p === "mudancas" || p === "freteiro") return "fretes";
+    if (p === "viagens" || p === "turismo") return "viagens";
+    if (p === "all" || p === "promo" || p === "home") return p as TabValue;
     return null;
 }
 
@@ -63,6 +70,7 @@ export default function StorePublicPage() {
     const { storeId } = useParams<{ storeId: string }>();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+    const { pathname } = useLocation();
 
     // UI State — aba inicial pode vir de ?tab= (novo fluxo: clicar num card de
     // leilão/arremate abre a loja já na aba correta).
@@ -152,6 +160,28 @@ export default function StorePublicPage() {
         refetchOnWindowFocus: true,
     });
 
+    // ── Perfil de MÓDULO (Minha Imobiliária/Revenda/Empresa/Agência, Meus
+    // Leilões/Arremates): detectado pelo alias da URL ou pelo ?tab= de entrada.
+    // Se o dono salvou identidade/tema do módulo, eles sobrepõem os da loja.
+    const initialTabRef = useRef<string | null>(searchParams.get("tab"));
+    const publicModuleKey = useMemo(
+        () => moduleKeyFromPublicContext(pathname, initialTabRef.current),
+        [pathname],
+    );
+    const { data: moduleProfile } = useQuery({
+        queryKey: ["business-module-profile", publicModuleKey, store?.user_id],
+        enabled: !!publicModuleKey && !!store?.user_id,
+        refetchOnWindowFocus: true,
+        queryFn: async () => {
+            const { data } = await (supabase.from("advertiser_module_profiles") as any)
+                .select("*")
+                .eq("user_id", store!.user_id)
+                .eq("module_key", publicModuleKey!)
+                .maybeSingle();
+            return data ?? null;
+        },
+    });
+
     const { data: products = [], isLoading: loadingProducts } = useQuery<StoreProduct[]>({
         queryKey: ["public-store-products", storeId],
         refetchInterval: 15_000,
@@ -193,12 +223,21 @@ export default function StorePublicPage() {
                     .maybeSingle();
                 userId = (advAcc as any)?.user_id;
             }
+            if (!userId) {
+                // URLs dos módulos (/imobiliaria/:uid, /revenda/:uid, /agencia/:uid…)
+                // usam o user_id do dono direto — mesmo fallback da query da loja.
+                const { data: prof } = await supabase.from("profiles").select("id").eq("id", storeId!).maybeSingle();
+                userId = (prof as any)?.id;
+            }
 
             if (userId) {
-                const [pRes, rRes, vRes, advAccRes] = await Promise.all([
+                const [pRes, rRes, vRes, sRes, fRes, viRes, advAccRes] = await Promise.all([
                     supabase.from("product_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
                     supabase.from("real_estate_listings").select("id, title, price_brl, description, visibility_status, created_at, real_estate_media(original_storage_path, public_masked_storage_path)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
                     supabase.from("vehicle_listings").select("id, title, price_brl, description, visibility_status, created_at, vehicle_media(original_storage_path, public_masked_storage_path)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
+                    supabase.from("service_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
+                    supabase.from("freight_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
+                    supabase.from("viagem_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
                     supabase.from("advertiser_accounts").select("id").eq("user_id", userId).maybeSingle()
                 ]);
 
@@ -211,66 +250,55 @@ export default function StorePublicPage() {
                         advRes = await supabase.from("advertiser_listings").select("*").eq("advertiser_account_id", advAccRes.data.id).order("created_at", { ascending: false });
                     }
                 }
-                console.log("[StorePublicPage] products fetched", {
-                    storeId, userId,
-                    merchant_marketing_products: oldProducts?.length ?? 0,
-                    product_listings: pRes.data?.length ?? 0,
-                    real_estate_listings: rRes.data?.length ?? 0,
-                    vehicle_listings: vRes.data?.length ?? 0,
-                    advertiser_listings: advRes.data?.length ?? 0,
-                });
 
                 if (pRes.data) {
                     results.push(...pRes.data.map((p: any) => ({
                         id: p.id,
-                        title: p.title || "Sem título",
+                        title: p.title || "Produto",
                         short_description: p.description || null,
                         image_url: p.cover_image_url || null,
-                        price: p.price || 0,
-                        original_price: null,
+                        price: p.price_brl || 0,
+                        original_price: p.original_price_brl || null,
                         price_label: null,
-                        cta_label: "Comprar",
+                        cta_label: "Comprar / Ver Detalhes",
                         tracking_slug: p.id,
-                        category: p.category_id || p.category || "Produto",
+                        category: p.category || "Geral",
                         condition: p.condition || "new",
-                        is_active: p.is_active ?? true,
-                        is_digital: p.is_digital ?? false,
-                        is_featured: false,
+                        is_active: true,
+                        is_digital: p.is_digital || false,
+                        is_featured: p.is_featured || false,
                         created_at: p.created_at
                     })));
                 }
 
                 if (advRes.data) {
-                    results.push(...advRes.data.map((p: any) => {
-                        const mediaFallback = p.advertiser_listing_media?.[0]?.media_url ?? null;
-                        return {
-                            id: p.id,
-                            title: p.title || "Sem título",
-                            short_description: p.description || null,
-                            image_url: p.cover_image_url || mediaFallback,
-                            price: p.price || 0,
-                            original_price: p.original_price || null,
-                            price_label: p.price_label || null,
-                            cta_label: "Comprar",
-                            tracking_slug: p.slug || p.id,
-                            category: p.category_id || p.category || "Produto",
-                            condition: p.condition || "new",
-                            is_active: true,
-                            is_digital: p.is_digital ?? false,
-                            is_featured: false,
-                            created_at: p.created_at
-                        };
-                    }));
+                    results.push(...advRes.data.map((a: any) => ({
+                        id: a.id,
+                        title: a.title || "Anúncio",
+                        short_description: a.description || null,
+                        image_url: a.advertiser_listing_media?.[0]?.media_url || null,
+                        price: a.price || 0,
+                        original_price: null,
+                        price_label: a.price_label || null,
+                        cta_label: a.cta_label || "Ver Mais",
+                        tracking_slug: a.id,
+                        category: "Serviços/Anúncios",
+                        condition: "new",
+                        is_active: true,
+                        is_digital: false,
+                        is_featured: false,
+                        created_at: a.created_at
+                    })));
                 }
 
                 if (rRes.data) {
                     results.push(...rRes.data.map((r: any) => {
-                        let img = null;
-                        if (r.real_estate_media?.length > 0) {
-                            const m0 = r.real_estate_media[0];
+                        const media = r.real_estate_media || [];
+                        let img: string | null = null;
+                        if (media.length > 0) {
+                            const m0 = media[0];
                             const hasMasked = !!m0.public_masked_storage_path && m0.public_masked_storage_path !== m0.original_storage_path;
                             const path = hasMasked ? m0.public_masked_storage_path : m0.original_storage_path;
-                            // Fallback pro original tem que buscar no bucket "-original", não "-public".
                             if (path) img = getListingImageUrl(path, hasMasked ? 'public' : 'original');
                         }
                         return {
@@ -281,10 +309,10 @@ export default function StorePublicPage() {
                             price: r.price_brl || 0,
                             original_price: null,
                             price_label: null,
-                            cta_label: "Conhecer",
+                            cta_label: "Ver Imóvel",
                             tracking_slug: r.id,
                             category: "Imóveis",
-                            condition: "used",
+                            condition: "new",
                             is_active: true,
                             is_digital: false,
                             is_featured: false,
@@ -295,13 +323,12 @@ export default function StorePublicPage() {
 
                 if (vRes.data) {
                     results.push(...vRes.data.map((v: any) => {
-                        let img = null;
-                        if (v.vehicle_media?.length > 0) {
-                            const m0 = v.vehicle_media[0];
+                        const media = v.vehicle_media || [];
+                        let img: string | null = null;
+                        if (media.length > 0) {
+                            const m0 = media[0];
                             const hasMasked = !!m0.public_masked_storage_path && m0.public_masked_storage_path !== m0.original_storage_path;
                             const path = hasMasked ? m0.public_masked_storage_path : m0.original_storage_path;
-                            // Veículos reaproveitam o bucket "real-estate-public"/"real-estate-original"
-                            // (não existe bucket "vehicles") — tipo precisa bater com qual path veio.
                             if (path) img = getListingImageUrl(path, hasMasked ? 'public' : 'original');
                         }
                         return {
@@ -322,6 +349,66 @@ export default function StorePublicPage() {
                             created_at: v.created_at
                         };
                     }));
+                }
+
+                if (sRes.data) {
+                    results.push(...sRes.data.map((s: any) => ({
+                        id: s.id,
+                        title: s.title || "Serviço",
+                        short_description: s.description || null,
+                        image_url: s.cover_image_url || null,
+                        price: s.price_brl || s.base_price || 0,
+                        original_price: null,
+                        price_label: null,
+                        cta_label: "Contratar",
+                        tracking_slug: s.id,
+                        category: "Serviços",
+                        condition: "new",
+                        is_active: true,
+                        is_digital: false,
+                        is_featured: false,
+                        created_at: s.created_at
+                    })));
+                }
+
+                if (fRes.data) {
+                    results.push(...fRes.data.map((f: any) => ({
+                        id: f.id,
+                        title: f.title || "Frete / Mudança",
+                        short_description: f.description || null,
+                        image_url: f.cover_image_url || null,
+                        price: f.price_brl || f.base_price || 0,
+                        original_price: null,
+                        price_label: null,
+                        cta_label: "Solicitar Orçamento",
+                        tracking_slug: f.id,
+                        category: "Fretes",
+                        condition: "new",
+                        is_active: true,
+                        is_digital: false,
+                        is_featured: false,
+                        created_at: f.created_at
+                    })));
+                }
+
+                if (viRes.data) {
+                    results.push(...viRes.data.map((vi: any) => ({
+                        id: vi.id,
+                        title: vi.title || "Pacote de Viagem",
+                        short_description: vi.description || null,
+                        image_url: vi.cover_image_url || null,
+                        price: vi.price_brl || vi.price || 0,
+                        original_price: null,
+                        price_label: null,
+                        cta_label: "Ver Pacote",
+                        tracking_slug: vi.id,
+                        category: "Viagens",
+                        condition: "new",
+                        is_active: true,
+                        is_digital: false,
+                        is_featured: false,
+                        created_at: vi.created_at
+                    })));
                 }
             }
 
@@ -393,7 +480,7 @@ export default function StorePublicPage() {
             });
 
             const { data: vehicles } = await (supabase.from("vehicle_listings") as any)
-                .select("id, title, price_brl, description, created_at, vehicle_media(original_storage_path, public_masked_storage_path)")
+                .select("id, title, price_brl, description, created_at, owner_user_id, vehicle_media(original_storage_path, public_masked_storage_path)")
                 .eq("visibility_status", "published")
                 .order("created_at", { ascending: false })
                 .limit(12);
@@ -423,11 +510,12 @@ export default function StorePublicPage() {
                     created_at: v.created_at,
                     _kind: "vehicle",
                     _ownerStoreId: null,
+                    _ownerUserId: v.owner_user_id || null,
                 } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
             });
 
             const { data: properties } = await (supabase.from("real_estate_listings") as any)
-                .select("id, title, price_brl, description, created_at, real_estate_media(original_storage_path, public_masked_storage_path)")
+                .select("id, title, price_brl, description, created_at, owner_user_id, real_estate_media(original_storage_path, public_masked_storage_path)")
                 .eq("visibility_status", "published")
                 .order("created_at", { ascending: false })
                 .limit(12);
@@ -457,6 +545,7 @@ export default function StorePublicPage() {
                     created_at: r.created_at,
                     _kind: "imovel",
                     _ownerStoreId: null,
+                    _ownerUserId: r.owner_user_id || null,
                 } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
             });
 
@@ -560,6 +649,16 @@ export default function StorePublicPage() {
         }
         if (activeTab === "promo") {
             res = res.filter(p => (p.original_price || 0) > p.price);
+        } else if (activeTab === "imoveis") {
+            res = res.filter(p => p.category === "Imóveis");
+        } else if (activeTab === "veiculos") {
+            res = res.filter(p => p.category === "Veículos");
+        } else if (activeTab === "servicos") {
+            res = res.filter(p => p.category === "Serviços");
+        } else if (activeTab === "fretes") {
+            res = res.filter(p => p.category === "Fretes");
+        } else if (activeTab === "viagens") {
+            res = res.filter(p => p.category === "Viagens");
         }
         return res;
     }, [products, search, activeCategory, activeTab]);
@@ -567,9 +666,34 @@ export default function StorePublicPage() {
     const homeFeatured = useMemo(() => products.filter(p => p.is_featured).slice(0, 6), [products]);
     const homeLatest = platformLatest;
 
-    // Tema visual da loja (merchant_stores.appearance) — sanitizado no load;
-    // null = visual padrão da plataforma (nada muda).
-    const appearance = useMemo(() => sanitizeAppearance((store as any)?.appearance), [store]);
+    // Tema visual — em página de MÓDULO (imobiliária/revenda/leilões/arremates/
+    // fretes/agência) vale SÓ a aparência do módulo (advertiser_module_profiles);
+    // fora dela, a aparência da loja (merchant_stores.appearance). Sanitizado no
+    // load; null = visual padrão da plataforma (nada muda).
+    const appearance = useMemo(() => {
+        if (publicModuleKey) return sanitizeAppearance((moduleProfile as any)?.appearance);
+        return sanitizeAppearance((store as any)?.appearance);
+    }, [store, moduleProfile, publicModuleKey]);
+
+    // Identidade — SEPARAÇÃO TOTAL em página de módulo: a agência/imobiliária/
+    // revenda NUNCA herda nome/logo/banner da loja do lojista (são negócios
+    // distintos do mesmo dono). Sem perfil salvo, aparece "em branco" (neutra).
+    const displayStore = useMemo(() => {
+        if (!store || !publicModuleKey) return store;
+        const mp: any = moduleProfile || {};
+        return {
+            ...store,
+            store_name: mp.display_name || BUSINESS_MODULES[publicModuleKey].noun,
+            description: mp.description || null,
+            logo_url: mp.logo_url || null,
+            banner_url: mp.banner_url || null,
+            city: mp.city || null,
+            region: mp.state || null,
+            bairro: null,
+            logradouro: null,
+            whatsapp: mp.whatsapp || null,
+        };
+    }, [store, moduleProfile, publicModuleKey]);
     const productLayout = appearance?.layout.products ?? "carousel";
     const productGridClass =
         productLayout === "grid" ? "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4"
@@ -622,10 +746,63 @@ export default function StorePublicPage() {
                 image_url: normalizeImageUrl(r.image_url), short_description: r.description,
                 category: r.category, tracking_slug: null, is_featured: false,
                 cta_label: null, stock: null,
+                _module: r.module, _modality: r.modality,
             } as unknown as StoreProduct;
         },
     });
     const featuredProduct: StoreProduct | null = featuredFromList ?? featuredFallback ?? null;
+
+    // Tipo do anúncio em destaque — vem do resolver (_module) ou é derivado da
+    // categoria quando o item já estava na lista da loja. Define o CTA correto:
+    // produto usa cesta/interesse; os demais módulos levam à página de ação
+    // completa (lance, orçamento, visita etc.) sem perder a loja no histórico.
+    const featuredKind: string = (() => {
+        const m = (featuredProduct as any)?._module;
+        if (m) return m;
+        switch (featuredProduct?.category) {
+            case "Imóveis": return "real_estate";
+            case "Veículos": return "vehicles";
+            case "Serviços": return "services";
+            case "Fretes": return "freight";
+            case "Viagens": return "travel";
+            default: return "product";
+        }
+    })();
+    const featuredModality: string | null = (featuredProduct as any)?._modality ?? null;
+    // expand: true → abre o DETALHE COMPLETO DENTRO da página do anunciante
+    // (?view=full), mantendo o cabeçalho visível. path → módulos que ainda
+    // navegam para a página de ação isolada (padrão a migrar módulo a módulo).
+    const featuredAction: { label: string; path?: string; expand?: boolean } | null = (() => {
+        if (!featuredProduct) return null;
+        switch (featuredKind) {
+            case "real_estate": return { label: "Ver Imóvel Completo", path: `/imoveis/${featuredProduct.id}` };
+            case "vehicles": return { label: "Ver Veículo Completo", path: `/veiculos/${featuredProduct.id}` };
+            case "services": return { label: "Contratar Serviço", path: `/servicos/${featuredProduct.id}` };
+            case "freight": return { label: "Solicitar Orçamento", path: `/fretes/${featuredProduct.id}` };
+            case "travel": return { label: "Ver Pacote Completo", expand: true };
+            case "auction": return {
+                label: featuredModality === "arremate" ? "Fazer Oferta" : "Dar Lance Agora",
+                path: `/mercado/leiloes/${featuredProduct.id}`,
+            };
+            default: return null; // produto comum → cesta/interesse
+        }
+    })();
+
+    // ── DETALHE COMPLETO DENTRO DA PÁGINA (?view=full) ──────────────────────
+    // O usuário nunca sai da página do anunciante: só o miolo troca (resumo ⇄
+    // detalhe completo); cabeçalho, abas e demais anúncios permanecem.
+    const fullView = searchParams.get("view") === "full";
+    const openFullView = () => {
+        const next = new URLSearchParams(searchParams);
+        next.set("view", "full");
+        setSearchParams(next, { replace: false }); // push → Voltar do navegador fecha o detalhe
+    };
+    const closeFullView = () => {
+        const next = new URLSearchParams(searchParams);
+        next.delete("view");
+        setSearchParams(next, { replace: false });
+    };
+    const showEmbeddedFull = fullView && featuredKind === "travel" && !!highlightedProductId;
 
     // Trocar de produto SEM sair da loja — só muda o ?product= (Voltar funciona).
     const selectProduct = (id: string) => {
@@ -704,24 +881,25 @@ export default function StorePublicPage() {
             setSearch={setSearch}
             mainClassName={appearance ? "flex flex-col" : "bg-[#F5E62B] flex flex-col"}
             blueFooter
-            blueFooterLabel={`Loja: ${store.store_name}`}
+            blueFooterLabel={`${publicModuleKey ? BUSINESS_MODULES[publicModuleKey].noun : "Loja"}: ${displayStore.store_name}`}
             headerChildren={<MarketNavButtons />}
         >
             <StoreThemeScope appearance={appearance}>
             <div className="min-h-screen pb-24">
-                
+
                 {/* ─── HEADER PREMIUM ─── */}
                 {/* stats (avaliação) removido: fonte product_rating_stats não existe → sempre vazio */}
                 <StoreHeader
-                    store={store}
+                    store={displayStore}
+                    profileType={publicModuleKey ? BUSINESS_MODULES[publicModuleKey].profileType : (store.categoria || "general")}
                     productsCount={products.length}
-                    whatsappNumber={paySettings?.store_whatsapp || null}
+                    whatsappNumber={publicModuleKey ? ((moduleProfile as any)?.whatsapp || null) : (paySettings?.store_whatsapp || null)}
                     onShare={() => {
                         const url = window.location.href;
-                        navigator.share?.({ title: store.store_name, url }).catch(() => {});
+                        navigator.share?.({ title: displayStore.store_name, url }).catch(() => {});
                     }}
-                    logoUrl={normalizeImageUrl(store.logo_url, 'logos_lojas')}
-                    bannerUrl={normalizeImageUrl(store.banner_url)}
+                    logoUrl={normalizeImageUrl(displayStore.logo_url, 'logos_lojas')}
+                    bannerUrl={normalizeImageUrl(displayStore.banner_url)}
                 />
 
                 {/* ─── BREADCRUMB: Início > Categoria > Loja > Produto ─── */}
@@ -766,6 +944,10 @@ export default function StorePublicPage() {
                 {/* ─── PRODUTO EM DESTAQUE (quando ?product=) ─── */}
                 {featuredProduct && (
                     <div ref={featuredRef} className="w-full px-4 lg:px-8 xl:px-12 pt-6 scroll-mt-[120px]">
+                        {showEmbeddedFull ? (
+                            /* PACOTE COMPLETO dentro da página da Agência — cabeçalho permanece */
+                            <TravelFullView listingId={highlightedProductId!} embedded onBack={closeFullView} />
+                        ) : (
                         <div className="bg-white rounded-3xl border border-zinc-200 shadow-lg overflow-hidden flex flex-col md:flex-row">
                             <div className="md:w-2/5 aspect-square md:aspect-auto bg-zinc-50 shrink-0 overflow-hidden flex items-center justify-center">
                                 {featuredProduct.image_url ? (
@@ -775,7 +957,7 @@ export default function StorePublicPage() {
                                 )}
                             </div>
                             <div className="flex-1 p-6 md:p-8 flex flex-col gap-3">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6A00]">Produto selecionado</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6A00]">Anúncio selecionado</span>
                                 <h1 className="text-2xl md:text-3xl font-black text-zinc-900 leading-tight">{featuredProduct.title}</h1>
                                 {featuredProduct.short_description && (
                                     <p className="text-sm text-zinc-500 leading-relaxed line-clamp-4">{featuredProduct.short_description}</p>
@@ -786,15 +968,22 @@ export default function StorePublicPage() {
                                         : "Consultar"}
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-auto pt-3">
-                                    <Button onClick={() => handleAddToCart(featuredProduct)} className="h-12 px-6 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest rounded-xl gap-2">
-                                        <ShoppingCart className="w-4 h-4" /> Adicionar à cesta
-                                    </Button>
+                                    {featuredAction ? (
+                                        <Button onClick={() => (featuredAction.expand ? openFullView() : navigate(featuredAction.path!))} className="h-12 px-6 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest rounded-xl gap-2">
+                                            {featuredAction.label}
+                                        </Button>
+                                    ) : (
+                                        <Button onClick={() => handleAddToCart(featuredProduct)} className="h-12 px-6 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-black uppercase text-xs tracking-widest rounded-xl gap-2">
+                                            <ShoppingCart className="w-4 h-4" /> Adicionar à cesta
+                                        </Button>
+                                    )}
                                     <Button onClick={() => handleAskQuestion(featuredProduct)} variant="outline" className="h-12 px-6 font-black uppercase text-xs tracking-widest rounded-xl border-zinc-300">
                                         Tenho Interesse
                                     </Button>
                                 </div>
                             </div>
                         </div>
+                        )}
 
                         {/* ─── 🏪 MAIS PRODUTOS DESTA LOJA (carrossel; clique troca o destaque sem sair da loja) ─── */}
                         {(() => {
@@ -926,6 +1115,46 @@ export default function StorePublicPage() {
                                 <Flame className={cn("w-4 h-4", activeTab === "promo" ? "text-orange-500" : "")} />
                                 Promoções
                             </button>
+                            {products.some(p => p.category === "Imóveis") && (
+                                <button
+                                    onClick={() => selectTab("imoveis")}
+                                    className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "imoveis" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                                >
+                                    Imóveis
+                                </button>
+                            )}
+                            {products.some(p => p.category === "Veículos") && (
+                                <button
+                                    onClick={() => selectTab("veiculos")}
+                                    className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "veiculos" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                                >
+                                    Veículos
+                                </button>
+                            )}
+                            {products.some(p => p.category === "Serviços") && (
+                                <button
+                                    onClick={() => selectTab("servicos")}
+                                    className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "servicos" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                                >
+                                    Serviços
+                                </button>
+                            )}
+                            {products.some(p => p.category === "Fretes") && (
+                                <button
+                                    onClick={() => selectTab("fretes")}
+                                    className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "fretes" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                                >
+                                    Fretes
+                                </button>
+                            )}
+                            {products.some(p => p.category === "Viagens") && (
+                                <button
+                                    onClick={() => selectTab("viagens")}
+                                    className={cn("py-4 flex items-center gap-1.5 text-sm font-black uppercase tracking-wider border-b-4 transition-colors", activeTab === "viagens" ? "st-tab-active border-[#FF6A00] text-[#FF6A00]" : "border-transparent text-zinc-500 hover:text-zinc-800")}
+                                >
+                                    Viagens
+                                </button>
+                            )}
                         </div>
 
                         {/* Desktop Search */}
@@ -1040,10 +1269,9 @@ export default function StorePublicPage() {
                                                             source: "store_page",
                                                         });
                                                     }
-                                                    const isImovel = product.category?.toLowerCase() === "imóveis" || product.category?.toLowerCase() === "imoveis" || product.cta_label === "Conhecer";
-                                                    // Imóvel → rota própria; produto comum → destaca na PRÓPRIA loja (sem sair).
-                                                    if (isImovel) navigate(`/imoveis/${product.tracking_slug || product.id}`);
-                                                    else selectProduct(product.id);
+                                                    // Novo fluxo: TODO item da própria loja destaca na página (sem sair);
+                                                    // o CTA do destaque leva à página de ação completa quando for o caso.
+                                                    selectProduct(product.id);
                                                 }}
                                             />
                                         ))}
@@ -1070,12 +1298,20 @@ export default function StorePublicPage() {
                                                 onMakeOffer={handleMakeOffer}
                                                 onClick={() => {
                                                     const kind = (product as any)._kind;
+                                                    // Novo fluxo: item de outro vendedor abre a página do DONO com o
+                                                    // anúncio em destaque; sem dono conhecido, cai no detalhe isolado.
                                                     if (kind === "vehicle") {
-                                                        navigate(`/veiculos/${product.tracking_slug || product.id}`);
+                                                        const owner = (product as any)._ownerUserId;
+                                                        navigate(owner
+                                                            ? publicAdvertiserPath("veiculos", owner, product.id)
+                                                            : `/veiculos/${product.tracking_slug || product.id}`);
                                                         return;
                                                     }
                                                     if (kind === "imovel") {
-                                                        navigate(`/imoveis/${product.tracking_slug || product.id}`);
+                                                        const owner = (product as any)._ownerUserId;
+                                                        navigate(owner
+                                                            ? publicAdvertiserPath("imoveis", owner, product.id)
+                                                            : `/imoveis/${product.tracking_slug || product.id}`);
                                                         return;
                                                     }
                                                     const ownerStoreId = (product as any)._ownerStoreId;
@@ -1197,14 +1433,9 @@ export default function StorePublicPage() {
                                                     source: "store_page",
                                                 });
                                             }
-                                            const catNav = product.category?.toLowerCase() || "";
-                                            const isImovel = catNav === "imóveis" || catNav === "imoveis" || product.cta_label === "Conhecer";
-                                            const isVeiculo = catNav === "veículos" || catNav === "veiculos" || product.cta_label === "Ver Veículo";
-                                            // Imóvel/Veículo → rota própria (detalhe c/ mídia mascarada);
-                                            // produto comum → destaca na PRÓPRIA loja sem sair.
-                                            if (isImovel) navigate(`/imoveis/${product.tracking_slug || product.id}`);
-                                            else if (isVeiculo) navigate(`/veiculos/${product.tracking_slug || product.id}`);
-                                            else selectProduct(product.id);
+                                            // Novo fluxo: TODO item da própria loja destaca na página (sem sair);
+                                            // o CTA do destaque leva à página de ação completa quando for o caso.
+                                            selectProduct(product.id);
                                         }}
                                     />
                                 ));

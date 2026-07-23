@@ -50,6 +50,15 @@ export interface DetailPageLayoutProps {
   avaliacoes?: ReactNode;         // slot opcional
   loading?: boolean;
   bg?: string;
+  /**
+   * Modo EMBUTIDO: renderiza o detalhe dentro de outra página (ex.: página
+   * pública do anunciante), sem min-h-screen nem fundo próprio — o cabeçalho
+   * do anfitrião permanece visível o tempo todo.
+   */
+  embedded?: boolean;
+  /** Override do botão Voltar (embutido: volta ao resumo sem sair da página). */
+  onVoltar?: () => void;
+  voltarLabel?: string;
 }
 
 const glass: React.CSSProperties = {
@@ -92,9 +101,11 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
 
   return (
     <div
-      className="dpl-enter min-h-screen pb-10"
+      className={cn("dpl-enter", p.embedded ? "pb-4" : "min-h-screen pb-10")}
       style={{
-        background: p.bg ? p.bg : `radial-gradient(900px 300px at 15% -5%, ${p.accent}14, transparent), #F4F7FB`,
+        background: p.embedded
+          ? "transparent"
+          : p.bg ? p.bg : `radial-gradient(900px 300px at 15% -5%, ${p.accent}14, transparent), #F4F7FB`,
         fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
       }}
     >
@@ -114,11 +125,11 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
         {/* ← Voltar */}
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => (p.onVoltar ? p.onVoltar() : navigate(-1))}
           className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs text-slate-700 shadow-sm transition-all hover:shadow-md"
           style={{ fontWeight: 700 }}
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+          <ArrowLeft className="h-3.5 w-3.5" /> {p.voltarLabel ?? "Voltar"}
         </button>
 
         {/* Galeria Premium */}

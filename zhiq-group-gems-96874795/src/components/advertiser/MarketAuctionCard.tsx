@@ -10,6 +10,7 @@ import {
   Heart,
   Store,
   Check,
+  Truck,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -45,7 +46,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
       if (!listing.store_id) return null;
       const { data } = await supabase
         .from('merchant_stores')
-        .select('id, store_name, logo_url')
+        .select('id, store_name, logo_url, cidade, bairro, city, neighborhood')
         .eq('id', listing.store_id)
         .maybeSingle();
       return data;
@@ -63,6 +64,10 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
   const condColor = rawCond === 'used' || rawCond === 'usado' ? 'bg-amber-500/90 border-amber-400/30 text-white' : rawCond === 'seminovo' ? 'bg-sky-500/90 border-sky-400/30 text-white' : rawCond === 'recondicionado' ? 'bg-[#8B5E3C]/90 border-[#8B5E3C]/30 text-white' : 'bg-emerald-500/90 border-emerald-400/30 text-white';
 
   const isAuction = listing.listing_type === 'auction';
+
+  // Tipo de entrega: pickup (retirada) | delivery | both
+  const fulfillment = listing.fulfillment_type || 'pickup';
+  const isFreeDelivery = fulfillment === 'delivery' || fulfillment === 'both';
 
   // Calcular tempo restante
   const endsAt = new Date(listing.ends_at);
@@ -88,7 +93,8 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
       console.error('[CPC_ERROR]', err);
     }
     if (linkTo === 'store' && listing.store_id) {
-      navigate(`/loja/${listing.store_id}?tab=${isAuction ? 'leiloes' : 'arremates'}`);
+      // Novo fluxo: abre a página do anunciante na aba certa COM o leilão em destaque.
+      navigate(`/loja/${listing.store_id}?tab=${isAuction ? 'leiloes' : 'arremates'}&product=${listing.id}`);
     } else {
       navigate(`/mercado/leiloes/${listing.id}`);
     }
@@ -134,10 +140,15 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
 
   const timeLeft = formatTimeLeft();
 
+  // Endereço onde o produto está: usa o do anúncio; se vazio, cai para o da loja
+  const locCity = listing.city || (storeInfo as any)?.cidade || (storeInfo as any)?.city || '';
+  const locNeighborhood = listing.neighborhood || (storeInfo as any)?.bairro || (storeInfo as any)?.neighborhood || '';
   let location = '';
-  if (listing.city) {
-    location += listing.city;
-    if (listing.neighborhood) location += `, ${listing.neighborhood}`;
+  if (locCity) {
+    location += locCity;
+    if (locNeighborhood) location += `, ${locNeighborhood}`;
+  } else if (locNeighborhood) {
+    location = locNeighborhood;
   }
 
   const formattedPrice = formatCurrencyBRL(currentPrice).replace(/^R\$\s*/, '');
@@ -286,6 +297,17 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
             <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
               <Gavel className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
               <span>{listing.total_bids || 0} {(listing.total_bids || 0) === 1 ? 'lance' : 'lances'}</span>
+            </div>
+          )}
+          {isFreeDelivery ? (
+            <div className="flex items-center gap-1.5 bg-[#00C58E]/10 border border-[#00C58E]/40 px-2.5 py-1 rounded-xl shrink-0">
+              <Truck className="w-3.5 h-3.5 text-[#00C58E] shrink-0" />
+              <span className="text-[#00C58E] font-black">Entrega grátis</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-[#252B33] border border-[#323A45] px-2.5 py-1 rounded-xl shrink-0">
+              <Store className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
+              <span>A retirar</span>
             </div>
           )}
         </div>

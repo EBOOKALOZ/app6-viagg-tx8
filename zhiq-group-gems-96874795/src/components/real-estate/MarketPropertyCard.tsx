@@ -8,6 +8,7 @@ import { CardDark, CardImageOverlay, DarkBadge } from '@/components/ui/dark-card
 import { cn, formatCurrencyBRL } from '@/lib/utils';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { CardTopBar } from '@/components/ui/CardTopBar';
+import { publicAdvertiserPath } from '@/lib/business-modules';
 
 interface MarketPropertyCardProps {
   property: {
@@ -37,6 +38,7 @@ interface MarketPropertyCardProps {
     city?: string | null;
     state?: string | null;
     thumbnail_url?: string;
+    owner_user_id?: string | null;
     merchant?: {
       name: string;
       avatarUrl?: string | null;
@@ -98,7 +100,13 @@ export const MarketPropertyCard: React.FC<MarketPropertyCardProps> = ({ property
 
   const goToDetail = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    navigate(`/imoveis/${property.id}`);
+    // Novo fluxo: abre a página pública da IMOBILIÁRIA com o imóvel em destaque;
+    // sem dono conhecido, cai na página de detalhe isolada.
+    if (property.owner_user_id) {
+      navigate(publicAdvertiserPath('imoveis', property.owner_user_id, property.id));
+    } else {
+      navigate(`/imoveis/${property.id}`);
+    }
     try {
       supabase.rpc('rpc_register_property_click', {
         p_listing_id: property.id,

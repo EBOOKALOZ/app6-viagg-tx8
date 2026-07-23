@@ -30,6 +30,7 @@ export interface AuctionListing {
   buy_now_price: number | null;
   reserve_price: number | null;
   status: "active" | "ended" | "cancelled" | "sold";
+  fulfillment_type?: "pickup" | "delivery" | "both" | null;
   starts_at: string;
   ends_at: string;
   winner_user_id: string | null;
@@ -188,6 +189,7 @@ export function useAuctions() {
         p_starts_at: input.starts_at || null,
         p_ends_at: input.ends_at || null,
         p_product_id: input.product_id || null,
+        p_fulfillment_type: input.fulfillment_type || "pickup",
       });
 
       if (error) throw error;

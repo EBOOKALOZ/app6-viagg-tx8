@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Store, ShieldCheck, Zap, Share2, Phone, MapPin, CheckCircle2, Star, Plus, Check, MessageCircle, Instagram, Facebook, Globe, Mail } from "lucide-react";
+import { Store, ShieldCheck, Zap, Share2, Phone, MapPin, CheckCircle2, Star, Plus, Check, MessageCircle, Instagram, Facebook, Globe, Mail, ExternalLink, Building2, CarFront, Wrench, Truck, Plane, Gavel, UserCheck } from "lucide-react";
 import { useStoreTheme } from "@/components/public/store/StoreThemeScope";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { publicAdvertiserPath } from "@/lib/business-modules";
 
-interface StoreInfo {
+export interface StoreInfo {
     store_name: string;
     city: string | null;
     region: string | null;
@@ -21,9 +23,139 @@ interface StoreInfo {
     logo_url: string | null;
     banner_url: string | null;
     description: string | null;
+    categoria?: string | null;
 }
 
-interface StoreHeaderProps {
+export interface ProfileConfig {
+    badgeText: string;
+    badgeBg: string;
+    badgeHoverBg: string;
+    icon: any;
+    perk1Icon: any;
+    perk1Text: string;
+    perk2Icon: any;
+    perk2Text: string;
+    accentColor: string;
+    itemsLabel: string;
+}
+
+export function getProfileConfig(profileType?: string, categoria?: string | null): ProfileConfig {
+    const raw = (profileType || categoria || "").toLowerCase();
+    
+    if (raw.includes("imoveis") || raw.includes("imobiliaria") || raw === "corretor") {
+        return {
+            badgeText: "Imobiliária / Corretor Verificado",
+            badgeBg: "bg-[#10B981]",
+            badgeHoverBg: "hover:bg-[#059669]",
+            icon: Building2,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Imóvel Verificado & Protegido",
+            perk2Icon: Zap,
+            perk2Text: "Atendimento Direto",
+            accentColor: "#10B981",
+            itemsLabel: "Imóveis"
+        };
+    }
+    if (raw.includes("veiculo") || raw.includes("revenda") || raw.includes("concessionaria")) {
+        return {
+            badgeText: "Revenda / Concessionária Verificada",
+            badgeBg: "bg-[#3B82F6]",
+            badgeHoverBg: "hover:bg-[#2563EB]",
+            icon: CarFront,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Procedência & Segurança",
+            perk2Icon: Zap,
+            perk2Text: "Negociação Direta",
+            accentColor: "#3B82F6",
+            itemsLabel: "Veículos"
+        };
+    }
+    if (raw.includes("servico") || raw.includes("prestador") || raw.includes("profissional")) {
+        return {
+            badgeText: "Prestador Verificado",
+            badgeBg: "bg-[#8B5CF6]",
+            badgeHoverBg: "hover:bg-[#7C3AED]",
+            icon: Wrench,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Profissional Qualificado",
+            perk2Icon: Zap,
+            perk2Text: "Contato Direto",
+            accentColor: "#8B5CF6",
+            itemsLabel: "Serviços"
+        };
+    }
+    if (raw.includes("frete") || raw.includes("mudanca") || raw.includes("transport")) {
+        return {
+            badgeText: "Transportador Verificado",
+            badgeBg: "bg-[#F59E0B]",
+            badgeHoverBg: "hover:bg-[#D97706]",
+            icon: Truck,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Transporte Seguro",
+            perk2Icon: Zap,
+            perk2Text: "Agilidade & Pontualidade",
+            accentColor: "#F59E0B",
+            itemsLabel: "Fretes"
+        };
+    }
+    if (raw.includes("viagem") || raw.includes("turismo") || raw.includes("agencia")) {
+        return {
+            badgeText: "Agência de Turismo Verificada",
+            badgeBg: "bg-[#06B6D4]",
+            badgeHoverBg: "hover:bg-[#0891B2]",
+            icon: Plane,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Roteiro Protegido",
+            perk2Icon: Zap,
+            perk2Text: "Experiência Comprovada",
+            accentColor: "#06B6D4",
+            itemsLabel: "Viagens"
+        };
+    }
+    if (raw.includes("leilao") || raw.includes("leiloeiro")) {
+        return {
+            badgeText: "Leiloeiro Oficial Verificado",
+            badgeBg: "bg-[#EC4899]",
+            badgeHoverBg: "hover:bg-[#DB2777]",
+            icon: Gavel,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Edital Certificado",
+            perk2Icon: Zap,
+            perk2Text: "Segurança Jurídica",
+            accentColor: "#EC4899",
+            itemsLabel: "Leilões"
+        };
+    }
+    if (raw.includes("particular") || raw === "general" || raw === "user") {
+        return {
+            badgeText: "Anunciante Verificado",
+            badgeBg: "bg-[#64748B]",
+            badgeHoverBg: "hover:bg-[#475569]",
+            icon: UserCheck,
+            perk1Icon: ShieldCheck,
+            perk1Text: "Anunciante Verificado pela Plataforma",
+            perk2Icon: Zap,
+            perk2Text: "Atendimento Seguro",
+            accentColor: "#64748B",
+            itemsLabel: "Anúncios"
+        };
+    }
+    // Default: Lojista / Merchant
+    return {
+        badgeText: "Loja Oficial",
+        badgeBg: "bg-[#FF6A00]",
+        badgeHoverBg: "hover:bg-[#E65C00]",
+        icon: Store,
+        perk1Icon: ShieldCheck,
+        perk1Text: "Compra com Comércio Local",
+        perk2Icon: Zap,
+        perk2Text: "Entrega Rápida",
+        accentColor: "#FF6A00",
+        itemsLabel: "Produtos"
+    };
+}
+
+export interface StoreHeaderProps {
     store: StoreInfo;
     stats?: { average: string, count: number } | null;
     productsCount?: number;
@@ -33,13 +165,21 @@ interface StoreHeaderProps {
     bannerUrl?: string | null;
     compact?: boolean;
     sidebarMode?: boolean;
+    profileType?: string;
+    showProfileButton?: boolean;
+    profileId?: string | null;
 }
 
-export function StoreHeader({ store, stats, productsCount, whatsappNumber, onShare, logoUrl, bannerUrl, compact = false, sidebarMode = false }: StoreHeaderProps) {
+export function StoreHeader({ store, stats, productsCount, whatsappNumber, onShare, logoUrl, bannerUrl, compact = false, sidebarMode = false, profileType, showProfileButton = false, profileId }: StoreHeaderProps) {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const theme = useStoreTheme(); // null quando a loja não personalizou
     const effectiveLogoUrl = logoUrl || store?.logo_url || (store as any)?.avatar_url || null;
+    const config = getProfileConfig(profileType, (store as any)?.categoria);
+    const ProfileIcon = config.icon;
+    const Perk1Icon = config.perk1Icon;
+    const Perk2Icon = config.perk2Icon;
 
     // Botões de contato personalizados (só com tema; valores já sanitizados)
     const contactLinks = (() => {
@@ -196,7 +336,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                     <img src={effectiveLogoUrl} className={cn("w-full h-full object-cover", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")} alt="Logo" />
                                 ) : (
                                     <div className={cn("w-full h-full bg-gradient-to-br from-white/90 to-white/60 flex items-center justify-center", compact ? "rounded-[10px] lg:rounded-xl" : "rounded-[24px] lg:rounded-[26px]")}>
-                                        <Store className={cn("text-[#68c7f2]", compact ? "w-6 h-6 lg:w-8 lg:h-8" : "w-10 h-10 lg:w-16 lg:h-16")} />
+                                        <ProfileIcon className={cn("text-[#68c7f2]", compact ? "w-6 h-6 lg:w-8 lg:h-8" : "w-10 h-10 lg:w-16 lg:h-16")} />
                                     </div>
                                 )}
                             </div>
@@ -208,8 +348,8 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                         {/* Info Text */}
                         <div className={cn("flex-1 space-y-1", sidebarMode ? "text-center" : "text-center xl:text-left")}>
                             <div className={cn("flex items-center gap-2 flex-wrap mb-0.5", sidebarMode ? "justify-center" : "justify-center xl:justify-start")}>
-                                <Badge className="bg-[#FF6A00] hover:bg-[#E65C00] text-white border-none rounded-md px-1.5 py-0 font-bold uppercase text-[8px] lg:text-[9px] tracking-wider shadow-sm">
-                                    Loja Oficial
+                                <Badge className={cn("text-white border-none rounded-md px-1.5 py-0 font-bold uppercase text-[8px] lg:text-[9px] tracking-wider shadow-sm", config.badgeBg, config.badgeHoverBg)}>
+                                    {config.badgeText}
                                 </Badge>
                                 <div className="flex items-center gap-1 text-white/90 font-bold text-[9px] lg:text-[10px] uppercase tracking-wider">
                                     <MapPin className="w-3 h-3" /> 
@@ -244,7 +384,7 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                 <p className={cn("font-black text-white tracking-tight", sidebarMode ? "text-lg" : compact ? "text-lg lg:text-xl" : "text-xl lg:text-3xl")}>
                                     {productsCount}
                                 </p>
-                                <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Produtos</p>
+                                <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>{config.itemsLabel}</p>
                             </div>
                             <div className={cn("bg-white/30 self-center", compact ? "w-[1px] h-6 lg:h-8" : "w-[1px] h-8 lg:h-12")} />
                             <div className="text-center">
@@ -253,7 +393,6 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                 </p>
                                 <p className={cn("font-black text-white/80 uppercase tracking-wider", sidebarMode ? "text-[10px]" : compact ? "text-[8px] lg:text-[9px]" : "text-[10px]")}>Seguidores</p>
                             </div>
-                            {/* "98% Resposta" REMOVIDO (07-21): era hardcoded/falso, sem fonte de dado. */}
                         </div>
 
                     </div>
@@ -262,10 +401,10 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                     <div className={cn("bg-black/10 border-t border-white/20 flex flex-wrap items-center gap-3", sidebarMode ? "hidden" : "justify-between", !sidebarMode && compact ? "px-4 py-2 lg:py-2.5 gap-3" : !sidebarMode ? "px-6 py-4 lg:py-5 gap-4" : "")}>
                         <div className={cn("items-center gap-4 lg:gap-5", sidebarMode ? "hidden" : "hidden lg:flex")}>
                             <div className={cn("flex items-center gap-1.5 font-bold text-white/90 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
-                                <ShieldCheck className={cn("text-white", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Compra com Comércio Local
+                                <Perk1Icon className={cn("text-white", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> {config.perk1Text}
                             </div>
                             <div className={cn("flex items-center gap-1.5 font-bold text-white/90 uppercase tracking-wider", compact ? "text-[9px]" : "text-[11px]")}>
-                                <Zap className={cn("text-[#FF6A00]", compact ? "w-3.5 h-3.5" : "w-4 h-4")} /> Entrega Rápida
+                                <Perk2Icon className={cn("text-[#FF6A00]", compact ? "w-3.5 h-3.5" : "w-4 h-4")} style={{ color: config.accentColor !== '#64748B' ? config.accentColor : '#FF6A00' }} /> {config.perk2Text}
                             </div>
                         </div>
                         <div className={cn("flex items-center w-full", sidebarMode ? "gap-2 justify-center flex-wrap" : "gap-2 lg:gap-3 lg:w-auto justify-center lg:justify-end")}>
@@ -285,6 +424,19 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
                                     <Icon className={cn(compact ? "w-3.5 h-3.5" : "w-4 h-4")} />
                                 </a>
                             ))}
+                            {showProfileButton && profileId && (
+                                <Button
+                                    onClick={() => navigate(publicAdvertiserPath(profileType, profileId))}
+                                    className={cn(
+                                        "flex-1 lg:flex-none rounded-lg lg:rounded-xl font-black uppercase tracking-wider text-white shadow-md transition-all hover:scale-[1.02]",
+                                        config.badgeBg, config.badgeHoverBg,
+                                        compact ? "text-[9px] h-8 lg:h-9 px-3 lg:px-4" : "text-[11px] h-11 lg:h-12 px-5"
+                                    )}
+                                >
+                                    <ExternalLink className={cn("mr-1.5", compact ? "w-3 h-3" : "w-4 h-4")} />
+                                    Ver Perfil {productsCount !== undefined && productsCount > 0 ? `(${productsCount})` : ""}
+                                </Button>
+                            )}
                             <Button
                                 variant="outline"
                                 onClick={toggleFollow}
@@ -321,4 +473,5 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
     );
 }
 
+export const PublicProfileHeader = StoreHeader;
 export default StoreHeader;

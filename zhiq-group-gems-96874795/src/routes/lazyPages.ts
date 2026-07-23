@@ -173,6 +173,15 @@ export const PassengerHistory = lazy(() => import("@/pages/PassengerHistory"));
 export const AdvertiserDashboard = lazy(() => import("@/pages/advertiser/AdvertiserDashboard"));
 export const MerchantMyStorePage = lazy(() => import("@/pages/merchant/MerchantMyStorePage"));
 export const MerchantStoreAppearance = lazy(() => import("@/pages/merchant/MerchantStoreAppearance"));
+// "Minha X" + "Aparência da X" genéricos (imobiliária/revenda/leilões/arremates/fretes/agência)
+export const BusinessProfilePage = lazy(() => import("@/pages/business/BusinessProfilePage"));
+export const BusinessAppearancePage = lazy(() => import("@/pages/business/BusinessAppearancePage"));
+// Marketplace de cotações de frete (Solicitar Frete / V2 rotas e oportunidades)
+export const FreightQuoteRequestPage = lazy(() => import("@/pages/public/FreightQuoteRequestPage"));
+export const MyFreightQuotesPage = lazy(() => import("@/pages/public/MyFreightQuotesPage"));
+export const AdvertiserFreightOpportunitiesPage = lazy(() => import("@/pages/advertiser/AdvertiserFreightOpportunitiesPage"));
+export const AdvertiserFleetPage = lazy(() => import("@/pages/advertiser/AdvertiserFleetPage"));
+export const AdvertiserRoutesPage = lazy(() => import("@/pages/advertiser/AdvertiserRoutesPage"));
 export const AdvertiserListingsPage = lazy(() => import("@/pages/advertiser/AdvertiserListingsPage"));
 export const AdvertiserNewListingPage = lazy(() => import("@/pages/advertiser/AdvertiserNewListingPage"));
 export const AdvertiserAccountPage = lazy(() => import("@/pages/advertiser/AdvertiserAccountPage"));

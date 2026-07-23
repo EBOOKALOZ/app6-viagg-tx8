@@ -29,6 +29,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketVehicleCard } from '@/components/advertiser/MarketVehicleCard';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
+import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
 import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
@@ -309,7 +310,10 @@ export const VehicleDetailPage = () => {
           ) : undefined}
           extras={(
             <>
-              {storeInfo && <StoreHeader store={storeInfo} />}
+              <AdvertiserSummaryCard
+                advertiserId={storeInfo?.id || vehicle.owner_user_id}
+                profileType="veiculos"
+              />
               <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>

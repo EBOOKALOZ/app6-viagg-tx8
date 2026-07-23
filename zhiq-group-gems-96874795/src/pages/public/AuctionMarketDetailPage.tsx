@@ -15,6 +15,7 @@ import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { CardDark, CardInfo, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { registerResumeHandler } from '@/components/auth/AuthGateProvider';
 
@@ -474,6 +475,15 @@ export default function AuctionMarketDetailPage() {
             </CardDark>
           </div>
         </section>
+
+        {listing && (
+          <div className="max-w-4xl mx-auto px-4 mb-8">
+            <AdvertiserSummaryCard
+              advertiserId={listing.store_id || (listing as any).profile_id || (listing as any).user_id || (listing as any).owner_user_id}
+              profileType="leiloes"
+            />
+          </div>
+        )}
 
         <InstitutionalSafetyBanner />
       </div>

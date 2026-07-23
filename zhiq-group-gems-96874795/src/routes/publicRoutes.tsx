@@ -62,6 +62,8 @@ import {
   FretesInicio,
   PublicFreightHome,
   FreightDetailPage,
+  FreightQuoteRequestPage,
+  MyFreightQuotesPage,
   ViagensInicio,
   PublicTravelHome,
   TravelDetailPage,
@@ -109,6 +111,12 @@ export const publicRoutes = (
     <Route path="/vender-imovel" element={<Navigate to="/auth" replace />} />
     <Route path="/real-estate/checkout/:listingId" element={<RealEstateCheckoutPage />} />
     <Route path="/loja/:storeId" element={<StorePublicPage />} />
+    <Route path="/imobiliaria/:storeId" element={<StorePublicPage />} />
+    <Route path="/revenda/:storeId" element={<StorePublicPage />} />
+    <Route path="/prestador/:storeId" element={<StorePublicPage />} />
+    <Route path="/freteiro/:storeId" element={<StorePublicPage />} />
+    <Route path="/agencia/:storeId" element={<StorePublicPage />} />
+    <Route path="/anunciante/:storeId" element={<StorePublicPage />} />
     <Route path="/leiloes" element={<AuctionListPage />} />
     <Route path="/meus-lances" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeusLances /></Suspense></ProtectedRoute>} />
     <Route path="/leilao/:id" element={<AuctionPublicPage />} />
@@ -128,6 +136,9 @@ export const publicRoutes = (
     <Route path="/fretes" element={<PublicFreightHome />} />
     <Route path="/fretes/anuncios" element={<PublicFreightHome />} />
     <Route path="/fretes/lista" element={<PublicFreightHome />} />
+    {/* Modalidade 2 — Solicitar Cotações (marketplace inteligente ORION) */}
+    <Route path="/fretes/solicitar" element={<Suspense fallback={<PageFallback />}><FreightQuoteRequestPage /></Suspense>} />
+    <Route path="/fretes/minhas-solicitacoes" element={<Suspense fallback={<PageFallback />}><MyFreightQuotesPage /></Suspense>} />
     <Route path="/fretes/:id" element={<FreightDetailPage />} />
     <Route path="/viagens-inicio" element={<Suspense fallback={<PageFallback />}><ViagensInicio /></Suspense>} />
     {/* /viagens = VITRINE de anúncios (padrão marketplace: ofertas primeiro).

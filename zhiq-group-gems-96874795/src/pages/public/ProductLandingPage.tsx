@@ -21,6 +21,7 @@ import { StoreCartDrawer } from "@/components/public/StoreCartDrawer";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { CardTopBar } from "@/components/ui/CardTopBar";
 import { shareCardLink } from "@/hooks/useCardTopBarActions";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
@@ -647,27 +648,10 @@ export default function ProductLandingPage() {
                         </div>
 
                         {store && (
-                            <div className="rounded-2xl bg-[#68c7f2] border border-zinc-200 shadow-sm p-5">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-zinc-100 flex-shrink-0 bg-zinc-100">
-                                        {normalizeImageUrl(store.logo_url, 'logos_lojas') ? (
-                                            <img src={normalizeImageUrl(store.logo_url, 'logos_lojas')!} className="w-full h-full object-cover" alt={store.store_name || "Loja"} />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center"><Store className="w-6 h-6 text-zinc-400" /></div>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <span className="bg-[#FF6A00] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">Loja Oficial</span>
-                                        <h3 className="font-black text-zinc-900 leading-tight truncate mt-1">{store.store_name || "Vendedor Local"}</h3>
-                                        {(store.bairro || store.city) && (<p className="text-xs text-zinc-500 flex items-center gap-1"><MapPin className="w-3 h-3 text-[#FF6A00]" /> {[store.bairro, store.city].filter(Boolean).join(", ")}{store.region ? "/" + store.region : ""}</p>)}
-                                    </div>
-                                </div>
-                                {store.store_id && (
-                                    <button onClick={(e) => { e.preventDefault(); navigate(`/loja/${store.store_id}?product=${id}`); }} className="mt-4 w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-colors">
-                                        <Store className="h-4 w-4" /> Visitar a Loja
-                                    </button>
-                                )}
-                            </div>
+                            <AdvertiserSummaryCard
+                                advertiserId={store.store_id || store.merchant_user_id || (product as any)?.seller_user_id}
+                                profileType="merchant"
+                            />
                         )}
                     </div>
                 </div>

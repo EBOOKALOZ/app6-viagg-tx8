@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
+import { publicAdvertiserPath } from "@/lib/business-modules";
 
 export type SearchCategory = 'mercado' | 'imoveis' | 'veiculos' | 'servicos' | 'viagens' | 'fretes' | 'leiloes';
 
@@ -223,7 +224,9 @@ export class GlobalSearchService {
         category: 'imoveis' as const,
         categoryLabel: 'Imóveis',
         location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
-        routePath: `/imoveis/${item.id}`,
+        routePath: item.owner_user_id
+          ? publicAdvertiserPath('imoveis', item.owner_user_id, item.id)
+          : `/imoveis/${item.id}`,
       };
     });
   }
@@ -260,7 +263,9 @@ export class GlobalSearchService {
         category: 'veiculos' as const,
         categoryLabel: 'Veículos',
         location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
-        routePath: `/veiculos/${item.id}`,
+        routePath: item.owner_user_id
+          ? publicAdvertiserPath('veiculos', item.owner_user_id, item.id)
+          : `/veiculos/${item.id}`,
       };
     });
   }
@@ -297,14 +302,16 @@ export class GlobalSearchService {
         category: 'servicos' as const,
         categoryLabel: 'Serviços',
         location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
-        routePath: `/servicos/${item.id}`,
+        routePath: item.owner_user_id
+          ? publicAdvertiserPath('servicos', item.owner_user_id, item.id)
+          : `/servicos/${item.id}`,
       };
     });
   }
 
   static async searchViagens(q: string): Promise<GlobalSearchResult[]> {
     const { data, error } = await (supabase.from('travel_listings') as any)
-      .select('id, title, description, destination, city, state, price_per_person, total_price, entry_price, cover_image_url, thumbnail_url, travel_media(original_storage_path, public_masked_storage_path)')
+      .select('id, title, description, destination, city, state, price_per_person, total_price, entry_price, cover_image_url, thumbnail_url, owner_user_id, travel_media(original_storage_path, public_masked_storage_path)')
       .eq('visibility_status', 'published')
       .or(ilikeOr(q))
       .limit(20);
@@ -336,7 +343,9 @@ export class GlobalSearchService {
         category: 'viagens' as const,
         categoryLabel: 'Viagens',
         location: item.destination || item.city || '',
-        routePath: `/viagens/${item.id}`,
+        routePath: item.owner_user_id
+          ? publicAdvertiserPath('viagem', item.owner_user_id, item.id)
+          : `/viagens/${item.id}`,
       };
     });
   }
@@ -374,7 +383,9 @@ export class GlobalSearchService {
         category: 'fretes' as const,
         categoryLabel: 'Fretes',
         location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
-        routePath: `/fretes/${item.id}`,
+        routePath: item.owner_user_id
+          ? publicAdvertiserPath('freteiro', item.owner_user_id, item.id)
+          : `/fretes/${item.id}`,
       };
     });
   }
@@ -388,7 +399,7 @@ export class GlobalSearchService {
    */
   static async searchLeiloes(q: string, showAll = false): Promise<GlobalSearchResult[]> {
     let query = (supabase.from('auction_listings') as any)
-      .select('id, title, description, city, state, current_bid, starting_bid, product_image_url, status, ends_at, listing_type')
+      .select('id, title, description, city, state, current_bid, starting_bid, product_image_url, status, ends_at, listing_type, store_id')
       .order('ends_at', { ascending: true, nullsFirst: false })
       .limit(showAll ? 60 : 20);
     if (!showAll) query = query.or(ilikeOr(q));
@@ -416,7 +427,9 @@ export class GlobalSearchService {
         category: 'leiloes' as const,
         categoryLabel: item.listing_type === 'arremate' ? 'Arremate' : 'Leilão',
         location: item.city ? `${item.city}${item.state ? '/' + item.state : ''}` : '',
-        routePath: `/mercado/leiloes/${item.id}`,
+        routePath: item.store_id
+          ? publicAdvertiserPath(item.listing_type === 'arremate' ? 'arremates' : 'leiloes', item.store_id, item.id)
+          : `/mercado/leiloes/${item.id}`,
       };
     });
   }

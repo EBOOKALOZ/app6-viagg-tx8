@@ -23,6 +23,7 @@ import { MarketLayout } from '@/components/layout/MarketLayout';
 import { resolveFreightVehicleIcon } from '@/lib/freight/vehicleTypes';
 import { MarketFreightCard } from '@/components/freight/MarketFreightCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
 import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
@@ -46,7 +47,7 @@ export const FreightDetailPage = () => {
         .from('freight_listings' as any)
         // NÃO usar select('*'): total_price é base INTERNA da comissão de 2% e
         // não pode vazar no payload público. Selecionar só o que a página exibe.
-        .select('id, title, description, vehicle_type, price_label, price_per_km, coverage_routes, city, state, neighborhood, public_address_label, is_featured, subcategoria, visibility_status')
+        .select('id, title, description, vehicle_type, price_label, price_per_km, coverage_routes, city, state, neighborhood, public_address_label, is_featured, subcategoria, visibility_status, owner_user_id, store_id, profile_id')
         .eq('id', id)
         .maybeSingle();
 
@@ -225,6 +226,10 @@ export const FreightDetailPage = () => {
           ) : undefined}
           extras={(
             <>
+              <AdvertiserSummaryCard
+                advertiserId={freight.store_id || freight.profile_id || freight.owner_user_id}
+                profileType="freteiro"
+              />
               <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>

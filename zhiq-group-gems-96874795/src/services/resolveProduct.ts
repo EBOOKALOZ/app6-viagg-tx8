@@ -121,8 +121,8 @@ const REGISTRY: ModuleResolver[] = [
   },
   {
     module: "auction", table: "auction_listings",
-    select: "id, title, description, product_image_url, buy_now_price, reserve_price, store_id, owner_user_id, listing_type",
-    map: (r, id) => ({ id, module: "auction", modality: r.listing_type === "arremate" ? "arremate" : "leilao", title: r.title ?? "Leilão", description: r.description ?? null, image_url: r.product_image_url ?? null, gallery: [], price: num(r.buy_now_price ?? r.reserve_price), price_label: null, condition: null, store_id: r.store_id ?? null, owner_user_id: r.owner_user_id ?? null, category: "Leilões" }),
+    select: "id, title, description, product_image_url, current_bid, starting_bid, buy_now_price, reserve_price, store_id, owner_user_id, listing_type",
+    map: (r, id) => ({ id, module: "auction", modality: r.listing_type === "arremate" ? "arremate" : "leilao", title: r.title ?? "Leilão", description: r.description ?? null, image_url: r.product_image_url ?? null, gallery: [], price: num(r.current_bid ?? r.starting_bid ?? r.buy_now_price ?? r.reserve_price), price_label: null, condition: null, store_id: r.store_id ?? null, owner_user_id: r.owner_user_id ?? null, category: "Leilões" }),
   },
 ];
 

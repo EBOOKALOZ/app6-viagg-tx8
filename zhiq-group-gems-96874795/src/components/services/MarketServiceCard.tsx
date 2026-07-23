@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dark-card';
 import { formatCurrencyBRL } from '@/lib/utils';
 import { resolveServiceTypeLabel, resolveServiceTypeIcon } from '@/lib/services/serviceCategories';
+import { publicAdvertiserPath } from '@/lib/business-modules';
 
 interface MarketServiceCardProps {
   service: {
@@ -23,6 +24,7 @@ interface MarketServiceCardProps {
     city: string;
     state: string;
     thumbnail_url?: string;
+    owner_user_id?: string | null;
   };
 }
 
@@ -48,7 +50,13 @@ export const MarketServiceCard: React.FC<MarketServiceCardProps> = ({ service })
   const TypeIcon = resolveServiceTypeIcon(service.service_type);
 
   const handleNavigate = () => {
-    navigate(`/servicos/${service.id}`);
+    // Novo fluxo: abre a página pública do PRESTADOR com o serviço em destaque;
+    // sem dono conhecido, cai na página de detalhe isolada.
+    if (service.owner_user_id) {
+      navigate(publicAdvertiserPath('servicos', service.owner_user_id, service.id));
+    } else {
+      navigate(`/servicos/${service.id}`);
+    }
   };
 
   const features: CardFeature[] = [

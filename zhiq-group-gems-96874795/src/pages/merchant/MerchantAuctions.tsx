@@ -586,6 +586,36 @@ function CreateListingModal({
             );
           })()}
 
+          {/* ═══ Tipo de Entrega ═══ */}
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1 flex items-center gap-2">
+              <Truck className="h-3 w-3" /> Tipo de Entrega
+            </Label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: "pickup", label: "A Retirar", desc: "Loja física", emoji: "🏪" },
+                { value: "delivery", label: "Entrega Grátis", desc: "Envio ao cliente", emoji: "🚚" },
+                { value: "both", label: "Ambos", desc: "Cliente escolhe", emoji: "🔄" },
+              ].map(({ value, label, desc, emoji }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, fulfillment: value }))}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all text-center",
+                    form.fulfillment === value
+                      ? "border-[#FF6A00] bg-[#FF6A00]/10 text-white"
+                      : "border-[#2A3038] bg-[#1B1F24] text-[#A7B0BE] hover:border-[#FF6A00]/30"
+                  )}
+                >
+                  <span className="text-xl">{emoji}</span>
+                  <span className="font-black text-[10px] uppercase tracking-wider">{label}</span>
+                  <span className="text-[8px] opacity-50">{desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button
             className="w-full h-16 text-base font-black bg-gradient-to-r from-[#FF6A01] to-[#FF8C33] hover:from-[#FF7A1A] hover:to-[#FFA357] text-white rounded-2xl shadow-2xl shadow-[#FF6A00]/30 active:scale-[0.98] transition-all uppercase tracking-[0.2em] mt-4"
             onClick={handleSubmit}
@@ -712,6 +742,7 @@ function EditListingModal({
       minimum_increment: parseFloat(form.minimum_increment) || 1,
       product_image_url: form.product_image_url || null,
       status: form.status,
+      fulfillment_type: form.fulfillment_type || "pickup",
       city: form.city || null,
       neighborhood: form.neighborhood || null,
     };

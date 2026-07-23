@@ -14,6 +14,8 @@ const DashboardShell = lazy(() => import("@/dashboards/shell/DashboardShell"));
 const AdminComandoLeilao = lazy(() => import("@/pages/admin/AdminComandoLeilao"));
 // ORION Auction Intelligence — consolida AI-65/67/71/73 (lazy local)
 const AdminAuctionIntelligence = lazy(() => import("@/pages/admin/AdminAuctionIntelligence"));
+// Marketplace de cotações de frete — métricas + comissão configurável (lazy local)
+const AdminFreightQuotes = lazy(() => import("@/pages/admin/AdminFreightQuotes"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -198,6 +200,7 @@ export const adminRoutes = (
       <Route path="/admin/vehicles" element={<AdminVehicleOverview />} />
       <Route path="/admin/servicos" element={<AdminServiceOverview />} />
       <Route path="/admin/fretes" element={<AdminFreightOverview />} />
+      <Route path="/admin/fretes/cotacoes" element={<AdminFreightQuotes />} />
       <Route path="/admin/viagens" element={<AdminViagemOverview />} />
       <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
       <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />

@@ -127,6 +127,21 @@ Deno.serve(async (req) => {
       .update({ is_promoted: true })
       .eq("owner_user_id", purchase.advertiser_user_id)
       .eq("visibility_status", "published");
+  } else if (module === "freight") {
+    // FRETES: promove anúncios + rotas + veículos da frota do transportador
+    // até o fim do período do pacote (Rota Premium / Veículo Premium / Empresa Premium).
+    await svc.from("freight_listings" as any)
+      .update({ is_promoted: true, promoted_until: expiresAt })
+      .eq("owner_user_id", purchase.advertiser_user_id)
+      .eq("visibility_status", "published");
+    await svc.from("freight_routes" as any)
+      .update({ is_promoted: true, promoted_until: expiresAt })
+      .eq("owner_user_id", purchase.advertiser_user_id)
+      .eq("is_active", true);
+    await svc.from("freight_fleet_vehicles" as any)
+      .update({ is_promoted: true, promoted_until: expiresAt })
+      .eq("owner_user_id", purchase.advertiser_user_id)
+      .eq("is_active", true);
   }
   // Outros módulos podem ser adicionados aqui
 

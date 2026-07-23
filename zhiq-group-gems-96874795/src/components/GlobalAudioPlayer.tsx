@@ -356,8 +356,14 @@ export function GlobalAudioPlayer() {
       startMusic();
     }
     ensureOrionGraph();
+    if (!isPanelOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const newTop = Math.max(50, rect.bottom + 8);
+      const newRight = Math.max(12, window.innerWidth - rect.right);
+      setPanelPos({ top: newTop, right: newRight });
+    }
     setIsPanelOpen(prev => !prev);
-  }, [startMusic]);
+  }, [startMusic, isPanelOpen]);
 
   const VolumeIcon = settings.muted || settings.volume === 0
     ? VolumeX

@@ -187,6 +187,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
 
   const navigation = veiculosMode ? [
     { name: "Painel Geral", href: "/anunciante/veiculos", icon: LayoutDashboard },
+    { name: "Minha Revenda", href: "/anunciante/veiculos/minha-revenda", icon: Store },
+    { name: "Aparência da Revenda", href: "/anunciante/veiculos/aparencia", icon: Palette },
     { name: "Meus Anúncios", href: "/anunciante/veiculos/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/veiculos/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/veiculos/mensagens", icon: MessageSquare },
@@ -205,6 +207,11 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : fretesMode ? [
     { name: "Painel Geral", href: "/anunciante/fretes", icon: LayoutDashboard },
+    { name: "Oportunidades", href: "/anunciante/fretes/oportunidades", icon: Sparkles },
+    { name: "Minha Frota", href: "/anunciante/fretes/frota", icon: Truck },
+    { name: "Minhas Rotas", href: "/anunciante/fretes/rotas", icon: ClipboardList },
+    { name: "Minha Empresa", href: "/anunciante/fretes/minha-empresa", icon: Store },
+    { name: "Aparência da Empresa", href: "/anunciante/fretes/aparencia", icon: Palette },
     { name: "Meus Anúncios", href: "/anunciante/fretes/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/fretes/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/fretes/mensagens", icon: MessageSquare },
@@ -214,6 +221,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : viagensMode ? [
     { name: "Painel Geral", href: "/anunciante/viagens", icon: LayoutDashboard },
+    { name: "Minha Agência", href: "/anunciante/viagens/minha-agencia", icon: Store },
+    { name: "Aparência da Agência", href: "/anunciante/viagens/aparencia", icon: Palette },
     { name: "Meus Anúncios", href: "/anunciante/viagens/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/viagens/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/viagens/mensagens", icon: MessageSquare },
@@ -223,6 +232,8 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Sair", href: "#", icon: LogOut, action: "logout" },
   ] : imoveisMode ? [
     { name: "Painel Geral", href: "/anunciante/imoveis", icon: LayoutDashboard },
+    { name: "Minha Imobiliária", href: "/anunciante/imoveis/minha-imobiliaria", icon: Store },
+    { name: "Aparência da Imobiliária", href: "/anunciante/imoveis/aparencia", icon: Palette },
     { name: "Meus Anúncios", href: "/anunciante/imoveis/meus-anuncios", icon: Package },
     { name: "Divulgar Grátis", href: "/anunciante/imoveis/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/imoveis/mensagens", icon: MessageSquare },
@@ -239,7 +250,11 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     ] : []),
     { name: "Meus Produtos", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Leilões", href: "/anunciante/leiloes", icon: Gavel },
+    { name: "Meus Leilões", href: "/anunciante/leiloes/perfil", icon: Store },
+    { name: "Aparência dos Leilões", href: "/anunciante/leiloes/aparencia", icon: Palette },
     { name: "Arremates", href: "/anunciante/arremates/gestao", icon: Trophy },
+    { name: "Meus Arremates", href: "/anunciante/arremates/perfil", icon: Store },
+    { name: "Aparência dos Arremates", href: "/anunciante/arremates/aparencia", icon: Palette },
     { name: "Divulgar Grátis", href: "/anunciante/divulgar-gratis", icon: Megaphone },
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     ...(showMerchantOnlyItems ? [
