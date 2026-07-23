@@ -16,6 +16,8 @@ const AdminComandoLeilao = lazy(() => import("@/pages/admin/AdminComandoLeilao")
 const AdminAuctionIntelligence = lazy(() => import("@/pages/admin/AdminAuctionIntelligence"));
 // Marketplace de cotações de frete — métricas + comissão configurável (lazy local)
 const AdminFreightQuotes = lazy(() => import("@/pages/admin/AdminFreightQuotes"));
+// Gestão transacional de leilões (encerrar/cancelar/moderar/invalidar) — lazy local
+const AdminAuctionManagement = lazy(() => import("@/pages/admin/AdminAuctionManagement"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -79,6 +81,8 @@ import {
   AdminServiceOverview,
   AdminFreightOverview,
   AdminViagemOverview,
+  AdminTravelModeration,
+  AdminTravelImageModeration,
   AdminMarketplaceCommerce,
   AdminPaymentGateways,
   AdminPaymentDemo,
@@ -202,9 +206,12 @@ export const adminRoutes = (
       <Route path="/admin/fretes" element={<AdminFreightOverview />} />
       <Route path="/admin/fretes/cotacoes" element={<AdminFreightQuotes />} />
       <Route path="/admin/viagens" element={<AdminViagemOverview />} />
+      <Route path="/admin/viagens/moderacao" element={<AdminTravelModeration />} />
+      <Route path="/admin/viagens/aprovacao-imagens" element={<AdminTravelImageModeration />} />
       <Route path="/admin/promotion-packages" element={<AdminPromotionPackagesPage />} />
       <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />
       <Route path="/admin/auction-intelligence" element={<AdminAuctionIntelligence />} />
+      <Route path="/admin/leiloes/gestao" element={<AdminAuctionManagement />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />

@@ -285,6 +285,8 @@ const menuSections: MenuSection[] = [
       { title: "Serviços", url: "/admin/servicos", icon: Briefcase },
       { title: "Fretes & Transportes", url: "/admin/fretes", icon: Truck },
       { title: "Viagens & Turismo", url: "/admin/viagens", icon: Plane },
+      { title: "Moderação de Viagens", url: "/admin/viagens/moderacao", icon: Plane },
+      { title: "Imagens de Viagens", url: "/admin/viagens/aprovacao-imagens", icon: Camera },
       { title: "Créditos", url: "/admin/creditos", icon: Coins },
       { title: "Pacotes de Promoção", url: "/admin/promotion-packages", icon: Megaphone },
       { title: "Pacotes Imóveis", url: "/admin/imoveis/pacotes", icon: Building2 },

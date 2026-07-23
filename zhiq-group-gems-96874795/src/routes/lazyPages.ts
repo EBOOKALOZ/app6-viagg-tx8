@@ -276,6 +276,8 @@ export const AdminVehicleOverview = lazy(() => import("@/pages/admin/AdminVehicl
 export const AdminServiceOverview = lazy(() => import("@/pages/admin/AdminServiceOverview"));
 export const AdminFreightOverview = lazy(() => import("@/pages/admin/AdminFreightOverview"));
 export const AdminViagemOverview = lazy(() => import("@/pages/admin/AdminViagemOverview"));
+export const AdminTravelModeration = lazy(() => import("@/pages/admin/AdminTravelModeration"));
+export const AdminTravelImageModeration = lazy(() => import("@/pages/admin/AdminTravelImageModeration"));
 export const AdminMarketplaceCommerce = lazy(() => import("@/pages/admin/AdminMarketplaceCommerce"));
 export const AdminPromotionPackagesPage = lazy(() => import("@/pages/admin/AdminPromotionPackagesPage"));
 export const MotoboyTestPanel = lazy(() => import("@/pages/admin/MotoboyTestPanel"));

@@ -22,8 +22,11 @@ import {
   Plane, Search, Loader2, TrendingUp, TrendingDown, Users,
   Coins, CheckCircle2, Clock, Ban, MapPin, Store,
   User as UserIcon, Eye, Plus, Edit, Trash2, Star,
-  Calendar,
+  Calendar, ShieldCheck, Camera, Download, PauseCircle,
+  Archive, RotateCcw, XCircle, Wallet, Target,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import type { TravelListingModerationAction, TravelModerationResult } from "@/integrations/supabase/types-travel";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,8 +97,30 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
-function TravelDetailDrawer({ selected, open, onClose }: { selected: AdminTravelListingRow | null; open: boolean; onClose: () => void }) {
+function TravelDetailDrawer({ selected, open, onClose, onModerate, moderating }: {
+  selected: AdminTravelListingRow | null;
+  open: boolean;
+  onClose: () => void;
+  onModerate: (id: string, action: TravelListingModerationAction, reason: string | null) => void;
+  moderating: boolean;
+}) {
+  const [reason, setReason] = useState("");
   if (!selected) return null;
+
+  const needsReason = (action: TravelListingModerationAction) =>
+    action === "reject" || action === "request_changes";
+
+  const act = (action: TravelListingModerationAction) => {
+    if (needsReason(action) && !reason.trim()) {
+      toast.error("Informe o motivo para esta ação.");
+      return;
+    }
+    if (action === "soft_delete" && !confirm("Remover este anúncio (soft delete)? Ele sai do ar mas permanece no histórico e pode ser restaurado.")) return;
+    onModerate(selected.id, action, reason.trim() || null);
+    setReason("");
+  };
+
+  const status = selected.visibility_status || "";
 
   const priceDisplay =
     selected.entry_price?.trim() ||
@@ -181,6 +206,52 @@ function TravelDetailDrawer({ selected, open, onClose }: { selected: AdminTravel
               <UserIcon className="w-4 h-4 mr-2" /> Perfil do Anunciante
             </Button>
           </div>
+
+          {/* ── Ações administrativas (RPC auditada) ── */}
+          <section className="pt-4 border-t">
+            <h4 className="text-[13px] font-bold uppercase text-muted-foreground mb-3 flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-sky-500" /> Moderação Administrativa
+            </h4>
+            <Input
+              placeholder="Motivo (obrigatório ao rejeitar / solicitar ajustes)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="h-9 text-xs mb-3"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              {status !== "published" && (
+                <Button size="sm" disabled={moderating} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={() => act("approve")}>
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Aprovar / Publicar
+                </Button>
+              )}
+              {status === "published" && (
+                <Button size="sm" variant="outline" disabled={moderating} className="border-amber-300 text-amber-600 hover:bg-amber-50 gap-1.5" onClick={() => act("pause")}>
+                  <PauseCircle className="w-3.5 h-3.5" /> Pausar
+                </Button>
+              )}
+              <Button size="sm" variant="outline" disabled={moderating} className="border-amber-300 text-amber-600 hover:bg-amber-50 gap-1.5" onClick={() => act("request_changes")}>
+                <Edit className="w-3.5 h-3.5" /> Solicitar Ajustes
+              </Button>
+              <Button size="sm" variant="outline" disabled={moderating} className="border-red-300 text-red-600 hover:bg-red-50 gap-1.5" onClick={() => act("reject")}>
+                <XCircle className="w-3.5 h-3.5" /> Reprovar
+              </Button>
+              {status !== "archived" ? (
+                <Button size="sm" variant="outline" disabled={moderating} className="gap-1.5" onClick={() => act("archive")}>
+                  <Archive className="w-3.5 h-3.5" /> Arquivar
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled={moderating} className="gap-1.5" onClick={() => act("restore")}>
+                  <RotateCcw className="w-3.5 h-3.5" /> Restaurar
+                </Button>
+              )}
+              <Button size="sm" variant="outline" disabled={moderating} className="border-red-300 text-red-600 hover:bg-red-50 gap-1.5 col-span-2" onClick={() => act("soft_delete")}>
+                <Trash2 className="w-3.5 h-3.5" /> Remover (soft delete, reversível)
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              Toda decisão é registrada em travel_audit_log com autor, motivo e status anterior/novo.
+            </p>
+          </section>
         </div>
       </SheetContent>
     </Sheet>
@@ -215,6 +286,29 @@ export default function AdminViagemOverview() {
   }, [data?.rows, search, statusFilter, cityFilter]);
 
   const kpis = data?.kpis;
+
+  // ── KPIs enterprise derivados (receita, leads, tops) ──
+  const paidStatuses = new Set(["paid", "approved", "completed"]);
+  const revenueBrl = useMemo(
+    () => (data?.purchases || [])
+      .filter((p: any) => paidStatuses.has(String(p.payment_status || "").toLowerCase()))
+      .reduce((s: number, p: any) => s + (Number(p.amount_brl) || 0), 0),
+    [data?.purchases],
+  );
+  const totalLeads = useMemo(
+    () => (data?.rows || []).reduce((s, r) => s + (r.lead_count || 0), 0),
+    [data?.rows],
+  );
+  const topBy = (key: "destination" | "category") => {
+    const counts = new Map<string, number>();
+    (data?.rows || []).forEach((r) => {
+      const v = (r[key] || "").trim();
+      if (v) counts.set(v, (counts.get(v) || 0) + 1);
+    });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  };
+  const topDestinos = useMemo(() => topBy("destination"), [data?.rows]);
+  const topCategorias = useMemo(() => topBy("category"), [data?.rows]);
 
   // ── Gestão de Pacotes ──
   const qc = useQueryClient();
@@ -379,6 +473,48 @@ export default function AdminViagemOverview() {
   const handleCloseForm = () => { setShowCreatePkg(false); setEditingPkg(null); };
   const isSubmitting = editingPkg ? updateTravelPkg.isPending : createTravelPkg.isPending;
 
+  // ── Moderação administrativa (RPC auditada admin_moderate_travel_listing) ──
+  const moderateListing = useMutation({
+    mutationFn: async ({ id, action, reason }: { id: string; action: TravelListingModerationAction; reason: string | null }) => {
+      const { data: res, error } = await (supabase.rpc as any)("admin_moderate_travel_listing", {
+        p_listing_id: id,
+        p_action: action,
+        p_reason: reason,
+      });
+      if (error) throw error;
+      const result = res as TravelModerationResult;
+      if (!result?.success) throw new Error(result?.error || "Falha na moderação");
+      return result;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["admin-travel-overview"] });
+      qc.invalidateQueries({ queryKey: ["admin-travel-moderation-queue"] });
+      toast.success(`Ação "${result.action}" aplicada (${result.old_status} → ${result.new_status}).`);
+      setSelectedRow(null);
+    },
+    onError: (err: any) => toast.error(`Erro na moderação: ${err.message}`),
+  });
+
+  // ── Exportação CSV (linhas filtradas da tabela) ──
+  const exportCsv = () => {
+    const header = ["id", "titulo", "categoria", "destino", "cidade", "estado", "status", "anunciante", "tipo_anunciante", "leads", "creditos", "partida", "criado_em"];
+    const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = filteredRows.map((r) => [
+      r.id, r.title, r.category, r.destination, r.city, r.state, r.visibility_status,
+      r.advertiser_name, r.advertiser_kind, r.lead_count, r.credits_consumed,
+      r.departure_date, r.created_at,
+    ].map(escape).join(";"));
+    const csv = "﻿" + [header.join(";"), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `viagens-admin-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${filteredRows.length} anúncios exportados.`);
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Pacotes ── */}
@@ -498,13 +634,27 @@ export default function AdminViagemOverview() {
       )}
 
       {/* ── KPIs ── */}
-      <div className="flex items-center gap-2 pt-4">
-        <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-md">
-          <Plane className="h-4 w-4 text-white" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center shadow-md">
+            <Plane className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight">Visão Geral de Viagens & Turismo</h2>
+            <p className="text-xs text-muted-foreground">Anúncios, anunciantes, receita e leads</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold tracking-tight">Visão Geral de Viagens & Turismo</h2>
-          <p className="text-xs text-muted-foreground">Anúncios, anunciantes e consumo de créditos</p>
+        <div className="flex items-center gap-2">
+          <Link to="/admin/viagens/moderacao">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs border-amber-300 text-amber-600 hover:bg-amber-50">
+              <ShieldCheck className="w-3.5 h-3.5" /> Fila de Moderação{kpis?.pending_listings ? ` (${kpis.pending_listings})` : ""}
+            </Button>
+          </Link>
+          <Link to="/admin/viagens/aprovacao-imagens">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Camera className="w-3.5 h-3.5" /> Aprovação de Imagens
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -526,6 +676,45 @@ export default function AdminViagemOverview() {
             <MetricCard title="Pendentes" value={formatNumber(kpis?.pending_listings)} icon={Clock} />
             <MetricCard title="Rejeitados" value={formatNumber(kpis?.rejected_listings)} icon={Ban} />
             <MetricCard title="Pacotes Vendidos" value={formatNumber(kpis?.total_packages_sold)} icon={Coins} />
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MetricCard title="Receita de Pacotes" value={formatCurrencyBRL(revenueBrl)} icon={Wallet} />
+            <MetricCard title="Leads Gerados" value={formatNumber(totalLeads)} icon={Target} />
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" /> Top Destinos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {topDestinos.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">Sem dados.</p>
+                ) : topDestinos.map(([name, count]) => (
+                  <div key={name} className="flex justify-between text-[12px]">
+                    <span className="truncate font-medium">{name}</span>
+                    <span className="text-muted-foreground font-semibold shrink-0 ml-2">{count}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Plane className="h-3.5 w-3.5" /> Top Categorias
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                {topCategorias.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">Sem dados.</p>
+                ) : topCategorias.map(([name, count]) => (
+                  <div key={name} className="flex justify-between text-[12px]">
+                    <span className="truncate font-medium">{name}</span>
+                    <span className="text-muted-foreground font-semibold shrink-0 ml-2">{count}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Filtros */}
@@ -559,6 +748,9 @@ export default function AdminViagemOverview() {
                 <SelectItem value="90">90 dias</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs" onClick={exportCsv} disabled={filteredRows.length === 0}>
+              <Download className="w-3.5 h-3.5" /> Exportar CSV
+            </Button>
           </div>
 
           {/* Tabela */}
@@ -627,7 +819,13 @@ export default function AdminViagemOverview() {
         </>
       )}
 
-      <TravelDetailDrawer selected={selectedRow} open={!!selectedRow} onClose={() => setSelectedRow(null)} />
+      <TravelDetailDrawer
+        selected={selectedRow}
+        open={!!selectedRow}
+        onClose={() => setSelectedRow(null)}
+        onModerate={(id, action, reason) => moderateListing.mutate({ id, action, reason })}
+        moderating={moderateListing.isPending}
+      />
     </div>
   );
 }
