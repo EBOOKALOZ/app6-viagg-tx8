@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatBrazilianPhone } from "@/lib/utils";
 import { moderatedUpload } from "@/lib/moderation/moderatedUpload";
 import { moderatedText } from "@/lib/moderation/moderatedText";
-import { getTravelMediaUrl, TRAVEL_UPLOAD_BUCKET } from "@/lib/viagem/travelMedia";
+import { getTravelMediaUrl, resolveTravelUploadBucket } from "@/lib/viagem/travelMedia";
 
 interface ExistingMedia {
   id: string;
@@ -292,6 +292,9 @@ export default function ViagemForm() {
       }
 
       if (savedId && pendingFiles.length > 0) {
+        // Resolve o bucket oficial 1x (travel-public se já existir, senão o
+        // fallback público) — auto-migra para o oficial sem troca de código.
+        const uploadBucket = await resolveTravelUploadBucket();
         for (let idx = 0; idx < pendingFiles.length; idx++) {
           const file = pendingFiles[idx];
           let modRes;
@@ -301,7 +304,7 @@ export default function ViagemForm() {
               mime: file.type || 'image/jpeg',
               listingId: savedId,
               category: 'travel',
-              targetBucket: TRAVEL_UPLOAD_BUCKET,
+              targetBucket: uploadBucket,
             });
           } catch (modErr: any) {
             toast({ title: "Erro na moderação da foto", description: modErr.message, variant: "destructive" });
