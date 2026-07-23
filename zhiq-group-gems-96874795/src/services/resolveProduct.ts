@@ -142,7 +142,19 @@ export async function resolveProductById(productId: string): Promise<ResolvedPro
       } catch { return null; }
     })
   );
-  const resolved = (results.find(Boolean) as ResolvedProduct | undefined) ?? null;
+  const matches = results.filter(Boolean) as ResolvedProduct[];
+  // Colisão de id entre módulos: um UUID resolvendo em mais de uma tabela é
+  // anomalia — em vez de "primeiro da lista vence" (silencioso, causa título
+  // de um módulo com descrição de outro), registramos e não devolvemos nada
+  // ambíguo. O chamador trata como não-encontrado, evitando dados misturados.
+  if (matches.length > 1) {
+    console.error(
+      `[resolveProductById] id ${productId} colide em ${matches.length} módulos:`,
+      matches.map((m) => m.module),
+    );
+    return null;
+  }
+  const resolved = matches[0] ?? null;
   if (!resolved) return null;
 
   // Defaults padronizados (maps de venda não precisam repetir).

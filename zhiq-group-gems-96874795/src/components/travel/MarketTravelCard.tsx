@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dark-card';
 import { formatCurrencyBRL } from '@/lib/utils';
 import { resolveTravelCategoryEmoji } from '@/lib/viagem/travelCategories';
-import { getTravelMediaFallbackUrl } from '@/lib/viagem/travelMedia';
+import { travelImgFallback } from '@/lib/viagem/travelMedia';
 import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
 import { publicAdvertiserPath } from '@/lib/business-modules';
 
@@ -56,16 +56,7 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
     { id: travel.id }
   );
 
-  const [imgError, setImgError] = useState(false);
-  const [imgFailed, setImgFailed] = useState(false);
-  React.useEffect(() => {
-    setImgError(false);
-    setImgFailed(false);
-  }, [travel.thumbnail_url]);
-
-  const fallbackUrl = travel.thumbnail_url ? getTravelMediaFallbackUrl(travel.thumbnail_url) : null;
-  const currentSrc = imgFailed ? null : ((imgError && fallbackUrl) ? fallbackUrl : travel.thumbnail_url);
-
+  const currentSrc = travel.thumbnail_url || null;
   const emoji = resolveTravelCategoryEmoji(travel.category);
 
   const handleNavigate = () => {
@@ -129,13 +120,7 @@ export const MarketTravelCard: React.FC<MarketTravelCardProps> = ({ travel }) =>
                 src={currentSrc}
                 alt={travel.title}
                 loading="lazy"
-                onError={(e) => {
-                  if (!imgError && fallbackUrl) {
-                    setImgError(true);
-                  } else {
-                    setImgFailed(true);
-                  }
-                }}
+                onError={travelImgFallback}
                 className="w-full h-full object-contain bg-[#1A1F24] transition-transform duration-700 ease-out group-hover:scale-105"
               />
             ) : (

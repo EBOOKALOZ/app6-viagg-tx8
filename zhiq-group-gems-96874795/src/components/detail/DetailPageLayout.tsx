@@ -68,6 +68,28 @@ const glass: React.CSSProperties = {
   borderRadius: '24px',
 };
 
+/**
+ * Fallback genérico de <img>: se a URL for do storage público do Supabase,
+ * tenta os demais buckets candidatos (mídia pode estar em qualquer um durante
+ * a transição de buckets). Esconde a imagem só depois de esgotar a cadeia.
+ */
+const STORAGE_BUCKET_CHAIN = ["real-estate-public", "travel-public", "real-estate-original"];
+function chainedImgError(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget;
+  const marker = "/storage/v1/object/public/";
+  const i = img.src.indexOf(marker);
+  if (i === -1) { img.style.display = "none"; return; }
+  const rest = img.src.slice(i + marker.length).split("?")[0];
+  const path = rest.slice(rest.indexOf("/") + 1);
+  const current = STORAGE_BUCKET_CHAIN.find((b) => img.src.includes(`/${b}/`));
+  const start = current ? STORAGE_BUCKET_CHAIN.indexOf(current) + 1 : 0;
+  const tried = Number(img.dataset.bucketIdx ?? "-1");
+  const nextIdx = Math.max(tried + 1, start);
+  if (nextIdx >= STORAGE_BUCKET_CHAIN.length) { img.style.display = "none"; return; }
+  img.dataset.bucketIdx = String(nextIdx);
+  img.src = `${img.src.slice(0, i)}${marker}${STORAGE_BUCKET_CHAIN[nextIdx]}/${path}`;
+}
+
 export function DetailPageLayout(p: DetailPageLayoutProps) {
   const navigate = useNavigate();
   const [idx, setIdx] = useState(0);
@@ -141,10 +163,25 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
                 className="h-full w-full cursor-zoom-in object-cover"
                 onClick={() => setZoom(true)}
                 loading="eager"
+                onError={chainedImgError}
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-slate-300">
-                <ImageOff className="h-12 w-12" />
+              <div
+                className="flex h-full w-full flex-col items-center justify-center gap-3"
+                style={{ background: `linear-gradient(135deg, ${p.accent}0d, #f8fafc 60%)` }}
+              >
+                <div
+                  className="flex h-16 w-16 items-center justify-center rounded-2xl"
+                  style={{ background: `${p.accent}1a`, color: p.accent }}
+                >
+                  <ImageOff className="h-8 w-8" />
+                </div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                  Sem imagem disponível
+                </p>
+                <p className="max-w-[220px] text-center text-[10px] font-medium text-slate-400">
+                  As fotos deste anúncio ainda não foram publicadas.
+                </p>
               </div>
             )}
             <span
@@ -180,10 +217,16 @@ export function DetailPageLayout(p: DetailPageLayoutProps) {
           {total > 1 && (
             <div className="flex gap-2 overflow-x-auto p-3">
               {imgs.map((src, i) => (
-                <button key={i} type="button" onClick={() => setIdx(i)}
-                  className={cn('dpl-thumb h-14 w-20 shrink-0 overflow-hidden rounded-xl border-2', i === idx ? '' : 'border-transparent opacity-70')}
-                  style={i === idx ? { borderColor: p.accent } : undefined}>
-                  <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
+                <button
+                  key={i} type="button" onClick={() => setIdx(i)}
+                  className={cn("h-16 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all", i === idx ? "border-sky-500 opacity-100" : "border-transparent opacity-60 hover:opacity-100")}
+                >
+                  <img
+                    src={src}
+                    alt={`${p.titulo} ${i+1}`}
+                    className="h-full w-full object-cover"
+                    onError={chainedImgError}
+                  />
                 </button>
               ))}
             </div>

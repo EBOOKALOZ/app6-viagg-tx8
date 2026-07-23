@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatBrazilianPhone } from "@/lib/utils";
 import { moderatedUpload } from "@/lib/moderation/moderatedUpload";
 import { moderatedText } from "@/lib/moderation/moderatedText";
-import { getTravelMediaUrl } from "@/lib/viagem/travelMedia";
+import { getTravelMediaUrl, TRAVEL_UPLOAD_BUCKET } from "@/lib/viagem/travelMedia";
 
 interface ExistingMedia {
   id: string;
@@ -134,8 +134,10 @@ export default function ViagemForm() {
   }, [contactRow]);
 
   useEffect(() => {
-    if (!mediaData?.length) return;
-    const mapped: ExistingMedia[] = mediaData.map((m: any) => ({
+    // Reseta SEMPRE que mediaData mudar (inclusive p/ vazio): sem isso, ao
+    // editar um pacote sem fotos logo após outro COM fotos, as imagens do
+    // anterior persistiam — mistura de mídia entre anúncios distintos.
+    const mapped: ExistingMedia[] = (mediaData || []).map((m: any) => ({
       id: m.id,
       path: m.original_storage_path,
       url: getTravelMediaUrl(m.original_storage_path) || "",
@@ -299,7 +301,7 @@ export default function ViagemForm() {
               mime: file.type || 'image/jpeg',
               listingId: savedId,
               category: 'travel',
-              targetBucket: 'travel-public',
+              targetBucket: TRAVEL_UPLOAD_BUCKET,
             });
           } catch (modErr: any) {
             toast({ title: "Erro na moderação da foto", description: modErr.message, variant: "destructive" });
@@ -514,7 +516,22 @@ export default function ViagemForm() {
             {/* fotos já salvas no banco */}
             {existingMedia.map((media, i) => (
               <div key={media.id} className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 group">
-                <img src={media.url} alt="" className="w-full h-full object-cover" />
+                <img 
+                  src={media.url} 
+                  alt="" 
+                  className="w-full h-full object-cover" 
+                  onError={e => {
+                      const img = e.currentTarget as HTMLImageElement;
+                      if (img.dataset.fallbackTried === "1") { img.style.display = "none"; return; }
+                      if (img.src.includes("/travel-public/")) {
+                          const fb = img.src.replace("/travel-public/", "/real-estate-original/").split("?")[0];
+                          img.dataset.fallbackTried = "1";
+                          img.src = fb;
+                      } else {
+                          img.style.display = "none";
+                      }
+                  }}
+                />
                 {deletingId === media.id && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <Loader2 className="w-5 h-5 text-white animate-spin" />
