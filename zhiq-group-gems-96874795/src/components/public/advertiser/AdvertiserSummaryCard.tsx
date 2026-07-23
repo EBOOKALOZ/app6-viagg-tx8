@@ -148,7 +148,7 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
                     supabase.from("vehicle_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
                     supabase.from("service_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
                     supabase.from("freight_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
-                    supabase.from("viagem_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
+                    supabase.from("travel_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", ownerUserId || targetId).eq("visibility_status", "published"),
                 ];
                 const results = await Promise.all(queries);
                 results.forEach((res) => {

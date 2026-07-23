@@ -7,6 +7,7 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { TravelFullView } from "@/components/travel/TravelFullView";
+import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 
 /**
@@ -51,8 +52,8 @@ export default function TravelDetailPage() {
       const mediaMap = new Map<string, string>();
       for (const m of (mediaRows as any[]) || []) {
         if (!mediaMap.has(m.listing_id)) {
-          const p = m.public_masked_storage_path || m.original_storage_path;
-          if (p) mediaMap.set(m.listing_id, p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl);
+          const url = resolveTravelMediaRow(m);
+          if (url) mediaMap.set(m.listing_id, url);
         }
       }
       return rows.map((r: any) => ({ ...r, thumbnail_url: mediaMap.get(r.id) ?? null }));

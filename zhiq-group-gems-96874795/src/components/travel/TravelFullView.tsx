@@ -6,8 +6,20 @@ import { StoreLocationMap } from "@/components/StoreLocationMap";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { Plane, MapPin, Calendar, Users, Check, Loader2, DollarSign, Clock, ShieldCheck } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
+import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
 import { DetailPageLayout, DetailRelated } from "@/components/detail/DetailPageLayout";
 import { AdvertiserSummaryCard } from "@/components/public/advertiser/AdvertiserSummaryCard";
+
+/** Fingerprint por sessão (dedup de telemetria no banco — 60 min). */
+function travelFingerprint(listingId: string): string {
+  const key = `travel_fp_${listingId}`;
+  let fp = sessionStorage.getItem(key);
+  if (!fp) {
+    fp = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem(key, fp);
+  }
+  return fp;
+}
 
 export interface TravelFullViewProps {
   listingId: string;
@@ -38,12 +50,9 @@ export function TravelFullView({ listingId, embedded = false, onBack, relacionad
     enabled: !!listingId,
     queryFn: async () => {
       const { data } = await (supabase.from("travel_listings") as any)
-        .select("*").eq("id", listingId).maybeSingle();
-      if (data) return data;
-      // Fallback: anúncios de viagem criados no schema antigo (viagem_listings)
-      const { data: alt } = await (supabase.from("viagem_listings") as any)
-        .select("*").eq("id", listingId).maybeSingle();
-      return alt ?? null;
+        .select("id, title, description, category, subcategoria, trip_type, destination, country, city, state, departure_date, return_date, duration_days, available_spots, price_per_person, total_price, entry_price, installments_available, not_included, is_featured, is_promoted, visibility_status, latitude, longitude, endereco_formatado, owner_user_id, includes_accommodation, includes_breakfast, includes_lunch, includes_dinner, includes_transport, includes_guide, includes_insurance, includes_tours, includes_airport_transfer")
+        .eq("id", listingId).maybeSingle();
+      return data ?? null;
     },
   });
 
@@ -55,27 +64,26 @@ export function TravelFullView({ listingId, embedded = false, onBack, relacionad
         .select("original_storage_path, public_masked_storage_path, sort_order")
         .eq("listing_id", listingId)
         .order("sort_order", { ascending: true });
-      return ((data || []) as any[]).map((m: any) => {
-        const p = m.public_masked_storage_path || m.original_storage_path;
-        return p?.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl;
-      }).filter(Boolean);
+      return ((data || []) as any[])
+        .map((m: any) => resolveTravelMediaRow(m))
+        .filter(Boolean);
     },
   });
 
+  // Telemetria SEM débito (travel_track_event, 20260723): substitui as
+  // RPCs legadas charge_travel_* que debitavam créditos do anunciante.
   useEffect(() => {
     if (!listingId || chargedClick.current === listingId) return;
     chargedClick.current = listingId;
-    const fpKey = `travel_click_${listingId}`;
-    const fp = sessionStorage.getItem(fpKey) ?? (() => {
-      const v = Math.random().toString(36).slice(2);
-      sessionStorage.setItem(fpKey, v);
-      return v;
-    })();
-    supabase.rpc("charge_travel_listing_click" as any, { p_listing_id: listingId, p_fingerprint: fp }).then(() => {}, () => {});
+    supabase.rpc("travel_track_event" as any, {
+      p_listing_id: listingId, p_event: "listing_click", p_fingerprint: travelFingerprint(listingId),
+    }).then(() => {}, () => {});
   }, [listingId]);
 
   const handleInterest = () => {
-    supabase.rpc("charge_travel_interest_click" as any, { p_listing_id: listingId, p_fingerprint: null }).then(() => {}, () => {});
+    supabase.rpc("travel_track_event" as any, {
+      p_listing_id: listingId, p_event: "interest_click", p_fingerprint: travelFingerprint(listingId),
+    }).then(() => {}, () => {});
     setContactOpen(true);
   };
 
@@ -112,8 +120,12 @@ export function TravelFullView({ listingId, embedded = false, onBack, relacionad
         preco={priceDisplay}
         categoria={`${emoji} ${listing.category}`}
         cidade={listing.destination || `${listing.city ?? ''}${listing.state ? '/' + listing.state : ''}`}
-        badges={listing.is_featured ? [{ label: '⭐ Destaque', bg: '#fef3c7', color: '#b45309' }] : []}
-        imagens={((media as string[]).length ? media : [listing.cover_image_url].filter(Boolean)) as string[]}
+        badges={[
+          ...(listing.is_featured ? [{ label: '⭐ Destaque', bg: '#fef3c7', color: '#b45309' }] : []),
+          ...(listing.is_promoted
+            ? [{ label: '🚀 Promovido', bg: '#e0f2fe', color: '#0369a1' }] : []),
+        ]}
+        imagens={media as string[]}
         caracteristicas={[
           ...(listing.departure_date ? [{ icone: <Calendar className="h-3.5 w-3.5" />, label: `Saída: ${new Date(listing.departure_date + 'T12:00:00').toLocaleDateString('pt-BR')}` }] : []),
           ...(listing.duration_days ? [{ icone: <Plane className="h-3.5 w-3.5" />, label: `${listing.duration_days} dias` }] : []),
@@ -168,7 +180,7 @@ export function TravelFullView({ listingId, embedded = false, onBack, relacionad
             )}
             {!embedded && (
               <AdvertiserSummaryCard
-                advertiserId={listing.store_id || listing.profile_id || listing.owner_user_id}
+                advertiserId={listing.owner_user_id}
                 profileType="viagem"
               />
             )}

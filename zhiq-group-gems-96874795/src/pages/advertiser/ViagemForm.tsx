@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { formatBrazilianPhone } from "@/lib/utils";
 import { moderatedUpload } from "@/lib/moderation/moderatedUpload";
 import { moderatedText } from "@/lib/moderation/moderatedText";
+import { getTravelMediaUrl } from "@/lib/viagem/travelMedia";
 
 interface ExistingMedia {
   id: string;
@@ -109,19 +110,42 @@ export default function ViagemForm() {
     },
   });
 
+  // Contatos moram em travel_listing_contacts (não em travel_listings) —
+  // sem esta query os campos apareciam vazios ao editar.
+  const { data: contactRow } = useQuery({
+    queryKey: ["viagem-form-contacts", listingId],
+    enabled: isEdit && !!listingId,
+    queryFn: async () => {
+      const { data } = await (supabase.from("travel_listing_contacts") as any)
+        .select("whatsapp_e164, email")
+        .eq("listing_id", listingId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    if (!contactRow) return;
+    setForm(prev => ({
+      ...prev,
+      whatsapp: prev.whatsapp || formatBrazilianPhone(contactRow.whatsapp_e164 || ""),
+      email: prev.email || contactRow.email || "",
+    }));
+  }, [contactRow]);
+
   useEffect(() => {
     if (!mediaData?.length) return;
     const mapped: ExistingMedia[] = mediaData.map((m: any) => ({
       id: m.id,
       path: m.original_storage_path,
-      url: supabase.storage.from("real-estate-original").getPublicUrl(m.original_storage_path).data.publicUrl,
+      url: getTravelMediaUrl(m.original_storage_path) || "",
     }));
     setExistingMedia(mapped);
   }, [mediaData]);
 
   useEffect(() => {
     if (!existing) return;
-    setForm({
+    setForm(prev => ({
       title: existing.title || "",
       category: existing.category || "",
       trip_type: existing.trip_type || "nacional",
@@ -139,15 +163,16 @@ export default function ViagemForm() {
       description: existing.description || "",
       city: existing.city || "",
       state: existing.state || "",
-      whatsapp: existing.whatsapp || "",
-      email: existing.email || "",
+      // contatos vêm de travel_listing_contacts (query própria acima)
+      whatsapp: prev.whatsapp,
+      email: prev.email,
       latitude: existing.latitude ?? null,
       longitude: existing.longitude ?? null,
       endereco_formatado: existing.endereco_formatado ?? null,
       includes: Object.fromEntries(
         TRAVEL_INCLUDES.map(i => [i.key, existing[`includes_${i.key}`] ?? false])
       ),
-    });
+    }));
   }, [existing]);
 
   const set = (key: keyof FormData, value: any) => setForm(prev => ({ ...prev, [key]: value }));
@@ -170,12 +195,22 @@ export default function ViagemForm() {
     replaceInputRef.current?.click();
   };
 
-  const handleSave = async () => {
+  /**
+   * mode:
+   *  - 'publish' → publica (define published_at)
+   *  - 'draft'   → salva como rascunho (não aparece na vitrine)
+   *  - 'keep'    → salva alterações mantendo o status atual (edição)
+   */
+  const handleSave = async (mode: "publish" | "draft" | "keep" = "publish") => {
     if (!user) return;
     if (!form.title.trim() || !form.category) {
       toast({ title: "Preencha o titulo e a categoria.", variant: "destructive" });
       return;
     }
+    const targetStatus =
+      mode === "publish" ? "published"
+      : mode === "draft" ? "draft"
+      : (existing?.visibility_status ?? "published");
     setSaving(true);
     try {
       const payload: any = {
@@ -202,9 +237,9 @@ export default function ViagemForm() {
         latitude: form.latitude ?? null,
         longitude: form.longitude ?? null,
         endereco_formatado: form.endereco_formatado ?? null,
-        visibility_status: "published",
-        published_at: new Date().toISOString(),
+        visibility_status: targetStatus,
       };
+      if (mode === "publish") payload.published_at = new Date().toISOString();
       TRAVEL_INCLUDES.forEach(i => { payload[`includes_${i.key}`] = form.includes[i.key] || false; });
 
       const textMod = await moderatedText({
@@ -225,6 +260,14 @@ export default function ViagemForm() {
       payload.moderation_status = isTextApproved ? 'approved' : 'pending_ai_analysis';
       payload.ai_status = isTextApproved ? 'approved' : 'queued';
       payload.moderation_reason = textMod.reason;
+
+      // Texto aprovado pela RIDV publica na hora (caminho rápido preservado);
+      // texto retido entra na fila do admin (/admin/viagens/moderacao) em vez
+      // de ir ao ar sem revisão.
+      if (mode === "publish" && !isTextApproved) {
+        payload.visibility_status = "pending_review";
+        delete payload.published_at;
+      }
 
       let savedId = listingId;
       if (isEdit) {
@@ -288,7 +331,13 @@ export default function ViagemForm() {
       qc.invalidateQueries({ queryKey: ['public-travel'] });
       qc.invalidateQueries({ queryKey: ['public-travel-home'] });
       qc.invalidateQueries({ queryKey: ['viagens-meus-anuncios'] });
-      toast({ title: "Viagem salva com sucesso!" });
+      toast({
+        title: mode === "draft"
+          ? "Rascunho salvo! Publique quando quiser."
+          : mode === "keep"
+            ? "Alterações salvas!"
+            : "Viagem publicada com sucesso!",
+      });
       navigate("/anunciante/viagens/meus-anuncios");
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
@@ -444,7 +493,7 @@ export default function ViagemForm() {
           }
 
           const finalPath = modRes.storagePath || `${user.id}/travel/${listingId}/${Date.now()}_replace.jpg`;
-          const finalUrl = modRes.publicUrl || supabase.storage.from('travel-public').getPublicUrl(finalPath).data.publicUrl;
+          const finalUrl = modRes.publicUrl || getTravelMediaUrl(finalPath) || "";
 
           // atualiza o registro no banco
           await (supabase.from("travel_media") as any).update({
@@ -695,10 +744,38 @@ export default function ViagemForm() {
         </div>
       </div>
 
-      <Button onClick={handleSave} disabled={saving} className="w-full bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black h-12">
-        {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-        {isEdit ? "Salvar alteracoes" : "Publicar viagem"}
-      </Button>
+      <div className="flex flex-col sm:flex-row gap-3">
+        {(!isEdit || existing?.visibility_status === "draft") && (
+          <Button
+            onClick={() => handleSave("draft")}
+            disabled={saving}
+            variant="outline"
+            className="flex-1 border-sky-300 text-sky-700 hover:bg-sky-50 rounded-2xl font-black h-12"
+          >
+            {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+            Salvar rascunho
+          </Button>
+        )}
+        {isEdit && existing?.visibility_status !== "draft" && (
+          <Button
+            onClick={() => handleSave("keep")}
+            disabled={saving}
+            variant="outline"
+            className="flex-1 border-sky-300 text-sky-700 hover:bg-sky-50 rounded-2xl font-black h-12"
+          >
+            {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+            Salvar alteracoes
+          </Button>
+        )}
+        <Button
+          onClick={() => handleSave("publish")}
+          disabled={saving}
+          className="flex-1 bg-sky-600 hover:bg-sky-700 text-white rounded-2xl font-black h-12"
+        >
+          {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+          {isEdit && existing?.visibility_status === "published" ? "Republicar" : "Publicar viagem"}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,18 +1,21 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { TRAVEL_CATEGORIES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
+import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
 import { Plane, Loader2 } from "lucide-react";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
 import { AdvertiserCtaBanner } from "@/components/public/AdvertiserCtaBanner";
 
 type SortKey = "recent" | "price_asc" | "price_desc";
+
+const PAGE_SIZE = 48;
 
 /** preço "de vitrine" de um anúncio (o menor valor cheio disponível) */
 function listingPrice(l: any): number {
@@ -22,6 +25,26 @@ function listingPrice(l: any): number {
   return cands.length ? Math.min(...cands) : Number.POSITIVE_INFINITY;
 }
 
+/** promoção paga ativa (is_promoted respeitando a expiração) */
+function isActivePromo(l: any): boolean {
+  return !!l.is_promoted;
+}
+
+/** Skeleton de card durante o carregamento (sem layout shift) */
+function TravelCardSkeleton() {
+  return (
+    <div className="w-full max-w-md rounded-2xl overflow-hidden bg-white/60 border border-black/5 animate-pulse">
+      <div className="aspect-square bg-zinc-200/70" />
+      <div className="p-4 space-y-3">
+        <div className="h-4 bg-zinc-200/80 rounded w-3/4" />
+        <div className="h-6 bg-zinc-200/80 rounded w-1/2" />
+        <div className="h-3 bg-zinc-200/70 rounded w-2/3" />
+        <div className="h-10 bg-zinc-200/60 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
 export default function PublicTravelHome() {
   const [searchParams, setSearchParams] = useSearchParams();
   const subcategoria = searchParams.get("subcategoria");
@@ -29,14 +52,27 @@ export default function PublicTravelHome() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sort, setSort] = useState<SortKey>("recent");
 
-  const { data: listings = [], isLoading } = useQuery({
+  // Paginação real no servidor (.range) — a vitrine não baixa mais a
+  // tabela inteira; páginas de PAGE_SIZE com botão "Carregar mais".
+  const {
+    data: pages,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["public-travel-home"],
-    queryFn: async () => {
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: any[], allPages: any[][]) =>
+      lastPage.length === PAGE_SIZE ? allPages.length : undefined,
+    queryFn: async ({ pageParam }) => {
+      const from = (pageParam as number) * PAGE_SIZE;
       const { data, error } = await (supabase.from("travel_listings") as any)
-        .select("id, title, subcategoria, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, visibility_status, published_at, created_at, owner_user_id")
+        .select("id, title, subcategoria, category, destination, city, state, price_per_person, total_price, entry_price, is_featured, is_promoted, departure_date, duration_days, available_spots, visibility_status, published_at, created_at, owner_user_id")
         .eq("visibility_status", "published")
         .order("is_featured", { ascending: false })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
       if (error) { console.warn("[travel-home]", error.message); return []; }
       const rows = (data as any[]) || [];
       if (rows.length === 0) return [];
@@ -48,14 +84,16 @@ export default function PublicTravelHome() {
       const mediaMap = new Map<string, string>();
       for (const row of (media as any[]) || []) {
         if (!mediaMap.has(row.listing_id)) {
-          const p = row.public_masked_storage_path || row.original_storage_path;
-          if (p) mediaMap.set(row.listing_id, p.startsWith("http") ? p : supabase.storage.from("real-estate-original").getPublicUrl(p).data.publicUrl);
+          const url = resolveTravelMediaRow(row);
+          if (url) mediaMap.set(row.listing_id, url);
         }
       }
       return rows.map((r: any) => ({ ...r, thumbnail_url: mediaMap.get(r.id) || null }));
     },
     refetchOnWindowFocus: true,
   });
+
+  const listings = useMemo(() => (pages?.pages ?? []).flat(), [pages]);
 
   /* Categorias com pelo menos 1 listing — nunca mostra vazia */
   const activeCategories = useMemo(() => {
@@ -108,7 +146,7 @@ export default function PublicTravelHome() {
     if (!showShelves) return [] as Array<{ key: string; title: string; items: any[] }>;
     const out: Array<{ key: string; title: string; items: any[] }> = [];
 
-    const featured = baseFiltered.filter((l: any) => l.is_featured);
+    const featured = baseFiltered.filter((l: any) => l.is_featured || isActivePromo(l));
     if (featured.length) out.push({ key: "destaque", title: "🏖 Pacotes em Destaque", items: featured });
 
     // Última Hora: com data de partida futura, mais próximas primeiro
@@ -191,8 +229,10 @@ export default function PublicTravelHome() {
       )}
 
       {isLoading ? (
-        <div className="flex items-center gap-2 py-16 justify-center text-zinc-500">
-          <Loader2 className="w-6 h-6 animate-spin" /> Carregando...
+        <div className="w-full py-8 bg-[#F5E62B]">
+          <div className="max-w-[1920px] mx-auto px-4 lg:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 justify-items-center">
+            {Array.from({ length: 8 }).map((_, i) => <TravelCardSkeleton key={i} />)}
+          </div>
         </div>
       ) : listings.length === 0 ? (
         <div className="text-center py-20 space-y-3 px-4">
@@ -249,6 +289,19 @@ export default function PublicTravelHome() {
                   {filtered.map((tr: any) => (
                     <MarketTravelCard key={tr.id} travel={tr} />
                   ))}
+                </div>
+              )}
+
+              {hasNextPage && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="px-6 py-2.5 rounded-xl bg-zinc-900 text-white text-sm font-black shadow-sm hover:bg-zinc-800 disabled:opacity-60 flex items-center gap-2"
+                  >
+                    {isFetchingNextPage && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Carregar mais viagens
+                  </button>
                 </div>
               )}
             </section>

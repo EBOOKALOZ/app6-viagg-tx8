@@ -10,11 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Plane, Loader2, Pencil, Plus, Search, Star, Brain, Sparkles,
-  LayoutGrid, List as ListIcon, Share2, Pause, Play, Trash2,
+  LayoutGrid, List as ListIcon, Share2, Pause, Play, Trash2, Archive,
   Calendar, Activity, CheckCircle2, Clock, AlertCircle, TrendingUp, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
+import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ const STATUS_CFG: Record<string, { label: string; dot: string; text: string; bg:
   moderating:     { label: "Em Análise",  dot: "bg-yellow-400",  text: "text-yellow-700",  bg: "bg-yellow-50",  border: "border-yellow-200"  },
   paused:         { label: "Pausado",     dot: "bg-orange-500",  text: "text-orange-700",  bg: "bg-orange-50",  border: "border-orange-200"  },
   draft:          { label: "Rascunho",    dot: "bg-zinc-400",    text: "text-zinc-600",    bg: "bg-zinc-100",   border: "border-zinc-200"    },
+  archived:       { label: "Arquivado",   dot: "bg-zinc-500",    text: "text-zinc-500",    bg: "bg-zinc-100",   border: "border-zinc-300"    },
   expired:        { label: "Expirado",    dot: "bg-red-500",     text: "text-red-700",     bg: "bg-red-50",     border: "border-red-200"     },
 };
 function getStatusCfg(s: string) {
@@ -43,27 +44,30 @@ export default function AdvertiserViagemListingsPage() {
   const navigate  = useNavigate();
   const qc        = useQueryClient();
 
-  // ── Query original (inalterada) ───────────────────────────────────────
+  // ── Query (mídia em UMA consulta .in — sem N+1) ───────────────────────
   const { data: viagens = [], isLoading } = useQuery({
     queryKey: ["viagens-meus-anuncios", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
       const { data } = await (supabase.from("travel_listings") as any)
-        .select("id, title, category, destination, visibility_status, entry_price, price_per_person, city, state, is_featured, created_at")
+        .select("id, title, category, destination, visibility_status, entry_price, price_per_person, city, state, is_featured, is_promoted, created_at")
         .eq("owner_user_id", user!.id)
         .order("created_at", { ascending: false });
-      const list = data || [];
-      return Promise.all(list.map(async (s: any) => {
-        const { data: media } = await (supabase.from("travel_media") as any)
-          .select("original_storage_path, public_masked_storage_path")
-          .eq("listing_id", s.id)
-          .order("sort_order", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        const hasThumb = !!media?.public_masked_storage_path && media.public_masked_storage_path !== media.original_storage_path;
-        const path = hasThumb ? media.public_masked_storage_path : media?.original_storage_path;
-        return { ...s, thumb: path ? getListingImageUrl(path, hasThumb ? "public" : "original") : null };
-      }));
+      const list = (data || []) as any[];
+      if (list.length === 0) return [];
+      const ids = list.map((s: any) => s.id);
+      const { data: mediaRows } = await (supabase.from("travel_media") as any)
+        .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+        .in("listing_id", ids)
+        .order("sort_order", { ascending: true });
+      const thumbMap = new Map<string, string>();
+      for (const m of (mediaRows as any[]) || []) {
+        if (!thumbMap.has(m.listing_id)) {
+          const url = resolveTravelMediaRow(m);
+          if (url) thumbMap.set(m.listing_id, url);
+        }
+      }
+      return list.map((s: any) => ({ ...s, thumb: thumbMap.get(s.id) || null }));
     },
   });
 
@@ -86,6 +90,18 @@ export default function AdvertiserViagemListingsPage() {
     onError: () => toast.error("Erro ao excluir."),
   });
 
+  const archiveListing = useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+      await (supabase.from("travel_listings") as any)
+        .update({ visibility_status: archived ? "draft" : "archived" }).eq("id", id);
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["viagens-meus-anuncios", user?.id] });
+      toast.success(v.archived ? "Viagem restaurada como rascunho." : "Viagem arquivada.");
+    },
+    onError: () => toast.error("Erro ao arquivar."),
+  });
+
   // ── Estado de UI ─────────────────────────────────────────────────────
   const [searchTerm,   setSearchTerm]   = useState("");
   const [activeFilter, setActiveFilter] = useState<"all"|"active"|"paused"|"review"|"featured"|"favs">("all");
@@ -106,7 +122,8 @@ export default function AdvertiserViagemListingsPage() {
   };
 
   const handleShare = (id: string) => {
-    const url = `${window.location.origin}/viagem/${id}`;
+    // Rota pública correta é /viagens/:id (a antiga /viagem/:id não existe).
+    const url = `${window.location.origin}/viagens/${id}`;
     navigator.clipboard?.writeText(url).then(() => toast.success("Link copiado!")).catch(() => toast.info(`Link: ${url}`));
   };
 
@@ -200,19 +217,38 @@ export default function AdvertiserViagemListingsPage() {
             <span className="text-[10px] text-sky-400 font-black">Anúncio gratuito</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-            {TRAVEL_CATEGORIES.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => navigate(`/anunciante/viagens/anuncios/novo/viagem?categoria=${encodeURIComponent(cat.value)}`)}
-                className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2A3038] bg-[#14171B] hover:border-sky-700/50 hover:bg-sky-950/20 transition-all"
-              >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 bg-sky-600 text-xl">
-                  {cat.emoji}
-                </div>
-                <span className="font-bold text-[#F5F7FA] text-xs text-center leading-tight">{cat.label}</span>
-                <span className="text-[10px] font-black text-sky-400">Grátis</span>
-              </button>
-            ))}
+            {TRAVEL_CATEGORIES.map((cat) => {
+              const catImages: Record<string, string> = {
+                pacote_completo: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=200&h=200&fit=crop",
+                lua_de_mel: "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=200&h=200&fit=crop",
+                aventura: "https://images.unsplash.com/photo-1533240332313-0bc499f52410?w=200&h=200&fit=crop",
+                praia: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=200&fit=crop",
+                cruzeiro: "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=200&h=200&fit=crop",
+                ecoturismo: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=200&h=200&fit=crop",
+                cultural: "https://images.unsplash.com/photo-1542382156909-9ae37b3f56fd?w=200&h=200&fit=crop",
+                religioso: "https://images.unsplash.com/photo-1548625149-fc4a29cf7092?w=200&h=200&fit=crop",
+                rural: "https://images.unsplash.com/photo-1500076656116-558758c991c1?w=200&h=200&fit=crop",
+                negocios: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=200&h=200&fit=crop",
+                saude: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=200&h=200&fit=crop",
+                gastronomico: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=200&h=200&fit=crop",
+                outro: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=200&h=200&fit=crop",
+              };
+              const imgUrl = catImages[cat.value] || catImages.outro;
+              
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => navigate(`/anunciante/viagens/anuncios/novo/viagem?categoria=${encodeURIComponent(cat.value)}`)}
+                  className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-[#2A3038] bg-[#14171B] hover:border-sky-700/50 hover:bg-sky-950/20 transition-all"
+                >
+                  <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center transition-transform group-hover:scale-110 bg-[#2A3038]">
+                    <img src={imgUrl} alt={cat.label} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="font-bold text-[#F5F7FA] text-xs text-center leading-tight">{cat.label}</span>
+                  <span className="text-[10px] font-black text-sky-400">Grátis</span>
+                </button>
+              );
+            })}
           </div>
           <p className="text-[10px] text-sky-500/80 bg-sky-950/30 border border-sky-800/30 rounded-lg px-3 py-2">
             🔓 O anúncio é publicado gratuitamente. Você usa créditos apenas para desbloquear o contato do interessado.
@@ -318,6 +354,13 @@ export default function AdvertiserViagemListingsPage() {
                       <button onClick={() => handleShare(s.id)} className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white hover:border-sky-700/50 transition-colors"><Share2 className="h-3.5 w-3.5" /></button>
                       <button onClick={() => toggleStatus.mutate({ id: s.id, status: s.visibility_status })} className={cn("h-9 w-9 flex items-center justify-center rounded-xl border transition-colors", isActive ? "border-orange-500/30 text-orange-400 hover:bg-orange-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10")}>
                         {isActive ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                      </button>
+                      <button
+                        title={s.visibility_status === "archived" ? "Restaurar" : "Arquivar"}
+                        onClick={() => archiveListing.mutate({ id: s.id, archived: s.visibility_status === "archived" })}
+                        className="h-9 w-9 flex items-center justify-center rounded-xl border border-[#2A3038] text-[#A7B0BE] hover:text-white hover:border-sky-700/50 transition-colors"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
                       </button>
                       <button onClick={() => { if(window.confirm("Excluir esta viagem?")) deleteListing.mutate(s.id); }} className="h-9 w-9 flex items-center justify-center rounded-xl border border-red-500/20 text-red-500/50 hover:text-red-500 hover:bg-red-500/10 transition-colors">
                         <Trash2 className="h-3.5 w-3.5" />

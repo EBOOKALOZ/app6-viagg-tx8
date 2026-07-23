@@ -19,6 +19,7 @@ import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking
 import { cn, parseBRLCurrency } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
+import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
 import { resolveProductById } from "@/services/resolveProduct";
 
 import { StoreHeader } from "@/components/public/store/StoreHeader";
@@ -237,7 +238,7 @@ export default function StorePublicPage() {
                     supabase.from("vehicle_listings").select("id, title, price_brl, description, visibility_status, created_at, vehicle_media(original_storage_path, public_masked_storage_path)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
                     supabase.from("service_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
                     supabase.from("freight_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
-                    supabase.from("viagem_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
+                    supabase.from("travel_listings" as any).select("id, title, description, entry_price, price_per_person, total_price, visibility_status, created_at, travel_media(original_storage_path, public_masked_storage_path)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
                     supabase.from("advertiser_accounts").select("id").eq("user_id", userId).maybeSingle()
                 ]);
 
@@ -392,23 +393,27 @@ export default function StorePublicPage() {
                 }
 
                 if (viRes.data) {
-                    results.push(...viRes.data.map((vi: any) => ({
-                        id: vi.id,
-                        title: vi.title || "Pacote de Viagem",
-                        short_description: vi.description || null,
-                        image_url: vi.cover_image_url || null,
-                        price: vi.price_brl || vi.price || 0,
-                        original_price: null,
-                        price_label: null,
-                        cta_label: "Ver Pacote",
-                        tracking_slug: vi.id,
-                        category: "Viagens",
-                        condition: "new",
-                        is_active: true,
-                        is_digital: false,
-                        is_featured: false,
-                        created_at: vi.created_at
-                    })));
+                    results.push(...viRes.data.map((vi: any) => {
+                        const media = vi.travel_media || [];
+                        const img: string | null = media.length > 0 ? resolveTravelMediaRow(media[0]) : null;
+                        return {
+                            id: vi.id,
+                            title: vi.title || "Pacote de Viagem",
+                            short_description: vi.description || null,
+                            image_url: img,
+                            price: Number(vi.total_price ?? vi.price_per_person ?? vi.entry_price) || 0,
+                            original_price: null,
+                            price_label: null,
+                            cta_label: "Ver Pacote",
+                            tracking_slug: vi.id,
+                            category: "Viagens",
+                            condition: "new",
+                            is_active: true,
+                            is_digital: false,
+                            is_featured: false,
+                            created_at: vi.created_at
+                        };
+                    }));
                 }
             }
 
