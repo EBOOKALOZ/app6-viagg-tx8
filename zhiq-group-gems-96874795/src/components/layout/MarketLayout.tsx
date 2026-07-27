@@ -29,6 +29,7 @@ import { HeroClimaRadio } from "@/components/public/HeroClimaRadio";
 import { GlobalSearchBar } from "@/components/public/GlobalSearchBar";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { PremiumQuickAccessBar } from "@/components/layout/PremiumQuickAccessBar";
+import { NotificationCenter } from "@/components/public/notifications/NotificationCenter";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -253,6 +254,10 @@ export function MarketLayout({
                                 )}
                             </button>
 
+                            <div className="bg-[#1A1F24] rounded-full px-1 border border-[#323A45]">
+                                <NotificationCenter />
+                            </div>
+
                             <div className="flex items-center gap-2 text-slate-900 font-bold">
                                 {headerRight}
                             </div>
@@ -270,19 +275,24 @@ export function MarketLayout({
                             <GlobalSearchBar initialValue={effSearch} />
 
                             {/* Cesta à direita da pesquisa */}
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                aria-label="Abrir Cesta / Carrinho"
-                                className="relative ml-auto flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
-                                title="Cesta / Carrinho"
-                            >
-                                <ShoppingCart className="h-5 w-5 text-black transition-transform group-hover:scale-110" />
-                                {globalCart.totalItems > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-[#FF6A00] px-1 text-[10px] font-black text-white shadow-md animate-in zoom-in-50 fade-in duration-300">
-                                        {globalCart.totalItems}
-                                    </span>
-                                )}
-                            </button>
+                            <div className="ml-auto flex items-center gap-2">
+                                <div className="bg-[#1A1F24] rounded-full px-1 border border-[#323A45] shadow-sm">
+                                    <NotificationCenter />
+                                </div>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
+                                    aria-label="Abrir Cesta / Carrinho"
+                                    className="relative flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
+                                    title="Cesta / Carrinho"
+                                >
+                                    <ShoppingCart className="h-5 w-5 text-black transition-transform group-hover:scale-110" />
+                                    {globalCart.totalItems > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-[#FF6A00] px-1 text-[10px] font-black text-white shadow-md animate-in zoom-in-50 fade-in duration-300">
+                                            {globalCart.totalItems}
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -295,9 +305,10 @@ export function MarketLayout({
                     </div>
                 </div>
 
-                {/* ═══ BARRA PREMIUM DE ACESSO RÁPIDO (UI-01 · FAIXA LARANJA · FIXA / SEMPRE VISÍVEL) ═══
-                    Entrega Local · Verificados · 👤 Minha Conta · Favoritos · Notificações · Som.
-                    O portal de áudio (#global-audio-portal-trustbar) vive dentro do componente. */}
+                {/* ═══ BARRA PREMIUM DE ACESSO RÁPIDO (UI-01/UI-02 · FAIXA LARANJA · FIXA / SEMPRE VISÍVEL) ═══
+                    👤 Minha Conta · 🔊 Som · Favoritos · Notificações · Compartilhar.
+                    O portal de áudio (#global-audio-portal-trustbar) vive dentro do componente,
+                    logo à direita do seletor de conta/loja (botão branco "Som" — UI-02). */}
                 <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
                     <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-1 w-full">
                         <PremiumQuickAccessBar />

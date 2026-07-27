@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
-import { Volume2, VolumeX, Volume1 } from 'lucide-react';
+import { Volume2, VolumeX, Volume1, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { pillBase, pillWhite } from '@/components/layout/PremiumQuickAccessBar';
 import { OrionAudioCenter } from '@/components/orion/OrionAudioCenter';
 import { RadioMiniPlayer } from '@/components/orion/RadioMiniPlayer';
 import {
@@ -378,18 +379,26 @@ export function GlobalAudioPlayer() {
     <div className={cn(
       portalTarget ? "relative flex items-center" : "fixed top-28 right-3 z-50"
     )}>
-      {/* Botão principal */}
+      {/* Botão principal.
+          UI-02: na barra premium (portal trustbar) o controle de áudio é o botão
+          branco "Som" — pílula idêntica às vizinhas (Favoritos/Notificações/…),
+          com o ícone de transmissão carregando o estado do áudio:
+          vermelho = mudo · verde = som ativo (pulsando quando tocando).
+          Toda a lógica (startMusic, ensureOrionGraph, painel Audio Center,
+          mute/volume) permanece a MESMA do antigo botão vermelho circular.
+
+          ROLLBACK UI-02 — estilo antigo do botão da barra (circular vermelho/verde):
+          cn(
+            'w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-white border sm:border-2 border-white shadow-md hover:scale-105 active:scale-95 transition-all outline-none cursor-pointer select-none shrink-0',
+            isMutedState ? 'bg-[#EF4444] hover:bg-[#DC2626]' : 'bg-[#10B981] hover:bg-[#059669]'
+          )
+          ícone antigo: <VolumeIcon className='w-4.5 sm:w-5 h-4.5 sm:h-5 text-white' /> */}
       <button
         ref={buttonRef}
         onClick={handleButtonClick}
         className={cn(
           isMarketPortal
-            ? cn(
-                'w-8 sm:w-9 h-8 sm:h-9 rounded-full flex items-center justify-center text-white border sm:border-2 border-white shadow-md hover:scale-105 active:scale-95 transition-all outline-none cursor-pointer select-none shrink-0',
-                isMutedState
-                  ? 'bg-[#EF4444] hover:bg-[#DC2626]'
-                  : 'bg-[#10B981] hover:bg-[#059669]'
-              )
+            ? cn(pillBase, pillWhite)
             : portalTarget
               ? cn(
                   'w-9 h-9 rounded-full flex items-center justify-center transition-all text-white shadow-sm active:scale-95',
@@ -410,7 +419,20 @@ export function GlobalAudioPlayer() {
         aria-label="Abrir Viagg-TX8 Audio Center"
         aria-expanded={isPanelOpen}
       >
-        <VolumeIcon className={cn(isMarketPortal ? 'w-4.5 sm:w-5 h-4.5 sm:h-5 text-white' : portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
+        {isMarketPortal ? (
+          <>
+            <Radio
+              className={cn(
+                'h-3 w-3',
+                isMutedState ? 'text-[#EF4444]' : 'text-[#10B981]',
+                !isMutedState && isPlaying && 'animate-pulse'
+              )}
+            />
+            <span className="hidden sm:inline">Som</span>
+          </>
+        ) : (
+          <VolumeIcon className={cn(portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
+        )}
       </button>
     </div>
   );
