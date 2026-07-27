@@ -262,29 +262,48 @@ END $$;
 -- 10. Funções helper SECURITY DEFINER
 -- ─────────────────────────────────────────────────────────────────────────
 
--- is_admin(): JWT role='admin' OU papel ceo/admin na tabela RBAC
+-- is_admin(): definição CANÔNICA (fix P0 de 27/07, commit 4f8f18c) + branch RBAC.
+-- ATENÇÃO: não reduzir esta definição para só user_role_assignments — a tabela
+-- nasce vazia e isso derruba o acesso admin da plataforma inteira (regressão
+-- que este bloco já causou uma vez; ver 20260727_02_shc_runs_authorized_write.sql).
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
 AS $$
   SELECT COALESCE(
     (auth.jwt() -> 'app_metadata' ->> 'role') IN ('admin','ceo'),
     false
   )
-  OR EXISTS (
-    SELECT 1
-    FROM   public.user_role_assignments ura
-    JOIN   public.system_roles sr ON sr.id = ura.role_id
-    WHERE  ura.user_id = auth.uid()
-      AND  sr.name IN ('ceo','admin')
+  OR (
+    auth.uid() IS NOT NULL
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.user_roles ur
+        WHERE ur.user_id = auth.uid()
+          AND ur.role::text IN ('admin', 'ceo')
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.profiles p
+        WHERE p.id = auth.uid()
+          AND p.is_admin = true
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM   public.user_role_assignments ura
+        JOIN   public.system_roles sr ON sr.id = ura.role_id
+        WHERE  ura.user_id = auth.uid()
+          AND  sr.name IN ('ceo','admin')
+      )
+    )
   );
 $$;
 
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 COMMENT ON FUNCTION public.is_admin() IS
-'Tier 2.2 PRÉ-2.3: Retorna true para usuários com role=admin/ceo no JWT ou na tabela RBAC.';
+'Canônica: JWT app_metadata.role OU user_roles OU profiles.is_admin OU RBAC (user_role_assignments).';
 
 -- is_supervisor(): admin + supervisor
 CREATE OR REPLACE FUNCTION public.is_supervisor()

@@ -45,21 +45,13 @@ export class SHCEngine {
          throw new Error(`Autodiagnóstico Falhou: ${diagnostic.errorDetails?.failureType} - ${diagnostic.errorDetails?.message}`);
       }
       
-      let { data: moduleInfo } = await supabase.from('shc_modules').select('id, name, slug').eq('slug', moduleId).single();
-      
+      // Módulos SHC são o catálogo oficial (10 verticais congeladas) — nunca
+      // auto-criados a partir de um slug arbitrário digitado na UI, o que
+      // poluiria o painel com módulos fantasma sem dono nem escopo definido.
+      const { data: moduleInfo } = await supabase.from('shc_modules').select('id, name, slug').eq('slug', moduleId).single();
+
       if (!moduleInfo) {
-        console.log(`[SHCEngine] Module slug ${moduleId} not found. Creating dynamically...`);
-        const { data: newModule, error: createError } = await supabase.from('shc_modules').insert({
-          slug: moduleId,
-          name: moduleId.toUpperCase(),
-          status: 'active'
-        }).select('id, name, slug').single();
-        
-        if (createError) {
-          console.error(`[SHCEngine] Failed to create module ${moduleId}:`, createError);
-          throw createError;
-        }
-        moduleInfo = newModule;
+        throw new Error(`Módulo "${moduleId}" não existe no catálogo oficial do SHC. Módulos são cadastrados via migration, não criados dinamicamente.`);
       }
       
       const moduleName = moduleInfo?.name || 'Unknown';
@@ -67,6 +59,16 @@ export class SHCEngine {
 
       if (!moduleUuid) {
          throw new Error("Não foi possível resolver o UUID do módulo.");
+      }
+
+      // RLS shc_runs exige executed_by = auth.uid() para não-admin; resolve a
+      // autoria pela sessão quando o chamador não informa userId.
+      if (!userId) {
+        const { data: authData } = await supabase.auth.getUser();
+        userId = authData?.user?.id ?? null;
+      }
+      if (!userId) {
+        throw new Error('Sessão não autenticada: faça login para iniciar uma execução do SHC.');
       }
 
       const { data: run, error: runError } = await supabase.from('shc_runs').insert([
@@ -78,7 +80,12 @@ export class SHCEngine {
         }
       ]).select().single();
 
-      if (runError) throw runError;
+      if (runError) {
+        if (runError.code === '42501') {
+          throw new Error('Acesso negado (RLS shc_runs): a conta precisa de perfil admin ou da permissão "shc:run" atribuída via user_role_assignments.');
+        }
+        throw runError;
+      }
 
       await supabase.from('shc_modules').update({ status: 'in_test' }).eq('id', moduleUuid);
 
