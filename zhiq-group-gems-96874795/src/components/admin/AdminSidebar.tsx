@@ -83,6 +83,7 @@ import {
   Tag,
   Gavel,
   GraduationCap,
+  CheckSquare,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -127,6 +128,7 @@ const menuSections: MenuSection[] = [
       { title: "Centro de Crescimento", url: "/admin/centro-crescimento", icon: TrendingUp },
       { title: "Expansão", url: "/admin/expansao", icon: Gauge },
       { title: "Comando Leilão", url: "/admin/comando-leilao", icon: Tag, badge: "LEILÃO" },
+      { title: "Leilões (SHC)", url: "/admin/leiloes-shc", icon: Gavel, badge: "SHC" },
       { title: "Auction Intelligence", url: "/admin/auction-intelligence", icon: Sparkles, badge: "IA" },
     ],
   },
@@ -238,6 +240,7 @@ const menuSections: MenuSection[] = [
       { title: "Creative Layout AI", url: "/admin/orion-creative-layout", icon: Wand2, badge: "LAYOUT" },
       { title: "Trust & Reputation (74)", url: "/admin/orion-trust-center", icon: ShieldCheck, badge: "TRUST" },
       { title: "Audio Center", url: "/admin/orion-audio", icon: AudioLines, badge: "AUDIO" },
+      { title: "Centro Multimídia", url: "/admin/multimidia", icon: AudioLines, badge: "MEDIA" },
       { title: "Certification Engine", url: "/admin/orion-certification", icon: BadgeCheck, badge: "CORE" },
       { title: "Centro Nacional", url: "/admin/orion", icon: Satellite, badge: "IA" },
       { title: "Mobility 360°", url: "/admin/orion-mobility", icon: Brain, badge: "IA" },
@@ -285,6 +288,7 @@ const menuSections: MenuSection[] = [
       { title: "Serviços", url: "/admin/servicos", icon: Briefcase },
       { title: "Fretes & Transportes", url: "/admin/fretes", icon: Truck },
       { title: "Viagens & Turismo", url: "/admin/viagens", icon: Plane },
+      { title: "SHC – Sistema de Homologação", url: "/admin/shc", icon: CheckSquare, badge: "SHC" },
       { title: "Moderação de Viagens", url: "/admin/viagens/moderacao", icon: Plane },
       { title: "Imagens de Viagens", url: "/admin/viagens/aprovacao-imagens", icon: Camera },
       { title: "Créditos", url: "/admin/creditos", icon: Coins },

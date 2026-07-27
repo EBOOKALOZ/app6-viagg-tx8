@@ -1,12 +1,13 @@
 /**
- * ORION-AUDIO-01 — ORION Audio Center v1.0 (painel).
+ * ORION-AUDIO-01 + ORION-MEDIA-01 — Viagg-TX8 Centro Multimídia v2.0 (painel).
  *
- * Centro Inteligente de Áudio: volume, EQ 5/10 bandas, presets oficiais e
- * personalizados, boosters com guarda anti-distorção, ORION AI SOUND
- * (classificação espectral com evidência — sem LLM), ORION SOUND EXPERIENCE,
- * visualizador LED, teste de som, perfis por dispositivo e sincronização na
- * conta (orion_audio_settings/presets/events — RLS por usuário).
- * O DSP vive em src/lib/orionAudioEngine.ts; aqui é UI + orquestração.
+ * Evolução do Audio Center: além do Centro Inteligente de Áudio (volume, EQ
+ * 5/10 bandas, presets, boosters, ORION AI SOUND, visualizador LED, perfis por
+ * dispositivo, sync na conta — TUDO preservado), o painel agora concentra
+ * vídeo: abas EQ · Rádio · TV · Lives · Favoritos · Histórico. TV/Lives usam
+ * o MultimediaMiniPlayer (16:9, LAZY — vídeo só carrega no clique "Assistir")
+ * com canais de media_channels (admin: /admin/multimidia). Favoritos e
+ * Histórico unificam rádio + vídeo. O DSP vive em src/lib/orionAudioEngine.ts.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -29,6 +30,9 @@ import {
 } from '@/lib/orionAudioEngine';
 import { RadioMundial } from './RadioMundial';
 import { applyRadioEq, setRadioVolume } from '@/lib/radioPlayer';
+import { MultimediaTV } from './MultimediaTV';
+import type { MediaChannel } from '@/lib/multimedia/mediaCenter';
+import { Tv, Clapperboard, Heart, History as HistoryIcon } from 'lucide-react';
 
 interface CustomPreset { id: string; nome: string; bands: { eq10?: number[]; boosters?: Partial<Boosters> }; origem: string }
 
@@ -502,7 +506,15 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
     ? (detected ? `Auto · ${DEVICE_META[detected].label}` : 'Auto · Padrão do sistema')
     : DEVICE_META[settings.deviceProfile].label;
 
-  const [aba, setAba] = useState<'eq' | 'radio'>('eq');
+  // ── CENTRO MULTIMÍDIA (ORION-MEDIA-01): abas EQ · Rádio · TV · Lives · ♥ · ⏱ ──
+  const [aba, setAba] = useState<'eq' | 'radio' | 'tv' | 'live' | 'favs' | 'hist'>('eq');
+  // canal de vídeo selecionado (compartilhado entre TV/Lives/Favoritos/Histórico)
+  const [mediaSel, setMediaSel] = useState<MediaChannel | null>(null);
+  // favoritos/histórico → abrir um canal troca para a aba dele (TV ou Lives)
+  const openChannel = useCallback((ch: MediaChannel) => {
+    setMediaSel(ch);
+    setAba(ch.kind === 'live' ? 'live' : 'tv');
+  }, []);
   useEffect(() => {
     const openRadio = () => setAba('radio');
     window.addEventListener('viagg:open-radio', openRadio);
@@ -522,23 +534,27 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
       <div className="flex items-center gap-3">
         <ViaggLogo pulseRef={logoRef} />
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-black text-white tracking-[0.1em] leading-tight">VIAGG-TX8 <span className="text-emerald-300">AUDIO</span> CENTER</p>
-          <p className="text-[9px] text-zinc-400 font-bold tracking-wider">CENTRO INTELIGENTE DE ÁUDIO · v1.0</p>
+          <p className="text-[13px] font-black text-white tracking-[0.1em] leading-tight">VIAGG-TX8 <span className="text-emerald-300">CENTRO</span> MULTIMÍDIA</p>
+          <p className="text-[9px] text-zinc-400 font-bold tracking-wider">ÁUDIO · RÁDIO · TV · AO VIVO · v2.0</p>
         </div>
         <span className="text-xs font-black text-green-300 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full shadow-inner shrink-0">
           {volumePercent}%
         </span>
       </div>
 
-      {/* ═══ ABAS: Equalizador (laranja) · Rádio (verde) ═══ */}
-      <div className="flex gap-1.5">
+      {/* ═══ ABAS DO CENTRO MULTIMÍDIA: EQ · Rádio · TV · Lives · ♥ · Histórico ═══ */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
         {([
-          ['eq', 'Equalizador', SlidersHorizontal, 'from-[#FF6A00] to-[#FF9A00]', 'rgba(255,106,0,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
+          ['eq', 'EQ', SlidersHorizontal, 'from-[#FF6A00] to-[#FF9A00]', 'rgba(255,106,0,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
           ['radio', 'Rádio', Radio, 'from-emerald-500 to-green-500', 'rgba(16,185,129,0.85)', 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'],
+          ['tv', 'TV', Tv, 'from-sky-500 to-cyan-500', 'rgba(14,165,233,0.8)', 'bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'],
+          ['live', 'Lives', Clapperboard, 'from-red-500 to-rose-500', 'rgba(244,63,94,0.8)', 'bg-red-500/10 text-red-300 hover:bg-red-500/20'],
+          ['favs', 'Favoritos', Heart, 'from-pink-500 to-rose-400', 'rgba(236,72,153,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
+          ['hist', 'Histórico', HistoryIcon, 'from-violet-500 to-purple-500', 'rgba(139,92,246,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
         ] as const).map(([k, label, I, grad, glow, inactive]) => (
           <button key={k} onClick={() => setAba(k)}
             style={aba === k ? { boxShadow: `0 0 14px -4px ${glow}` } : undefined}
-            className={cn('flex-1 flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-[11px] font-black transition-all',
+            className={cn('flex shrink-0 items-center justify-center gap-1 rounded-xl px-2.5 py-1.5 text-[10px] font-black transition-all',
               aba === k ? `bg-gradient-to-r ${grad} text-white` : inactive)}>
             <I className="w-3.5 h-3.5" /> {label}
           </button>
@@ -547,6 +563,8 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
 
       {aba === 'radio' ? (
         <RadioMundial />
+      ) : aba === 'tv' || aba === 'live' || aba === 'favs' || aba === 'hist' ? (
+        <MultimediaTV mode={aba} selected={mediaSel} onSelect={setMediaSel} onOpenChannel={openChannel} />
       ) : (
       <>
       {/* status: dispositivo + estado */}

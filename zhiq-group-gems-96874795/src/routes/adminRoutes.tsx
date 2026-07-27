@@ -18,6 +18,10 @@ const AdminAuctionIntelligence = lazy(() => import("@/pages/admin/AdminAuctionIn
 const AdminFreightQuotes = lazy(() => import("@/pages/admin/AdminFreightQuotes"));
 // Gestão transacional de leilões (encerrar/cancelar/moderar/invalidar) — lazy local
 const AdminAuctionManagement = lazy(() => import("@/pages/admin/AdminAuctionManagement"));
+// Painel Administrativo de IA e Antifraude (Enterprise)
+const AuctionFraudDashboard = lazy(() => import("@/pages/admin/AuctionFraudDashboard"));
+// Painel de Notificações Administrativas
+const AdminNotificationsDashboard = lazy(() => import("@/pages/admin/AdminNotificationsDashboard"));
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   AdminLayout,
@@ -175,6 +179,7 @@ import {
   AdminOrionAuctionOrchestrator,
   AdminOrionTrustCenter,
   AdminOrionAudio,
+  AdminMultimidia,
   AdminOrionPricing,
   AdminOrionForecast,
   AdminAuditoriaCategorias,
@@ -187,6 +192,17 @@ import {
   AdminMotoboyFinanceiro,
   AdminMotoTaxiFinanceiro,
   AdminMotoristaFinanceiro,
+  AdminSHCCentral,
+  AdminSHCOverview,
+  AdminLeiloesSHC,
+  AdminSHCModules,
+  AdminSHCResults,
+  AdminSHCCorrections,
+  AdminSHCHistory,
+  AdminSHCAudit,
+  AdminSHCCertification,
+  AdminSHCCertificationTab,
+  AdminSHCEvolution
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -212,6 +228,8 @@ export const adminRoutes = (
       <Route path="/admin/comando-leilao" element={<AdminComandoLeilao />} />
       <Route path="/admin/auction-intelligence" element={<AdminAuctionIntelligence />} />
       <Route path="/admin/leiloes/gestao" element={<AdminAuctionManagement />} />
+      <Route path="/admin/leiloes/antifraude" element={<AuctionFraudDashboard />} />
+      <Route path="/admin/notificacoes" element={<AdminNotificationsDashboard />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
@@ -384,6 +402,7 @@ export const adminRoutes = (
       <Route path="/admin/orion-auction-orchestrator" element={<AdminOrionAuctionOrchestrator />} />
       <Route path="/admin/orion-trust-center" element={<AdminOrionTrustCenter />} />
       <Route path="/admin/orion-audio" element={<AdminOrionAudio />} />
+      <Route path="/admin/multimidia" element={<AdminMultimidia />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
@@ -391,6 +410,18 @@ export const adminRoutes = (
       {/* Redirect legado */}
       <Route path="/admin/fila-postador" element={<Navigate to="/admin/fila-impulsionar" replace />} />
       <Route path="/admin/postador-central" element={<Navigate to="/admin/impulsionar-central" replace />} />
+      
+      {/* SHC */}
+      <Route path="/admin/shc" element={<AdminSHCCentral />} />
+      <Route path="/admin/shc/:moduleId" element={<AdminSHCOverview />} />
+      <Route path="/admin/shc/:moduleId/resultados/:id" element={<AdminSHCResults />} />
+      <Route path="/admin/shc/:moduleId/correcoes" element={<AdminSHCCorrections />} />
+      <Route path="/admin/shc/:moduleId/historico" element={<AdminSHCHistory />} />
+      <Route path="/admin/shc/:moduleId/auditoria" element={<AdminSHCAudit />} />
+      <Route path="/admin/shc/:moduleId/certificacao" element={<AdminSHCCertificationTab />} />
+      <Route path="/admin/shc/:moduleId/evolucao" element={<AdminSHCEvolution />} />
+      <Route path="/admin/shc/:moduleId/certificacao/:id" element={<AdminSHCCertification />} />
+      <Route path="/admin/leiloes-shc" element={<Navigate to="/admin/shc/leiloes" replace />} />
     </Route>
 
     {/* ── Alias /administrador ── */}
