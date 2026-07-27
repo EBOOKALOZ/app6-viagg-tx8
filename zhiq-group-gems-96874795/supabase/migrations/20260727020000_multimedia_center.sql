@@ -63,10 +63,14 @@ CREATE INDEX IF NOT EXISTS idx_media_events_evento  ON public.media_playback_eve
 ALTER TABLE public.media_channels        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.media_playback_events ENABLE ROW LEVEL SECURITY;
 
+-- FIX SHC-01 (homologação 2026-07-27): anon NÃO tem EXECUTE em is_admin()
+-- (lockdown) — a policy pública não pode referenciá-la, senão todo SELECT anon
+-- falha com "permission denied for function is_admin". Leitura pública = só
+-- status='active'; admins enxergam tudo pela policy FOR ALL abaixo (OR de policies).
 DROP POLICY IF EXISTS media_channels_public_read ON public.media_channels;
 CREATE POLICY media_channels_public_read ON public.media_channels
   FOR SELECT TO anon, authenticated
-  USING (status = 'active' OR public.is_admin());
+  USING (status = 'active');
 
 DROP POLICY IF EXISTS media_channels_admin_write ON public.media_channels;
 CREATE POLICY media_channels_admin_write ON public.media_channels

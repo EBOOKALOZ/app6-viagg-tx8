@@ -10,6 +10,7 @@ import {
   AudioSettings, loadAudioSettings, saveAudioSettings, ensureOrionGraph,
 } from '@/lib/orionAudioEngine';
 import { hasPendingRadioSession, resumeRadioAfterReload } from '@/lib/radioPlayer';
+import { isVideoActive } from '@/lib/multimedia/mediaCenter';
 import { initAudioManager } from '@/lib/audioManager';
 
 const AUDIO_URL = 'https://jifnpjnffhzosxrdhvxb.supabase.co/storage/v1/object/public/aaudio/background-music.mp3';
@@ -290,6 +291,8 @@ export function GlobalAudioPlayer() {
     if (isAudioPlaying() || !audioRef.current) return;
     // PRIORIDADE: rádio ativa (ou retomando de um reload) → música de fundo NÃO entra
     if (hasPendingRadioSession()) return;
+    // FIX SHC-02: vídeo do Centro Multimídia carregado → música NÃO entra (nunca 2 áudios)
+    if (isVideoActive()) return;
 
     const audio = audioRef.current;
     const targetVolume = DEFAULT_VOLUME;

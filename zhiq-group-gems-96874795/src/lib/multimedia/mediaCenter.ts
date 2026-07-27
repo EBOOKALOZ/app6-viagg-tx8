@@ -173,6 +173,13 @@ export function pushMediaHistory(ch: MediaChannel) {
   writeList(HIST_KEY, [ch, ...list].slice(0, HIST_MAX));
 }
 
+// ── Coordenação de áudio: vídeo ativo bloqueia a música de fundo ─────────────
+// FIX SHC-02: sem esta flag, abrir/fechar o painel (botão Som) com um vídeo
+// tocando religava a música de fundo → dois áudios simultâneos.
+declare global { interface Window { __viagg_video_active__?: boolean } }
+export const setVideoActive = (v: boolean) => { try { window.__viagg_video_active__ = v; } catch { /* ignore */ } };
+export const isVideoActive = () => { try { return !!window.__viagg_video_active__; } catch { return false; } };
+
 // ── Telemetria (media_playback_events) — fire-and-forget, nunca quebra a UI ──
 function sessionId(): string {
   try {

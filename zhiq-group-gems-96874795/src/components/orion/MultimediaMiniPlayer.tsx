@@ -18,10 +18,10 @@ import {
 import { cn } from '@/lib/utils';
 import viaggLogo from '@/assets/logo.png';
 import { Slider } from '@/components/ui/slider';
-import { getRadioState, togglePlay as toggleRadioPlay } from '@/lib/radioPlayer';
+import { getRadioState, togglePlay as toggleRadioPlay, subscribeRadio } from '@/lib/radioPlayer';
 import {
   MediaChannel, MediaEmbed, buildEmbed, isMediaFavorite, toggleMediaFavorite,
-  pushMediaHistory, logMediaEvent,
+  pushMediaHistory, logMediaEvent, setVideoActive,
 } from '@/lib/multimedia/mediaCenter';
 
 // Barras do visualizador (placeholder animado quando não há vídeo carregado)
@@ -172,6 +172,24 @@ export function MultimediaMiniPlayer({ channel, watchSignal = 0 }: MiniPlayerPro
   const faved = channel ? isMediaFavorite(channel.id) : false;
   const cover = channel?.cover_url || channel?.logo_url || null;
   const loaded = !!embed && embed.type !== 'error';
+
+  // FIX SHC-02: vídeo carregado ↔ flag global — o GlobalAudioPlayer consulta a
+  // flag e NÃO religa a música de fundo enquanto houver vídeo (nunca 2 áudios).
+  useEffect(() => {
+    setVideoActive(loaded);
+    return () => setVideoActive(false);
+  }, [loaded]);
+
+  // FIX SHC-03: usuário deu play numa RÁDIO com vídeo carregado → o vídeo é
+  // descarregado na hora (registra view_end). Sem isto, rádio + vídeo tocavam
+  // juntos. O caminho inverso (Assistir pausa a rádio) já era coberto em watch().
+  useEffect(() => subscribeRadio((st) => {
+    if (st.playing) {
+      stopView(channelRef.current);
+      setEmbed(null);
+      setPaused(false);
+    }
+  }), [stopView]);
 
   return (
     <div>
