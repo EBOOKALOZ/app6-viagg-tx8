@@ -55,6 +55,30 @@ export function forceStopGlobalAudio() {
   }
 }
 
+// ── UI-03: responsividade do painel de áudio ─────────────────────────────────
+// Posição/tamanho do painel calculados para ficar SEMPRE 100% dentro da viewport.
+type PanelPos = { top: number; right: number; maxHeight: number; mobile: boolean };
+
+// • Mobile (<640px): folha quase full-width (margens de 8px), alinhada à
+//   esquerda, imediatamente abaixo da barra superior; altura limitada ao espaço
+//   visível → rolagem INTERNA (nunca corte de conteúdo).
+// • Tablet/desktop: ancorado ao botão (comportamento original), com clamp da
+//   borda esquerda — em desktop largo o resultado é idêntico ao anterior.
+function computePanelPos(btn: HTMLElement): PanelPos {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const r = btn.getBoundingClientRect();
+  const top = Math.max(50, Math.round(r.bottom + 8));
+  // Teto original (78vh) LIMITADO ao espaço real abaixo do topo (12px de folga).
+  const maxHeight = Math.max(160, Math.min(Math.round(vh * 0.78), vh - top - 12));
+  const mobile = vw < 640;
+  if (mobile) return { top, right: 8, maxHeight, mobile };
+  const panelW = Math.min(vw * 0.94, 340); // espelha w-[min(94vw,340px)] do painel
+  const anchored = Math.max(8, Math.round(vw - r.right));
+  const right = Math.min(anchored, Math.max(8, Math.round(vw - 8 - panelW)));
+  return { top, right, maxHeight, mobile };
+}
+
 function getOrCreateAudio(volume: number): HTMLAudioElement {
   let audio = getAudio();
   if (!audio) {
@@ -83,7 +107,8 @@ export function GlobalAudioPlayer() {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   // Posição do painel de volume — renderizado em document.body (fixed) para
   // NUNCA ser cortado por um ancestral com overflow-hidden (ex.: trust bar).
-  const [panelPos, setPanelPos] = useState<{ top: number; right: number }>({ top: 0, right: 12 });
+  // UI-03: inclui maxHeight + modo mobile (folha full-width) — ver computePanelPos.
+  const [panelPos, setPanelPos] = useState<PanelPos>({ top: 0, right: 12, maxHeight: 480, mobile: false });
 
   // Watch for the portal container element in the DOM.
   // ATENÇÃO: no MarketLayout o portal vive dentro da trust bar RETRÁTIL — ela
@@ -244,17 +269,12 @@ export function GlobalAudioPlayer() {
   }, [isPanelOpen]);
 
   // Recalcula a posição do painel (fixed em document.body) a partir do botão.
-  // Roda ao abrir e acompanha scroll/resize enquanto aberto.
+  // Roda ao abrir e acompanha scroll/resize enquanto aberto (resize também cobre
+  // rotação do aparelho e teclado virtual — o maxHeight é recalculado).
   useEffect(() => {
     if (!isPanelOpen) return;
     const reposition = () => {
-      const btn = buttonRef.current;
-      if (!btn) return;
-      const r = btn.getBoundingClientRect();
-      setPanelPos({
-        top: Math.round(r.bottom + 8),
-        right: Math.max(8, Math.round(window.innerWidth - r.right)),
-      });
+      if (buttonRef.current) setPanelPos(computePanelPos(buttonRef.current));
     };
     reposition();
     window.addEventListener('scroll', reposition, { passive: true });
@@ -358,10 +378,7 @@ export function GlobalAudioPlayer() {
     }
     ensureOrionGraph();
     if (!isPanelOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const newTop = Math.max(50, rect.bottom + 8);
-      const newRight = Math.max(12, window.innerWidth - rect.right);
-      setPanelPos({ top: newTop, right: newRight });
+      setPanelPos(computePanelPos(buttonRef.current));
     }
     setIsPanelOpen(prev => !prev);
   }, [startMusic, isPanelOpen]);
@@ -438,12 +455,22 @@ export function GlobalAudioPlayer() {
   );
 
   // Painel renderizado em document.body (fixed) → nunca cortado por overflow-hidden.
+  // UI-03: no mobile vira folha quase full-width (left+right 8px, largura
+  // automática); tablet/desktop mantém a âncora ao botão. maxHeight inline
+  // limita a altura ao espaço visível → rolagem interna, zero corte/overflow.
   const panelContent = (
     <div
       ref={panelRef}
-      style={{ position: 'fixed', top: panelPos.top, right: panelPos.right }}
+      style={{
+        position: 'fixed',
+        top: panelPos.top,
+        maxHeight: panelPos.maxHeight,
+        ...(panelPos.mobile
+          ? { left: 8, right: 8, width: 'auto' }
+          : { right: panelPos.right }),
+      }}
       className={cn(
-        'bg-[#0a1f16]/95 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 w-[min(94vw,340px)] max-h-[78vh] overflow-y-auto transition-all duration-300 ease-out origin-top-right z-[9999]',
+        'bg-[#0a1f16]/95 backdrop-blur-xl border border-green-400/50 rounded-2xl shadow-[0_0_50px_10px_rgba(34,197,94,0.35),0_0_20px_2px_rgba(56,189,248,0.2)] ring-1 ring-white/20 p-4 w-[min(94vw,340px)] max-h-[78vh] overflow-y-auto overflow-x-hidden transition-all duration-300 ease-out origin-top-right z-[9999]',
         isPanelOpen
           ? 'opacity-100 scale-100 translate-y-0'
           : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
