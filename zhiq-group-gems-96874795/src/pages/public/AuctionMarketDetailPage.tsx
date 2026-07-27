@@ -18,6 +18,12 @@ import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafe
 import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { registerResumeHandler } from '@/components/auth/AuthGateProvider';
+import { AuctionGallery, AuctionMediaItem } from '@/components/public/auction/AuctionGallery';
+import { AuctionHistory } from "@/components/public/auction/AuctionHistory";
+import { AuctionQASection } from '@/components/public/auction/AuctionQASection';
+import { AuctionReportModal } from '@/components/public/auction/AuctionReportModal';
+import { AuctionTransparencyCenter } from '@/components/public/auction/AuctionTransparencyCenter';
+import { SellerTransparencyCenter } from '@/components/public/auction/SellerTransparencyCenter';
 
 // ─── Helpers ────────────────────────────
 
@@ -89,6 +95,23 @@ export default function AuctionMarketDetailPage() {
     refetchInterval: 5000,
   });
 
+  // Fetch media
+  const { data: media = [] } = useQuery<AuctionMediaItem[]>({
+    queryKey: ["auction-media", id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from("auction_media")
+        .select("*")
+        .eq("auction_listing_id", id)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) return []; 
+      return data as AuctionMediaItem[];
+    },
+    enabled: !!id,
+  });
+
   // Fetch store name (if applicable)
   const { data: storeName } = useQuery({
     queryKey: ["store-name", listing?.store_id],
@@ -99,25 +122,22 @@ export default function AuctionMarketDetailPage() {
         .select("nome_loja")
         .eq("id", listing.store_id)
         .single();
+      
       return data?.nome_loja || null;
     },
     enabled: !!listing?.store_id,
   });
 
-  // Increment view
+  // Increment view — via RPC SECURITY DEFINER (antes era UPDATE direto que
+  // falhava sob RLS para visitantes; agora conta para qualquer um).
   useEffect(() => {
     if (!id) return;
-    (async () => {
-      try {
-        await (supabase.from("auction_listings") as any)
-          .update({ views_count: ((listing as any)?.views_count || 0) + 1 })
-          .eq("id", id);
-      } catch { /* ignore */ }
-    })();
+    supabase.rpc("increment_auction_view", { p_listing_id: id }).then(() => undefined, () => undefined);
   }, [id]);
 
   // ✅ Hook sempre chamado incondicionalmente — usa data fallback se listing ainda não carregou
-  const remaining = useLiveCountdown(listing?.ends_at ?? new Date(Date.now() + 86400000).toISOString());
+  const fallbackDate = useMemo(() => new Date(Date.now() + 86400000).toISOString(), []);
+  const remaining = useLiveCountdown(listing?.ends_at ?? fallbackDate);
 
   const isActive = listing && listing.status === "active" && !remaining.ended;
   const currentBid = listing?.current_bid ?? listing?.starting_bid ?? 0;
@@ -151,7 +171,9 @@ export default function AuctionMarketDetailPage() {
   });
 
   const doBid = () => {
-    const amount = minNextBid * 100; // convert to cents
+    // minNextBid está em REAIS → converte para centavos (unidade da RPC/auction_bids).
+    // O backend é a fonte de verdade da grade; se recusar, devolve next_min_cents.
+    const amount = Math.round(minNextBid * 100);
     placeBid.mutate({ amountCents: amount });
   };
 
@@ -159,6 +181,33 @@ export default function AuctionMarketDetailPage() {
     // dar lance é ação pessoal → exige login (o backend também valida auth.uid()).
     // Deslogado: abre o modal e, após autenticar, o lance é dado sozinho.
     requireAuth(doBid, { kind: 'auction_bid', label: 'dar seu lance neste leilão', payload: { id } });
+  };
+
+  // BUY-NOW real — encerra e define o comprador como vencedor (RPC auction_buy_now).
+  const buyNow = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error("ID ausente");
+      const { data, error } = await supabase.rpc("auction_buy_now", { p_listing_id: id });
+      if (error) throw error;
+      const r = data as any;
+      if (!r?.success) throw new Error(r?.error || "Não foi possível arrematar agora.");
+      return r;
+    },
+    onSuccess: () => {
+      toast.success("Arrematado! Você é o vencedor. 🏆");
+      queryClient.invalidateQueries({ queryKey: ["auction-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["auction-bids", id] });
+      queryClient.invalidateQueries({ queryKey: ["public-auctions"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao arrematar."),
+  });
+  const handleBuyNow = () => {
+    if (!buyNowPrice) return;
+    requireAuth(() => {
+      if (window.confirm(`Arrematar agora por ${buyNowPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}? O leilão será encerrado e você será o vencedor.`)) {
+        buyNow.mutate();
+      }
+    }, { kind: 'auction_buynow', label: 'arrematar este item agora', payload: { id } });
   };
 
   // retoma o lance após login (registrado enquanto a página está montada)
@@ -255,33 +304,43 @@ export default function AuctionMarketDetailPage() {
               Voltar aos Leilões
             </button>
 
+            {/* Cabeçalho oficial da loja (componente único dos demais módulos) */}
+            {listing?.store_id && (
+              <AdvertiserSummaryCard
+                advertiserId={listing.store_id}
+                profileType="leiloes"
+                compact={false}
+              />
+            )}
+
             {/* Main card */}
             <CardDark className="rounded-3xl ring-1 ring-[#FF7A00]/20">
 
               {/* Image area */}
-              {imgSrc && (
-                <div className="relative aspect-[16/9] bg-[#252B33] overflow-hidden">
-                  <img src={imgSrc} alt={listing.title} className="w-full h-full object-contain" />
-                  <CardImageOverlay />
-                  <div className="absolute top-4 left-4">
-                    <DarkBadge
-                      tone={listing.listing_type === 'arremate' ? 'green' : 'orange'}
-                      className="bg-[#1A1F24]/80 px-3 py-1.5 shadow-lg backdrop-blur-sm"
-                    >
-                      {listing.listing_type === 'arremate' ? 'Arremate' : 'Leilão'}
-                    </DarkBadge>
-                  </div>
-                  {remaining.ended && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <div className="bg-[#1A1F24]/95 border border-[#323A45] px-6 py-3 rounded-2xl">
-                        <p className="font-black text-xl text-white flex items-center gap-2">
-                          <Clock className="w-5 h-5" /> Encerrado
-                        </p>
-                      </div>
-                    </div>
-                  )}
+              <div className="relative">
+                <AuctionGallery 
+                  media={media} 
+                  fallbackImage={imgSrc} 
+                  title={listing.title} 
+                />
+                <div className="absolute top-4 left-4 z-10">
+                  <DarkBadge
+                    tone={listing.listing_type === 'arremate' ? 'green' : 'orange'}
+                    className="bg-[#1A1F24]/80 px-3 py-1.5 shadow-lg backdrop-blur-sm"
+                  >
+                    {listing.listing_type === 'arremate' ? 'Arremate' : 'Leilão'}
+                  </DarkBadge>
                 </div>
-              )}
+                {remaining.ended && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20 pointer-events-none rounded-3xl">
+                    <div className="bg-[#1A1F24]/95 border border-[#323A45] px-6 py-3 rounded-2xl">
+                      <p className="font-black text-xl text-white flex items-center gap-2">
+                        <Clock className="w-5 h-5" /> Encerrado
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className="p-6 md:p-8 space-y-6">
                 {/* Title & location */}
@@ -396,10 +455,11 @@ export default function AuctionMarketDetailPage() {
                       <Button
                         size="lg"
                         variant="outline"
-                        onClick={() => {/* TODO: implement buy now */}}
+                        onClick={handleBuyNow}
+                        disabled={buyNow.isPending}
                         className="h-14 text-lg font-black rounded-2xl border-2 border-[#00C58E] bg-transparent text-[#00C58E] hover:bg-[rgba(0,197,142,0.12)] hover:text-[#00C58E]"
                       >
-                        <Crown className="w-5 h-5 mr-2" />
+                        {buyNow.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Crown className="w-5 h-5 mr-2" />}
                         Arrematar Agora
                       </Button>
                     )}
@@ -471,19 +531,27 @@ export default function AuctionMarketDetailPage() {
                   </CardInfo>
                 </div>
 
+                {/* Report Section */}
+                <div className="pt-4 border-t border-[#323A45] flex justify-end">
+                  <AuctionReportModal listingId={id!} />
+                </div>
               </div>
+            </CardDark>
+
+            {/* Seller Transparency */}
+            {listing.store_id && (
+              <SellerTransparencyCenter storeId={listing.store_id} />
+            )}
+
+            {/* Auction Transparency Center */}
+            <AuctionTransparencyCenter listingId={id!} />
+
+            {/* Q&A Section */}
+            <CardDark className="rounded-3xl ring-1 ring-[#FF7A00]/20 p-6 md:p-8">
+              <AuctionQASection listingId={id!} />
             </CardDark>
           </div>
         </section>
-
-        {listing && (
-          <div className="max-w-4xl mx-auto px-4 mb-8">
-            <AdvertiserSummaryCard
-              advertiserId={listing.store_id || (listing as any).profile_id || (listing as any).user_id || (listing as any).owner_user_id}
-              profileType="leiloes"
-            />
-          </div>
-        )}
 
         <InstitutionalSafetyBanner />
       </div>

@@ -3,7 +3,7 @@
  * Layout com menu superior do marketplace + conteúdo premium
  */
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import {
   Gavel, Timer, TrendingUp, MapPin, Eye, Users, Zap, ArrowUp,
   Clock, Shield, ChevronRight, Loader2, AlertTriangle, Crown, Flame,
-  ShoppingCart, Search, ShoppingBag, Truck, Store, Tag,
+  ShoppingCart, Search, ShoppingBag, Truck, Store, Tag, Heart, Share2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
@@ -21,6 +21,9 @@ import { OfertaRapidaModal } from "@/components/public/MiniCadastroModal";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { CardDark, CardInfo, CardHighlight, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
+import { StoreHeader } from "@/components/public/store/StoreHeader";
+import { StoreThemeScope } from "@/components/public/store/StoreThemeScope";
+import { useAdvertiserSummary } from "@/components/public/advertiser/AdvertiserSummaryCard";
 
 // ─── Helpers ────────────────────────────
 
@@ -162,6 +165,7 @@ export default function AuctionPublicPage() {
   const [bids, setBids] = useState<AuctionBid[]>([]);
   const [loading, setLoading] = useState(true);
   const [storeName, setStoreName] = useState("");
+  const [favorited, setFavorited] = useState(false);
 
   // Cart
   const [cartOpen, setCartOpen] = useState(false);
@@ -171,10 +175,36 @@ export default function AuctionPublicPage() {
   // Offer modal state
   const [showOfertaModal, setShowOfertaModal] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
-  const [ofertaFixedAmount, setOfertaFixedAmount] = useState<number | undefined>(undefined);
-  const [ofertaAllowCustom, setOfertaAllowCustom] = useState(true);
+  const [ofertaFixedAmount, setOfertaFixedAmount] = useState<number>(0);
+  const [ofertaAllowCustom, setOfertaAllowCustom] = useState(false);
+
+  const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+  const isStoreContext = outletContext?.isStoreContext;
+
+  // Identidade oficial da loja (mesmo padrão de Imóveis/Veículos): em contexto
+  // de loja o StoreLayout já exibe o cabeçalho — aqui só na rota standalone.
+  const { data: advertiserData } = useAdvertiserSummary(listing?.store_id, "leiloes");
+  const storeInfo = advertiserData?.store;
+  const storeTargetId = advertiserData?.targetId || listing?.store_id;
 
   const { timeLeft, urgency } = useCountdown(listing?.ends_at || new Date().toISOString());
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: listing?.title, url: window.location.href }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copiado!");
+    }
+  };
+
+  const handleBackToList = () => {
+    if (isStoreContext && listing?.store_id) {
+      navigate(`/loja/${listing.store_id}?tab=leiloes`);
+    } else {
+      navigate("/leiloes");
+    }
+  };
 
   // Fetch listing + bids
   const fetchData = useCallback(async () => {
@@ -211,13 +241,9 @@ export default function AuctionPublicPage() {
       .limit(20);
     setBids((b || []) as AuctionBid[]);
 
-    // Increment view (silently ignore if views_count column is missing)
-    try {
-      await supabase
-        .from("auction_listings")
-        .update({ views_count: ((l as any).views_count || 0) + 1 } as any)
-        .eq("id", id);
-    } catch {}
+    // Increment view — via RPC SECURITY DEFINER (UPDATE direto era negado pela
+    // RLS para visitantes anônimos: 401 no console e métrica congelada).
+    supabase.rpc("increment_auction_view" as any, { p_listing_id: id }).then(() => undefined, () => undefined);
 
     setLoading(false);
   }, [id]);
@@ -265,9 +291,15 @@ export default function AuctionPublicPage() {
   };
 
   if (loading) {
+    if (isStoreContext) return (
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
+        </div>
+    );
+
     return (
       <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
-        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Leilões" myAccountPath="/minha-conta">
+        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="👨‍⚖️ Leilões" myAccountPath="/minha-conta">
         <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
         </div>
@@ -276,13 +308,21 @@ export default function AuctionPublicPage() {
   }
 
   if (!listing) {
-    return (
-      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
-        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="🏷️ Leilões" myAccountPath="/minha-conta">
+    if (isStoreContext) return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
           <AlertTriangle className="h-12 w-12 text-gray-400" />
           <p className="text-gray-600 font-medium">Leilão não encontrado</p>
-          <Button variant="outline" onClick={() => navigate("/leiloes")}>Ver todos</Button>
+          <Button variant="outline" onClick={handleBackToList}>Ver todos</Button>
+        </div>
+    );
+
+    return (
+      <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
+        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="👨‍⚖️ Leilões" myAccountPath="/minha-conta">
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+          <AlertTriangle className="h-12 w-12 text-gray-400" />
+          <p className="text-gray-600 font-medium">Leilão não encontrado</p>
+          <Button variant="outline" onClick={handleBackToList}>Ver todos</Button>
         </div>
       </MarketLayout>
     );
@@ -291,18 +331,26 @@ export default function AuctionPublicPage() {
   const isActive = listing.status === "active" && new Date(listing.ends_at) > new Date();
   const totalBids = listing.total_bids || 0;
 
-  return (
-    <MarketLayout
-      search={q}
-      setSearch={setQ}
-      headerChildren={<MarketNavButtons />}
-      lockHeaderExpanded
-      mainClassName="flex flex-col bg-[#F5E62B]"
-      blueFooter
-      blueFooterLabel="🏷️ Leilões"
-      myAccountPath="/minha-conta"
-    >
-      {/* ── HERO — Decision Block ── */}
+  const content = (
+      <>
+      {/* ─── CABEÇALHO OFICIAL DA LOJA (mesmo componente dos demais módulos) ─── */}
+      {storeInfo && !isStoreContext && (
+        <StoreThemeScope appearance={storeInfo.appearance}>
+          <div className="w-full bg-[#F5E62B]">
+            <StoreHeader
+              store={storeInfo}
+              productsCount={advertiserData?.totalCount || 0}
+              profileType={advertiserData?.type || "leiloes"}
+              showProfileButton={true}
+              profileId={storeTargetId}
+              compact={false}
+              onShare={handleShare}
+            />
+          </div>
+        </StoreThemeScope>
+      )}
+
+      {/* ─── HERO — Decision Block ─── */}
       <div className="relative overflow-hidden">
         <div className="relative max-w-lg mx-auto px-4 pt-6 pb-8">
           {/* Badge */}
@@ -320,6 +368,21 @@ export default function AuctionPublicPage() {
               <div className="relative rounded-2xl overflow-hidden bg-[#252B33] border border-[#323A45]">
                 <img src={imgSrc} alt={listing.title} className="w-full aspect-[16/9] object-contain bg-[#252B33]" />
                 <CardImageOverlay />
+                <div className="absolute top-3 right-3 flex items-center gap-2">
+                  <button onClick={() => setFavorited(!favorited)} className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-colors">
+                    <Heart className={`h-4 w-4 ${favorited ? "fill-red-500 text-red-500" : ""}`} />
+                  </button>
+                  <button onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: listing.title, url: window.location.href })
+                    } else {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast.success("Link copiado!");
+                    }
+                  }} className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-colors">
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -328,13 +391,10 @@ export default function AuctionPublicPage() {
               {listing.title}
             </h1>
 
-            {/* Store + Location */}
-            <div className="flex items-center justify-center gap-3 text-sm text-[#B8C2CC]">
-              <span className="flex items-center gap-1">
-                <Crown className="h-3.5 w-3.5 text-amber-400" /> {storeName || "Loja"}
-              </span>
+            {/* Location (a identidade da loja vive no StoreHeader oficial, no topo) */}
+            <div className="flex flex-col items-center justify-center gap-3 w-full my-6">
               {listing.city && (
-                <span className="flex items-center gap-1">
+                <span className="flex items-center justify-center gap-1 text-sm text-[#B8C2CC] mt-2">
                   <MapPin className="h-3.5 w-3.5 text-[#00C58E]" />
                   {listing.neighborhood ? `${listing.neighborhood}, ` : ""}{listing.city}
                 </span>
@@ -556,7 +616,7 @@ export default function AuctionPublicPage() {
         </div>
 
         {/* Back */}
-        <Button variant="ghost" className="w-full text-gray-600 hover:text-gray-900" onClick={() => navigate("/leiloes")}>
+        <Button variant="ghost" className="w-full text-gray-600 hover:text-gray-900" onClick={handleBackToList}>
           <ChevronRight className="h-4 w-4 mr-1 rotate-180" /> Ver todos os leilões
         </Button>
       </div>
@@ -578,6 +638,29 @@ export default function AuctionPublicPage() {
       )}
 
       <InstitutionalSafetyBanner />
+      </>
+  );
+
+  if (isStoreContext) {
+      return (
+          <div className="flex-1 flex flex-col bg-store-background text-store-primary min-h-screen">
+              {content}
+          </div>
+      );
+  }
+
+  return (
+    <MarketLayout
+      search={q}
+      setSearch={setQ}
+      headerChildren={<MarketNavButtons />}
+      lockHeaderExpanded
+      mainClassName="flex flex-col bg-[#F5E62B]"
+      blueFooter
+      blueFooterLabel="👨‍⚖️ Leilões"
+      myAccountPath="/minha-conta"
+    >
+        {content}
     </MarketLayout>
   );
 }

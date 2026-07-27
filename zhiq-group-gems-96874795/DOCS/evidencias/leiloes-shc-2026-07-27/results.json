@@ -1,0 +1,227 @@
+[
+  {
+    "id": "T1.listing-renders",
+    "ok": true,
+    "detail": "título do leilão visível: true"
+  },
+  {
+    "id": "T1.store-header",
+    "ok": false,
+    "detail": ".st-banner count=0, storeName hits=0 em /leilao/:id"
+  },
+  {
+    "id": "T1.console",
+    "ok": false,
+    "detail": "console errors: 13 [\"Failed to load resource: the server responded with a status of 401 ()\",\"Failed to load resource: the server responded with a status of 401 ()\",\"Failed to load resource: the server responded with a status of 401 ()\"]"
+  },
+  {
+    "id": "T1b.store-header-in-layout",
+    "ok": true,
+    "detail": ".st-banner count=1 em /loja/:id/leilao/:id"
+  },
+  {
+    "id": "T2.lista",
+    "ok": true,
+    "detail": "card do leilão ativo visível na lista: hits=1"
+  },
+  {
+    "id": "T2.console",
+    "ok": false,
+    "detail": "console errors: 8 [\"Failed to load resource: the server responded with a status of 401 ()\",\"Failed to load resource: the server responded with a status of 401 ()\",\"Failed to load resource: the server responded with a status of 401 ()\"]"
+  },
+  {
+    "id": "T5.card-click-target",
+    "ok": true,
+    "detail": "URL após clique: http://localhost:8081/loja/9cb222df-e59c-42b8-addc-4c0f38ddf9ec?tab=leiloes&product=c2cfbb53-a5db-42c7-9e4c-08731a79d1ae | .st-banner=1"
+  },
+  {
+    "id": "T3.portal",
+    "ok": true,
+    "detail": "portal #global-audio-portal-trustbar: 1"
+  },
+  {
+    "id": "T3.som-button",
+    "ok": true,
+    "detail": "botões no portal=1; classe pílula branca=true; ícone=1"
+  },
+  {
+    "id": "T3.red-button-removed",
+    "ok": true,
+    "detail": "botões circulares vermelhos antigos na página: 0"
+  },
+  {
+    "id": "T3.panel-opens",
+    "ok": true,
+    "detail": "painel visível=true, aria-expanded=true"
+  },
+  {
+    "id": "T3.panel-in-viewport-desktop",
+    "ok": true,
+    "detail": "rect={\"x\":63,\"y\":278,\"width\":340,\"height\":610} vp={\"width\":1440,\"height\":900}"
+  },
+  {
+    "id": "T3.mute-toggle",
+    "ok": true,
+    "detail": "badge \"Mudo\" antes=0 depois=1"
+  },
+  {
+    "id": "T3.icon-state",
+    "ok": true,
+    "detail": "classe do ícone: lucide lucide-radio h-3 w-3 text-[#EF4444]"
+  },
+  {
+    "id": "T3.click-outside-closes",
+    "ok": false,
+    "detail": "painel após clique fora: visível=true"
+  },
+  {
+    "id": "T3.console",
+    "ok": false,
+    "detail": "console errors: 14 [\"Failed to load resource: the server responded with a status of 401 ()\",\"Failed to load resource: the server responded with a status of 401 ()\",\"Failed to load resource: the server responded with a status of 401 ()\"]"
+  },
+  {
+    "id": "T4.mercado@320",
+    "ok": true,
+    "detail": "scrollW=320 innerW=320"
+  },
+  {
+    "id": "T4.painel@320",
+    "ok": true,
+    "detail": "rect={\"x\":8,\"y\":242,\"width\":304,\"height\":590}"
+  },
+  {
+    "id": "T4.leilao@320",
+    "ok": true,
+    "detail": "scrollW=320 innerW=320"
+  },
+  {
+    "id": "T4.leiloes@320",
+    "ok": true,
+    "detail": "scrollW=320 innerW=320"
+  },
+  {
+    "id": "T4.mercado@360",
+    "ok": true,
+    "detail": "scrollW=360 innerW=360"
+  },
+  {
+    "id": "T4.painel@360",
+    "ok": true,
+    "detail": "rect={\"x\":8,\"y\":242,\"width\":344,\"height\":590}"
+  },
+  {
+    "id": "T4.leilao@360",
+    "ok": true,
+    "detail": "scrollW=360 innerW=360"
+  },
+  {
+    "id": "T4.leiloes@360",
+    "ok": true,
+    "detail": "scrollW=360 innerW=360"
+  },
+  {
+    "id": "T4.mercado@375",
+    "ok": true,
+    "detail": "scrollW=375 innerW=375"
+  },
+  {
+    "id": "T4.painel@375",
+    "ok": true,
+    "detail": "rect={\"x\":8,\"y\":242,\"width\":359,\"height\":590}"
+  },
+  {
+    "id": "T4.leilao@375",
+    "ok": true,
+    "detail": "scrollW=375 innerW=375"
+  },
+  {
+    "id": "T4.leiloes@375",
+    "ok": true,
+    "detail": "scrollW=375 innerW=375"
+  },
+  {
+    "id": "T4.mercado@390",
+    "ok": true,
+    "detail": "scrollW=390 innerW=390"
+  },
+  {
+    "id": "T4.painel@390",
+    "ok": true,
+    "detail": "rect={\"x\":8,\"y\":103,\"width\":374,\"height\":658}"
+  },
+  {
+    "id": "T4.leilao@390",
+    "ok": true,
+    "detail": "scrollW=390 innerW=390"
+  },
+  {
+    "id": "T4.leiloes@390",
+    "ok": true,
+    "detail": "scrollW=390 innerW=390"
+  },
+  {
+    "id": "T4.mercado@414",
+    "ok": true,
+    "detail": "scrollW=414 innerW=414"
+  },
+  {
+    "id": "T4.painel@414",
+    "ok": true,
+    "detail": "rect={\"x\":8,\"y\":242,\"width\":398,\"height\":590}"
+  },
+  {
+    "id": "T4.leilao@414",
+    "ok": true,
+    "detail": "scrollW=414 innerW=414"
+  },
+  {
+    "id": "T4.leiloes@414",
+    "ok": true,
+    "detail": "scrollW=414 innerW=414"
+  },
+  {
+    "id": "T4.mercado@768",
+    "ok": true,
+    "detail": "scrollW=768 innerW=768"
+  },
+  {
+    "id": "T4.painel@768",
+    "ok": true,
+    "detail": "rect={\"x\":8,\"y\":257,\"width\":340,\"height\":575}"
+  },
+  {
+    "id": "T4.leilao@768",
+    "ok": true,
+    "detail": "scrollW=768 innerW=768"
+  },
+  {
+    "id": "T4.leiloes@768",
+    "ok": true,
+    "detail": "scrollW=768 innerW=768"
+  },
+  {
+    "id": "T4.mercado@1440",
+    "ok": true,
+    "detail": "scrollW=1440 innerW=1440"
+  },
+  {
+    "id": "T4.painel@1440",
+    "ok": true,
+    "detail": "rect={\"x\":63,\"y\":278,\"width\":340,\"height\":554}"
+  },
+  {
+    "id": "T4.leilao@1440",
+    "ok": true,
+    "detail": "scrollW=1440 innerW=1440"
+  },
+  {
+    "id": "T4.leiloes@1440",
+    "ok": true,
+    "detail": "scrollW=1440 innerW=1440"
+  },
+  {
+    "id": "T6.load",
+    "ok": true,
+    "detail": "wallclock=1406ms {\"domContentLoaded\":609,\"loadEvent\":1401,\"usedJSHeapMB\":28} (dev server, sem minificação — referência)"
+  }
+]

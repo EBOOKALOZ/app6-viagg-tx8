@@ -12,10 +12,10 @@ export interface AdvertiserSummaryCardProps {
     compact?: boolean;
 }
 
-export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, compact = true }: AdvertiserSummaryCardProps) {
+export function useAdvertiserSummary(advertiserId?: string | null, profileType?: string, storeData?: any) {
     const effectiveId = advertiserId || storeData?.id || storeData?.store_id || storeData?.profile_id || null;
 
-    const { data: resolvedInfo, isLoading } = useQuery({
+    return useQuery({
         queryKey: ["advertiser-summary-info", effectiveId, profileType],
         queryFn: async () => {
             if (!effectiveId && !storeData) return null;
@@ -38,35 +38,41 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
                     logo_url: storeData.logo_url || null,
                     banner_url: storeData.banner_url || null,
                     description: storeData.description || null,
-                    categoria: storeData.categoria || resolvedProfileType
+                    categoria: storeData.categoria || resolvedProfileType,
+                    appearance: storeData.appearance || null
                 };
                 targetId = storeData.id || effectiveId;
                 ownerUserId = storeData.user_id || storeData.owner_user_id || null;
             } else if (effectiveId) {
-                // 2. Tentar buscar em merchant_stores primeiro pelo id ou profile_id
+                // 2. Tentar buscar em merchant_stores pelo id da loja ou pelo user_id
+                //    do dono (a tabela NÃO tem profile_id — a versão antiga com
+                //    or(profile_id) devolvia 400 do PostgREST e a loja nunca resolvia).
+                //    Status no banco real usa vocabulário misto: "active" e "Ativa".
                 const { data: mStore } = await supabase
                     .from("merchant_stores")
                     .select("*")
-                    .or(`id.eq.${effectiveId},profile_id.eq.${effectiveId}`)
-                    .eq("status", "active")
+                    .or(`id.eq.${effectiveId},user_id.eq.${effectiveId}`)
+                    .in("status", ["active", "Ativa"])
                     .maybeSingle();
 
                 if (mStore) {
+                    const ms = mStore as any;
                     store = {
-                        store_name: mStore.store_name,
-                        city: mStore.city || null,
-                        region: mStore.region || null,
-                        bairro: (mStore as any).bairro || null,
-                        logradouro: (mStore as any).logradouro || null,
-                        numero: (mStore as any).numero || null,
-                        cep: (mStore as any).cep || null,
-                        logo_url: mStore.logo_url || null,
-                        banner_url: mStore.banner_url || null,
-                        description: mStore.description || null,
-                        categoria: mStore.categoria || resolvedProfileType || "merchant"
+                        store_name: ms.store_name || ms.nome_loja,
+                        city: ms.city || ms.cidade || null,
+                        region: ms.region || ms.estado || null,
+                        bairro: ms.bairro || ms.neighborhood || null,
+                        logradouro: ms.street || null,
+                        numero: ms.number || null,
+                        cep: ms.cep || null,
+                        logo_url: ms.logo_url || null,
+                        banner_url: null,
+                        description: ms.descricao || null,
+                        categoria: resolvedProfileType || "merchant",
+                        appearance: ms.appearance || null
                     };
-                    targetId = mStore.id;
-                    ownerUserId = (mStore as any).user_id || null;
+                    targetId = ms.id;
+                    ownerUserId = ms.user_id || null;
                 } else {
                     // 3. Buscar em profiles + advertiser_accounts
                     const { data: profile } = await supabase
@@ -75,10 +81,11 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
                         .eq("id", effectiveId)
                         .maybeSingle();
 
+                    // advertiser_accounts também não tem profile_id — a chave é user_id.
                     const { data: advAcc } = await supabase
                         .from("advertiser_accounts")
                         .select("*")
-                        .eq("profile_id", effectiveId)
+                        .eq("user_id", effectiveId)
                         .maybeSingle();
 
                     if (profile || advAcc) {
@@ -94,7 +101,8 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
                             logo_url: (advAcc as any)?.company_logo_url || (profile as any)?.avatar_url || null,
                             banner_url: (advAcc as any)?.company_banner_url || null,
                             description: (advAcc as any)?.company_description || (profile as any)?.bio || "Anunciante parceiro da plataforma Viagg-TX8.",
-                            categoria: resolvedProfileType || "general"
+                            categoria: resolvedProfileType || "general",
+                            appearance: (advAcc as any)?.appearance || (profile as any)?.appearance || null
                         };
                         targetId = (profile as any)?.id || effectiveId;
                         ownerUserId = (profile as any)?.id || (advAcc as any)?.user_id || null;
@@ -132,6 +140,7 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
                         city: mp.city || store?.city || null,
                         region: mp.state || store?.region || null,
                         categoria: resolvedProfileType || "general",
+                        appearance: mp.appearance || store?.appearance || null,
                     } as StoreInfo;
                     targetId = targetId || mp.user_id;
                 }
@@ -139,17 +148,29 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
 
             if (!store) return null;
 
-            // Contar todos os anúncios ativos em todos os módulos para esse targetId/profile_id
+            // Contar anúncios vivos em todos os módulos para esse targetId.
+            // Fonte: VIEWS PÚBLICAS (public_*_listings) — já encapsulam o status
+            // "vivo" de cada módulo (os enums diferem: 'active' × 'published') e
+            // são legíveis por anon. products só tem store_id (sem status).
+            // travel: a view pública não expõe o dono (privacidade); a tabela só
+            // é legível autenticado — consulta condicionada à sessão.
             let totalCount = 0;
             try {
+                const owner = ownerUserId || targetId;
                 const queries = [
-                    supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", targetId).eq("status", "active"),
-                    supabase.from("real_estate_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
-                    supabase.from("vehicle_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
-                    supabase.from("service_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
-                    supabase.from("freight_listings").select("id", { count: "exact", head: true }).or(`store_id.eq.${targetId},profile_id.eq.${targetId}`).eq("status", "active"),
-                    supabase.from("travel_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", ownerUserId || targetId).eq("visibility_status", "published"),
+                    supabase.from("products").select("id", { count: "exact", head: true }).eq("store_id", targetId),
+                    supabase.from("public_real_estate_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", owner),
+                    supabase.from("public_vehicle_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", owner),
+                    supabase.from("public_service_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", owner),
+                    supabase.from("public_freight_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", owner),
+                    supabase.from("auction_listings").select("id", { count: "exact", head: true }).eq("store_id", targetId).eq("status", "active"),
                 ];
+                const { data: sessData } = await supabase.auth.getSession();
+                if (sessData?.session) {
+                    queries.push(
+                        supabase.from("travel_listings" as any).select("id", { count: "exact", head: true }).eq("owner_user_id", owner).eq("visibility_status", "published"),
+                    );
+                }
                 const results = await Promise.all(queries);
                 results.forEach((res) => {
                     if (res.count) totalCount += res.count;
@@ -168,6 +189,10 @@ export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, co
         enabled: Boolean(effectiveId || storeData),
         staleTime: 1000 * 60 * 5 // 5 minutos de cache
     });
+}
+
+export function AdvertiserSummaryCard({ advertiserId, profileType, storeData, compact = true }: AdvertiserSummaryCardProps) {
+    const { data: resolvedInfo, isLoading } = useAdvertiserSummary(advertiserId, profileType, storeData);
 
     if (isLoading && !resolvedInfo) {
         return (
