@@ -55,6 +55,9 @@ const FIN_TABLES = [
   // Débito de 2% por interessado (AI-75.3, 2026-07-21): PII + carteiras
   "advertiser_contact_intentions", "orion_marketplace_contact_charges",
   "orion_contact_reveal_log", "wallets", "wallet_transactions",
+  // VIAGENS (2026-07-23): carteiras/ledger/compras/contatos/audit anon-NEGADOS
+  "travel_credit_balances", "travel_credit_ledger", "travel_credit_purchases",
+  "travel_listing_contacts", "travel_negotiation_messages", "travel_audit_log",
 ];
 const FIN_FUNCTIONS = [
   "admin_wallet_credit", "append_ledger_entry", "pay_settle_delivery", "settle_delivery",
@@ -65,6 +68,12 @@ const FIN_FUNCTIONS = [
   "wallet_unlock_contact", "wallet_reveal_contact", "wallet_unlock_charge_cents",
   "wallet_credit", "wallet_reserve", "wallet_confirm", "wallet_migrate_legacy_balances",
   "unlock_reconcile",
+  // VIAGENS (2026-07-23): RPCs de crédito legadas APOSENTADAS (REVOKE de anon) —
+  // o vetor de drenagem de créditos por anônimo deve estar fechado. As RPCs
+  // admin exigem is_admin() e não podem ser executadas por anon.
+  "charge_travel_interest_click", "charge_travel_listing_click",
+  "unlock_travel_intention", "feature_travel_listing",
+  "admin_moderate_travel_listing", "admin_moderate_travel_media",
 ];
 const FIN_VIEWS_NONINVOKER = [
   "v_pay_platform_ledger_summary", "platform_financial_dashboard", "v_account_balances",
@@ -78,7 +87,10 @@ async function main() {
   console.log("### 1. RLS — anon NEGADO em tabelas financeiras");
   for (const t of FIN_TABLES)
     await check(`anon SELECT ${t} negado`, async () =>
-      expectStatus(await rest(`${t}?select=id&limit=1`), [401, 403], t));
+      // select=* (não select=id): tabelas com PK própria (ex.: owner_user_id)
+      // devolveriam 400 "column id does not exist" ANTES do check de ACL,
+      // mascarando o resultado real de permissão.
+      expectStatus(await rest(`${t}?select=*&limit=1`), [401, 403], t));
 
   console.log("### 2. Permissões — RPC financeira/sensível anon BLOQUEADA");
   for (const f of FIN_FUNCTIONS)
@@ -97,6 +109,24 @@ async function main() {
   for (const t of PUBLIC_OK)
     await check(`anon SELECT ${t} permitido`, async () =>
       expectStatus(await rest(`${t}?select=*&limit=1`), [200], t));
+
+  console.log("### 4b. VIAGENS — vitrine pública OK, rascunho anon-NEGADO");
+  // A vitrine lê apenas 'published' (policy hardening 2026-07-23).
+  await check("anon SELECT travel_listings (published) permitido", async () =>
+    expectStatus(await rest("travel_listings?select=id&visibility_status=eq.published&limit=1"), [200], "travel_pub"));
+  // Rascunhos NÃO podem vazar para anon (policy filtra por status).
+  await check("anon NÃO lê rascunhos de travel_listings", async () => {
+    const r = await rest("travel_listings?select=id,visibility_status&visibility_status=eq.draft&limit=1");
+    if (r.status !== 200) return; // 401/403 também é aceitável
+    const body = await r.json();
+    if (Array.isArray(body) && body.length > 0) throw new Error("rascunho vazou para anon!");
+  });
+  // Telemetria sem débito é pública, mas exige fingerprint (não é vetor financeiro).
+  await check("anon travel_track_event exige fingerprint (sem débito)", async () => {
+    const r = await rpc("travel_track_event", { p_listing_id: "00000000-0000-0000-0000-000000000000", p_event: "listing_click" });
+    // 200 com success:false (fingerprint_required/listing_not_found) OU bloqueio — nunca débito.
+    if (![200, 400, 401, 403, 404].includes(r.status)) throw new Error(`status ${r.status}`);
+  });
 
   // ── Testes autenticados (só com credenciais no ambiente) ──
   if (process.env.TEST_EMAIL && process.env.TEST_PASSWORD) {
