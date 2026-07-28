@@ -23,6 +23,8 @@ import {
   playStation, togglePlay, stopRadio, setRadioVolume, subscribeRadio, getRadioState,
   getFavorites, toggleFavorite, isFavorite, getHistory, pushHistory, getLastStation, type RadioState,
 } from "@/lib/radioPlayer";
+import { subscribeNowPlaying, getNowPlaying, type NowPlayingTrack } from "@/lib/multimedia/nowPlaying";
+import { RadioTvPlayer } from "./RadioTvPlayer";
 
 type Tab = "buscar" | "perto" | "favoritas" | "historico" | "populares";
 const RADIUS = [5, 10, 25, 50, 100, 200, 250];
@@ -135,6 +137,9 @@ export function RadioMundial() {
   const [addMsg, setAddMsg] = useState<string | null>(null);  // feedback do fluxo "tocar por link"
   // "Continuar ouvindo": última estação salva em localStorage (sobrevive a fechar o app por dias).
   const [lastStation, setLastStation] = useState<RadioStation | null>(() => getLastStation());
+  // ORION-MEDIA-02: música no ar detectada (ICY/Icecast) → player Rádio+TV
+  const [npTrack, setNpTrack] = useState<NowPlayingTrack | null>(() => getNowPlaying());
+  useEffect(() => subscribeNowPlaying(setNpTrack), []);
 
   const runSearch = useCallback<Runner>(async (params, label) => {
     setLoading(true); setError(null);
@@ -343,8 +348,11 @@ export function RadioMundial() {
 
   return (
     <div className="space-y-2.5">
-      {/* NOW PLAYING (compacto) */}
-      {radio.station && (
+      {/* ═══ PLAYER RÁDIO+TV — assume quando a música no ar é detectada ═══ */}
+      {radio.station && npTrack && <RadioTvPlayer stations={list as RadioStation[]} />}
+
+      {/* NOW PLAYING (compacto) — sem música detectada, mantém a tela atual */}
+      {radio.station && !npTrack && (
         <div className="flex items-center gap-2 rounded-xl border border-orange-400/30 bg-orange-500/10 p-2">
           <Icon src={radio.station.favicon} />
           <div className="min-w-0 flex-1">
@@ -387,7 +395,7 @@ export function RadioMundial() {
           </button>
         </div>
       )}
-      {radio.station && (
+      {radio.station && !npTrack && (
         <div className="flex items-center gap-2 px-1">
           <Volume2 className="h-3.5 w-3.5 text-white/40" />
           <Slider value={[Math.round(radio.volume * 100)]} min={0} max={100} step={1} onValueChange={(v) => setRadioVolume((v[0] ?? 90) / 100)} />

@@ -196,6 +196,11 @@ export type MediaEvento =
   | 'view_start' | 'view_end' | 'favorite' | 'unfavorite'
   | 'share' | 'fullscreen' | 'open_window' | 'mute' | 'unmute';
 
+/** Eventos do modo Rádio+TV (ORION-MEDIA-02) — sem canal (channel_id null). */
+export type TrackEvento =
+  | 'radio_track' | 'video_found' | 'video_missing' | 'video_error'
+  | 'cache_hit' | 'cache_miss' | 'like' | 'tv_open' | 'tv_close' | 'share';
+
 export function logMediaEvent(ch: MediaChannel, evento: MediaEvento, detalhes: Record<string, unknown> = {}) {
   try {
     (supabase.from('media_playback_events') as any).insert({
@@ -210,5 +215,26 @@ export function logMediaEvent(ch: MediaChannel, evento: MediaEvento, detalhes: R
         dispositivo: window.innerWidth < 640 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop',
       },
     }).then(() => { /* ok */ }, () => { /* tabela ausente/offline → ignora */ });
+  } catch { /* nunca propaga */ }
+}
+
+/**
+ * Telemetria do modo Rádio+TV: música detectada, vídeo encontrado/indisponível,
+ * cache HIT/MISS, curtir, abrir/fechar TV. Fire-and-forget — nunca quebra a UI.
+ * (Requer a migration 20260727120000_radio_tv_mode.sql; sem ela, o insert é
+ * recusado pelo CHECK e silenciosamente ignorado.)
+ */
+export function logTrackEvent(evento: TrackEvento, detalhes: Record<string, unknown> = {}) {
+  try {
+    (supabase.from('media_playback_events') as any).insert({
+      channel_id: null,
+      evento,
+      session_id: sessionId(),
+      detalhes: {
+        ...detalhes,
+        origem: window.location.pathname,
+        dispositivo: window.innerWidth < 640 ? 'mobile' : window.innerWidth < 1024 ? 'tablet' : 'desktop',
+      },
+    }).then(() => { /* ok */ }, () => { /* migration ausente/offline → ignora */ });
   } catch { /* nunca propaga */ }
 }

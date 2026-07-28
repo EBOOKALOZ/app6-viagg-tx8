@@ -11,17 +11,21 @@
  * SEGURANÇA: URL só HTTPS + provedores permitidos (YouTube/Vimeo/Twitch/HLS/
  * vídeo direto). Validação espelha src/lib/multimedia/mediaCenter.ts.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MonitorPlay, Loader2, Tv, Clapperboard, Users, Timer, Heart, Share2, Activity,
   Radio, Star, Ban, CheckCircle2, Trash2, Pencil, Plus, Search, ExternalLink,
+  Music2, Youtube, Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   MediaChannel, MediaKind, MediaStatus, validateMediaUrl, detectProvider,
 } from "@/lib/multimedia/mediaCenter";
+import {
+  fetchMediaSettings, saveMediaSettings, DEFAULT_MEDIA_SETTINGS, type MediaCenterSettings,
+} from "@/lib/multimedia/mediaSettings";
 
 const tb = () => (supabase.from("media_channels") as any);
 
@@ -73,6 +77,30 @@ export default function AdminMultimidia() {
     refetchInterval: 60_000,
     retry: 1,
   });
+
+  // ── ORION-MEDIA-02: modo Rádio+TV (configurações + telemetria) ──
+  const [tvForm, setTvForm] = useState<MediaCenterSettings>(DEFAULT_MEDIA_SETTINGS);
+  const [tvMsg, setTvMsg] = useState<string | null>(null);
+  const [tvBusy, setTvBusy] = useState(false);
+  useEffect(() => { fetchMediaSettings(true).then(setTvForm); }, []);
+
+  const tvStats = useQuery({
+    queryKey: ["media-radio-tv-stats"],
+    queryFn: async (): Promise<Record<string, any>> => {
+      const { data, error } = await (supabase.rpc as any)("media_radio_tv_stats", { p_days: 30 });
+      if (error) throw new Error(error.message);
+      return (data || {}) as Record<string, any>;
+    },
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+
+  const saveTv = async () => {
+    setTvBusy(true); setTvMsg(null);
+    const r = await saveMediaSettings(tvForm);
+    setTvBusy(false);
+    setTvMsg(r.ok ? "✓ Configurações do modo TV salvas." : `Erro ao salvar: ${r.error}`);
+  };
 
   const channels = useQuery({
     queryKey: ["media-admin-channels"],
@@ -232,6 +260,108 @@ export default function AdminMultimidia() {
             </div>
           </div>
         )}
+
+        {/* ═══ ORION-MEDIA-02: MODO RÁDIO + TV ═══ */}
+        <div className="mt-6 overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 border-b border-sky-100 bg-sky-50/60 px-4 py-3">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-100">
+              <Music2 className="h-5 w-5 text-sky-700" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-zinc-900">Rádio + TV — videoclipe da música no ar</p>
+              <p className="text-[11px] text-zinc-500">
+                O player detecta a música tocando na rádio e o botão TV troca o equalizador pelo videoclipe (embed YouTube — nada é hospedado na plataforma).
+              </p>
+            </div>
+          </div>
+
+          {/* telemetria do modo Rádio+TV (30 dias) */}
+          <div className="grid grid-cols-2 gap-3 px-4 pt-4 md:grid-cols-4">
+            {(() => {
+              const t = tvStats.data || {};
+              const hits = Number(t.cache_hits || 0);
+              const misses = Number(t.cache_misses || 0);
+              const hitPct = hits + misses > 0 ? Math.round((hits / (hits + misses)) * 100) : null;
+              const cells: [string, string | number, string][] = [
+                ["Músicas detectadas", tvStats.isError ? "—" : t.musicas_detectadas ?? 0, "radio_track · 30 dias"],
+                ["Vídeos encontrados", tvStats.isError ? "—" : t.videos_encontrados ?? 0, `${t.videos_indisponiveis ?? 0} indisponíveis · ${t.falhas_busca ?? 0} falhas`],
+                ["Cache HIT", tvStats.isError || hitPct === null ? "—" : `${hitPct}%`, `${hits} hits · ${misses} misses · ${t.cache_videos ?? 0} clipes no cache`],
+                ["Busca média", tvStats.isError ? "—" : `${t.tempo_medio_busca_ms ?? 0}ms`, `${t.curtidas ?? 0} curtidas · ${t.tv_aberturas ?? 0} aberturas de TV`],
+              ];
+              return cells.map(([label, value, hint]) => (
+                <div key={label} className="rounded-xl border border-zinc-200 bg-white p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
+                  <p className="mt-0.5 text-xl font-black text-zinc-900">{value}</p>
+                  <p className="text-[10px] font-medium text-zinc-400">{hint}</p>
+                </div>
+              ));
+            })()}
+          </div>
+          {tvStats.isError && (
+            <p className="px-4 pt-2 text-[11px] font-semibold text-amber-700">
+              ⓘ Telemetria Rádio+TV indisponível: {(tvStats.error as Error).message} — aplique a migration 20260727120000_radio_tv_mode.sql.
+            </p>
+          )}
+
+          {/* configurações (spec: PAINEL ADMIN) */}
+          <div className="grid gap-2 px-4 py-4 md:grid-cols-2">
+            {([
+              ["tv_enabled", "Habilitar modo TV", "desligado = o botão TV some do player"],
+              ["tv_autoplay", "Reprodução automática", "música trocou em modo TV → carrega o próximo clipe sozinho"],
+              ["tv_official_only", "Mostrar apenas vídeos oficiais", "ignora lyric/live/visualizer no fallback"],
+              ["tv_allow_lyric", "Permitir lyric videos", "2º da ordem de fallback"],
+              ["tv_allow_live", "Permitir apresentações ao vivo", "3º da ordem de fallback"],
+              ["tv_auto_quality", "Qualidade automática", "conexão lenta (2G/3G) limita a 480p; senão o player decide"],
+            ] as [keyof MediaCenterSettings, string, string][]).map(([k, label, hint]) => (
+              <label key={k} className="flex items-start gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={tvForm[k] === true}
+                  onChange={e => setTvForm(f => ({ ...f, [k]: e.target.checked }))}
+                />
+                <span>{label}<span className="block text-[10px] font-medium text-zinc-400">{hint}</span></span>
+              </label>
+            ))}
+            <label className="flex items-start gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-sm font-semibold">
+              <span className="min-w-0 flex-1">Limitar resolução
+                <span className="block text-[10px] font-medium text-zinc-400">
+                  teto manual do vídeo (vale com "Qualidade automática" desligada)
+                </span>
+              </span>
+              <select
+                value={tvForm.tv_max_resolution}
+                onChange={e => setTvForm(f => ({ ...f, tv_max_resolution: e.target.value as MediaCenterSettings["tv_max_resolution"] }))}
+                className="rounded-lg border border-zinc-300 px-2 py-1 text-sm"
+              >
+                <option value="auto">Automática</option>
+                <option value="360">até 360p</option>
+                <option value="480">até 480p</option>
+                <option value="720">até 720p</option>
+                <option value="1080">até 1080p</option>
+              </select>
+            </label>
+            <div className="flex flex-wrap items-center gap-2 md:col-span-2">
+              <button
+                onClick={saveTv}
+                disabled={tvBusy}
+                className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-5 py-2 text-sm font-black text-white shadow hover:bg-sky-700 disabled:opacity-50"
+              >
+                {tvBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Salvar modo TV
+              </button>
+              {tvMsg && <span className="text-sm font-semibold text-sky-800">{tvMsg}</span>}
+            </div>
+            <p className="flex items-start gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 md:col-span-2">
+              <Youtube className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                A busca automática usa a <b>YouTube Data API v3</b> pela edge function <code className="rounded bg-amber-100 px-1">media-video-search</code>.
+                Cadastre o secret <code className="rounded bg-amber-100 px-1">YOUTUBE_API_KEY</code> em Edge Functions → Secrets.
+                Sem a chave, o player mostra "Vídeo indisponível" e o áudio continua (o cache do banco segue funcionando).
+              </span>
+            </p>
+          </div>
+        </div>
 
         {/* AÇÕES + FILTROS */}
         <div className="mt-6 flex flex-wrap items-center gap-2">
