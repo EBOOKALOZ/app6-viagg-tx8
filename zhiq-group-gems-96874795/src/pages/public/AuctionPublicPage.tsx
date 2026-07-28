@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Gavel, Timer, TrendingUp, MapPin, Eye, Users, Zap, ArrowUp,
-  Clock, Shield, ChevronRight, Loader2, AlertTriangle, Crown, Flame,
+  Clock, Shield, ChevronRight, AlertTriangle, Crown, Flame,
   ShoppingCart, Search, ShoppingBag, Truck, Store, Tag, Heart, Share2
 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,10 +20,11 @@ import { GlobalCartDrawer } from "@/components/public/GlobalCartDrawer";
 import { OfertaRapidaModal } from "@/components/public/MiniCadastroModal";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
-import { CardDark, CardInfo, CardHighlight, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
+import { CardDark, CardInfo, CardHighlight, DarkBadge, DarkButton, CardImageOverlay, DarkSkeleton } from "@/components/ui/dark-card";
 import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StoreThemeScope } from "@/components/public/store/StoreThemeScope";
 import { useAdvertiserSummary } from "@/components/public/advertiser/AdvertiserSummaryCard";
+import { AuctionInfoPanel, AuctionCtaRow } from "@/components/public/auction/AuctionInfoPanel";
 
 // ─── Helpers ────────────────────────────
 
@@ -60,6 +61,24 @@ function useCountdown(endsAt: string) {
   }, [endsAt]);
 
   return { timeLeft, urgency };
+}
+
+// ─── Skeleton ────────────────────────────
+
+function AuctionPublicSkeleton() {
+  return (
+    <div className="max-w-lg mx-auto px-4 pt-6 pb-8 space-y-5">
+      <DarkSkeleton className="h-6 w-40 mx-auto rounded-full" />
+      <CardDark className="rounded-3xl p-6 space-y-5">
+        <DarkSkeleton className="aspect-[16/9] w-full rounded-2xl" />
+        <DarkSkeleton className="h-7 w-3/4 mx-auto" />
+        <DarkSkeleton className="h-4 w-1/3 mx-auto" />
+        <DarkSkeleton className="h-16 w-full rounded-2xl" />
+        <DarkSkeleton className="h-10 w-1/2 mx-auto" />
+        <DarkSkeleton className="h-14 w-full rounded-2xl" />
+      </CardDark>
+    </div>
+  );
 }
 
 // ─── Top Bar Component ──────────────────
@@ -291,39 +310,38 @@ export default function AuctionPublicPage() {
   };
 
   if (loading) {
-    if (isStoreContext) return (
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
-        </div>
-    );
+    if (isStoreContext) return <AuctionPublicSkeleton />;
 
     return (
       <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
-        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="👨‍⚖️ Leilões" myAccountPath="/minha-conta">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
-        </div>
+        mainClassName="flex flex-col bg-institutional-yellow" blueFooter blueFooterLabel="👨‍⚖️ Leilões" myAccountPath="/minha-conta">
+        <AuctionPublicSkeleton />
       </MarketLayout>
     );
   }
 
   if (!listing) {
-    if (isStoreContext) return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <AlertTriangle className="h-12 w-12 text-gray-400" />
-          <p className="text-gray-600 font-medium">Leilão não encontrado</p>
-          <Button variant="outline" onClick={handleBackToList}>Ver todos</Button>
+    const notFoundBlock = (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 px-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-[#1A1F24] border border-[#323A45] flex items-center justify-center">
+          <AlertTriangle className="h-8 w-8 text-[#FF7A00]" />
         </div>
+        <p className="font-black text-[#1B1F24]">Leilão não encontrado</p>
+        <p className="text-xs font-bold text-[#1B1F24]/70 max-w-xs">
+          Este anúncio pode ter sido encerrado, removido ou o link está incorreto.
+        </p>
+        <Button onClick={handleBackToList} className="bg-[#FF6A00] hover:bg-[#E65C00] h-11 px-5 rounded-2xl font-black">
+          Ver todos os leilões
+        </Button>
+      </div>
     );
+
+    if (isStoreContext) return notFoundBlock;
 
     return (
       <MarketLayout search={q} setSearch={setQ} headerChildren={<MarketNavButtons />} lockHeaderExpanded
-        mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="👨‍⚖️ Leilões" myAccountPath="/minha-conta">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <AlertTriangle className="h-12 w-12 text-gray-400" />
-          <p className="text-gray-600 font-medium">Leilão não encontrado</p>
-          <Button variant="outline" onClick={handleBackToList}>Ver todos</Button>
-        </div>
+        mainClassName="flex flex-col bg-institutional-yellow" blueFooter blueFooterLabel="👨‍⚖️ Leilões" myAccountPath="/minha-conta">
+        {notFoundBlock}
       </MarketLayout>
     );
   }
@@ -336,7 +354,7 @@ export default function AuctionPublicPage() {
       {/* ─── CABEÇALHO OFICIAL DA LOJA (mesmo componente dos demais módulos) ─── */}
       {storeInfo && !isStoreContext && (
         <StoreThemeScope appearance={storeInfo.appearance}>
-          <div className="w-full bg-[#F5E62B]">
+          <div className="w-full bg-institutional-yellow">
             <StoreHeader
               store={storeInfo}
               productsCount={advertiserData?.totalCount || 0}
@@ -428,9 +446,8 @@ export default function AuctionPublicPage() {
               className={`text-center py-4 rounded-2xl border shadow-md ${
                 isCrit ? "bg-red-500/10 border-red-500/40"
                 : isWarn ? "bg-amber-500/10 border-amber-500/40"
-                : "border-transparent"
+                : "bg-[#00C58E] border-transparent"
               }`}
-              style={isNormal ? { backgroundColor: "#00a300" } : undefined}
             >
               <p className={`text-[10px] uppercase tracking-widest mb-1 flex items-center justify-center gap-1 ${
                 isNormal ? "text-white/85" : "text-[#8E98A3]"
@@ -596,18 +613,12 @@ export default function AuctionPublicPage() {
           </CardInfo>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <CardInfo className="p-3 text-center">
-            <p className="text-[10px] text-[#8E98A3] uppercase mb-1">Condição</p>
-            <p className="text-sm font-bold text-white capitalize">{(listing as any).condition || "—"}</p>
-          </CardInfo>
-          <CardInfo className="p-3 text-center">
-            <p className="text-[10px] text-[#8E98A3] uppercase mb-1">Retirada</p>
-            <p className="text-sm font-bold text-white capitalize">
-              {(listing as any).fulfillment_type === "both" ? "Entrega & Retirada" : (listing as any).fulfillment_type === "delivery" ? "Entrega" : "Retirada"}
-            </p>
-          </CardInfo>
-        </div>
+        {/* Painel de informações do anúncio + CTAs em destaque (fundo escuro
+            próprio — esta seção da página fica sobre o amarelo do módulo) */}
+        <CardDark className="rounded-3xl p-4 md:p-6 space-y-5">
+          <AuctionInfoPanel listing={listing} />
+          <AuctionCtaRow listing={listing} isActive={isActive} onBid={handleBid} />
+        </CardDark>
 
         {/* Trust signals */}
         <div className="flex items-center justify-center gap-4 py-4 text-[10px] text-gray-600">
@@ -642,8 +653,10 @@ export default function AuctionPublicPage() {
   );
 
   if (isStoreContext) {
+      // Fundo institucional do módulo Leilões — bg-store-background não existe
+      // no Tailwind (classe morta): o tema da loja vazava e a página ficava branca.
       return (
-          <div className="flex-1 flex flex-col bg-store-background text-store-primary min-h-screen">
+          <div className="flex-1 flex flex-col bg-institutional-yellow min-h-screen">
               {content}
           </div>
       );
@@ -655,7 +668,7 @@ export default function AuctionPublicPage() {
       setSearch={setQ}
       headerChildren={<MarketNavButtons />}
       lockHeaderExpanded
-      mainClassName="flex flex-col bg-[#F5E62B]"
+      mainClassName="flex flex-col bg-institutional-yellow"
       blueFooter
       blueFooterLabel="👨‍⚖️ Leilões"
       myAccountPath="/minha-conta"

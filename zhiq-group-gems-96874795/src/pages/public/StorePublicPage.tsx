@@ -1032,13 +1032,14 @@ export default function StorePublicPage() {
                             const visible = filtered.slice(0, moreLimit);
                             const hasMore = filtered.length > moreLimit;
 
-                            // Banda amarela institucional (mesma cor das demais seções do módulo — bg-[#F5E62B]).
-                            // -mx cancela o px do container pai e o px interno o reaplica: conteúdo não desloca.
-                            // Tipografia da banda SEM classes st-*: o fundo é sempre amarelo institucional,
-                            // então título/subtítulo/chips não podem herdar cores claras de tema de lojista.
-                            // zinc-600 no lugar de zinc-500: 5,9:1 sobre #F5E62B (WCAG AA; zinc-500 dava 3,7:1).
+                            // Banda amarela institucional — token único bg-institutional-yellow (= #F5E62B
+                            // exato, tailwind.config). -mx cancela o px do container pai e o px interno o
+                            // reaplica: conteúdo não desloca. Tipografia da banda SEM classes st-*: o fundo
+                            // é sempre amarelo institucional, então título/subtítulo/chips não podem herdar
+                            // cores claras de tema de lojista. zinc-600 no lugar de zinc-500: 5,9:1 sobre
+                            // #F5E62B (WCAG AA; zinc-500 dava 3,7:1).
                             return (
-                                <div className="mt-8 -mx-4 lg:-mx-8 xl:-mx-12 px-4 lg:px-8 xl:px-12 py-6 bg-[#F5E62B] space-y-4">
+                                <div className="mt-8 -mx-4 lg:-mx-8 xl:-mx-12 px-4 lg:px-8 xl:px-12 py-6 bg-institutional-yellow space-y-4">
                                     <div className="flex flex-wrap items-end justify-between gap-2">
                                         <div>
                                             <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
@@ -1057,7 +1058,7 @@ export default function StorePublicPage() {
                                                 onClick={() => { setMoreCat("all"); setMoreLimit(12); }}
                                                 aria-pressed={moreCat === "all"}
                                                 className={cn(
-                                                    "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5E62B]",
+                                                    "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-institutional-yellow",
                                                     moreCat === "all" ? "bg-[#FF6A00] text-zinc-900" : "bg-white border border-zinc-200 text-zinc-600 hover:border-[#FF6A00]/40"
                                                 )}
                                             >
@@ -1069,7 +1070,7 @@ export default function StorePublicPage() {
                                                     onClick={() => { setMoreCat(cat); setMoreLimit(12); }}
                                                     aria-pressed={moreCat === cat}
                                                     className={cn(
-                                                        "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5E62B]",
+                                                        "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-institutional-yellow",
                                                         moreCat === cat ? "bg-[#FF6A00] text-zinc-900" : "bg-white border border-zinc-200 text-zinc-600 hover:border-[#FF6A00]/40"
                                                     )}
                                                 >
@@ -1096,7 +1097,7 @@ export default function StorePublicPage() {
                                                 <button
                                                     key="load-more"
                                                     onClick={() => setMoreLimit(l => l + 12)}
-                                                    className="h-full min-h-[260px] w-full rounded-[24px] border-2 border-dashed border-zinc-500 bg-white/60 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:border-zinc-900/60 hover:text-zinc-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5E62B]"
+                                                    className="h-full min-h-[260px] w-full rounded-[24px] border-2 border-dashed border-zinc-500 bg-white/60 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:border-zinc-900/60 hover:text-zinc-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-institutional-yellow"
                                                 >
                                                     <Sparkles className="w-6 h-6" />
                                                     <span className="text-xs font-black uppercase tracking-wider">
@@ -1376,11 +1377,10 @@ export default function StorePublicPage() {
                             const isLeiloes = activeTab === "leiloes";
                             const items = isLeiloes ? storeLeiloes : storeArremates;
                             return (
-                                // Leilões: painel sobre o amarelo institucional do módulo — padrão
-                                // único bg-[#F5E62B] (o token institutional-yellow foi removido por
-                                // divergir do hex canônico). Cards seguem brancos por contraste.
-                                // Arremates mantém o fundo neutro atual.
-                                <div className={cn("space-y-6", isLeiloes && "bg-[#F5E62B] rounded-3xl p-4 sm:p-6 lg:p-8")}>
+                                // Leilões: painel sobre o amarelo institucional do módulo — token
+                                // único bg-institutional-yellow (= #F5E62B exato). Cards seguem
+                                // brancos por contraste. Arremates mantém o fundo neutro atual.
+                                <div className={cn("space-y-6", isLeiloes && "bg-institutional-yellow rounded-3xl p-4 sm:p-6 lg:p-8")}>
                                     <div className="flex items-center gap-3">
                                         <div className={cn("w-11 h-11 rounded-2xl flex items-center justify-center shrink-0", isLeiloes ? "bg-[#FF6A00]/10 text-[#FF6A00]" : "bg-blue-500/10 text-blue-500")}>
                                             <Gavel className="w-5 h-5" />
@@ -1574,7 +1574,7 @@ export default function StorePublicPage() {
         <MarketLayout
             search={search}
             setSearch={setSearch}
-            mainClassName={appearance ? "flex flex-col" : "bg-[#F5E62B] flex flex-col"}
+            mainClassName={appearance ? "flex flex-col" : "bg-institutional-yellow flex flex-col"}
             blueFooter
             blueFooterLabel={`${publicModuleKey ? BUSINESS_MODULES[publicModuleKey].noun : "Loja"}: ${displayStore.store_name}`}
             headerChildren={<MarketNavButtons />}

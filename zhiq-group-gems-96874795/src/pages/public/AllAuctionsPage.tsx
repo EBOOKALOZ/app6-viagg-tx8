@@ -257,7 +257,7 @@ export default function AllAuctionsPage() {
           {/* Título */}
           <div className="space-y-3">
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white leading-none drop-shadow-lg">
-              LEILÕES E <span className="text-yellow-300 italic">ARRAMATES</span>
+              LEILÕES E <span className="text-yellow-300 italic">ARREMATES</span>
             </h1>
             <p className="text-xl text-white/90 font-medium max-w-3xl mx-auto tracking-tight">
               Produtos e oportunidades em disputa, com transparência, tempo real e uso de créditos.
@@ -287,13 +287,13 @@ export default function AllAuctionsPage() {
       </section>
 
       {/* MAIN CONTENT */}
-      <main className="min-h-screen bg-[#F5E62B]">
+      <main className="min-h-screen bg-institutional-yellow">
         <div className="container px-4 py-8 space-y-8">
 
           {/* FILTROS RÁPIDOS (topo da página) */}
           <div className="space-y-4">
             {/* Tabs de tipo (simples) */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setTypeFilter("all")}
                 className={`px-4 py-2 rounded-xl text-sm font-black whitespace-nowrap transition-all ${
@@ -334,7 +334,7 @@ export default function AllAuctionsPage() {
                 <select
                   value={cityFilter}
                   onChange={e => setCityFilter(e.target.value)}
-                  className="w-full h-12 rounded-xl border-0 bg-white px-4 text-sm font-bold shadow-md focus:ring-2 focus:ring-[#FF6A00] outline-none"
+                  className="w-full h-12 rounded-xl border-0 bg-white px-4 text-sm font-bold text-zinc-800 shadow-md focus:ring-2 focus:ring-[#FF6A00] outline-none"
                 >
                   <option value="all">Todas as cidades</option>
                   {cities.map(c => (
@@ -348,7 +348,7 @@ export default function AllAuctionsPage() {
                   <select
                     value={neighborhoodFilter}
                     onChange={e => setNeighborhoodFilter(e.target.value)}
-                    className="w-full h-12 rounded-xl border-0 bg-white px-4 text-sm font-bold shadow-md focus:ring-2 focus:ring-[#FF6A00] outline-none"
+                    className="w-full h-12 rounded-xl border-0 bg-white px-4 text-sm font-bold text-zinc-800 shadow-md focus:ring-2 focus:ring-[#FF6A00] outline-none"
                   >
                     <option value="all">Todos os bairros</option>
                     {neighborhoods.map(nb => (
@@ -362,7 +362,7 @@ export default function AllAuctionsPage() {
                 <select
                   value={sortOption}
                   onChange={e => setSortOption(e.target.value)}
-                  className="w-full h-12 rounded-xl border-0 bg-white px-4 text-sm font-bold shadow-md focus:ring-2 focus:ring-[#FF6A00] outline-none"
+                  className="w-full h-12 rounded-xl border-0 bg-white px-4 text-sm font-bold text-zinc-800 shadow-md focus:ring-2 focus:ring-[#FF6A00] outline-none"
                 >
                   <option value="ends_at">Encerrando primeiro</option>
                   <option value="price_asc">Menor lance</option>
@@ -376,11 +376,17 @@ export default function AllAuctionsPage() {
 
           {/* GRID DE LEILÕES */}
           {auctionsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-[#FF6A00]"></div>
-              <p className="text-sm font-bold text-[#A7B0BE] mt-4 uppercase tracking-widest">
-                Carregando leilões...
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="rounded-2xl bg-[#1A1F24] border border-[#323A45] overflow-hidden animate-pulse">
+                  <div className="aspect-[4/3] sm:aspect-[1.15] bg-[#252B33]" />
+                  <div className="p-5 sm:p-6 space-y-3">
+                    <div className="h-5 w-3/4 bg-[#252B33] rounded" />
+                    <div className="h-4 w-1/2 bg-[#252B33] rounded" />
+                    <div className="h-10 w-full bg-[#252B33] rounded-xl" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : sortedListings.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl shadow-lg border border-[#FF6A00]/20">

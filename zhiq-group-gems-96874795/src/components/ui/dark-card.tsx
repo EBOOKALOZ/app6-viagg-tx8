@@ -131,3 +131,8 @@ export function CardImageOverlay({ className }: { className?: string }) {
     />
   );
 }
+
+/** Bloco de skeleton no tom grafite oficial (substitui o spinner isolado nas telas dark). */
+export function DarkSkeleton({ className }: { className?: string }) {
+  return <div className={cn('animate-pulse rounded-xl bg-[#252B33]', className)} />;
+}

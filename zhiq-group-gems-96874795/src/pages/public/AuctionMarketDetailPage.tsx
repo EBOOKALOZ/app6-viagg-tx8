@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
-import { CardDark, CardInfo, DarkBadge, DarkButton, CardImageOverlay } from "@/components/ui/dark-card";
+import { CardDark, CardInfo, DarkBadge, DarkButton, CardImageOverlay, DarkSkeleton } from "@/components/ui/dark-card";
 import type { AuctionListing, AuctionBid } from "@/hooks/useAuctions";
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
@@ -24,8 +24,37 @@ import { AuctionQASection } from '@/components/public/auction/AuctionQASection';
 import { AuctionReportModal } from '@/components/public/auction/AuctionReportModal';
 import { AuctionTransparencyCenter } from '@/components/public/auction/AuctionTransparencyCenter';
 import { SellerTransparencyCenter } from '@/components/public/auction/SellerTransparencyCenter';
+import { AuctionInfoPanel, AuctionCtaRow, useAuctionStoreInfo } from '@/components/public/auction/AuctionInfoPanel';
 
 // ─── Helpers ────────────────────────────
+
+/** Esqueleto com a mesma silhueta da página (galeria + título + preço + CTAs). */
+function AuctionDetailSkeleton() {
+  return (
+    <div className="min-h-screen bg-institutional-yellow pb-12">
+      <section className="relative py-8 px-4">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <DarkSkeleton className="h-5 w-40 bg-black/10" />
+          <DarkSkeleton className="h-20 w-full rounded-3xl bg-black/10" />
+          <CardDark className="rounded-3xl">
+            <DarkSkeleton className="aspect-[4/3] md:aspect-[16/9] w-full rounded-none" />
+            <div className="p-6 md:p-8 space-y-6">
+              <DarkSkeleton className="h-8 w-3/4" />
+              <DarkSkeleton className="h-4 w-1/3" />
+              <DarkSkeleton className="h-28 w-full rounded-2xl" />
+              <DarkSkeleton className="h-24 w-full rounded-2xl" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <DarkSkeleton className="h-14 w-full rounded-2xl" />
+                <DarkSkeleton className="h-14 w-full rounded-2xl" />
+              </div>
+              <DarkSkeleton className="h-20 w-full rounded-2xl" />
+            </div>
+          </CardDark>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 function useLiveCountdown(endsAt: string) {
   const calc = () => {
@@ -112,21 +141,9 @@ export default function AuctionMarketDetailPage() {
     enabled: !!id,
   });
 
-  // Fetch store name (if applicable)
-  const { data: storeName } = useQuery({
-    queryKey: ["store-name", listing?.store_id],
-    queryFn: async () => {
-      if (!listing?.store_id) return null;
-      const { data } = await supabase
-        .from("merchant_stores")
-        .select("nome_loja")
-        .eq("id", listing.store_id)
-        .single();
-      
-      return data?.nome_loja || null;
-    },
-    enabled: !!listing?.store_id,
-  });
+  // Loja do leilão — fonte única compartilhada com o AuctionInfoPanel (sem query duplicada)
+  const { data: storeInfo } = useAuctionStoreInfo(listing?.store_id);
+  const storeName = storeInfo?.nome || null;
 
   // Increment view — via RPC SECURITY DEFINER (antes era UPDATE direto que
   // falhava sob RLS para visitantes; agora conta para qualquer um).
@@ -239,21 +256,24 @@ export default function AuctionMarketDetailPage() {
 
   if (loadingListing) {
     return (
-      <MarketLayout search="" setSearch={() => {}} hideCart={true} headerRight={null}>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-12 w-12 animate-spin text-[#FF6A00]" />
-        </div>
+      <MarketLayout search="" setSearch={() => {}} hideCart={true} headerRight={null} mainClassName="flex flex-col bg-institutional-yellow">
+        <AuctionDetailSkeleton />
       </MarketLayout>
     );
   }
 
   if (!listing) {
     return (
-      <MarketLayout search="" setSearch={() => {}} hideCart={true} headerRight={null}>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-          <AlertTriangle className="h-16 w-16 text-[#FF6A00]/30" />
+      <MarketLayout search="" setSearch={() => {}} hideCart={true} headerRight={null} mainClassName="flex flex-col bg-institutional-yellow">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4 text-center">
+          <div className="w-20 h-20 rounded-full bg-[#1A1F24] border border-[#323A45] flex items-center justify-center">
+            <AlertTriangle className="h-9 w-9 text-[#FF7A00]" />
+          </div>
           <h2 className="text-2xl font-black text-[#1B1F24]">Leilão não encontrado</h2>
-          <Button onClick={() => navigate("/mercado/leiloes")} className="bg-[#FF6A00] hover:bg-[#E65C00]">
+          <p className="text-sm font-bold text-[#1B1F24]/70 max-w-sm">
+            Este anúncio pode ter sido encerrado, removido ou o link está incorreto.
+          </p>
+          <Button onClick={() => navigate("/mercado/leiloes")} className="bg-[#FF6A00] hover:bg-[#E65C00] h-12 px-6 rounded-2xl font-black">
             <ChevronLeft className="w-4 h-4 mr-2" /> Voltar aos Leilões
           </Button>
         </div>
@@ -290,7 +310,7 @@ export default function AuctionMarketDetailPage() {
         </div>
       }
     >
-      <div className="min-h-screen bg-[#F5E62B] pb-12">
+      <div className="min-h-screen bg-institutional-yellow pb-12">
         {/* ── HERO / DECISION BLOCK ── */}
         <section className="relative py-8 px-4">
           <div className="max-w-4xl mx-auto space-y-6">
@@ -476,6 +496,12 @@ export default function AuctionMarketDetailPage() {
                   </div>
                 )}
 
+                {/* Painel de informações do anúncio (abaixo da descrição) */}
+                <AuctionInfoPanel listing={listing} />
+
+                {/* CTAs em destaque após os blocos informativos */}
+                <AuctionCtaRow listing={listing} isActive={!!isActive} onBid={handleBid} />
+
                 {/* Bids history */}
                 {bids.length > 0 && (
                   <div className="space-y-3">
@@ -516,20 +542,6 @@ export default function AuctionMarketDetailPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Conditions */}
-                <div className="grid grid-cols-2 gap-4">
-                  <CardInfo className="p-4 text-center">
-                    <p className="text-xs uppercase tracking-wider text-[#8E98A3] mb-1">Entrega</p>
-                    <p className="font-bold text-white capitalize">
-                      {(listing as any).fulfillment_type === "both" ? "Entrega/Retirada" : (listing as any).fulfillment_type || "Retirada"}
-                    </p>
-                  </CardInfo>
-                  <CardInfo className="p-4 text-center">
-                    <p className="text-xs uppercase tracking-wider text-[#8E98A3] mb-1">Status</p>
-                    <p className="font-bold text-white capitalize">{listing.status}</p>
-                  </CardInfo>
-                </div>
 
                 {/* Report Section */}
                 <div className="pt-4 border-t border-[#323A45] flex justify-end">

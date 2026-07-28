@@ -195,7 +195,7 @@ export const MarketAuctionCard: React.FC<MarketAuctionCardProps> = ({ listing, v
               ARREMATE
             </DarkBadge>
           )}
-          <DarkBadge tone="green" className={cn("shadow-md backdrop-blur-md font-black uppercase text-[10px] tracking-wide", condColor)}>
+          <DarkBadge className={cn("shadow-md backdrop-blur-md font-black uppercase text-[10px] tracking-wide", condColor)}>
             {condLabel}
           </DarkBadge>
         </div>

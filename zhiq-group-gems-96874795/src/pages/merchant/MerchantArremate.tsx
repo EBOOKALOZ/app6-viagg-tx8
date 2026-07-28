@@ -44,18 +44,53 @@ function formatBRL(value: number) {
   return `R$ ${value.toFixed(2).replace(".", ",")}`;
 }
 
+function CountdownTimer({ endsAt, onEnd }: { endsAt: string; onEnd?: () => void }) {
+  const [now, setNow] = useState(Date.now());
+  const [hasEnded, setHasEnded] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const diff = new Date(endsAt).getTime() - now;
+
+  useEffect(() => {
+    if (diff <= 0 && !hasEnded) {
+      setHasEnded(true);
+      if (onEnd) onEnd();
+    }
+  }, [diff, hasEnded, onEnd]);
+
+  if (diff <= 0) return <span className="text-red-500 font-black uppercase tracking-widest text-[10px]">Encerrado</span>;
+
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+
+  const isUrgent = diff < 3600000;
+
+  return (
+    <span className={`font-mono font-black tabular-nums tracking-tighter ${isUrgent ? "text-red-500 animate-pulse" : "text-[#FF6A00]"}`}>
+      {d > 0 && `${d}d `}
+      {h.toString().padStart(2, "0")}:{m.toString().padStart(2, "0")}:{s.toString().padStart(2, "0")}
+    </span>
+  );
+}
+
 // ─── KPI Card ───────────────────────────
 function KPICard({ icon: Icon, label, value, color, accent }: {
   icon: typeof Tag; label: string; value: number; color: string; accent: string;
 }) {
   return (
-    <div className="bg-[#1B1F24] rounded-2xl p-4 shadow-lg shadow-black/20 border border-[#2A3038] flex items-center gap-4 min-w-0 hover:border-[#FF6A00]/30 transition-all group">
+    <div className="bg-[#1A1F24] rounded-2xl p-4 shadow-lg shadow-black/20 border border-[#323A45] flex items-center gap-4 min-w-0 hover:border-[#FF6A00]/30 transition-all group">
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${accent}`}>
         <Icon className={`h-6 w-6 ${color}`} />
       </div>
       <div className="min-w-0">
-        <p className="text-2xl font-black text-[#F5F7FA] leading-tight">{value}</p>
-        <p className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.1em] truncate">{label}</p>
+        <p className="text-2xl font-black text-[#FFFFFF] leading-tight">{value}</p>
+        <p className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.1em] truncate">{label}</p>
       </div>
     </div>
   );
@@ -121,8 +156,8 @@ function ArremateOfferCard({
         isAccepted
           ? "bg-emerald-500/10 border-emerald-500/30 shadow-lg shadow-emerald-500/5"
           : isRejected
-          ? "bg-[#1B1F24]/50 border-[#2A3038] opacity-60"
-          : "bg-[#1B1F24] border-[#2A3038] shadow-xl shadow-black/20 hover:border-[#FF6A00]/30"
+          ? "bg-[#1A1F24]/50 border-[#323A45] opacity-60"
+          : "bg-[#1A1F24] border-[#323A45] shadow-xl shadow-black/20 hover:border-[#FF6A00]/30"
       }`}
     >
       {/* ── Status Banner ── */}
@@ -184,21 +219,21 @@ function ArremateOfferCard({
       <div className="p-5 space-y-4">
         {/* ── Product Info ── */}
         {listing && (
-          <div className="flex items-center gap-4 bg-[#14171B] border border-[#2A3038] rounded-2xl p-3 hover:border-[#FF6A01]/20 transition-all">
+          <div className="flex items-center gap-4 bg-[#252B33] border border-[#323A45] rounded-2xl p-3 hover:border-[#FF6A01]/20 transition-all">
             {listing.product_image_url ? (
-              <img src={listing.product_image_url} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0 border border-[#2A3038]" />
+              <img src={listing.product_image_url} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0 border border-[#323A45]" />
             ) : (
-              <div className="w-16 h-16 rounded-xl bg-[#0D0F12] flex items-center justify-center shrink-0 border border-[#2A3038]">
-                <Package className="h-7 w-7 text-[#A7B0BE]/30" />
+              <div className="w-16 h-16 rounded-xl bg-[#1A1F24] flex items-center justify-center shrink-0 border border-[#323A45]">
+                <Package className="h-7 w-7 text-[#8E98A3]/30" />
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-[#F5F7FA] truncate">{listing.title}</p>
+              <p className="text-sm font-black text-[#FFFFFF] truncate">{listing.title}</p>
               {listing.starting_bid > 0 && (
-                <p className="text-xs font-bold text-[#A7B0BE]">Base: {formatBRL(listing.starting_bid)}</p>
+                <p className="text-xs font-bold text-[#8E98A3]">Base: {formatBRL(listing.starting_bid)}</p>
               )}
               {listing.description && (
-                <p className="text-[11px] text-[#A7B0BE]/70 truncate mt-1">{listing.description}</p>
+                <p className="text-[11px] text-[#8E98A3]/70 truncate mt-1">{listing.description}</p>
               )}
             </div>
             <span className="text-[10px] font-black uppercase px-3 py-1.5 rounded-xl bg-[#FF6A00]/10 text-[#FF6A00] border border-[#FF6A00]/20 shrink-0">
@@ -210,15 +245,15 @@ function ArremateOfferCard({
         {/* ── Offer Value (hero) ── */}
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#A7B0BE] font-black mb-1">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#8E98A3] font-black mb-1">
               Valor Ofertado
             </p>
             <div className="flex items-baseline gap-2">
-              <p className={`text-3xl font-black tracking-tight ${isAccepted ? "text-emerald-400" : "text-[#F5F7FA]"}`}>
+              <p className={`text-3xl font-black tracking-tight ${isAccepted ? "text-emerald-400" : "text-[#FFFFFF]"}`}>
                 {formatBRL(offerValueReais)}
               </p>
               {(offer.quantity || 1) > 1 && (
-                <span className="text-sm font-black text-[#A7B0BE]">
+                <span className="text-sm font-black text-[#8E98A3]">
                   ×{offer.quantity} unit.
                 </span>
               )}
@@ -235,9 +270,9 @@ function ArremateOfferCard({
 
         {/* ── Customer Info ── */}
         <div className={`rounded-2xl p-4 space-y-3 ${
-          isAccepted ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-[#14171B] border border-[#2A3038]"
+          isAccepted ? "bg-emerald-500/5 border border-emerald-500/20" : "bg-[#252B33] border border-[#323A45]"
         }`}>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-[#A7B0BE] font-black flex items-center gap-2">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-[#8E98A3] font-black flex items-center gap-2">
             <Users className="h-3.5 w-3.5 text-[#FF6A00]" /> Dados do Cliente
           </p>
 
@@ -249,22 +284,22 @@ function ArremateOfferCard({
                 {offer.customer_name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-black text-[#F5F7FA] truncate uppercase">{offer.customer_name}</p>
+                <p className="text-sm font-black text-[#FFFFFF] truncate uppercase">{offer.customer_name}</p>
                 {offer.customer_whatsapp && (
-                  <p className="text-xs font-bold text-[#A7B0BE] font-mono">
+                  <p className="text-xs font-bold text-[#8E98A3] font-mono">
                     {offer.customer_whatsapp.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")}
                   </p>
                 )}
               </div>
             </div>
           ) : (
-            <p className="text-xs text-[#A7B0BE] italic">Informações do cliente não disponíveis</p>
+            <p className="text-xs text-[#8E98A3] italic">Informações do cliente não disponíveis</p>
           )}
 
           {offer.message && (
-            <div className="flex items-start gap-2 pt-2 border-t border-[#2A3038]">
+            <div className="flex items-start gap-2 pt-2 border-t border-[#323A45]">
               <MessageSquare className="h-3.5 w-3.5 text-[#FF6A00] shrink-0 mt-0.5" />
-              <p className="text-xs font-medium text-[#A7B0BE] leading-relaxed italic">"{offer.message}"</p>
+              <p className="text-xs font-medium text-[#8E98A3] leading-relaxed italic">"{offer.message}"</p>
             </div>
           )}
         </div>
@@ -665,7 +700,7 @@ export default function MerchantArremate() {
   return (
     <div className="px-4 pt-4 pb-28 lg:px-10 xl:px-16 max-w-5xl w-full mx-auto space-y-5">
       {/* ═══ HEADER ═══ */}
-      <div className="flex items-center justify-between bg-[#1B1F24] border border-[#2A3038] p-6 rounded-3xl shadow-2xl shadow-black/40">
+      <div className="flex items-center justify-between bg-[#1A1F24] border border-[#323A45] p-6 rounded-3xl shadow-2xl shadow-black/40">
         <div className="flex items-center gap-4">
           {(() => {
             const storeImage = normalizeImageUrl(merchantStore?.logo_url);
@@ -681,14 +716,14 @@ export default function MerchantArremate() {
           })()}
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-3xl font-black text-[#F5F7FA] tracking-tight uppercase">Arremate</h1>
+              <h1 className="text-3xl font-black text-[#FFFFFF] tracking-tight uppercase">Arremate</h1>
               {merchantStore?.nome_loja && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#FF6A00]/10 border border-[#FF6A00]/30 text-[#FF6A00] text-xs font-bold uppercase tracking-wider">
                   {merchantStore.nome_loja}
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-bold text-[#A7B0BE] uppercase tracking-[0.2em] mt-1 opacity-70">
+            <p className="text-[11px] font-bold text-[#8E98A3] uppercase tracking-[0.2em] mt-1 opacity-70">
               Venda Direta • Ofertas • Conversão Real
             </p>
           </div>
@@ -696,9 +731,9 @@ export default function MerchantArremate() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="w-12 h-12 rounded-2xl border border-[#2A3038] bg-[#14171B] flex items-center justify-center hover:border-[#FF6A01]/40 hover:bg-[#1B1F24] transition-all disabled:opacity-50 group"
+          className="w-12 h-12 rounded-2xl border border-[#323A45] bg-[#252B33] flex items-center justify-center hover:border-[#FF6A01]/40 hover:bg-[#1A1F24] transition-all disabled:opacity-50 group"
         >
-          <RefreshCw className={`h-5 w-5 text-[#A7B0BE] group-hover:text-[#FF6A00] ${refreshing ? "animate-spin" : ""}`} />
+          <RefreshCw className={`h-5 w-5 text-[#8E98A3] group-hover:text-[#FF6A00] ${refreshing ? "animate-spin" : ""}`} />
         </button>
       </div>
 
@@ -738,12 +773,12 @@ export default function MerchantArremate() {
       <div className="space-y-4">
         {/* Search */}
         <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#A7B0BE] group-focus-within:text-[#FF6A00] transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#8E98A3] group-focus-within:text-[#FF6A00] transition-colors" />
           <Input
             placeholder="Buscar por produto ou cliente..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] shadow-2xl shadow-black/20 text-sm font-bold text-[#F5F7FA] focus:border-[#FF6A00]/50 transition-all placeholder:text-[#A7B0BE]/40 w-full"
+            className="pl-12 h-14 rounded-2xl border-[#323A45] bg-[#1A1F24] shadow-2xl shadow-black/20 text-sm font-bold text-[#FFFFFF] focus:border-[#FF6A00]/50 transition-all placeholder:text-[#8E98A3]/40 w-full"
           />
         </div>
 
@@ -756,12 +791,12 @@ export default function MerchantArremate() {
               className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
                 statusFilter === key
                   ? "bg-[#FF6A00] border-[#FF6A00] text-white shadow-xl shadow-[#FF6A00]/20"
-                  : "bg-[#1B1F24] border-[#2A3038] text-[#A7B0BE] hover:border-[#FF6A00]/30 hover:text-[#F5F7FA]"
+                  : "bg-[#1A1F24] border-[#323A45] text-[#8E98A3] hover:border-[#FF6A00]/30 hover:text-[#FFFFFF]"
               }`}
             >
               {label}
               <span className={`px-2 py-0.5 rounded-full text-[9px] ${
-                statusFilter === key ? "bg-white/20 text-white" : "bg-[#14171B] text-[#A7B0BE]"
+                statusFilter === key ? "bg-white/20 text-white" : "bg-[#252B33] text-[#8E98A3]"
               }`}>
                 {count}
               </span>
@@ -778,35 +813,35 @@ export default function MerchantArremate() {
         const intentionCost = usageRules?.find(r => r.feature_code === 'purchase_intention_received')?.credits_cost ?? 5;
         const acceptCost    = contactCost + intentionCost;
         return (
-          <div className="bg-[#1B1F24] rounded-2xl border border-[#2A3038] px-5 py-4 shadow-xl shadow-black/20 border-l-4 border-l-[#FF6A00]">
+          <div className="bg-[#1A1F24] rounded-2xl border border-[#323A45] px-5 py-4 shadow-xl shadow-black/20 border-l-4 border-l-[#FF6A00]">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 shrink-0">
                 <div className="p-2 rounded-lg bg-[#FF6A00]/10">
                   <Coins className="h-5 w-5 text-[#FF6A00]" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-black text-[#F5F7FA] uppercase tracking-wider block">Regras de Créditos</span>
-                  <p className="text-[10px] font-bold text-[#A7B0BE]">Investimento para conversão direta</p>
+                  <span className="text-[11px] font-black text-[#FFFFFF] uppercase tracking-wider block">Regras de Créditos</span>
+                  <p className="text-[10px] font-bold text-[#8E98A3]">Investimento para conversão direta</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-tighter">Criar Arremate</span>
+                  <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Criar Arremate</span>
                   <span className="text-sm font-black text-[#FF6A00]">{publishCost} CRÉDITOS</span>
                 </div>
-                <div className="w-px h-8 bg-[#2A3038]" />
+                <div className="w-px h-8 bg-[#323A45]" />
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-tighter">Encerrar Arremate</span>
+                  <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Encerrar Arremate</span>
                   <span className="text-sm font-black text-amber-400">{endCost} CRÉDITOS</span>
                 </div>
-                <div className="w-px h-8 bg-[#2A3038]" />
+                <div className="w-px h-8 bg-[#323A45]" />
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-tighter">Aceitar Oferta</span>
+                  <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Aceitar Oferta</span>
                   <span className="text-sm font-black text-emerald-400">{acceptCost} CRÉDITOS</span>
                 </div>
-                <div className="w-px h-8 bg-[#2A3038]" />
+                <div className="w-px h-8 bg-[#323A45]" />
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-tighter">Recusar Oferta</span>
+                  <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Recusar Oferta</span>
                   <span className="text-sm font-black text-red-400">GRÁTIS</span>
                 </div>
               </div>
@@ -827,7 +862,7 @@ export default function MerchantArremate() {
       {/* ═══ MEUS ARREMATES PUBLICADOS ═══ */}
       {arremateListings.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-black text-[#F5F7FA] flex items-center gap-2 uppercase tracking-widest">
+          <h2 className="text-sm font-black text-[#FFFFFF] flex items-center gap-2 uppercase tracking-widest">
             <Tag className="h-5 w-5 text-[#FF6A00]" />
             Meus Arremates Publicados ({arremateListings.length})
           </h2>
@@ -840,55 +875,59 @@ export default function MerchantArremate() {
               const endsAt = new Date(listing.ends_at);
               const now = new Date();
               const isExpired = endsAt <= now;
+              const isOngoing = listing.status === 'active' || listing.status === 'approved' || (listing.status !== 'ended' && listing.status !== 'cancelled' && listing.status !== 'sold' && !isExpired);
 
               return (
                 <div key={listing.id} className={`rounded-3xl border overflow-hidden transition-all duration-300 shadow-2xl shadow-black/20 ${
                   isActive && !isExpired
-                    ? "bg-[#1B1F24] border-[#2A3038] hover:border-[#FF6A00]/40"
-                    : "bg-[#14171B] border-[#2A3038] opacity-60"
+                    ? "bg-[#1A1F24] border-[#323A45] hover:border-[#FF6A00]/40"
+                    : "bg-[#252B33] border-[#323A45] opacity-60"
                 }`}>
                   {/* Header badge */}
-                  <div className="bg-[#14171B] border-b border-[#2A3038] px-5 py-3 flex items-center justify-between">
+                  <div className="bg-[#252B33] border-b border-[#323A45] px-5 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Tag className="h-4 w-4 text-[#FF6A00]" />
-                      <span className="text-[10px] font-black text-[#F5F7FA] uppercase tracking-widest">Arremate Ativo</span>
+                      <span className="text-[10px] font-black text-[#FFFFFF] uppercase tracking-widest">Arremate Ativo</span>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide ${
-                      isActive && !isExpired
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-gray-800 text-gray-500"
-                    }`}>
-                      {isActive && !isExpired ? "Publicado" : "Encerrado"}
-                    </span>
+                    {isActive && !isExpired ? (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3 w-3 text-[#FF6A00]" />
+                        <CountdownTimer endsAt={listing.ends_at} onEnd={() => endAuction.mutate(listing.id, { onSuccess: () => refetchMyListings() })} />
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide bg-gray-800 text-gray-500">
+                        Encerrado
+                      </span>
+                    )}
                   </div>
 
                   <div className="p-5 space-y-5">
                     {/* Product info */}
                     <div className="flex items-center gap-4">
                       {listing.product_image_url ? (
-                        <img src={listing.product_image_url} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-[#2A3038] shadow-lg" />
+                        <img src={listing.product_image_url} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-[#323A45] shadow-lg" />
                       ) : (
-                        <div className="w-16 h-16 rounded-2xl bg-[#0D0F12] flex items-center justify-center shrink-0 border border-[#2A3038]">
-                          <Package className="h-7 w-7 text-[#A7B0BE]/30" />
+                        <div className="w-16 h-16 rounded-2xl bg-[#1A1F24] flex items-center justify-center shrink-0 border border-[#323A45]">
+                          <Package className="h-7 w-7 text-[#8E98A3]/30" />
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[#F5F7FA] truncate uppercase tracking-tight">{listing.title}</p>
+                        <p className="text-sm font-black text-[#FFFFFF] truncate uppercase tracking-tight">{listing.title}</p>
                         <p className="text-sm font-black text-[#FF6A00] mt-0.5">{formatBRL(listing.starting_bid)}</p>
                       </div>
                     </div>
 
                     {/* Offer stats */}
-                    <div className="flex items-center gap-4 text-[11px] font-bold text-[#A7B0BE] bg-[#14171B] p-3 rounded-2xl border border-[#2A3038]">
+                    <div className="flex items-center gap-4 text-[11px] font-bold text-[#8E98A3] bg-[#252B33] p-3 rounded-2xl border border-[#323A45]">
                       {listingOffers.length === 0 ? (
-                        <span className="flex items-center gap-2 italic text-[#A7B0BE]/30">
+                        <span className="flex items-center gap-2 italic text-[#8E98A3]/30">
                           <Clock className="h-4 w-4" />
                           Aguardando ofertas...
                         </span>
                       ) : (
                         <div className="flex items-center gap-4">
-                          <span className="text-[#A7B0BE]/70">
-                            <span className="font-black text-[#F5F7FA]">{listingOffers.length}</span> oferta{listingOffers.length > 1 ? "s" : ""}
+                          <span className="text-[#8E98A3]/70">
+                            <span className="font-black text-[#FFFFFF]">{listingOffers.length}</span> oferta{listingOffers.length > 1 ? "s" : ""}
                           </span>
                           {pendingCount > 0 && (
                             <span className="text-amber-400 font-black animate-pulse flex items-center gap-1">
@@ -905,14 +944,14 @@ export default function MerchantArremate() {
                     </div>
 
                     {/* Created date */}
-                    <p className="text-[10px] font-bold text-[#A7B0BE]/40 uppercase tracking-widest">
+                    <p className="text-[10px] font-bold text-[#8E98A3]/40 uppercase tracking-widest">
                       Criado em {new Date(listing.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                     </p>
 
                     {/* ── Action Buttons ── */}
-                    <div className="flex gap-2 pt-2 border-t border-[#2A3038]">
+                    <div className="flex gap-2 pt-2 border-t border-[#323A45]">
                       <button
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black text-[#F5F7FA] bg-[#14171B] border border-[#2A3038] hover:border-[#FF6A00]/40 transition-all uppercase tracking-widest"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black text-[#FFFFFF] bg-[#252B33] border border-[#323A45] hover:border-[#FF6A00]/40 transition-all uppercase tracking-widest"
                         onClick={() => {
                           setConfigProduct({
                             id: listing.id,
@@ -973,19 +1012,21 @@ export default function MerchantArremate() {
                           <><PlayCircle className="h-4 w-4" /> Ativar</>  
                         )}
                       </button>
-                      <button
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black text-red-500 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all uppercase tracking-widest"
-                        onClick={() => {
-                          if (confirm("Tem certeza que deseja excluir este arremate?")) {
-                            deleteListing.mutate(listing.id, {
-                              onSuccess: () => refetchMyListings(),
-                            });
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Excluir
-                      </button>
+                      {!isOngoing && (
+                        <button
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[11px] font-black text-red-500 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-all uppercase tracking-widest"
+                          onClick={() => {
+                            if (confirm("Tem certeza que deseja excluir este arremate?")) {
+                              deleteListing.mutate(listing.id, {
+                                onSuccess: () => refetchMyListings(),
+                              });
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Excluir
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1002,21 +1043,21 @@ export default function MerchantArremate() {
             <Loader2 className="h-12 w-12 animate-spin text-[#FF6A00]" />
             <div className="absolute inset-0 blur-lg bg-[#FF6A00]/20 animate-pulse" />
           </div>
-          <p className="text-sm font-bold text-[#A7B0BE] mt-4 uppercase tracking-widest">Sincronizando Arremates...</p>
+          <p className="text-sm font-bold text-[#8E98A3] mt-4 uppercase tracking-widest">Sincronizando Arremates...</p>
         </div>
       ) : filteredOffers.length === 0 ? (
-        <div className="text-center py-24 bg-[#1B1F24] rounded-3xl border border-[#2A3038] shadow-2xl shadow-black/40">
-          <div className="w-24 h-24 rounded-full bg-[#14171B] border border-[#2A3038] flex items-center justify-center mx-auto mb-6 shadow-inner">
+        <div className="text-center py-24 bg-[#1A1F24] rounded-3xl border border-[#323A45] shadow-2xl shadow-black/40">
+          <div className="w-24 h-24 rounded-full bg-[#252B33] border border-[#323A45] flex items-center justify-center mx-auto mb-6 shadow-inner">
             <Tag className="h-10 w-10 text-[#FF6A00]/40" />
           </div>
-          <h3 className="text-xl font-black text-[#F5F7FA] mb-2 uppercase tracking-tight">
+          <h3 className="text-xl font-black text-[#FFFFFF] mb-2 uppercase tracking-tight">
             {searchQuery ? "Nenhum resultado" :
               statusFilter === "all" ? "Nenhuma oferta de arremate" :
               `Nenhuma oferta ${statusFilter === "pending" ? "pendente" : statusFilter === "accepted" ? "aceita" : "recusada"}`}
           </h3>
-          <p className="text-sm font-medium text-[#A7B0BE] max-w-md mx-auto px-6 leading-relaxed">
+          <p className="text-sm font-medium text-[#8E98A3] max-w-md mx-auto px-6 leading-relaxed">
             {searchQuery ? "Tente ajustar seus termos de busca." :
-              <>As ofertas enviadas por seus clientes aparecerão instantaneamente aqui. <br/><span className="text-[#A7B0BE]/70 text-xs mt-2 block">Nota: Os produtos para inserir no arremate devem estar cadastrados na loja.</span></>}
+              <>As ofertas enviadas por seus clientes aparecerão instantaneamente aqui. <br/><span className="text-[#8E98A3]/70 text-xs mt-2 block">Nota: Os produtos para inserir no arremate devem estar cadastrados na loja.</span></>}
           </p>
         </div>
       ) : (
@@ -1038,7 +1079,7 @@ export default function MerchantArremate() {
 
       {/* ═══ PRODUCT PICKER MODAL (Fluxo Completo) ═══ */}
       <Dialog open={showProductPicker} onOpenChange={setShowProductPicker}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto bg-[#14171B] border-[#2A3038] text-[#F5F7FA]">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto bg-[#252B33] border-[#323A45] text-[#FFFFFF]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight">
               <div className="p-2 rounded-xl bg-[#FF6A00]/10">
@@ -1046,12 +1087,12 @@ export default function MerchantArremate() {
               </div>
               Publicar Arremate
             </DialogTitle>
-            <DialogDescription className="text-[#A7B0BE] font-bold">Vincule um produto do seu catálogo para criar uma oferta estratégica.</DialogDescription>
+            <DialogDescription className="text-[#8E98A3] font-bold">Vincule um produto do seu catálogo para criar uma oferta estratégica.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 pt-4">
-            <div className="space-y-4 p-4 rounded-2xl bg-[#1B1F24] border border-[#2A3038] shadow-inner">
-              <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1">Buscar no Catálogo</Label>
+            <div className="space-y-4 p-4 rounded-2xl bg-[#1A1F24] border border-[#323A45] shadow-inner">
+              <Label className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.2em] ml-1">Buscar no Catálogo</Label>
               
               <div className="flex flex-col gap-3">
                 <Popover open={searchOpen} onOpenChange={setSearchOpen}>
@@ -1060,7 +1101,7 @@ export default function MerchantArremate() {
                       variant="outline"
                       role="combobox"
                       aria-expanded={searchOpen}
-                      className="w-full justify-between bg-[#14171B] border-[#2A3038] text-[#F5F7FA] hover:bg-[#1B1F24] h-14 rounded-2xl font-bold"
+                      className="w-full justify-between bg-[#252B33] border-[#323A45] text-[#FFFFFF] hover:bg-[#1A1F24] h-14 rounded-2xl font-bold"
                     >
                       <div className="flex items-center gap-3">
                          <Search className="h-4 w-4 text-[#FF6A00]" />
@@ -1071,11 +1112,11 @@ export default function MerchantArremate() {
                       <ChevronRight className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", searchOpen && "rotate-90")} />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-[#1B1F24] border-[#2A3038] shadow-2xl">
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-[#1A1F24] border-[#323A45] shadow-2xl">
                     <Command className="bg-transparent">
                       <CommandInput placeholder="Digite o nome..." className="text-white" />
                       <CommandList className="max-h-[300px]">
-                        <CommandEmpty className="py-6 text-center text-[#A7B0BE] font-bold">Nenhum produto encontrado.</CommandEmpty>
+                        <CommandEmpty className="py-6 text-center text-[#8E98A3] font-bold">Nenhum produto encontrado.</CommandEmpty>
                         <CommandGroup heading="Seu Catálogo">
                           {storeProducts.map((product) => (
                             <CommandItem
@@ -1093,11 +1134,11 @@ export default function MerchantArremate() {
                                 setShowProductPicker(false);
                                 setShowConfigModal(true);
                               }}
-                              className="hover:bg-[#FF6A00]/10 cursor-pointer text-[#A7B0BE] hover:text-white flex items-center justify-between p-3"
+                              className="hover:bg-[#FF6A00]/10 cursor-pointer text-[#8E98A3] hover:text-white flex items-center justify-between p-3"
                             >
                               <div className="flex items-center gap-3">
                                 {product.image_url && (
-                                  <img src={product.image_url} alt="" className="w-8 h-8 rounded-lg object-cover border border-[#2A3038]" />
+                                  <img src={product.image_url} alt="" className="w-8 h-8 rounded-lg object-cover border border-[#323A45]" />
                                 )}
                                 <div className="flex flex-col">
                                   <span className="font-bold text-sm">{product.name}</span>
@@ -1114,15 +1155,15 @@ export default function MerchantArremate() {
                 </Popover>
 
                 <div className="flex items-center gap-2">
-                  <div className="h-px bg-[#2A3038] flex-1" />
-                  <span className="text-[9px] font-black text-[#A7B0BE] uppercase tracking-[0.2em]">ou</span>
-                  <div className="h-px bg-[#2A3038] flex-1" />
+                  <div className="h-px bg-[#323A45] flex-1" />
+                  <span className="text-[9px] font-black text-[#8E98A3] uppercase tracking-[0.2em]">ou</span>
+                  <div className="h-px bg-[#323A45] flex-1" />
                 </div>
 
                 <Button 
                   variant="outline" 
                   onClick={() => navigate('/anunciante/meus-anuncios')}
-                  className="w-full h-12 rounded-xl border-dashed border-[#2A3038] text-[9px] font-black uppercase tracking-widest gap-2 bg-[#FF6A00]/5 text-[#FF6A00] hover:bg-[#FF6A00]/10"
+                  className="w-full h-12 rounded-xl border-dashed border-[#323A45] text-[9px] font-black uppercase tracking-widest gap-2 bg-[#FF6A00]/5 text-[#FF6A00] hover:bg-[#FF6A00]/10"
                 >
                   <Plus className="w-4 h-4" /> Cadastrar Novo Produto (Fluxo Completo)
                 </Button>
@@ -1134,7 +1175,7 @@ export default function MerchantArremate() {
 
       {/* ═══ CONFIG MODAL ═══ */}
       <Dialog open={showConfigModal} onOpenChange={(o) => { setShowConfigModal(o); if (!o) setConfigProduct(null); }}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#14171B] border-[#2A3038] text-[#F5F7FA]">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-[#252B33] border-[#323A45] text-[#FFFFFF]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl font-black uppercase tracking-tight">
               <div className="p-2 rounded-xl bg-[#FF6A00]/10">
@@ -1142,7 +1183,7 @@ export default function MerchantArremate() {
               </div>
               Configurar Arremate
             </DialogTitle>
-            <DialogDescription className="text-[#A7B0BE] font-bold">
+            <DialogDescription className="text-[#8E98A3] font-bold">
               Defina as regras da oferta para o produto selecionado.
             </DialogDescription>
           </DialogHeader>
@@ -1150,16 +1191,16 @@ export default function MerchantArremate() {
           {configProduct && (
             <div className="space-y-6 py-4">
               {/* Product preview */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1B1F24] border border-[#2A3038] shadow-inner">
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#1A1F24] border border-[#323A45] shadow-inner">
                 {configProduct.image_url ? (
-                  <img src={configProduct.image_url} alt={configProduct.name} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-[#2A3038]" />
+                  <img src={configProduct.image_url} alt={configProduct.name} className="w-16 h-16 rounded-xl object-cover shrink-0 border border-[#323A45]" />
                 ) : (
-                  <div className="w-16 h-16 rounded-xl bg-[#14171B] flex items-center justify-center shrink-0 border border-[#2A3038]">
-                    <Package className="h-7 w-7 text-[#A7B0BE]/20" />
+                  <div className="w-16 h-16 rounded-xl bg-[#252B33] flex items-center justify-center shrink-0 border border-[#323A45]">
+                    <Package className="h-7 w-7 text-[#8E98A3]/20" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-black text-xs text-[#F5F7FA] truncate uppercase tracking-tight">{configProduct.name}</p>
+                  <p className="font-black text-xs text-[#FFFFFF] truncate uppercase tracking-tight">{configProduct.name}</p>
                   <p className="text-sm font-black text-[#FF6A00]">{formatBRL(configProduct.price || 0)}</p>
                 </div>
                 <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-full bg-[#FF6A00]/20 text-[#FF6A00] tracking-widest border border-[#FF6A00]/30 shadow-lg shadow-[#FF6A00]/10">PRODUTO BASE</span>
@@ -1167,7 +1208,7 @@ export default function MerchantArremate() {
 
               {/* Preço de oportunidade */}
               <div className="space-y-2">
-                <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1">Preço do Arremate (R$) <span className="text-red-500">*</span></Label>
+                <Label className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.2em] ml-1">Preço do Arremate (R$) <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[#FF6A00]">R$</span>
                   <Input 
@@ -1176,7 +1217,7 @@ export default function MerchantArremate() {
                     placeholder="0,00" 
                     value={configForm.starting_price}
                     onChange={(e) => setConfigForm(f => ({ ...f, starting_price: e.target.value }))} 
-                    className="pl-12 h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] font-black text-[#F5F7FA] text-lg focus:border-[#FF6A00]/50 shadow-xl shadow-black/10"
+                    className="pl-12 h-14 rounded-2xl border-[#323A45] bg-[#1A1F24] font-black text-[#FFFFFF] text-lg focus:border-[#FF6A00]/50 shadow-xl shadow-black/10"
                   />
                 </div>
               </div>
@@ -1184,24 +1225,24 @@ export default function MerchantArremate() {
               {/* Custo de crédito + Quantidade */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1">Custo Unlocking</Label>
-                  <div className="flex items-center gap-3 h-14 px-4 rounded-2xl border border-[#2A3038] bg-[#14171B] shadow-inner">
+                  <Label className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.2em] ml-1">Custo Unlocking</Label>
+                  <div className="flex items-center gap-3 h-14 px-4 rounded-2xl border border-[#323A45] bg-[#252B33] shadow-inner">
                     <Coins className="h-5 w-5 text-emerald-400" />
                     <div className="flex flex-col">
                       <span className="text-sm font-black text-emerald-400">7 CRÉDITOS</span>
-                      <span className="text-[8px] text-[#A7B0BE] font-bold uppercase tracking-tight italic">Por contato liberado</span>
+                      <span className="text-[8px] text-[#8E98A3] font-bold uppercase tracking-tight italic">Por contato liberado</span>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1">Quantidade</Label>
+                  <Label className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.2em] ml-1">Quantidade</Label>
                   <Input 
                     type="number" 
                     min="1" 
                     placeholder="1" 
                     value={configForm.quantity}
                     onChange={(e) => setConfigForm(f => ({ ...f, quantity: e.target.value }))} 
-                    className="h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] font-black text-[#F5F7FA] text-lg focus:border-[#FF6A00]/50 shadow-xl shadow-black/10 text-center"
+                    className="h-14 rounded-2xl border-[#323A45] bg-[#1A1F24] font-black text-[#FFFFFF] text-lg focus:border-[#FF6A00]/50 shadow-xl shadow-black/10 text-center"
                   />
                 </div>
               </div>
@@ -1209,21 +1250,21 @@ export default function MerchantArremate() {
               {/* Data início / fim */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1">Início</Label>
+                  <Label className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.2em] ml-1">Início</Label>
                   <Input 
                     type="datetime-local" 
                     value={configForm.start_date}
                     onChange={(e) => setConfigForm(f => ({ ...f, start_date: e.target.value }))} 
-                    className="h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] font-bold text-[#F5F7FA] text-sm focus:border-[#FF6A00]/50 shadow-xl shadow-black/10"
+                    className="h-14 rounded-2xl border-[#323A45] bg-[#1A1F24] font-bold text-[#FFFFFF] text-sm focus:border-[#FF6A00]/50 shadow-xl shadow-black/10"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-[#A7B0BE] uppercase tracking-[0.2em] ml-1">Término</Label>
+                  <Label className="text-[10px] font-black text-[#8E98A3] uppercase tracking-[0.2em] ml-1">Término</Label>
                   <Input 
                     type="datetime-local" 
                     value={configForm.end_date}
                     onChange={(e) => setConfigForm(f => ({ ...f, end_date: e.target.value }))} 
-                    className="h-14 rounded-2xl border-[#2A3038] bg-[#1B1F24] font-bold text-[#F5F7FA] text-sm focus:border-[#FF6A00]/50 shadow-xl shadow-black/10"
+                    className="h-14 rounded-2xl border-[#323A45] bg-[#1A1F24] font-bold text-[#FFFFFF] text-sm focus:border-[#FF6A00]/50 shadow-xl shadow-black/10"
                   />
                 </div>
               </div>

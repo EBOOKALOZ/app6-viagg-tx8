@@ -9,11 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import {
-  Gavel, MapPin, Loader2, Truck,
+  Gavel, MapPin, Truck,
   Sparkles, Trophy, ShieldCheck, BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CardDark } from "@/components/ui/dark-card";
+import { CardDark, DarkSkeleton } from "@/components/ui/dark-card";
 import { MarketAuctionCard } from "@/components/advertiser/MarketAuctionCard";
 import { AuctionCarousel } from "@/components/public/AuctionCarousel";
 import type { AuctionListing } from "@/hooks/useAuctions";
@@ -156,13 +156,13 @@ export default function AuctionListPage() {
       search={search}
       setSearch={setSearch}
       headerChildren={<MarketNavButtons />}
-      mainClassName="flex flex-col bg-[#F5E62B]"
+      mainClassName="flex flex-col bg-institutional-yellow"
       blueFooter
       blueFooterLabel="🏷️ Leilões"
       myAccountPath="/minha-conta"
     >
       {/* ═══ TRUST BAR (futurista) ═══ */}
-      <div className="relative bg-[#F5E62B] border-b border-yellow-600/40 overflow-hidden shadow-md">
+      <div className="relative bg-institutional-yellow border-b border-yellow-600/40 overflow-hidden shadow-md">
         {/* linha de scan neon */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
         <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 flex items-center justify-center gap-5 sm:gap-7 text-[11px] font-bold text-[#1A1F24]">
@@ -209,7 +209,7 @@ export default function AuctionListPage() {
           </div>
 
           {/* Type tabs */}
-          <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-center gap-4 py-3 w-full">
             {[
               { key: "all" as const, label: "Todos", icon: Sparkles, count: listings.length },
               { key: "auction" as const, label: "Leilões", icon: Gavel, count: auctionCount },
@@ -242,14 +242,20 @@ export default function AuctionListPage() {
       </div>
 
       {/* ═══ LISTINGS GRID ═══ */}
-      <div className="flex-1" style={{ backgroundColor: '#F5E62B' }}>
+      <div className="flex-1 bg-institutional-yellow">
         <div className="w-full px-4 lg:px-6 py-6">
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="text-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-[#0284C7] mx-auto" />
-                <p className="text-sm text-gray-400">Carregando leilões...</p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-2">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <CardDark key={i} className="overflow-hidden">
+                  <DarkSkeleton className="aspect-[4/3] sm:aspect-[1.15] rounded-none" />
+                  <div className="p-5 sm:p-6 space-y-3">
+                    <DarkSkeleton className="h-5 w-3/4" />
+                    <DarkSkeleton className="h-4 w-1/2" />
+                    <DarkSkeleton className="h-10 w-full rounded-xl" />
+                  </div>
+                </CardDark>
+              ))}
             </div>
           ) : filteredListings.length === 0 ? (
             <CardDark className="text-center py-20">
