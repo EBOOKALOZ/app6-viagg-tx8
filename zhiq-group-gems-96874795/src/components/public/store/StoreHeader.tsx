@@ -24,6 +24,7 @@ export interface StoreInfo {
     banner_url: string | null;
     description: string | null;
     categoria?: string | null;
+    appearance?: any | null;
 }
 
 export interface ProfileConfig {
@@ -253,32 +254,20 @@ export function StoreHeader({ store, stats, productsCount, whatsappNumber, onSha
 
     const toggleFollow = async () => {
         console.log("[StoreHeader] toggleFollow clicked", { storeKey, isFollowing, userId: user?.id, anonId });
-        if (isFollowing) {
-            // Unfollow
-            const q = (supabase.from("store_followers" as any).delete().eq("store_key", storeKey)) as any;
-            const { error, count } = user?.id
-                ? await q.eq("user_id", user.id)
-                : await q.eq("visitor_anon_id", anonId);
-            console.log("[StoreHeader] unfollow result", { error, count });
-            if (error) { toast.error("Erro ao deixar de seguir: " + error.message); return; }
-            toast.success("Você deixou de seguir esta loja.");
-        } else {
-            // Follow
-            const payload = {
-                store_key: storeKey,
-                user_id: user?.id ?? null,
-                visitor_anon_id: user?.id ? null : anonId,
-            };
-            console.log("[StoreHeader] follow payload", payload);
-            const { error, data } = await (supabase.from("store_followers" as any).insert(payload).select()) as any;
-            console.log("[StoreHeader] follow result", { error, data });
-            if (error) {
-                if (error.code === "23505") toast.info("Você já segue esta loja.");
-                else toast.error("Erro ao seguir: " + (error.message || error.code || "desconhecido"));
-                return;
-            }
-            toast.success("Agora você segue esta loja! 🎉");
+        // Follow/unfollow via RPC SECURITY DEFINER (escrita anônima direta em
+        // tabela foi revogada); a RPC decide seguir/deixar de seguir pelo
+        // estado atual e retorna { following, followers }
+        const { data: res, error } = await (supabase.rpc as any)("toggle_store_follow", {
+            p_store_key: storeKey,
+            p_visitor_anon_id: user?.id ? null : anonId,
+        });
+        console.log("[StoreHeader] toggle_store_follow result", { res, error });
+        if (error || (res && res.ok === false)) {
+            toast.error("Erro ao atualizar seguidor: " + (error?.message || res?.error || "desconhecido"));
+            return;
         }
+        if (res?.following) toast.success("Agora você segue esta loja! 🎉");
+        else toast.success("Você deixou de seguir esta loja.");
         queryClient.invalidateQueries({ queryKey: ["store-followers-count", storeKey] });
         queryClient.invalidateQueries({ queryKey: ["store-followers-mine", storeKey] });
     };

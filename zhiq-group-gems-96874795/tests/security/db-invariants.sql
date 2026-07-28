@@ -19,7 +19,12 @@ BEGIN
   SELECT count(*) INTO v_n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
   WHERE n.nspname='public' AND p.prosecdef AND p.prorettype<>'trigger'::regtype
     AND has_function_privilege('anon', p.oid, 'EXECUTE')
-    AND (p.proname ~* 'pay_|wallet|ledger|escrow|payout|commission|credit|settle|withdraw|financial|profit|balance|finance|auth_email|moderat|admin_apply|merchant_split|payment_split');
+    AND (p.proname ~* 'pay_|wallet|ledger|escrow|payout|commission|credit|settle|withdraw|financial|profit|balance|finance|auth_email|moderat|admin_apply|merchant_split|payment_split')
+    -- exceção: gates booleanos puros (STABLE, sem side effects, false p/ anon)
+    -- chamados por policies de leitura pública — negar EXECUTE a anon estoura
+    -- 42501 na leitura anônima em vez de aplicar a policy (mesmo racional do
+    -- hotfix 20260727024000 p/ is_admin)
+    AND p.proname NOT IN ('is_financial_admin');
   IF v_n > 0 THEN RAISE EXCEPTION 'INV2 FALHOU: % função(ões) financeira/sensível executável por anon', v_n; END IF;
 
   -- 3) Nenhuma view financeira non-invoker legível por anon
@@ -37,7 +42,11 @@ BEGIN
     AND NOT (p.prosrc ~* 'auth\.uid|is_admin|is_platform_admin|has_role|assert|guard')
     AND p.proname NOT IN ('submit_marketplace_order','register_product_inquiry',
       'charge_vehicle_listing_click','charge_vehicle_interest_click','charge_service_interest_click',
-      'charge_freight_interest_click','charge_travel_interest_click');
+      'charge_freight_interest_click','charge_travel_interest_click',
+      -- contador benigno de views chamado por visitantes anônimos em 3 páginas
+      -- públicas de leilão (AuctionPublicPage/AuctionMarketDetailPage/
+      -- ArrematePublicPage), fire-and-forget; sem impacto financeiro
+      'increment_auction_view');
   IF v_n > 0 THEN RAISE EXCEPTION 'INV4 FALHOU: % função(ões) mutante(s) sem guarda executável(is) por anon fora da allowlist', v_n; END IF;
 
   -- 5) Ledger pay_* íntegro: saldo da conta = último balance_after

@@ -149,20 +149,27 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                 return;
             }
 
-            // Insert discount request
-            const { error } = await (supabase.from("discount_requests") as any).insert({
-                product_id: product.id,
-                store_id: product.merchant_store_id,
-                product_price: product.price_label || null,
-                customer_name: customerName.trim(),
-                customer_phone: phoneClean,
-                customer_email: customerEmail.trim() || null,
-                requested_price: priceNum,
-                message: message.trim() || "Tenho interesse neste produto. A loja aceita este valor?",
-                status: "pending",
+            // Pedido de desconto via RPC SECURITY DEFINER (escrita anônima
+            // direta em tabela foi revogada — padrão charge_*/submit_*)
+            const { data: rpcRes, error } = await (supabase.rpc as any)("submit_discount_request", {
+                p_product_id: product.id,
+                p_store_id: product.merchant_store_id,
+                p_customer_name: customerName.trim(),
+                p_customer_phone: phoneClean,
+                p_requested_price: priceNum,
+                p_customer_email: customerEmail.trim() || null,
+                p_product_price: product.price_label || null,
+                p_message: message.trim() || null,
             });
 
             if (error) throw error;
+            if (rpcRes && rpcRes.ok === false) {
+                if (rpcRes.error === "rate_limited") {
+                    toast.error("Limite de pedidos atingido. Tente novamente em 10 minutos.");
+                    return;
+                }
+                throw new Error(String(rpcRes.error || "falha ao enviar pedido"));
+            }
 
             // Dispara e-mail ao lojista + confirmação ao comprador (sem depender do trigger SQL)
             supabase.functions.invoke('swift-action', {

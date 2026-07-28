@@ -54,7 +54,7 @@ async function detectLocation(fallbackCity?: string | null): Promise<DetectedLoc
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.id) {
-      const { data: profile } = await (supabase.from("profiles") as any)
+      const { data: profile } = await (supabase.from("profiles") as never)
         .select("cidade, bairro")
         .eq("id", user.id)
         .single();
@@ -98,18 +98,16 @@ export function trackProductEvent(params: TrackEventParams): void {
   (async () => {
     try {
       const location = await detectLocation(params.city);
-      const userId = (await supabase.auth.getUser()).data?.user?.id || null;
 
-      await (supabase.from("product_interest_events") as any).insert({
-        product_id: params.product_id,
-        store_id: params.store_id || null,
-        city: params.city || location.city,
-        neighborhood: params.neighborhood || location.neighborhood,
-        event_type: params.event_type,
-        source: params.source || "landing",
-        user_id: userId,
-        session_id: getSessionId(),
-        metadata: params.metadata || {},
+      // RPC SECURITY DEFINER — o INSERT direto antigo enviava colunas
+      // inexistentes (store_id/user_id/session_id/metadata) e falhava
+      // silenciosamente; a RPC grava apenas o schema real da tabela
+      await (supabase.rpc as never as (fn: string, args: object) => Promise<unknown>)("track_product_interest", {
+        p_product_id: params.product_id,
+        p_event_type: params.event_type,
+        p_city: params.city || location.city,
+        p_neighborhood: params.neighborhood || location.neighborhood,
+        p_source: params.source || "landing",
       });
     } catch (err) {
       // Fail-safe: never interrupt user experience

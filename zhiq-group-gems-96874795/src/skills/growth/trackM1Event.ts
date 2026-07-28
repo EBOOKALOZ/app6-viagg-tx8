@@ -104,22 +104,22 @@ export function trackM1Event(params: TrackM1EventParams): void {
   (async () => {
     try {
       const urlSource = getSourceFromURL();
-      const visitorId = (await supabase.auth.getUser()).data?.user?.id || null;
 
-      await (supabase.from("m1_billing_events") as any).insert({
-        merchant_store_id: params.merchant_store_id,
-        product_id: params.product_id || null,
-        event_type: params.event_type,
-        source_type: params.source_type || urlSource.source_type,
-        source_id: params.source_id || urlSource.source_id,
-        campaign_id: params.campaign_id || urlSource.campaign_id,
-        city: params.city || null,
-        region: params.region || null,
-        bairro: params.bairro || null,
-        session_id: getM1SessionId(),
-        visitor_user_id: visitorId,
-        sale_value_cents: params.sale_value_cents || 0,
-        metadata: params.metadata || {},
+      // RPC SECURITY DEFINER (escrita anônima direta em tabela foi revogada);
+      // visitor_user_id é resolvido server-side via auth.uid()
+      await (supabase.rpc as never as (fn: string, args: object) => Promise<unknown>)("track_m1_event", {
+        p_merchant_store_id: params.merchant_store_id,
+        p_event_type: params.event_type,
+        p_session_id: getM1SessionId(),
+        p_product_id: params.product_id || null,
+        p_source_type: params.source_type || urlSource.source_type,
+        p_source_id: params.source_id || urlSource.source_id,
+        p_campaign_id: params.campaign_id || urlSource.campaign_id,
+        p_city: params.city || null,
+        p_region: params.region || null,
+        p_bairro: params.bairro || null,
+        p_sale_value_cents: params.sale_value_cents || 0,
+        p_metadata: params.metadata || {},
       });
     } catch (err) {
       // Fail-safe: never interrupt user experience
