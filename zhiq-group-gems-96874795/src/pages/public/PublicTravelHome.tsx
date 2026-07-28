@@ -7,7 +7,7 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketTravelCard } from "@/components/travel/MarketTravelCard";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { TRAVEL_CATEGORIES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
-import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
+import { resolveTravelMediaUrl } from "@/lib/viagem/travelMedia";
 import { Plane, Loader2 } from "lucide-react";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { CategoryFilterBar } from "@/components/ui/CategoryFilterBar";
@@ -78,13 +78,13 @@ export default function PublicTravelHome() {
       if (rows.length === 0) return [];
       const ids = rows.map((r: any) => r.id);
       const { data: media } = await (supabase.from("travel_media") as any)
-        .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+        .select("listing_id, bucket, storage_path, public_url, moderation_status, sort_order")
         .in("listing_id", ids)
         .order("sort_order", { ascending: true });
       const mediaMap = new Map<string, string>();
       for (const row of (media as any[]) || []) {
         if (!mediaMap.has(row.listing_id)) {
-          const url = resolveTravelMediaRow(row);
+          const url = resolveTravelMediaUrl(row);
           if (url) mediaMap.set(row.listing_id, url);
         }
       }
@@ -173,7 +173,7 @@ export default function PublicTravelHome() {
       setSearch={setSearch}
       showSearch
       headerChildren={<MarketNavButtons />}
-      mainClassName="flex flex-col bg-[#F5E62B]"
+      mainClassName="flex flex-col bg-institutional-yellow"
       blueFooter
       blueFooterLabel="Viagens & Turismo"
       hideStoreNav
@@ -182,7 +182,7 @@ export default function PublicTravelHome() {
       <InstitutionalSafetyBanner />
 
       {/* ─── 1. HERO ENXUTO (sem botão de anunciar) ─── */}
-      <div className="w-full px-4 lg:px-6 pt-6 bg-[#F5E62B]">
+      <div className="w-full px-4 lg:px-6 pt-6 bg-institutional-yellow">
         <div className="max-w-[1920px] mx-auto flex flex-col items-center text-center gap-2">
           <div className="flex items-center gap-2 justify-center">
             <div className="p-2 bg-sky-600/10 rounded-lg">
@@ -229,7 +229,7 @@ export default function PublicTravelHome() {
       )}
 
       {isLoading ? (
-        <div className="w-full py-8 bg-[#F5E62B]">
+        <div className="w-full py-8 bg-institutional-yellow">
           <div className="max-w-[1920px] mx-auto px-4 lg:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 justify-items-center">
             {Array.from({ length: 8 }).map((_, i) => <TravelCardSkeleton key={i} />)}
           </div>
@@ -241,7 +241,7 @@ export default function PublicTravelHome() {
           <p className="text-zinc-500">Volte em breve — novas ofertas chegam toda semana.</p>
         </div>
       ) : (
-        <div className="w-full py-8 bg-[#F5E62B]">
+        <div className="w-full py-8 bg-institutional-yellow">
           <div className="max-w-[1920px] mx-auto space-y-10">
 
             {/* ─── 2. VITRINES DE DESTAQUE (só na visão "Todas") ─── */}

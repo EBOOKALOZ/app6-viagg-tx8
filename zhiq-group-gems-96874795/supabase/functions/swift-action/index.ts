@@ -166,7 +166,7 @@ interface Recipient {
   optedOut: boolean;
 }
 
-async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipient> {
+async function resolveRecipient(supabase: unknown, ev: EventPayload): Promise<Recipient> {
   // Resolve o destinatário por store_id.
   if (ev.store_id) {
     const { data: store } = await supabase
@@ -191,7 +191,9 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
             return { email: ownerEmail, name: store.nome_loja || "", optedOut: false };
           }
         }
-      } catch {}
+      } catch {
+        // Ignora erro caso usuário não exista no auth admin
+      }
       const { data: profile } = await supabase
         .from("profiles")
         .select("email, name")
@@ -295,7 +297,7 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
 }
 
 // Nome da loja (p/ o e-mail de confirmação ao comprador: "a loja X recebeu...").
-async function resolveStoreName(supabase: any, ev: EventPayload): Promise<string> {
+async function resolveStoreName(supabase: unknown, ev: EventPayload): Promise<string> {
   if (ev.advertiser_user_id) {
     const { data } = await supabase
       .from("merchant_stores")
@@ -318,7 +320,7 @@ async function resolveStoreName(supabase: any, ev: EventPayload): Promise<string
 
 // E-mail + nome do COMPRADOR (oferta) a partir do user_id. profiles primeiro,
 // auth como fallback p/ o e-mail.
-async function resolveBuyer(supabase: any, userId?: string): Promise<{ email: string | null; name: string }> {
+async function resolveBuyer(supabase: unknown, userId?: string): Promise<{ email: string | null; name: string }> {
   if (!userId) return { email: null, name: "" };
   const { data: profile } = await supabase
     .from("profiles")
@@ -337,7 +339,7 @@ async function resolveBuyer(supabase: any, userId?: string): Promise<{ email: st
 // Best-effort: busca título (+ preço) e imagem do anúncio pelo listing_id,
 // cobrindo os módulos product / real_estate / vehicle. Assim o bloco do produto
 // aparece no e-mail de lead independente do tipo de anúncio.
-async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
+async function resolveListing(supabase: unknown, ev: EventPayload): Promise<void> {
   if (!ev.listing_id) return;
   const mod = ev.listing_module || "product";
 
@@ -407,7 +409,7 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
       .select("public_masked_storage_path, moderation_status, sort_order")
       .eq("listing_id", ev.listing_id)
       .order("sort_order", { ascending: true });
-    const ok = (media || []).find((m: any) =>
+    const ok = (media || []).find((m: Record<string, unknown>) =>
       m.public_masked_storage_path &&
       ["approved", "approved_clean", "approved_masked"].includes(m.moderation_status)
     );
@@ -545,7 +547,7 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
 
 // Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
 // quando a edge function roda, pois o net.http_post é disparado após o commit).
-async function resolveOrderImage(supabase: any, ev: EventPayload): Promise<void> {
+async function resolveOrderImage(supabase: unknown, ev: EventPayload): Promise<void> {
   if (!ev.intention_id) return;
   const { data: item } = await supabase
     .from("purchase_intention_items")
@@ -906,7 +908,7 @@ function gatewayLabel(name?: string | null): string {
  *  Usa o access_token do gateway ativo (FASE 1: resolver central — config por
  *  ambiente → env vars → legado payment_gateways). Best-effort:
  *  retorna null se não houver token, pagamento ou URL de comprovante. */
-async function fetchMpReceiptUrl(supabase: any, providerPaymentId: string): Promise<string | null> {
+async function fetchMpReceiptUrl(supabase: unknown, providerPaymentId: string): Promise<string | null> {
   try {
     if (!/^\d+$/.test(String(providerPaymentId))) return null; // só payment_id numérico do MP
     const resolved = await resolveMpGateway(supabase);
@@ -917,11 +919,11 @@ async function fetchMpReceiptUrl(supabase: any, providerPaymentId: string): Prom
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
-    const p: any = await res.json().catch(() => ({}));
+    const p: Record<string, unknown> = await res.json().catch(() => ({}));
     // Comprovante oficial: PIX/boleto expõem ticket_url / external_resource_url.
     return (
-      p?.point_of_interaction?.transaction_data?.ticket_url ||
-      p?.transaction_details?.external_resource_url ||
+      ((p?.point_of_interaction as Record<string, unknown>)?.transaction_data as Record<string, unknown>)?.ticket_url as string ||
+      (p?.transaction_details as Record<string, unknown>)?.external_resource_url as string ||
       null
     );
   } catch (_e) {
@@ -930,10 +932,10 @@ async function fetchMpReceiptUrl(supabase: any, providerPaymentId: string): Prom
 }
 
 /** Preenche ev com os dados de pagamento da ordem (best-effort) p/ o comprovante. */
-async function enrichPaymentReceipt(supabase: any, ev: EventPayload): Promise<void> {
+async function enrichPaymentReceipt(supabase: unknown, ev: EventPayload): Promise<void> {
   if (!ev.order_id) return;
   try {
-    const { data: o } = await supabase
+    const { data: o } = await (supabase as never)
       .from("pay_payment_orders")
       .select("amount, provider_name, provider_payment_id, paid_at, metadata")
       .eq("id", ev.order_id)

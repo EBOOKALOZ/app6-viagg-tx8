@@ -79,7 +79,8 @@ export function useMerchantPayWallet() {
     if (!user?.id) return;
     (async () => {
       try {
-        const { data } = await (supabase.from("merchant_stores") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data } = await supabase.from("merchant_stores")
           .select("id")
           .eq("user_id", user.id)
           .single();
@@ -95,7 +96,8 @@ export function useMerchantPayWallet() {
       if (!storeId) return [];
 
       // Fetch real product prices for accurate mapping
-      const { data: productsData } = await (supabase.from("merchant_credit_products") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: productsData } = await supabase.from("merchant_credit_products")
         .select("id, name, slug, price_cents, price_brl, credits_base, credits_bonus, credits_amount, credits_total");
 
       // Build multiple lookup maps for matching
@@ -121,7 +123,8 @@ export function useMerchantPayWallet() {
       };
 
       // Get credit entries from merchant_credit_ledger
-      const { data: ledgerData } = await (supabase.from("merchant_credit_ledger") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: ledgerData } = await supabase.from("merchant_credit_ledger")
         .select("id, created_at, amount, reason_code, description, metadata")
         .eq("store_id", storeId)
         .eq("entry_type", "credit")
@@ -130,28 +133,29 @@ export function useMerchantPayWallet() {
 
       if (!ledgerData) return [];
 
-      return ledgerData.map((e: any) => {
-        const productName = e.metadata?.product_slug
-          ? e.description || e.metadata.product_slug
-          : e.description || MODULE_LABELS[e.reason_code] || e.reason_code;
+      return ledgerData.map((e: Record<string, unknown>) => {
+        const metadata = (e.metadata as Record<string, unknown>) || {};
+        const productName = metadata.product_slug
+          ? (e.description as string) || (metadata.product_slug as string)
+          : (e.description as string) || MODULE_LABELS[e.reason_code as string] || (e.reason_code as string);
 
         // Resolve real price: metadata → key lookup → name-in-description → credits match → 0
-        const priceCents = e.metadata?.price_cents
-          || e.metadata?.amount_cents
-          || priceByKey[e.metadata?.product_slug]
-          || priceByKey[e.metadata?.product_id]
-          || findPriceInText(e.description)
-          || findPriceInText(e.metadata?.product_name)
+        const priceCents = Number(metadata.price_cents)
+          || Number(metadata.amount_cents)
+          || priceByKey[metadata.product_slug as string]
+          || priceByKey[metadata.product_id as string]
+          || findPriceInText(e.description as string)
+          || findPriceInText(metadata.product_name as string)
           || priceByKey[`credits_${e.amount}`]
           || 0;
 
         return {
-          id: e.id,
-          created_at: e.created_at,
+          id: e.id as string,
+          created_at: e.created_at as string,
           amount_cents: priceCents,
-          credits_added: e.amount,
+          credits_added: Number(e.amount) || 0,
           product_name: productName,
-          reason_code: e.reason_code,
+          reason_code: e.reason_code as string,
           status: "confirmed",
         };
       });
@@ -166,7 +170,8 @@ export function useMerchantPayWallet() {
     queryFn: async (): Promise<MerchantPayModuleConsumption[]> => {
       if (!storeId) return [];
 
-      const { data } = await (supabase.from("merchant_credit_ledger") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data } = await supabase.from("merchant_credit_ledger")
         .select("reason_code, amount")
         .eq("store_id", storeId)
         .eq("entry_type", "debit");
@@ -175,10 +180,10 @@ export function useMerchantPayWallet() {
 
       // Group by reason_code
       const byModule: Record<string, { credits: number; count: number }> = {};
-      data.forEach((e: any) => {
-        const key = e.reason_code || "unknown";
+      data.forEach((e: Record<string, unknown>) => {
+        const key = (e.reason_code as string) || "unknown";
         if (!byModule[key]) byModule[key] = { credits: 0, count: 0 };
-        byModule[key].credits += e.amount;
+        byModule[key].credits += Number(e.amount) || 0;
         byModule[key].count += 1;
       });
 
@@ -199,21 +204,22 @@ export function useMerchantPayWallet() {
     queryFn: async (): Promise<MerchantPayDebitEntry[]> => {
       if (!storeId) return [];
 
-      const { data } = await (supabase.from("merchant_credit_ledger") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data } = await supabase.from("merchant_credit_ledger")
         .select("id, created_at, amount, reason_code, description, balance_after, purchase_intention_id")
         .eq("store_id", storeId)
         .eq("entry_type", "debit")
         .order("created_at", { ascending: false })
         .limit(30);
 
-      return (data || []).map((e: any) => ({
-        id: e.id,
-        created_at: e.created_at,
-        amount: e.amount,
-        reason_code: e.reason_code,
-        description: e.description || MODULE_LABELS[e.reason_code] || "Movimentação",
-        balance_after: e.balance_after ?? 0,
-        purchase_intention_id: e.purchase_intention_id,
+      return (data || []).map((e: Record<string, unknown>) => ({
+        id: e.id as string,
+        created_at: e.created_at as string,
+        amount: Number(e.amount) || 0,
+        reason_code: e.reason_code as string,
+        description: (e.description as string) || MODULE_LABELS[e.reason_code as string] || "Movimentação",
+        balance_after: e.balance_after !== undefined && e.balance_after !== null ? Number(e.balance_after) : 0,
+        purchase_intention_id: (e.purchase_intention_id as string) || null,
       }));
     },
     enabled: !!storeId,
@@ -227,7 +233,8 @@ export function useMerchantPayWallet() {
       if (!storeId) return { avgDailyConsumption: 0, daysRemaining: 999, suggestedPackage: "pacote-20", urgency: "low" };
 
       // Get balance
-      const { data: balData } = await (supabase.from("merchant_credit_balances") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: balData } = await supabase.from("merchant_credit_balances")
         .select("available_credits")
         .eq("store_id", storeId)
         .maybeSingle();
@@ -238,13 +245,14 @@ export function useMerchantPayWallet() {
       const twoWeeksAgo = new Date();
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-      const { data: recentDebits } = await (supabase.from("merchant_credit_ledger") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: recentDebits } = await supabase.from("merchant_credit_ledger")
         .select("amount")
         .eq("store_id", storeId)
         .eq("entry_type", "debit")
         .gte("created_at", twoWeeksAgo.toISOString());
 
-      const totalConsumed = (recentDebits || []).reduce((s: number, e: any) => s + e.amount, 0);
+      const totalConsumed = (recentDebits || []).reduce((s: number, e: Record<string, unknown>) => s + (Number(e.amount) || 0), 0);
       const avgDaily = totalConsumed / 14;
       const daysRemaining = avgDaily > 0 ? Math.floor(available / avgDaily) : 999;
 

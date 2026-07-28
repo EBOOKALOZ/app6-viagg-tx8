@@ -24,6 +24,43 @@ import {
 } from "@/hooks/useAdminPayAudit";
 import { formatDate, formatDateFull, formatBRL, truncateId } from "@/skills/pay/payUtils";
 
+interface WebhookData {
+  id: string;
+  received_at: string;
+  source: string;
+  event_type: string;
+  processed: boolean;
+  process_error: string | null;
+  [key: string]: unknown;
+}
+
+interface ReconciliationData {
+  id: string;
+  reconciliation_date?: string;
+  created_at: string;
+  bank_balance_cents: number;
+  ledger_balance_cents: number;
+  divergence_cents: number;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface LongRunningData {
+  id: string;
+  amount_cents: number;
+  hours_processing: number;
+  [key: string]: unknown;
+}
+
+interface ErrorData {
+  id: string;
+  transaction_type: string;
+  error_message?: string;
+  error_code?: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
 export default function PayAuditAlerts() {
   const { data: summary } = usePayAuditSummary();
   const { data: webhooks, isLoading: webhooksLoading } = usePayAuditWebhooks(50);
@@ -31,8 +68,8 @@ export default function PayAuditAlerts() {
   const { data: longRunning } = usePayAuditLongRunningPayouts();
   const { data: errors } = usePayAuditErrors();
 
-  const [selectedWebhook, setSelectedWebhook] = useState<any>(null);
-  const [selectedAudit, setSelectedAudit] = useState<any>(null);
+  const [selectedWebhook, setSelectedWebhook] = useState<WebhookData | null>(null);
+  const [selectedAudit, setSelectedAudit] = useState<Record<string, unknown> | null>(null);
   const [searchEvents, setSearchEvents] = useState("");
 
   // Health status
@@ -156,7 +193,7 @@ export default function PayAuditAlerts() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredWebhooks.map((w: any) => (
+                        {filteredWebhooks.map((w: WebhookData) => (
                           <tr key={w.id} className="border-b hover:bg-accent/30 transition-colors cursor-pointer" onClick={() => setSelectedWebhook(w)}>
                             <td className="py-2 px-3 text-muted-foreground whitespace-nowrap">{formatDate(w.received_at)}</td>
                             <td className="py-2 px-3 font-mono text-[10px]">{w.source || "—"}</td>
@@ -230,7 +267,7 @@ export default function PayAuditAlerts() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(reconciliation || []).map((r: any) => (
+                        {(reconciliation || []).map((r: ReconciliationData) => (
                           <tr key={r.id} className="border-b hover:bg-accent/30 transition-colors">
                             <td className="py-2.5 px-3 text-muted-foreground whitespace-nowrap">{formatDate(r.reconciliation_date || r.created_at)}</td>
                             <td className="py-2.5 px-3 font-bold tabular-nums">{formatBRL(r.bank_balance_cents || 0)}</td>
@@ -275,7 +312,7 @@ export default function PayAuditAlerts() {
                     <Badge className="text-[8px] bg-violet-500 text-white">{longRunning.length}</Badge>
                   </div>
                   <div className="space-y-2">
-                    {longRunning.map((p: any) => (
+                    {longRunning.map((p: LongRunningData) => (
                       <div key={p.id} className="flex items-center justify-between bg-violet-50/50 dark:bg-violet-950/20 rounded-lg p-2.5 text-[11px]">
                         <div className="flex items-center gap-3">
                           <span className="font-mono text-muted-foreground">{truncateId(p.id)}</span>
@@ -299,7 +336,7 @@ export default function PayAuditAlerts() {
                     <Badge className="text-[8px] bg-red-500 text-white">{errors.length}</Badge>
                   </div>
                   <div className="space-y-2">
-                    {errors.map((e: any) => (
+                    {errors.map((e: ErrorData) => (
                       <div key={e.id} className="flex items-center justify-between bg-red-50/50 dark:bg-red-950/20 rounded-lg p-2.5 text-[11px]">
                         <div className="flex items-center gap-3">
                           <Badge className="text-[8px] bg-red-100 text-red-700">{e.transaction_type}</Badge>

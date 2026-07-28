@@ -47,6 +47,11 @@
     --zhiq-navy: 155 25% 8%;
     --zhiq-navy-light: 155 18% 15%;
 
+    /* Amarelo institucional dos módulos públicos — canais RGB de #F5E62B.
+       Formato R G B (não HSL) de propósito: rgb(var(--institutional-yellow))
+       reproduz o hex canônico byte a byte, sem arredondamento de conversão. */
+    --institutional-yellow: 245 230 43;
+
     /* Cores funcionais com melhor contraste */
     --success: 120 100% 32%;
     --success-foreground: 0 0% 100%;

@@ -69,10 +69,10 @@ export function useAdminDashboardSnapshot(from: string, to: string, options?: { 
             if (error) {
                 console.error("[useAdminDashboardSnapshot] RPC Error:", error);
                 // Assigning additional fields to the error object directly for compatibility
-                const richError = new Error(error.message || "Unknown RPC error");
-                (richError as any).details = error.details;
-                (richError as any).hint = error.hint;
-                (richError as any).code = error.code;
+                const richError = new Error(error.message) as Error & { details?: string; hint?: string; code?: string };
+                richError.details = error.details;
+                richError.hint = error.hint;
+                richError.code = error.code;
                 throw richError;
             }
 

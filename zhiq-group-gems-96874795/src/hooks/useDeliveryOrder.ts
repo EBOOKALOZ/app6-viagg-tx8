@@ -50,7 +50,7 @@ export interface DeliveryOrder {
 }
 
 // CORREÇÃO: Log dos dados recebidos para debug
-const logDeliveryData = (label: string, data: any) => {
+const logDeliveryData = (label: string, data: Record<string, unknown> | null) => {
   console.log(`[useDeliveryOrder] ${label}:`, {
     id: data?.id,
     status: data?.status,
@@ -152,7 +152,7 @@ export function useDeliveryOrder() {
         },
         (payload) => {
           console.log('[useDeliveryOrder] Realtime UPDATE recebido:', payload.new);
-          const updated = payload.new as any;
+          const updated = payload.new as Record<string, unknown>;
           
           // Atualizar estado para qualquer status ativo
           const activeStatuses = ['accepted', 'in_progress', 'assigned'];
@@ -195,7 +195,7 @@ export function useDeliveryOrder() {
         },
         (payload) => {
           console.log('[useDeliveryOrder] Realtime INSERT recebido:', payload.new);
-          const inserted = payload.new as any;
+          const inserted = payload.new as Record<string, unknown>;
           
           const activeStatuses = ['accepted', 'in_progress', 'assigned'];
           if (activeStatuses.includes(inserted.status)) {
@@ -384,11 +384,12 @@ export function useDeliveryOrder() {
           { p_order_id: deliveryId, p_commission_percent: commissionRate },
         );
         if (settleErr) throw settleErr;
-        if ((settleRes as any)?.success === false) {
-          throw new Error((settleRes as any)?.error || 'pay_settle_delivery falhou');
+        const settleObj = settleRes as Record<string, unknown> | null;
+        if (settleObj?.success === false) {
+          throw new Error(String(settleObj?.error || 'pay_settle_delivery falhou'));
         }
         console.log('[validateCode] pay_settle_delivery OK:', settleRes);
-      } catch (payErr: any) {
+      } catch (payErr: unknown) {
         // Estado da entrega já mudou; não reverter. Loga p/ conciliação.
         console.error('[validateCode] pay_settle_delivery falhou:', payErr);
       }
@@ -416,10 +417,11 @@ export function useDeliveryOrder() {
       setActiveOrder(null);
       return true;
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[validateCode] Exception:', error);
+      const errorObj = error as Record<string, unknown>;
       toast.error('Erro ao validar código', {
-        description: error?.message || 'Tente novamente',
+        description: String(errorObj?.message || 'Tente novamente'),
       });
       return false;
     } finally {
@@ -428,7 +430,7 @@ export function useDeliveryOrder() {
   };
 
   // Função para criar registro no histórico após validação
-  const createDeliveryHistory = async (deliveryId: string, orderData: any) => {
+  const createDeliveryHistory = async (deliveryId: string, orderData: Record<string, unknown>) => {
     if (!user?.id) return;
     
     try {
@@ -621,7 +623,7 @@ export function useDeliveryOrder() {
         console.log('[validatePickupCode] FALHA: RPC retornou false - código não confere ou status inválido');
         return false;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[validatePickupCode] Exception:', error);
       return false;
     }
@@ -657,7 +659,7 @@ export function useDeliveryOrder() {
             reason: 'Cancelada pelo lojista',
           });
         }
-      } catch (payErr: any) {
+      } catch (payErr: unknown) {
         console.error('[cancelDelivery] cancelDelivery (pay_*) falhou:', payErr);
       }
 
@@ -666,10 +668,11 @@ export function useDeliveryOrder() {
       });
       setActiveOrder(null);
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error cancelling delivery:', error);
+      const errorObj = error as Record<string, unknown>;
       toast.error('Erro ao cancelar entrega', {
-        description: error?.message || 'Tente novamente',
+        description: String(errorObj?.message || 'Tente novamente'),
       });
       return false;
     }

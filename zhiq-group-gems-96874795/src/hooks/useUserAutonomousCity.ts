@@ -34,7 +34,8 @@ export function useUserAutonomousCity(): UserAutonomousLocation {
               : ['motoboy_profiles', 'driver_profiles'];
 
           for (const table of tables) {
-            const { data } = await (supabase.from(table) as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data } = await supabase.from(table)
               .select('cidade, estado')
               .eq('user_id', user.id)
               .maybeSingle();
@@ -48,7 +49,8 @@ export function useUserAutonomousCity(): UserAutonomousLocation {
           }
 
           // Busca no perfil geral (profiles)
-          const { data: profData } = await (supabase.from('profiles') as any)
+          // @ts-expect-error - Type definitions may be missing
+          const { data: profData } = await supabase.from('profiles')
             .select('cidade, estado')
             .eq('id', user.id)
             .maybeSingle();
@@ -62,7 +64,8 @@ export function useUserAutonomousCity(): UserAutonomousLocation {
         }
 
         // 2. Busca primeiro por motoboys na cidade principal (Aripuanã)
-        const { data: aripuanaMb } = await (supabase.from('motoboy_profiles') as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { data: aripuanaMb } = await supabase.from('motoboy_profiles')
           .select('cidade, estado')
           .ilike('cidade', '%aripuan%')
           .limit(1)
@@ -76,7 +79,8 @@ export function useUserAutonomousCity(): UserAutonomousLocation {
         }
 
         // 2b. Se não houver, busca qualquer motoboy válido (excluindo testes/estação homônima)
-        const { data: mbData } = await (supabase.from('motoboy_profiles') as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { data: mbData } = await supabase.from('motoboy_profiles')
           .select('cidade, estado')
           .not('cidade', 'is', null)
           .neq('cidade', '')

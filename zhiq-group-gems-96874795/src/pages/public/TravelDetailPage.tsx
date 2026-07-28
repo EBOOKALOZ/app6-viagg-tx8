@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -7,7 +7,7 @@ import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { TravelFullView } from "@/components/travel/TravelFullView";
-import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
+import { resolveTravelMediaUrl } from "@/lib/viagem/travelMedia";
 import { ViaggAIChat } from "@/components/public/ViaggAIChat";
 
 /**
@@ -20,6 +20,8 @@ export default function TravelDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+  const isStoreContext = outletContext?.isStoreContext;
 
   const { data: exists, isLoading } = useQuery({
     queryKey: ["travel-detail-exists", id],
@@ -46,13 +48,13 @@ export default function TravelDetailPage() {
       if (rows.length === 0) return [];
       const ids = rows.map((r: any) => r.id);
       const { data: mediaRows } = await (supabase.from("travel_media") as any)
-        .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+        .select("listing_id, bucket, storage_path, public_url, moderation_status, sort_order")
         .in("listing_id", ids)
         .order("sort_order", { ascending: true });
       const mediaMap = new Map<string, string>();
       for (const m of (mediaRows as any[]) || []) {
         if (!mediaMap.has(m.listing_id)) {
-          const url = resolveTravelMediaRow(m);
+          const url = resolveTravelMediaUrl(m);
           if (url) mediaMap.set(m.listing_id, url);
         }
       }
@@ -73,33 +75,47 @@ export default function TravelDetailPage() {
     </div>
   );
 
-  return (
-    <MarketLayout
-      search={search}
-      setSearch={setSearch}
-      showSearch
-      headerChildren={<MarketNavButtons />}
-      mainClassName="flex flex-col bg-[#F5E62B]"
-      blueFooter
-      blueFooterLabel="Viagens & Turismo"
-      hideStoreNav
-      myAccountPath="/viagens/minha-conta"
-    >
-      <TravelFullView
-        listingId={id!}
-        relacionados={sideListings.map((t: any) => ({
-          id: t.id,
-          titulo: t.title || 'Viagem',
-          imagem: t.thumbnail_url,
-          preco: t.entry_price?.trim()
-            || (t.price_per_person ? `R$ ${Number(t.price_per_person).toLocaleString('pt-BR')}/pessoa` : null)
-            || (t.total_price ? `R$ ${Number(t.total_price).toLocaleString('pt-BR')}` : null),
-          cidade: t.destination || t.city,
-          href: `/viagens/${t.id}`,
-        }))}
-      />
+  const content = (
+      <>
+        <TravelFullView
+          listingId={id!}
+          relacionados={sideListings.map((t: any) => ({
+            id: t.id,
+            titulo: t.title || 'Viagem',
+            imagem: t.thumbnail_url,
+            preco: t.entry_price?.trim()
+              || (t.price_per_person ? `R$ ${Number(t.price_per_person).toLocaleString('pt-BR')}/pessoa` : null)
+              || (t.total_price ? `R$ ${Number(t.total_price).toLocaleString('pt-BR')}` : null),
+            cidade: t.destination || t.city,
+            href: `/viagens/${t.id}`,
+          }))}
+        />
+  
+        <ViaggAIChat welcomeMessage="Olá! 🧳 Sou o Assistente da plataforma Viagg-TX8. Posso te ajudar com os detalhes e dúvidas desta viagem?" />
+      </>
+  );
 
-      <ViaggAIChat welcomeMessage="Olá! 👋 Sou o Assistente da plataforma Viagg-TX8. Posso te ajudar com os detalhes e dúvidas desta viagem?" />
-    </MarketLayout>
+  return (
+    <>
+      {isStoreContext ? (
+          <div className="flex flex-col bg-institutional-yellow min-h-screen">
+              {content}
+          </div>
+      ) : (
+          <MarketLayout
+            search={search}
+            setSearch={setSearch}
+            showSearch
+            headerChildren={<MarketNavButtons />}
+            mainClassName="flex flex-col bg-institutional-yellow"
+            blueFooter
+            blueFooterLabel="Viagens & Turismo"
+            hideStoreNav
+            myAccountPath="/viagens/minha-conta"
+          >
+              {content}
+          </MarketLayout>
+      )}
+    </>
   );
 }

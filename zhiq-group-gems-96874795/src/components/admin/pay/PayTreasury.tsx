@@ -20,13 +20,26 @@ import { usePayWithdrawalQueue } from "@/hooks/useAdminPayWithdrawals";
 import { formatBRL, formatBRLCompact, formatDateShort } from "@/skills/pay/payUtils";
 import type { CashflowPeriod } from "@/skills/pay/payTypes";
 
+interface TooltipPayload {
+  dataKey: string;
+  color: string;
+  value: number;
+  [key: string]: unknown;
+}
+
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+
 // ─── Custom Recharts Tooltip ─────────────────
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-3 text-xs space-y-1.5">
       <p className="font-bold text-gray-700 dark:text-gray-300 border-b pb-1 mb-1">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p: TooltipPayload) => (
         <div key={p.dataKey} className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
           <span className="text-gray-500 dark:text-gray-400">

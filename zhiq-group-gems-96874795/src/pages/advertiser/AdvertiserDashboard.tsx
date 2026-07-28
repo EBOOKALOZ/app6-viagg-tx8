@@ -30,7 +30,7 @@ import { ptBR } from "date-fns/locale";
 import { formatCurrencyBRL } from "@/lib/utils";
 import { AdvertiserAccountCard } from "@/components/advertiser/AdvertiserAccountCard";
 import { useAdvertiserAccountData } from "@/hooks/useAdvertiserAccountData";
-import { AdvertiserOverviewCards } from "@/components/advertiser/AdvertiserOverviewCards";
+import { AdvertiserCommercialDashboard } from "@/components/advertiser/dashboard/AdvertiserCommercialDashboard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -594,8 +594,8 @@ export default function AdvertiserDashboard() {
             <h2 className="text-2xl font-black text-[#F5F7FA] tracking-tight uppercase leading-none">Acesso Inteligente</h2>
           </div>
           <p className="text-xs font-bold text-[#A7B0BE] uppercase tracking-widest ml-5">Atalhos rápidos para alta produtividade</p>
+          <AdvertiserCommercialDashboard />
         </div>
-        <AdvertiserOverviewCards />
       </section>
 
       {/* Progress / Next Steps Checklist */}

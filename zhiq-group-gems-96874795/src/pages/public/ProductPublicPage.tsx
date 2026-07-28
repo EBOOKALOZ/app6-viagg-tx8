@@ -185,7 +185,7 @@ export default function ProductPublicPage() {
             headerChildren={<MarketNavButtons />}
             blueFooter={true}
         >
-            <div className="bg-[#F5E62B] min-h-screen pb-20 animate-in fade-in duration-1000">
+            <div className="bg-institutional-yellow min-h-screen pb-20 animate-in fade-in duration-1000">
                 <div className="container max-w-7xl mx-auto px-4 py-8">
                     
                     {/* Breadcrumbs / Back */}

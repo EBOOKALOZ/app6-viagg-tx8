@@ -67,7 +67,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
     const { data: motoboyProfile } = useQuery({
         queryKey: ["postador-motoboy-profile", user?.id],
         queryFn: async () => {
-            const { data } = await (supabase.from("motoboy_profiles") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data } = await supabase.from("motoboy_profiles")
                 .select("cidade, estado")
                 .eq("user_id", user!.id)
                 .maybeSingle();
@@ -83,7 +84,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
     const { data: campaigns = [], isLoading: loadingCampaigns, isError: errorCampaigns } = useQuery<CampaignQueueItem[]>({
         queryKey: ["postador-campaigns", user?.id, motoboyProfile?.cidade],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("campaign_queue") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("campaign_queue")
                 .select("id, created_by_user_id, merchant_store_id, product_id, campaign_type, title, message_text, media_url, target_city, target_region, status, scheduled_for, available_from, available_until, created_at")
                 .in("status", ["ready", "approved", "processing", "pending", "scheduled", "queued"])
                 .order("created_at", { ascending: false })
@@ -116,7 +118,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
     const { data: groups = [], isLoading: loadingGroups, isError: errorGroups } = useQuery<WhatsAppGroupItem[]>({
         queryKey: ["postador-groups", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("whatsapp_groups") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("whatsapp_groups")
                 .select("id, group_name, group_link, neighborhood, city_name, state_code, members_count, is_active, is_valid, validation_status, invalid_reason, last_posted_at, valid_for_commission, created_at, updated_at")
                 .eq("owner_user_id", user!.id)
                 .order("updated_at", { ascending: false })
@@ -138,7 +141,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
         queryKey: ["postador-runtime", groupIds],
         queryFn: async () => {
             if (!groupIds.length) return [];
-            const { data, error } = await (supabase.from("group_posting_runtime") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("group_posting_runtime")
                 .select("id, whatsapp_group_id, last_posted_at, cooldown_until, next_allowed_at, total_posts, created_at, updated_at")
                 .in("whatsapp_group_id", groupIds)
                 .order("updated_at", { ascending: false });
@@ -159,7 +163,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
     const { data: history = [], isLoading: loadingHistory } = useQuery<PostingHistoryEntry[]>({
         queryKey: ["postador-history", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("posting_history") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("posting_history")
                 .select("id, campaign_queue_id, whatsapp_group_id, operator_user_id, final_status, template_hash, message_text, execution_notes, posted_at")
                 .eq("operator_user_id", user!.id)
                 .order("posted_at", { ascending: false })
@@ -250,7 +255,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
 
             try {
                 // Step 1: Check eligibility via RPC
-                const { data: eligibility, error: eligErr } = await (supabase.rpc as any)(
+                // @ts-expect-error - Type definitions may be missing
+                const { data: eligibility, error: eligErr } = await supabase.rpc(
                     "check_group_posting_eligibility",
                     {
                         p_campaign_queue_id: campaignId,
@@ -279,7 +285,8 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
                 }
 
                 // Step 2: Confirm posting with cooldown via RPC
-                const { data: confirmResult, error: confErr } = await (supabase.rpc as any)(
+                // @ts-expect-error - Type definitions may be missing
+                const { data: confirmResult, error: confErr } = await supabase.rpc(
                     "confirm_posting_with_cooldown",
                     {
                         p_campaign_queue_id: campaignId,
@@ -322,9 +329,9 @@ export function usePostadorOperacional(callerProfileType: AuditProfileType = "po
 
                 // Clear success visual after 3s
                 setTimeout(() => setPostingState((prev) => { const n = { ...prev }; delete n[key]; return n; }), 3000);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("[Postador] markAsPosted error:", err);
-                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err?.message ?? "unknown_error" });
+                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err instanceof Error ? err.message : String(err) });
                 // GUARDA 7: Nunca expor erro bruto — sempre use mensagem amigável
                 toast.error(friendlyError("unknown_error"));
                 setPostingState((prev) => ({ ...prev, [key]: "error" }));

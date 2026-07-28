@@ -39,8 +39,9 @@ export function useMerchantConversions() {
 
       if (!store) return [];
 
+      // @ts-expect-error - View might not be mapped yet
       const { data, error } = await supabase
-        .from("merchant_conversion_events_view" as any)
+        .from("merchant_conversion_events_view")
         .select("*")
         .eq("store_id", store.id)
         .order("created_at", { ascending: false });

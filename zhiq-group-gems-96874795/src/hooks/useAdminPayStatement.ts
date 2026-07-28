@@ -50,7 +50,7 @@ export function usePayFinancialStatement(filters?: {
 
       // Map to StatementEntry with running balance computation
       let runningBalance = 0;
-      const rows: StatementEntry[] = (data || []).reverse().map((e: any) => {
+      const rows: StatementEntry[] = (data || []).reverse().map((e: unknown) => {
         runningBalance += Number(e.amount_cents || 0);
         return {
           id: e.id,
@@ -90,7 +90,7 @@ export function usePaySourceTypes() {
         .select("source_type")
         .not("source_type", "is", null)
         .limit(200);
-      return [...new Set((data || []).map((r: any) => r.source_type).filter(Boolean))].sort();
+      return [...new Set((data || []).map((r: unknown) => r.source_type).filter(Boolean))].sort();
     },
     staleTime: 60_000,
   });

@@ -36,7 +36,8 @@ export function MotoboyFinanceStats() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-motoboy-finances"],
     queryFn: async () => {
-      const { data: rows, error } = await (supabase.rpc as any)("admin_list_motoboy_finances");
+      // @ts-expect-error RPC admin_list_motoboy_finances ausente nos tipos
+      const { data: rows, error } = await supabase.rpc("admin_list_motoboy_finances");
       if (error) {
         console.error("[MotoboyFinanceStats] erro RPC:", error);
         throw error;
@@ -49,7 +50,7 @@ export function MotoboyFinanceStats() {
       if (groupsError) console.error("[MotoboyFinanceStats] erro grupos:", groupsError);
 
       const groupsCountByUser = new Map<string, number>();
-      (groupRows || []).forEach((g: any) => {
+      (groupRows || []).forEach((g: Record<string, unknown>) => {
         groupsCountByUser.set(g.user_id, (groupsCountByUser.get(g.user_id) || 0) + 1);
       });
 
@@ -63,25 +64,25 @@ export function MotoboyFinanceStats() {
         .contains("available_profiles", ["motoboy"]);
       if (profilesErr) console.error("[MotoboyFinanceStats] erro profiles:", profilesErr);
 
-      const motoboyUserIds = (profileRows || []).map((p: any) => p.id);
-      const operationalMap = new Map<string, any>();
+      const motoboyUserIds = (profileRows || []).map((p: Record<string, unknown>) => p.id);
+      const operationalMap = new Map<string, Record<string, unknown>>();
       if (motoboyUserIds.length > 0) {
         const { data: opRows } = await supabase
           .from("motoboy_profiles")
           .select("user_id, cidade, estado")
           .in("user_id", motoboyUserIds);
-        (opRows || []).forEach((m: any) => operationalMap.set(m.user_id, m));
+        (opRows || []).forEach((m: Record<string, unknown>) => operationalMap.set(m.user_id as string, m));
       }
 
-      const financeByUser = new Map<string, any>();
-      (rows || []).forEach((r: any) => financeByUser.set(r.user_id, r));
+      const financeByUser = new Map<string, Record<string, unknown>>();
+      (rows || []).forEach((r: Record<string, unknown>) => financeByUser.set(r.user_id as string, r));
 
       const allUserIds = new Set<string>();
-      (profileRows || []).forEach((p: any) => allUserIds.add(p.id));
-      (rows || []).forEach((r: any) => allUserIds.add(r.user_id));
+      (profileRows || []).forEach((p: Record<string, unknown>) => allUserIds.add(p.id as string));
+      (rows || []).forEach((r: Record<string, unknown>) => allUserIds.add(r.user_id as string));
 
-      const profileMap = new Map<string, any>();
-      (profileRows || []).forEach((p: any) => profileMap.set(p.id, p));
+      const profileMap = new Map<string, Record<string, unknown>>();
+      (profileRows || []).forEach((p: Record<string, unknown>) => profileMap.set(p.id as string, p));
 
       const list: MotoboyFinance[] = Array.from(allUserIds).map((id) => {
         const p = profileMap.get(id);

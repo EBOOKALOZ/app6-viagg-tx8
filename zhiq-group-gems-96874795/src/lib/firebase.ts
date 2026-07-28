@@ -64,7 +64,7 @@ export async function requestFCMToken(vapidKey: string): Promise<string | null> 
 /**
  * Escuta mensagens recebidas em foreground
  */
-export function onForegroundMessage(callback: (payload: any) => void): (() => void) | null {
+export function onForegroundMessage(callback: (payload: Record<string, unknown>) => void): (() => void) | null {
   if (!messagingInstance) return null;
 
   const unsubscribe = onMessage(messagingInstance, (payload) => {

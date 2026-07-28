@@ -89,7 +89,8 @@ export function useStoreCart(storeId: string | undefined) {
     queryKey: ["store-cart-items", cartId],
     queryFn: async () => {
       if (!cartId) return [];
-      const { data, error } = await (supabase.from("store_cart_items") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("store_cart_items")
         .select("*")
         .eq("cart_id", cartId)
         .gt("quantity", 0)
@@ -98,16 +99,17 @@ export function useStoreCart(storeId: string | undefined) {
       if (!data || data.length === 0) return [];
 
       // Collect product IDs that need enrichment (missing title or price=0)
-      const needsEnrich = (data as any[]).filter(
-        (item: any) => !item.product_title || item.product_title === "Produto" || !Number(item.product_price)
+      const needsEnrich = (data as Record<string, unknown>[]).filter(
+        (item: Record<string, unknown>) => !item.product_title || item.product_title === "Produto" || !Number(item.product_price)
       );
 
       // Fetch real product data for items with missing snapshots
-      const productMap: Record<string, any> = {};
+      const productMap: Record<string, Record<string, unknown>> = {};
       if (needsEnrich.length > 0) {
-        const ids = needsEnrich.map((i: any) => i.product_id).filter(Boolean);
+        const ids = needsEnrich.map((i: Record<string, unknown>) => i.product_id).filter(Boolean);
         if (ids.length > 0) {
-          const { data: products } = await (supabase.from("merchant_marketing_products") as any)
+          // @ts-expect-error - Type definitions may be missing
+          const { data: products } = await supabase.from("merchant_marketing_products")
             .select("id, title, image_url, price_label")
             .in("id", ids);
           if (products) {
@@ -123,8 +125,8 @@ export function useStoreCart(storeId: string | undefined) {
         }
       }
 
-      return (data as any[]).map((item: any) => {
-        const enriched = productMap[item.product_id];
+      return (data as Record<string, unknown>[]).map((item: Record<string, unknown>) => {
+        const enriched = productMap[String(item.product_id)];
         const title = (item.product_title && item.product_title !== "Produto")
           ? item.product_title
           : (enriched?.title || "Produto sem nome");
@@ -205,12 +207,12 @@ export function useStoreCart(storeId: string | undefined) {
         const CART_KEY = "vtx8_cart_items";
         const raw = localStorage.getItem(CART_KEY);
         if (raw) {
-          const entries = JSON.parse(raw) as any[];
+          const entries = JSON.parse(raw) as Record<string, unknown>[];
           if (quantity <= 0) {
-            const filtered = entries.filter((e: any) => e.item_id !== itemId);
+            const filtered = entries.filter((e: Record<string, unknown>) => e.item_id !== itemId);
             localStorage.setItem(CART_KEY, JSON.stringify(filtered));
           } else {
-            const updated = entries.map((e: any) => e.item_id === itemId ? { ...e, quantity } : e);
+            const updated = entries.map((e: Record<string, unknown>) => e.item_id === itemId ? { ...e, quantity } : e);
             localStorage.setItem(CART_KEY, JSON.stringify(updated));
           }
           window.dispatchEvent(new Event("vtx8_cart_change"));

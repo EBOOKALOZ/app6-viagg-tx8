@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Package, Edit, ArrowUpDown, Trash2, Plus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import type { AdminCreditProduct } from "@/hooks/useAdminCredits";
+import type { AdminCreditProduct, AdminCreditsData } from "@/hooks/useAdminCredits";
 
-interface Props { data: any; }
+interface Props { data: AdminCreditsData; }
 
 export function AdminCreditsPackages({ data }: Props) {
   const { products, toggleProduct, updateProduct, deleteProduct, createProduct } = data;
@@ -22,7 +22,7 @@ export function AdminCreditsPackages({ data }: Props) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("order");
   const [editingProduct, setEditingProduct] = useState<AdminCreditProduct | null>(null);
-  const [editForm, setEditForm] = useState<Record<string, any>>({});
+  const [editForm, setEditForm] = useState<Partial<AdminCreditProduct>>({});
   const [featuresText, setFeaturesText] = useState("");
 
   const filtered = products
@@ -114,9 +114,9 @@ export function AdminCreditsPackages({ data }: Props) {
       toast.success("Pacote atualizado com sucesso!");
       setEditingProduct(null);
       if (data.refetch) data.refetch();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[AdminCreditsPackages] Save error:", err);
-      toast.error(`Erro ao salvar: ${err?.message || "Erro desconhecido"}`);
+      toast.error(`Erro ao salvar: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
     }
   };
 
@@ -127,7 +127,7 @@ export function AdminCreditsPackages({ data }: Props) {
       {/* Filters */}
       <Card className="shadow-sm border-0">
         <CardContent className="p-4 flex flex-wrap gap-3 items-center">
-          <Select value={filter} onValueChange={(v: any) => setFilter(v)}>
+          <Select value={filter} onValueChange={(v: string) => setFilter(v)}>
             <SelectTrigger className="w-36 h-9 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
@@ -456,7 +456,7 @@ function CreateProductDialog({
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onCreate: { mutateAsync: (input: any) => Promise<void>; isPending: boolean };
+  onCreate: { mutateAsync: (input: Omit<AdminCreditProduct, 'id'>) => Promise<void>; isPending: boolean };
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -506,8 +506,8 @@ function CreateProductDialog({
       toast.success("Pacote criado com sucesso! 🎉");
       reset();
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(`Erro ao criar: ${err?.message || "Erro desconhecido"}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao criar: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
     }
   };
 

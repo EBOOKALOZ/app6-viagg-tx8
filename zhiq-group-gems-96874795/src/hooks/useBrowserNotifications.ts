@@ -5,7 +5,7 @@ interface NotificationOptions {
   body: string;
   icon?: string;
   tag?: string;
-  data?: any;
+  data?: unknown;
   requireInteraction?: boolean;
 }
 

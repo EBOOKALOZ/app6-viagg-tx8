@@ -57,7 +57,8 @@ export function useUnifiedWalletAccounts() {
     queryFn: async (): Promise<ProfileBalance[]> => {
       if (!user?.id) return [];
 
-      const { data, error } = await (supabase as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase
         .from("pay_financial_accounts")
         .select("id, account_type, available_balance")
         .eq("owner_id", user.id)
@@ -70,7 +71,7 @@ export function useUnifiedWalletAccounts() {
         return [];
       }
 
-      return (data || []).map((acc: any) => {
+      return (data || []).map((acc: Record<string, unknown>) => {
         const key = payProfileKey(String(acc.account_type));
         return {
           profileType: key,
@@ -122,7 +123,8 @@ export function useUnifiedTimeline(filterProfile?: string) {
     queryFn: async (): Promise<UnifiedLedgerEntry[]> => {
       if (!user?.id) return [];
 
-      const { data, error } = await (supabase as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase
         .from("v_wallet_statement")
         .select("*")
         .eq("owner_user_id", user.id)
@@ -134,7 +136,7 @@ export function useUnifiedTimeline(filterProfile?: string) {
         return [];
       }
 
-      const mapped: UnifiedLedgerEntry[] = (data || []).map((e: any, i: number) => {
+      const mapped: UnifiedLedgerEntry[] = (data || []).map((e: Record<string, unknown>, i: number) => {
         const cents = Number(e.amount_cents || 0);
         return {
           id: `${e.created_at}-${e.source_id ?? i}`,

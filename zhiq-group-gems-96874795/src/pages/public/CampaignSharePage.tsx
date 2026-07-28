@@ -100,7 +100,7 @@ export default function CampaignSharePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+      <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
         <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
       </div>
     );
@@ -110,7 +110,7 @@ export default function CampaignSharePage() {
 
   if (notFound || !campaign) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#F5E62B] p-6 text-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-institutional-yellow p-6 text-center">
         <AlertTriangle className="h-12 w-12 text-amber-400" />
         <h1 className="text-xl font-black text-foreground/80">Campanha não encontrada</h1>
         <p className="text-sm text-muted-foreground">Este link pode ter expirado ou sido removido.</p>
@@ -124,7 +124,7 @@ export default function CampaignSharePage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#F5E62B]">
+    <div className="min-h-screen bg-institutional-yellow">
       {/* Header bar */}
       <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-orange-100 px-4 py-3 flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-rose-500 flex items-center justify-center">

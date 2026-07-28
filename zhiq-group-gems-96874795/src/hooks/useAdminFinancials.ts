@@ -53,7 +53,7 @@ export function useAdminFinancialStats() {
     return useQuery<AdminFinancialStats>({
         queryKey: ["admin", "financial-stats"],
         queryFn: async () => {
-            const sum = (arr: any[], f: (x: any) => any) =>
+            const sum = (arr: unknown[], f: (x: unknown) => unknown) =>
                 (arr || []).reduce((s, x) => s + Number(f(x) || 0), 0);
 
             const todayStart = startOfDay(new Date());
@@ -61,19 +61,19 @@ export function useAdminFinancialStats() {
 
             // Contagem de lojas (subtítulo do card Total Lojistas).
             const { count: lojasCount } = await (supabase
-                .from("merchant_stores") as any)
+                .from("merchant_stores") as unknown)
                 .select("id", { count: "exact", head: true });
             const totalLojas = Number(lojasCount || 0);
 
             // ── 1. Compras de crédito / recargas de saldo PAGAS (pay_payment_orders) ──
-            const { data: paidOrders } = await (supabase.from("pay_payment_orders") as any)
+            const { data: paidOrders } = await (supabase.from("pay_payment_orders") as unknown)
                 .select("amount, product_type, paid_at, payer_owner_type, product_snapshot")
                 .eq("status", "paid");
             const creditOrders = (paidOrders || []).filter(
-                (o: any) => o.product_type === "credit_package" || o.product_type === "advertiser_credits"
+                (o: unknown) => o.product_type === "credit_package" || o.product_type === "advertiser_credits"
             );
             const creditRevenue = sum(creditOrders, (o) => o.amount);
-            const creditHoje = sum(creditOrders.filter((o: any) => isToday(o.paid_at)), (o) => o.amount);
+            const creditHoje = sum(creditOrders.filter((o: unknown) => isToday(o.paid_at)), (o) => o.amount);
             const saldoLojistas = creditRevenue;
 
             // ── Separação por segmento (cards dedicados no painel) ──
@@ -82,38 +82,38 @@ export function useAdminFinancialStats() {
             const pacotesLojistasQtd = creditOrders.length;
             // Imóveis = compras de pacotes imobiliários (product_type 'real_estate_credits').
             const imovelOrders = (paidOrders || []).filter(
-                (o: any) => o.product_type === "real_estate_credits"
+                (o: unknown) => o.product_type === "real_estate_credits"
             );
             const pacotesImoveis = sum(imovelOrders, (o) => o.amount);
             const pacotesImoveisQtd = imovelOrders.length;
             // Veículos = compras de pacotes de veículos (product_type 'vehicle_credits').
             const veiculoOrders = (paidOrders || []).filter(
-                (o: any) => o.product_type === "vehicle_credits"
+                (o: unknown) => o.product_type === "vehicle_credits"
             );
             const pacotesVeiculos = sum(veiculoOrders, (o) => o.amount);
             const pacotesVeiculosQtd = veiculoOrders.length;
             // Serviços = compras de pacotes de serviços (product_type 'service_credits').
             const servicoOrders = (paidOrders || []).filter(
-                (o: any) => o.product_type === "service_credits"
+                (o: unknown) => o.product_type === "service_credits"
             );
             const pacotesServicos = sum(servicoOrders, (o) => o.amount);
             const pacotesServicosQtd = servicoOrders.length;
             // Fretes = compras de pacotes de fretes (product_type 'freight_credits').
             const freteOrders = (paidOrders || []).filter(
-                (o: any) => o.product_type === "freight_credits"
+                (o: unknown) => o.product_type === "freight_credits"
             );
             const pacotesFretes = sum(freteOrders, (o) => o.amount);
             const pacotesFretesQtd = freteOrders.length;
             // Viagens = compras de pacotes de viagens (product_type 'travel_credits').
             const viagemOrders = (paidOrders || []).filter(
-                (o: any) => o.product_type === "travel_credits"
+                (o: unknown) => o.product_type === "travel_credits"
             );
             const pacotesViagens = sum(viagemOrders, (o) => o.amount);
             const pacotesViagensQtd = viagemOrders.length;
 
             // Recargas de saldo: o dinheiro carregado especificamente p/ chamar motoboy.
             const recargasSaldo = sum(
-                creditOrders.filter((o: any) =>
+                creditOrders.filter((o: unknown) =>
                     o.product_type === "credit_package" &&
                     /recarga/i.test(String(o.product_snapshot?.package_name || ""))
                 ),
@@ -124,22 +124,22 @@ export function useAdminFinancialStats() {
             let pacotesPromocao = 0;
             let pacotesPromocaoQtd = 0;
             try {
-                const { data: promoPurchases } = await (supabase.from("promotion_purchases") as any)
+                const { data: promoPurchases } = await (supabase.from("promotion_purchases") as unknown)
                     .select("amount_brl")
                     .eq("status", "paid");
                 pacotesPromocaoQtd = (promoPurchases || []).length;
-                pacotesPromocao = sum(promoPurchases || [], (p: any) => p.amount_brl);
+                pacotesPromocao = sum(promoPurchases || [], (p: unknown) => p.amount_brl);
             } catch { /* tabela pode não existir ainda */ }
 
             // ── 2. Entregas concluídas (comissão, ganho do motoboy, gasto total) ──
-            const { data: orders } = await (supabase.from("service_orders") as any)
+            const { data: orders } = await (supabase.from("service_orders") as unknown)
                 .select("status, total_price, completed_at, created_at");
             const delivered = (orders || []).filter(
-                (o: any) => String(o.status || "").toLowerCase() === "delivered"
+                (o: unknown) => String(o.status || "").toLowerCase() === "delivered"
             );
             const deliveredGMV = sum(delivered, (o) => o.total_price);
             const deliveredHojeGMV = sum(
-                delivered.filter((o: any) => isToday(o.completed_at || o.created_at)),
+                delivered.filter((o: unknown) => isToday(o.completed_at || o.created_at)),
                 (o) => o.total_price
             );
 
@@ -148,13 +148,13 @@ export function useAdminFinancialStats() {
             let motoboyEarnings = deliveredGMV - deliveryCommission;
             let deliveryHoje = deliveredHojeGMV;
             try {
-                const { data: splits } = await (supabase.from("payment_splits") as any)
+                const { data: splits } = await (supabase.from("payment_splits") as unknown)
                     .select("professional_amount_cents, platform_fee_cents, created_at");
                 if (splits && splits.length > 0) {
                     deliveryCommission = sum(splits, (s) => s.platform_fee_cents) / 100;
                     motoboyEarnings = sum(splits, (s) => s.professional_amount_cents) / 100;
                     deliveryHoje = sum(
-                        splits.filter((s: any) => isToday(s.created_at)),
+                        splits.filter((s: unknown) => isToday(s.created_at)),
                         (s) => Number(s.platform_fee_cents || 0) + Number(s.professional_amount_cents || 0)
                     ) / 100;
                 }
@@ -167,7 +167,7 @@ export function useAdminFinancialStats() {
             let saquesPendentesQtd = 0;
             let saquesPendentesValor = 0;
             try {
-                const { data: pendingPayouts } = await (supabase.from("payout_requests") as any)
+                const { data: pendingPayouts } = await (supabase.from("payout_requests") as unknown)
                     .select("amount_cents").eq("status", "pending");
                 saquesPendentesQtd = pendingPayouts?.length || 0;
                 saquesPendentesValor = sum(pendingPayouts, (p) => p.amount_cents) / 100;
@@ -175,7 +175,7 @@ export function useAdminFinancialStats() {
 
             // ── RPC preferencial (sobrescreve os agregados se trouxer valor) ──
             try {
-                const { data: rpc } = await (supabase.rpc as any)("admin_get_global_finances");
+                const { data: rpc } = await (supabase.rpc as unknown)("admin_get_global_finances");
                 if (rpc?.stats) {
                     const s = rpc.stats;
                     const total =

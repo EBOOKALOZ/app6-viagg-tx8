@@ -15,7 +15,7 @@ export interface RouteSegment {
  * Controla os IDs das animações rodando para cancelar se vier nova chamada
  */
 let currentAnimationFrame: number | null = null;
-let animationStep = 0;
+const animationStep = 0;
 
 /**
  * Desenha dois (ou mais) trechos tracejados independentes com cores distintas.

@@ -62,6 +62,18 @@ CREATE INDEX IF NOT EXISTS idx_travel_listings_owner
 -- ── 4. register_contact_intention: gravar contact_user_id ────
 -- Mesma assinatura/comportamento da versão 20260624 (não muda a
 -- regra de negócio homologada) + preenche contact_user_id.
+-- Guard: o banco pode já ter esta função (drift). CREATE OR REPLACE
+-- falha com 42P13 se a versão existente tiver defaults diferentes —
+-- por isso dropamos TODAS as sobrecargas antes (idempotente).
+DO $drop$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    SELECT p.oid::regprocedure AS sig FROM pg_proc p
+    WHERE p.pronamespace='public'::regnamespace AND p.proname='register_contact_intention'
+  LOOP EXECUTE format('DROP FUNCTION IF EXISTS %s', r.sig); END LOOP;
+END $drop$;
+
 CREATE OR REPLACE FUNCTION public.register_contact_intention(
   p_listing_module text,
   p_listing_id uuid,
@@ -135,6 +147,17 @@ GRANT EXECUTE ON FUNCTION public.register_contact_intention(text, uuid, text, te
 -- ── 5. register_travel_contact_intention (wrapper oficial) ───
 -- O front de viagens chama esta assinatura desde jun/2026; até
 -- hoje ela só existia (se existia) fora do versionamento.
+-- Guard idem ao anterior: dropa qualquer versão pré-existente (drift)
+-- para evitar 42P13 ao redefinir com defaults.
+DO $drop$
+DECLARE r record;
+BEGIN
+  FOR r IN
+    SELECT p.oid::regprocedure AS sig FROM pg_proc p
+    WHERE p.pronamespace='public'::regnamespace AND p.proname='register_travel_contact_intention'
+  LOOP EXECUTE format('DROP FUNCTION IF EXISTS %s', r.sig); END LOOP;
+END $drop$;
+
 CREATE OR REPLACE FUNCTION public.register_travel_contact_intention(
   p_listing_id uuid,
   p_interest_type text,

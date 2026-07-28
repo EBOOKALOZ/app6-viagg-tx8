@@ -45,7 +45,7 @@ export async function reverseGeocodeDetails(lat: number, lng: number): Promise<{
         let cidade = "";
         let estado = "";
 
-        data.features.forEach((feature: any) => {
+        data.features.forEach((feature: { id: string, text: string, context?: Array<{ short_code?: string }> }) => {
             if (feature.id.startsWith("neighborhood") || feature.id.startsWith("locality")) {
                 if (!bairro) bairro = feature.text;
             }

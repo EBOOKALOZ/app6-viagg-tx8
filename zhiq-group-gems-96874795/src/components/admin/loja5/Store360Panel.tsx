@@ -39,10 +39,42 @@ function SignalBadge({ active, label, color }: { active: boolean; label: string;
     return <Badge className={`${color} text-[10px]`}>{label}</Badge>;
 }
 
+interface StoreProduct {
+    id?: string;
+    title: string | null;
+    price_label: string | null;
+    is_active: boolean | null;
+    created_at: string | null;
+}
+
+interface StoreIntention {
+    id?: string;
+    customer_name: string | null;
+    total_items: number | null;
+    subtotal: number | null;
+    status: string | null;
+    created_at: string | null;
+}
+
+interface StoreAuction {
+    id?: string;
+    title: string | null;
+    current_bid?: number | null;
+    starting_price?: number | null;
+    status: string | null;
+}
+
+interface StoreArremate {
+    id?: string;
+    title: string | null;
+    asking_price: number | null;
+    status: string | null;
+}
+
 // ═══════════════════════════════════════
 // Info Row
 // ═══════════════════════════════════════
-function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string; value: string; mono?: boolean }) {
+function InfoRow({ icon: Icon, label, value, mono }: { icon: React.ElementType; label: string; value: string; mono?: boolean }) {
     return (
         <div className="flex items-center gap-2.5 py-1">
             <Icon className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
@@ -55,7 +87,7 @@ function InfoRow({ icon: Icon, label, value, mono }: { icon: any; label: string;
 // ═══════════════════════════════════════
 // KPI Mini Card
 // ═══════════════════════════════════════
-function KpiMini({ label, value, color, icon: Icon }: { label: string; value: string | number; color: string; icon: any }) {
+function KpiMini({ label, value, color, icon: Icon }: { label: string; value: string | number; color: string; icon: React.ElementType }) {
     return (
         <div className="flex items-center gap-2.5 bg-zinc-900/80 border border-zinc-800/60 rounded-lg px-3 py-2.5">
             <Icon className={`h-4 w-4 ${color} shrink-0`} />
@@ -200,7 +232,7 @@ export function Store360Panel({ data, onClose, onViewAccount }: Store360PanelPro
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {data.products.slice(0, 20).map((p: any, i: number) => (
+                                    {data.products.slice(0, 20).map((p: StoreProduct, i: number) => (
                                         <TableRow key={p.id || i} className="border-zinc-800/50">
                                             <TableCell>
                                                 <span className="text-xs text-zinc-200 truncate block max-w-[200px]">{p.title || "—"}</span>
@@ -246,7 +278,7 @@ export function Store360Panel({ data, onClose, onViewAccount }: Store360PanelPro
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {data.intentions.slice(0, 15).map((intent: any, i: number) => (
+                                    {data.intentions.slice(0, 15).map((intent: StoreIntention, i: number) => (
                                         <TableRow key={intent.id || i} className="border-zinc-800/50">
                                             <TableCell className="text-xs text-zinc-300 truncate max-w-[120px]">{intent.customer_name || "—"}</TableCell>
                                             <TableCell className="text-xs text-zinc-400">{intent.total_items}</TableCell>
@@ -275,7 +307,7 @@ export function Store360Panel({ data, onClose, onViewAccount }: Store360PanelPro
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                {data.auctions.slice(0, 5).map((a: any, i: number) => (
+                                {data.auctions.slice(0, 5).map((a: StoreAuction, i: number) => (
                                     <div key={a.id || i} className="flex items-center justify-between gap-2 bg-zinc-800/40 rounded-lg px-3 py-2">
                                         <div className="min-w-0">
                                             <p className="text-xs text-zinc-200 truncate">{a.title}</p>
@@ -297,7 +329,7 @@ export function Store360Panel({ data, onClose, onViewAccount }: Store360PanelPro
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                {data.arremates.slice(0, 5).map((ar: any, i: number) => (
+                                {data.arremates.slice(0, 5).map((ar: StoreArremate, i: number) => (
                                     <div key={ar.id || i} className="flex items-center justify-between gap-2 bg-zinc-800/40 rounded-lg px-3 py-2">
                                         <div className="min-w-0">
                                             <p className="text-xs text-zinc-200 truncate">{ar.title}</p>

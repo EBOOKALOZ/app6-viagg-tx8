@@ -55,11 +55,11 @@ export interface Store360Row {
 
 export interface Store360Detail {
     store: Store360Row;
-    products: any[];
-    intentions: any[];
-    credits: any[];
-    auctions: any[];
-    arremates: any[];
+    products: unknown[];
+    intentions: unknown[];
+    credits: unknown[];
+    auctions: unknown[];
+    arremates: unknown[];
     account: Account360Row | null;
 }
 
@@ -108,7 +108,7 @@ export function useStoreList360(filters: StoreListFilters = {}) {
     const { data: stores = [], isLoading, error } = useQuery<Store360Row[]>({
         queryKey: ["admineng-stores-360", filters],
         queryFn: async () => {
-            const params: Record<string, any> = {};
+            const params: Record<string, unknown> = {};
             if (filters.search) params.p_search = filters.search;
             if (filters.city) params.p_city = filters.city;
             if (filters.status) params.p_status = filters.status;
@@ -119,7 +119,7 @@ export function useStoreList360(filters: StoreListFilters = {}) {
             if (filters.hasAuction !== undefined && filters.hasAuction !== null) params.p_has_auction = filters.hasAuction;
             if (filters.hasArremate !== undefined && filters.hasArremate !== null) params.p_has_arremate = filters.hasArremate;
 
-            const { data, error } = await (supabase.rpc as any)("list_stores_360", params);
+            const { data, error } = await (supabase.rpc as unknown)("list_stores_360", params);
             if (error) { console.error("[LOJA5] list_stores_360 error:", error); return []; }
             return (data || []) as Store360Row[];
         },
@@ -156,7 +156,7 @@ export function useStore360(storeId: string | null) {
         queryKey: ["admineng-store-360", storeId],
         queryFn: async () => {
             if (!storeId) return null;
-            const { data, error } = await (supabase.rpc as any)("get_store_360_json", { p_store_id: storeId });
+            const { data, error } = await (supabase.rpc as unknown)("get_store_360_json", { p_store_id: storeId });
             if (error) { console.error("[LOJA5] get_store_360_json error:", error); return null; }
             if (data?.error) { console.error("[LOJA5] store not found:", data.error); return null; }
             return data as Store360Detail;
@@ -174,7 +174,7 @@ export function useAccount360(userId: string | null) {
         queryKey: ["admineng-account-360", userId],
         queryFn: async () => {
             if (!userId) return null;
-            const { data, error } = await (supabase.rpc as any)("get_account_360_json", { p_user_id: userId });
+            const { data, error } = await (supabase.rpc as unknown)("get_account_360_json", { p_user_id: userId });
             if (error) { console.error("[LOJA5] get_account_360_json error:", error); return null; }
             if (data?.error) { console.error("[LOJA5] account not found:", data.error); return null; }
             return data as { account: Account360Row; stores: Store360Row[] };

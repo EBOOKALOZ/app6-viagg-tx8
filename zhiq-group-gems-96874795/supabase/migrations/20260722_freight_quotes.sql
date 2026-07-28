@@ -721,17 +721,175 @@ GRANT EXECUTE ON FUNCTION public.admin_set_freight_commission(jsonb) TO authenti
 REVOKE ALL ON FUNCTION public.compute_freight_commission(numeric, text) FROM public, anon;
 GRANT EXECUTE ON FUNCTION public.compute_freight_commission(numeric, text) TO authenticated, service_role;
 
+-- ════════════════════════════════════════════════════════════
+-- V2.1 — ACEITAR SERVIÇO E ABRIR CONTATO
+-- Visualizar oportunidades é grátis; a comissão é cobrada UMA
+-- única vez ao abrir o contato do cliente (nome/WhatsApp/endereço
+-- completo). Desbloqueio fica permanente por transportador.
+-- ════════════════════════════════════════════════════════════
+
+-- 24) Desbloqueios de contato (1 por transportador × solicitação)
+CREATE TABLE IF NOT EXISTS public.freight_quote_unlocks (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id          uuid NOT NULL REFERENCES public.freight_quote_requests(id) ON DELETE CASCADE,
+  transporter_user_id uuid NOT NULL,
+  commission_brl      numeric NOT NULL DEFAULT 0,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT fqu_request_transporter_uk UNIQUE (request_id, transporter_user_id)
+);
+ALTER TABLE public.freight_quote_unlocks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS fqu_select_own ON public.freight_quote_unlocks;
+CREATE POLICY fqu_select_own ON public.freight_quote_unlocks
+  FOR SELECT USING (transporter_user_id = auth.uid() OR public.has_role(auth.uid(), 'admin'::app_role));
+
+-- 25) Monta o pacote de contato (INTERNA — sem grant; tolerante ao schema
+--     de profiles via to_jsonb: nunca quebra por coluna inexistente)
+CREATE OR REPLACE FUNCTION public.build_freight_quote_contact(p_request_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_req public.freight_quote_requests; v_prof jsonb := '{}'::jsonb;
+BEGIN
+  SELECT * INTO v_req FROM public.freight_quote_requests WHERE id = p_request_id;
+  IF v_req.id IS NULL THEN RETURN NULL; END IF;
+  SELECT to_jsonb(p.*) INTO v_prof FROM public.profiles p WHERE p.id = v_req.client_user_id;
+  v_prof := coalesce(v_prof, '{}'::jsonb);
+  RETURN jsonb_build_object(
+    'client', jsonb_build_object(
+      'name', coalesce(nullif(v_prof->>'full_name',''), nullif(v_prof->>'name',''), nullif(v_prof->>'nome',''), 'Cliente Viagg-TX8'),
+      'whatsapp', coalesce(nullif(v_prof->>'whatsapp',''), nullif(v_prof->>'telefone',''), ''),
+      'phone', coalesce(nullif(v_prof->>'telefone',''), nullif(v_prof->>'phone',''), '')
+    ),
+    'origin', jsonb_build_object('address', v_req.origin_address, 'city', v_req.origin_city,
+      'state', v_req.origin_state, 'cep', v_req.origin_cep, 'lat', v_req.origin_lat, 'lng', v_req.origin_lng),
+    'dest', jsonb_build_object('address', v_req.dest_address, 'city', v_req.dest_city,
+      'state', v_req.dest_state, 'cep', v_req.dest_cep, 'lat', v_req.dest_lat, 'lng', v_req.dest_lng),
+    'desired_date', v_req.desired_date, 'desired_time', v_req.desired_time,
+    'notes', v_req.notes, 'photos', coalesce(v_req.photos, '[]'::jsonb)
+  );
+END; $$;
+
+-- 26) Preview da comissão (mostrada ANTES do aceite — transparência)
+CREATE OR REPLACE FUNCTION public.preview_freight_commission(p_price numeric, p_category text)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE s public.freight_commission_settings; v_pct numeric;
+BEGIN
+  SELECT * INTO s FROM public.freight_commission_settings WHERE id = 1;
+  IF s.id IS NULL OR NOT s.enabled THEN
+    RETURN jsonb_build_object('success', true, 'enabled', false, 'percent', 0, 'commission_brl', 0);
+  END IF;
+  v_pct := coalesce(nullif(s.per_category->>coalesce(p_category,''), '')::numeric, s.percent, 0);
+  RETURN jsonb_build_object('success', true, 'enabled', true, 'percent', v_pct,
+    'commission_brl', public.compute_freight_commission(p_price, p_category));
+END; $$;
+
+-- 27) ACEITAR SERVIÇO E ABRIR CONTATO — aceita, registra a comissão e
+--     libera o contato do cliente numa única transação. Idempotente:
+--     já desbloqueado → devolve o contato sem nova cobrança.
+CREATE OR REPLACE FUNCTION public.accept_freight_opportunity_unlock(p_request_id uuid, p_price numeric)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_req public.freight_quote_requests;
+  v_prop public.freight_quote_proposals;
+  v_prop_id uuid;
+  v_price numeric;
+  v_comm numeric;
+BEGIN
+  IF v_uid IS NULL THEN RETURN jsonb_build_object('success', false, 'error', 'not_authenticated'); END IF;
+  SELECT * INTO v_req FROM public.freight_quote_requests WHERE id = p_request_id;
+  IF v_req.id IS NULL THEN RETURN jsonb_build_object('success', false, 'error', 'request_not_found'); END IF;
+  IF v_req.client_user_id = v_uid THEN RETURN jsonb_build_object('success', false, 'error', 'own_request'); END IF;
+
+  -- Já desbloqueado? Devolve sem nova cobrança.
+  IF EXISTS (SELECT 1 FROM public.freight_quote_unlocks
+             WHERE request_id = p_request_id AND transporter_user_id = v_uid) THEN
+    RETURN jsonb_build_object('success', true, 'already_unlocked', true,
+      'contact', public.build_freight_quote_contact(p_request_id));
+  END IF;
+
+  -- Solicitação fechada: só libera se a proposta aceita for do próprio
+  -- transportador (comissão já registrada no aceite do cliente).
+  IF v_req.status NOT IN ('aguardando','recebendo','negociacao') THEN
+    SELECT * INTO v_prop FROM public.freight_quote_proposals
+    WHERE request_id = p_request_id AND transporter_user_id = v_uid AND status = 'aceita';
+    IF v_prop.id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'request_closed');
+    END IF;
+    INSERT INTO public.freight_quote_unlocks (request_id, transporter_user_id, commission_brl)
+    VALUES (p_request_id, v_uid, 0) ON CONFLICT DO NOTHING;
+    RETURN jsonb_build_object('success', true, 'already_unlocked', true,
+      'contact', public.build_freight_quote_contact(p_request_id));
+  END IF;
+
+  -- Aceite definitivo agora
+  v_price := coalesce(p_price, v_req.suggested_price_brl);
+  IF v_price IS NULL OR v_price <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_price');
+  END IF;
+
+  INSERT INTO public.freight_quote_proposals (request_id, transporter_user_id, price_brl, status, notes)
+  VALUES (p_request_id, v_uid, v_price, 'aceita', 'Aceite direto da oportunidade (contato aberto).')
+  ON CONFLICT (request_id, transporter_user_id) DO UPDATE
+    SET price_brl = EXCLUDED.price_brl, status = 'aceita', updated_at = now()
+  RETURNING id INTO v_prop_id;
+
+  UPDATE public.freight_quote_proposals SET status = 'recusada', updated_at = now()
+  WHERE request_id = p_request_id AND id <> v_prop_id AND status = 'enviada';
+  UPDATE public.freight_quote_requests
+  SET status = 'aceita', accepted_proposal_id = v_prop_id, updated_at = now() WHERE id = p_request_id;
+
+  -- COBRANÇA: comissão registrada SÓ aqui, no aceite definitivo
+  v_comm := public.compute_freight_commission(v_price, v_req.cargo_type);
+  PERFORM public.register_freight_commission(p_request_id, v_prop_id, v_uid, v_price, v_req.cargo_type);
+  INSERT INTO public.freight_quote_unlocks (request_id, transporter_user_id, commission_brl)
+  VALUES (p_request_id, v_uid, coalesce(v_comm, 0)) ON CONFLICT DO NOTHING;
+
+  RETURN jsonb_build_object('success', true, 'already_unlocked', false,
+    'proposal_id', v_prop_id, 'price', v_price, 'commission_brl', coalesce(v_comm, 0),
+    'contact', public.build_freight_quote_contact(p_request_id));
+END; $$;
+
+-- 28) Ver contato já liberado (ou liberar sem cobrança quando o CLIENTE
+--     aceitou a proposta deste transportador)
+CREATE OR REPLACE FUNCTION public.get_freight_quote_contact(p_request_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_uid uuid := auth.uid();
+BEGIN
+  IF v_uid IS NULL THEN RETURN jsonb_build_object('success', false, 'error', 'not_authenticated'); END IF;
+  IF EXISTS (SELECT 1 FROM public.freight_quote_unlocks
+             WHERE request_id = p_request_id AND transporter_user_id = v_uid) THEN
+    RETURN jsonb_build_object('success', true, 'contact', public.build_freight_quote_contact(p_request_id));
+  END IF;
+  IF EXISTS (SELECT 1 FROM public.freight_quote_proposals
+             WHERE request_id = p_request_id AND transporter_user_id = v_uid AND status = 'aceita') THEN
+    INSERT INTO public.freight_quote_unlocks (request_id, transporter_user_id, commission_brl)
+    VALUES (p_request_id, v_uid, 0) ON CONFLICT DO NOTHING;
+    RETURN jsonb_build_object('success', true, 'contact', public.build_freight_quote_contact(p_request_id));
+  END IF;
+  RETURN jsonb_build_object('success', false, 'error', 'locked');
+END; $$;
+
+-- 29) Permissões V2.1 (build_freight_quote_contact fica SEM grant — interna)
+REVOKE ALL ON FUNCTION public.build_freight_quote_contact(uuid) FROM public, anon, authenticated;
+REVOKE ALL ON FUNCTION public.preview_freight_commission(numeric, text) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.preview_freight_commission(numeric, text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.accept_freight_opportunity_unlock(uuid, numeric) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.accept_freight_opportunity_unlock(uuid, numeric) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.get_freight_quote_contact(uuid) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_freight_quote_contact(uuid) TO authenticated, service_role;
+
 -- ============================================================
--- VERIFICAÇÃO (deve retornar tabelas=7, rpcs=13)
+-- VERIFICAÇÃO (deve retornar tabelas=8, rpcs=16)
 -- ============================================================
 SELECT
   (SELECT count(*) FROM information_schema.tables WHERE table_schema='public'
      AND table_name IN ('freight_quote_requests','freight_quote_proposals','freight_quote_reactions',
                         'freight_fleet_vehicles','freight_routes',
-                        'freight_commission_settings','freight_service_commissions')) AS tabelas,
+                        'freight_commission_settings','freight_service_commissions',
+                        'freight_quote_unlocks')) AS tabelas,
   (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname='public' AND p.proname IN
        ('create_freight_quote_request','react_freight_quote','submit_freight_quote_proposal',
         'accept_freight_quote_proposal','update_freight_quote_status','get_freight_quote_metrics',
         'upsert_fleet_vehicle','delete_fleet_vehicle','upsert_freight_route','delete_freight_route',
-        'compute_freight_commission','accept_freight_opportunity','admin_set_freight_commission')) AS rpcs;
+        'compute_freight_commission','accept_freight_opportunity','admin_set_freight_commission',
+        'preview_freight_commission','accept_freight_opportunity_unlock','get_freight_quote_contact')) AS rpcs;

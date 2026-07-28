@@ -90,7 +90,7 @@ export function useActiveFooterLinks(options?: {
     } finally {
       setLoading(false);
     }
-  }, [routePrefix, profileFilter]);
+  }, [routePrefix]);
 
   useEffect(() => {
     fetchLinks();

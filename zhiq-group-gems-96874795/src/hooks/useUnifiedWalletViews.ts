@@ -119,9 +119,9 @@ export function useUnifiedWalletViews() {
             if (payoutErr) throw payoutErr;
             setPayouts((payoutData as WalletPayout[]) || []);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('[useUnifiedWalletViews] Error:', err);
-            setError(err.message || 'Erro ao carregar dados da carteira');
+            setError(err instanceof Error ? err.message : String(err));
         } finally {
             setIsLoading(false);
         }

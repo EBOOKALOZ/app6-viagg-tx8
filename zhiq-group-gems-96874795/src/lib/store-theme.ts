@@ -180,7 +180,7 @@ export function sanitizeAppearance(raw: unknown): StoreAppearance | null {
   // Defensivo: se a aparência voltar como JSON string (double-encoded), parseia.
   if (typeof raw === "string") { try { raw = JSON.parse(raw); } catch { return null; } }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const r = raw as any;
+  const r = raw as Record<string, unknown>;
   const D = DEFAULT_APPEARANCE;
   return {
     v: 1,
@@ -329,7 +329,7 @@ export function buildThemeVars(a: StoreAppearance): CSSProperties {
   const btnBorder = isOutline ? `2px solid ${c.btnBg}` : "none";
   const btnShadow = a.buttons.glow ? `0 6px 20px ${hexToRgba(c.btnBg, 0.45)}` : "none";
 
-  let bannerBg = a.banner.color;
+  const bannerBg = a.banner.color;
   let bannerBgi = "none";
   if (a.banner.style === "gradient") {
     bannerBgi = `linear-gradient(135deg, ${a.banner.color}, ${a.banner.color2})`;

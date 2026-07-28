@@ -17,7 +17,8 @@ async function fetchServerOffset() {
   offsetFetched = true;
   try {
     const before = Date.now();
-    const { data } = await supabase.rpc("get_server_timestamp" as any);
+    type GetTimestampRpc = (fn: "get_server_timestamp") => Promise<{ data: string | null; error: Error | null }>;
+    const { data } = await (supabase.rpc as unknown as GetTimestampRpc)("get_server_timestamp");
     const after = Date.now();
     if (data) {
       const serverTime = new Date(data as string).getTime();
@@ -133,8 +134,20 @@ function ConfirmedByInfo({ confirmedBy, confirmedAt }: { confirmedBy: string | n
   );
 }
 
+interface QueueItem {
+  id: string;
+  status: string | null;
+  title: string | null;
+  text_content: string | null;
+  admin_unlock_at: string | null;
+  posting_confirmed_by: string | null;
+  posting_confirmed_at: string | null;
+  consumed_by: string | null;
+  created_at: string | null;
+}
+
 function ActiveQueueCard({ item, cancellingId, onPause, onCancel }: {
-  item: any;
+  item: QueueItem;
   cancellingId: string | null;
   onPause: (id: string) => void;
   onCancel: (id: string) => void;
@@ -194,7 +207,8 @@ export function CampaignQueueStatus() {
 
     setCancellingId(queueId);
     try {
-      const { error } = await (supabase.rpc as any)("cancel_queue_message", {
+      type CancelRpc = (fn: "cancel_queue_message", args: { p_queue_id: string }) => Promise<{ error: Error | null }>;
+      const { error } = await (supabase.rpc as unknown as CancelRpc)("cancel_queue_message", {
         p_queue_id: queueId,
       });
       if (error) throw error;
@@ -202,8 +216,8 @@ export function CampaignQueueStatus() {
       toast.success("Mensagem cancelada definitivamente");
       queryClient.invalidateQueries({ queryKey: ["admin-campaign-queue-status"] });
       queryClient.invalidateQueries({ queryKey: ["admin-message-library"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao cancelar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao cancelar");
     } finally {
       setCancellingId(null);
     }
@@ -219,8 +233,8 @@ export function CampaignQueueStatus() {
       toast.success("Campanha pausada");
       queryClient.invalidateQueries({ queryKey: ["admin-campaign-queue-status"] });
       queryClient.invalidateQueries({ queryKey: ["admin-message-library"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao pausar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao pausar");
     } finally {
       setCancellingId(null);
     }
@@ -236,8 +250,8 @@ export function CampaignQueueStatus() {
       toast.success("Campanha retomada");
       queryClient.invalidateQueries({ queryKey: ["admin-campaign-queue-status"] });
       queryClient.invalidateQueries({ queryKey: ["admin-message-library"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao retomar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao retomar");
     } finally {
       setCancellingId(null);
     }

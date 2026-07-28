@@ -81,10 +81,10 @@ const SERVICE_LABELS: Record<string, string> = {
   debit: "Débito",
 };
 
-function getServiceLabel(entry: any): string {
-  if (entry.reference_type && SERVICE_LABELS[entry.reference_type]) return SERVICE_LABELS[entry.reference_type];
-  if (entry.source_type && SERVICE_LABELS[entry.source_type]) return SERVICE_LABELS[entry.source_type];
-  if (entry.entry_type && SERVICE_LABELS[entry.entry_type]) return SERVICE_LABELS[entry.entry_type];
+function getServiceLabel(entry: Record<string, unknown>): string {
+  if (entry.reference_type && SERVICE_LABELS[entry.reference_type as string]) return SERVICE_LABELS[entry.reference_type as string];
+  if (entry.source_type && SERVICE_LABELS[entry.source_type as string]) return SERVICE_LABELS[entry.source_type as string];
+  if (entry.entry_type && SERVICE_LABELS[entry.entry_type as string]) return SERVICE_LABELS[entry.entry_type as string];
   return "Transação";
 }
 
@@ -173,7 +173,7 @@ export function useMotoboyPayEarnings() {
 
       const week = weekEntries || [];
       const today = week.filter(e => e.created_at >= todayStart);
-      const toCents = (rows: any[]) => rows.reduce((s, e) => s + Math.round(Number(e.amount || 0) * 100), 0);
+      const toCents = (rows: Record<string, unknown>[]) => rows.reduce((s, e) => s + Math.round(Number(e.amount || 0) * 100), 0);
 
       return {
         todayCents: toCents(today),
@@ -208,18 +208,18 @@ export function useMotoboyPayHistory(limit = 50) {
 
       if (error) { console.error("Error fetching history:", error); return []; }
 
-      return (data || []).map((e: any) => {
+      return (data || []).map((e: Record<string, unknown>) => {
         const signedCents = Math.round(Number(e.amount || 0) * 100) * (e.direction === "debit" ? -1 : 1);
         const mapped = {
           id: e.id,
           amount_cents: signedCents,
-          created_at: e.created_at,
-          entry_type: e.entry_type ?? null,
-          reference_type: e.reference_type ?? null,
-          reference_id: e.reference_id ?? null,
-          source_type: e.reason_code ?? null,
+          created_at: e.created_at as string,
+          entry_type: (e.entry_type as string) ?? null,
+          reference_type: (e.reference_type as string) ?? null,
+          reference_id: (e.reference_id as string) ?? null,
+          source_type: (e.reason_code as string) ?? null,
         };
-        return { ...mapped, service_label: getServiceLabel(mapped) };
+        return { ...mapped, service_label: getServiceLabel(mapped as Record<string, unknown>) };
       });
     },
     enabled: !!user?.id,
@@ -244,11 +244,11 @@ export function useMotoboyPayPayouts() {
         .limit(15);
 
       if (error) { console.error("Error fetching payouts:", error); return []; }
-      return (data || []).map((p: any) => ({
+      return (data || []).map((p: Record<string, unknown>) => ({
         id: p.id,
         amount_cents: Math.round(Number(p.requested_amount || 0) * 100),
-        status: p.status,
-        created_at: p.created_at,
+        status: p.status as string,
+        created_at: p.created_at as string,
       }));
     },
     enabled: !!user?.id,
@@ -271,8 +271,9 @@ export function useMotoboyPayCommission() {
         .single();
 
       // Contagem ao vivo dos grupos válidos — cobre o período pré-migration
-      const { count: liveValidCount } = await (supabase
-        .from('whatsapp_groups') as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { count: liveValidCount } = await supabase
+        .from('whatsapp_groups')
         .select('id', { count: 'exact', head: true })
         .eq('owner_user_id', user.id)
         .eq('valid_for_commission', true);

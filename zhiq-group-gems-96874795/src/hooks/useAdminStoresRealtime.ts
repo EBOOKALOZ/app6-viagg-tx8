@@ -55,7 +55,7 @@ export function useAdminStoresRealtime() {
 
         WATCHED_TABLES.forEach((table) => {
             channel = channel.on(
-                "postgres_changes" as any,
+                "postgres_changes" as unknown,
                 { event: "*", schema: "public", table },
                 () => invalidateStores()
             );

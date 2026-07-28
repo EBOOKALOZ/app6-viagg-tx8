@@ -116,8 +116,8 @@ export function CreateMediaModal({ open, onOpenChange, regions }: Props) {
       window.dispatchEvent(new Event("operator-live-update"));
       resetForm();
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao criar mídia");
+    } catch (err: unknown) {
+      toast.error(`Erro ao salvar imagem: ${err instanceof Error ? err.message : "Desconhecido"}`);
     } finally {
       setSaving(false);
     }

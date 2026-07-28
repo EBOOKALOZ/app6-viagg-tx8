@@ -14,7 +14,7 @@ import {
   Calendar, Activity, CheckCircle2, Clock, AlertCircle, TrendingUp, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
+import { resolveTravelMedia, travelImgFallback } from "@/lib/viagem/travelMedia";
 import { TRAVEL_CATEGORIES } from "@/lib/viagem/travelCategories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,17 +57,24 @@ export default function AdvertiserViagemListingsPage() {
       if (list.length === 0) return [];
       const ids = list.map((s: any) => s.id);
       const { data: mediaRows } = await (supabase.from("travel_media") as any)
-        .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+        .select("listing_id, bucket, storage_path, public_url, moderation_status, sort_order")
         .in("listing_id", ids)
         .order("sort_order", { ascending: true });
       const thumbMap = new Map<string, string>();
+      // dono vê a própria foto mesmo em análise (o card mostra o selo abaixo);
+      // só o público (Mercado) exige moderation_status aprovado.
+      const reviewingMap = new Map<string, boolean>();
       for (const m of (mediaRows as any[]) || []) {
-        if (!thumbMap.has(m.listing_id)) {
-          const url = resolveTravelMediaRow(m);
-          if (url) thumbMap.set(m.listing_id, url);
-        }
+        if (thumbMap.has(m.listing_id) || reviewingMap.has(m.listing_id)) continue;
+        const state = resolveTravelMedia(m);
+        if (state.kind === "ready") thumbMap.set(m.listing_id, state.url);
+        else if (state.kind === "reviewing") reviewingMap.set(m.listing_id, true);
       }
-      return list.map((s: any) => ({ ...s, thumb: thumbMap.get(s.id) || null }));
+      return list.map((s: any) => ({
+        ...s,
+        thumb: thumbMap.get(s.id) || null,
+        thumbReviewing: reviewingMap.get(s.id) || false,
+      }));
     },
   });
 
@@ -313,7 +320,17 @@ export default function AdvertiserViagemListingsPage() {
                 <div key={s.id} className="bg-[#1B1F24] border border-[#2A3038] rounded-2xl overflow-hidden flex flex-col hover:shadow-xl hover:shadow-black/30 transition-all hover:-translate-y-0.5">
                   <div className="relative h-44 bg-gradient-to-br from-sky-950/50 to-sky-900/30 overflow-hidden">
                     {s.thumb ? (
-                      <img src={s.thumb} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      <img
+                        src={s.thumb}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={travelImgFallback}
+                      />
+                    ) : s.thumbReviewing ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-center px-2">
+                        <Clock className="h-6 w-6 text-yellow-400" />
+                        <span className="text-[10px] font-bold text-yellow-300 uppercase">Foto em análise</span>
+                      </div>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-5xl">{getCatEmoji(s.category)}</div>
                     )}
@@ -381,7 +398,7 @@ export default function AdvertiserViagemListingsPage() {
               return (
                 <div key={s.id} className="flex items-center gap-3 p-4 hover:bg-[#14171B] transition-colors group">
                   <div className="w-14 h-14 rounded-xl overflow-hidden bg-gradient-to-br from-sky-950/50 to-sky-900/30 shrink-0 flex items-center justify-center border border-[#2A3038] text-2xl">
-                    {s.thumb ? <img src={s.thumb} alt="" className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} /> : getCatEmoji(s.category)}
+                    {s.thumb ? <img src={s.thumb} alt="" className="w-full h-full object-cover" onError={travelImgFallback} /> : getCatEmoji(s.category)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[#F5F7FA] text-sm truncate">{s.title || "Sem título"}</p>

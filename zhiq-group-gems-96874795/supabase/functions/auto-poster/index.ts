@@ -44,7 +44,7 @@ serve(async (req) => {
         const location = [lot.target_bairro || lot.target_region, lot.target_city].filter(Boolean).join(", ");
         if (location) lines.push(`Localização: ${location}`);
         lines.push("Produtos:");
-        (lot.items || []).forEach((item: any) => {
+        (lot.items || []).forEach((item: Record<string, unknown>) => {
             const price = item.product_price ? ` — R$ ${Number(item.product_price).toFixed(2).replace(".", ",")}` : "";
             lines.push(`• ${item.product_name}${price}`);
         });
@@ -137,7 +137,8 @@ O texto deve ser animado, usar emojis adequados e ter um call to action (CTA) cl
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
-    } catch (error: any) {
+    } catch (err: unknown) {
+        const error = err as Error;
         console.error("Auto-Poster Error:", error);
         return new Response(JSON.stringify({ success: false, error: error.message }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

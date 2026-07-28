@@ -35,10 +35,10 @@ export function useMyStore() {
         throw error;
       }
       
-      let payload = data as any;
+      let payload = data as Record<string, unknown> | string;
       if (typeof payload === 'string') {
         try {
-          payload = JSON.parse(payload);
+          payload = JSON.parse(payload) as Record<string, unknown>;
         } catch (e) {
           console.error('[useMyStore] Falha ao fazer parse do retorno RPC:', payload);
         }
@@ -53,10 +53,10 @@ export function useMyStore() {
         );
       }
 
-      setStore(payload.store as MyStoreData);
-    } catch (err: any) {
+      setStore((payload as Record<string, unknown>).store as MyStoreData);
+    } catch (err: Error | unknown) {
       console.error('[useMyStore] Falha ao recuperar contexto da loja:', err);
-      setError(err);
+      setError(err instanceof Error ? err : new Error("Erro desconhecido"));
     } finally {
       setIsLoading(false);
     }

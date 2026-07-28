@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
   // Pagamento recusado/cancelado
   if (["rejected", "cancelled", "refunded", "charged_back"].includes(mpStatus)) {
-    await svc.from("promotion_purchases" as any)
+    await svc.from("promotion_purchases" as never)
       .update({ status: "cancelled", mp_payment_id: String(payment.id ?? "") })
       .eq("id", purchaseId);
     return json({ ok: true });
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
 
   // Busca dados da compra
   const { data: purchase } = await svc
-    .from("promotion_purchases" as any)
+    .from("promotion_purchases" as never)
     .select("*")
     .eq("id", purchaseId)
     .maybeSingle();
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
   const expiresFormatted = new Date(expiresAt).toLocaleDateString("pt-BR");
 
   // 1. Atualiza purchase → paid
-  await svc.from("promotion_purchases" as any).update({
+  await svc.from("promotion_purchases" as never).update({
     status:       "paid",
     mp_payment_id: String(payment.id ?? ""),
     starts_at:    startsAt,
@@ -123,22 +123,25 @@ Deno.serve(async (req) => {
   // 2. Seta is_promoted = true em todos os anúncios publicados do anunciante no módulo
   const module = (purchase.listing_module as string) ?? "travel";
   if (module === "travel") {
-    await svc.from("travel_listings" as any)
-      .update({ is_promoted: true })
+    // VIAGENS: promove os pacotes publicados até o fim do período do pacote.
+    // (is_promoted/promoted_until versionados em 20260723_travel_promocao_
+    //  divulgacao_oficial.sql — a leitura respeita promoted_until > now().)
+    await svc.from("travel_listings" as never)
+      .update({ is_promoted: true, promoted_until: expiresAt })
       .eq("owner_user_id", purchase.advertiser_user_id)
       .eq("visibility_status", "published");
   } else if (module === "freight") {
     // FRETES: promove anúncios + rotas + veículos da frota do transportador
     // até o fim do período do pacote (Rota Premium / Veículo Premium / Empresa Premium).
-    await svc.from("freight_listings" as any)
+    await svc.from("freight_listings" as never)
       .update({ is_promoted: true, promoted_until: expiresAt })
       .eq("owner_user_id", purchase.advertiser_user_id)
       .eq("visibility_status", "published");
-    await svc.from("freight_routes" as any)
+    await svc.from("freight_routes" as never)
       .update({ is_promoted: true, promoted_until: expiresAt })
       .eq("owner_user_id", purchase.advertiser_user_id)
       .eq("is_active", true);
-    await svc.from("freight_fleet_vehicles" as any)
+    await svc.from("freight_fleet_vehicles" as never)
       .update({ is_promoted: true, promoted_until: expiresAt })
       .eq("owner_user_id", purchase.advertiser_user_id)
       .eq("is_active", true);

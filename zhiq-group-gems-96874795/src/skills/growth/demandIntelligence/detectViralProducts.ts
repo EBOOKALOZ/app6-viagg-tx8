@@ -19,7 +19,7 @@ export interface ViralProduct {
 export async function detectViralProducts(city: string): Promise<ViralProduct[]> {
   console.log(`[DemandIntelligence] 🔥 Scanning for viral products in ${city}...`);
 
-  const { data, error } = await (supabase.from("neighborhood_product_demand") as any)
+  const { data, error } = await (supabase.from("neighborhood_product_demand") as never)
     .select("*")
     .eq("city", city)
     .eq("is_viral", true)

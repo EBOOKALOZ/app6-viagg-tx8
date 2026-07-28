@@ -147,14 +147,14 @@ export function useAdminVehicleOverview(opts: UseAdminVehicleOverviewOptions = {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       // ── 1. Listings ─────────────────────────────────────────────────────
-      const { data: listingsRaw } = await (supabase.from("vehicle_listings") as any)
+      const { data: listingsRaw } = await (supabase.from("vehicle_listings") as unknown)
         .select(
           "id, title, vehicle_type, visibility_status, price_brl, created_at, updated_at, published_at, city, state, neighborhood, owner_user_id, brand, model, year, kilometers, fuel_type, transmission, condition"
         )
         .order("created_at", { ascending: false })
         .limit(2000);
 
-      const listings: any[] = listingsRaw || [];
+      const listings: unknown[] = listingsRaw || [];
 
       // IDs de usuário únicos
       const ownerIds = Array.from(
@@ -162,44 +162,44 @@ export function useAdminVehicleOverview(opts: UseAdminVehicleOverviewOptions = {
       ) as string[];
 
       // ── 2. Profiles + merchant_stores (p/ identificar lojista/pessoa) ───
-      const profileMap = new Map<string, any>();
-      const storeMap = new Map<string, any>();
+      const profileMap = new Map<string, unknown>();
+      const storeMap = new Map<string, unknown>();
 
       if (ownerIds.length > 0) {
         const [{ data: profs }, { data: stores }] = await Promise.all([
-          (supabase.from("profiles") as any)
+          (supabase.from("profiles") as unknown)
             .select("id, nome, nome_loja, telefone, cidade, estado, email")
             .in("id", ownerIds),
-          (supabase.from("merchant_stores") as any)
+          (supabase.from("merchant_stores") as unknown)
             .select("user_id, nome_loja, store_name, cidade, city, estado, region, telefone, phone")
             .in("user_id", ownerIds),
         ]);
-        (profs || []).forEach((p: any) => profileMap.set(p.id, p));
-        (stores || []).forEach((s: any) => storeMap.set(s.user_id, s));
+        (profs || []).forEach((p: unknown) => profileMap.set(p.id, p));
+        (stores || []).forEach((s: unknown) => storeMap.set(s.user_id, s));
       }
 
        // ── 3. Pacotes + compras (real_estate_credit_packages category='vehicles') ────────────────
-        const { data: vehiclePkgs } = await (supabase.from("real_estate_credit_packages") as any)
+        const { data: vehiclePkgs } = await (supabase.from("real_estate_credit_packages") as unknown)
           .select("*")
           .eq("category", "vehicles")
           .order("sort_order", { ascending: true });
 
-       const vehiclePackagesDb: any[] = vehiclePkgs || [];
+       const vehiclePackagesDb: unknown[] = vehiclePkgs || [];
 
        // Compras de veículos: real_estate_credit_purchases (somente pacotes de veículos)
        const vehiclePackageIds = vehiclePackagesDb.map(p => p.id);
-       const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as any)
+       const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as unknown)
          .select("id, owner_user_id, package_id, amount_brl, credits_total, payment_status, created_at, paid_at")
          .order("created_at", { ascending: false })
          .limit(2000);
 
-       const allPurchases: any[] = purchasesRaw || [];
+       const allPurchases: unknown[] = purchasesRaw || [];
        const purchases = allPurchases.filter(p => vehiclePackageIds.includes(p.package_id));
 
        // Map user (owner_user_id) -> último pacote comprado
        const userPackageMap = new Map<string, { name: string | null; slug: string | null; count: number }>();
        for (const p of purchases) {
-         const pkg = vehiclePackagesDb.find((k: any) => k.id === p.package_id);
+         const pkg = vehiclePackagesDb.find((k: unknown) => k.id === p.package_id);
          const uid = p.owner_user_id;
          if (!uid) continue;
          const entry = userPackageMap.get(uid) || { name: null, slug: null, count: 0 };
@@ -212,12 +212,12 @@ export function useAdminVehicleOverview(opts: UseAdminVehicleOverviewOptions = {
        }
 
       // ── 4. Ledger de créditos (filtrar módulo vehicle) ──────────────────
-      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as any)
+      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as unknown)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(3000);
 
-      const ledgerAll: any[] = ledgerRaw || [];
+      const ledgerAll: unknown[] = ledgerRaw || [];
       const ledgerVehicle = ledgerAll.filter((e) => {
         const hay = `${e.module || ""} ${e.reason_code || ""} ${e.description || ""}`.toLowerCase();
         return (
@@ -246,11 +246,11 @@ export function useAdminVehicleOverview(opts: UseAdminVehicleOverviewOptions = {
       }
 
       // advertiser_accounts → user_id bridge
-      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as any)
+      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as unknown)
         .select("id, user_id")
         .limit(5000);
       const acctToUser = new Map<string, string>();
-      (accountsRaw || []).forEach((a: any) => {
+      (accountsRaw || []).forEach((a: unknown) => {
         if (a?.id && a?.user_id) acctToUser.set(a.id, a.user_id);
       });
 
@@ -261,13 +261,13 @@ export function useAdminVehicleOverview(opts: UseAdminVehicleOverviewOptions = {
       }
 
       // ── 5. Leads (advertiser_contact_intentions) p/ vehicles ──────────
-      const { data: intentionsRaw } = await (supabase.from("advertiser_contact_intentions") as any)
+      const { data: intentionsRaw } = await (supabase.from("advertiser_contact_intentions") as unknown)
         .select("listing_id, listing_module, status")
         .eq("listing_module", "vehicles")
         .limit(5000);
 
       const leadsByListing = new Map<string, number>();
-      (intentionsRaw || []).forEach((i: any) => {
+      (intentionsRaw || []).forEach((i: unknown) => {
         if (i.status === "cancelled") return;
         leadsByListing.set(i.listing_id, (leadsByListing.get(i.listing_id) || 0) + 1);
       });
@@ -384,11 +384,11 @@ export function useAdminVehicleOverview(opts: UseAdminVehicleOverviewOptions = {
       });
 
        // ── 9. Estatística de pacotes ───────────────────────────────────────
-       const packageStats: AdminVehiclePackageStats[] = vehiclePackagesDb.map((p: any) => {
-         const buys = purchases.filter((x: any) => x.package_id === p.id);
-         const uniqueBuyers = new Set(buys.map((b: any) => b.owner_user_id)).size;
-         const revenue = buys.reduce((sum, b: any) => sum + (Number(b.amount_brl) || 0), 0);
-         const linkedListings = buys.reduce((sum, b: any) => {
+       const packageStats: AdminVehiclePackageStats[] = vehiclePackagesDb.map((p: unknown) => {
+         const buys = purchases.filter((x: unknown) => x.package_id === p.id);
+         const uniqueBuyers = new Set(buys.map((b: unknown) => b.owner_user_id)).size;
+         const revenue = buys.reduce((sum, b: unknown) => sum + (Number(b.amount_brl) || 0), 0);
+         const linkedListings = buys.reduce((sum, b: unknown) => {
            const uid = b.owner_user_id;
            return sum + (uid ? (listingsCountByUser.get(uid) || 0) : 0);
          }, 0);

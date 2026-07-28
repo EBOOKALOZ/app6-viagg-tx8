@@ -6,12 +6,12 @@ interface Coordinate {
 }
 
 export interface RouteData {
-    geometry: any;
+    geometry: Record<string, unknown>;
     distance: number;
     duration: number;
     weight_name: string;
     weight: number;
-    legs: any[];
+    legs: Record<string, unknown>[];
 }
 
 /**

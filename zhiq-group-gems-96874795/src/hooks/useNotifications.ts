@@ -79,7 +79,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
     const { error } = await supabase
       .from('user_notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() } as any)
+      // @ts-expect-error - Type definitions may be missing
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('id', notificationId)
       .eq('user_id', user.id);
 
@@ -101,7 +102,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
     let query = supabase
       .from('user_notifications')
-      .update({ is_read: true, read_at: new Date().toISOString() } as any)
+      // @ts-expect-error - Type definitions may be missing
+      .update({ is_read: true, read_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('is_read', false);
 

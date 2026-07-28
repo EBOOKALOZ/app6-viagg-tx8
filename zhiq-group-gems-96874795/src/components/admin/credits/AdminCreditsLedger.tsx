@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Download } from "lucide-react";
 import { exportToCSV } from "@/hooks/useAdminCredits";
-import type { AdminLedgerEntry } from "@/hooks/useAdminCredits";
+import type { AdminLedgerEntry, AdminCreditsData } from "@/hooks/useAdminCredits";
 
-interface Props { data: any; }
+interface Props { data: AdminCreditsData; }
 
 const REASON_LABELS: Record<string, string> = {
   package_purchase: "Compra de Pacote",

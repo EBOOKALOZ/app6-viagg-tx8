@@ -16,7 +16,7 @@ export function usePayAuditWebhooks(limit = 25) {
   return useQuery({
     queryKey: ["pay-audit-webhooks", limit],
     queryFn: async (): Promise<AuditWebhookEvent[]> => {
-      const { data, error } = await (supabase.from("pay_webhook_raw") as any)
+      const { data, error } = await (supabase.from("pay_webhook_raw") as unknown)
         .select("id, source, event_type, processed, process_error, received_at")
         .order("received_at", { ascending: false })
         .limit(limit);
@@ -34,7 +34,7 @@ export function usePayAuditReconciliation() {
   return useQuery({
     queryKey: ["pay-audit-reconciliation"],
     queryFn: async (): Promise<AuditReconciliation[]> => {
-      const { data, error } = await (supabase.from("pay_reconciliation_log") as any)
+      const { data, error } = await (supabase.from("pay_reconciliation_log") as unknown)
         .select("id, reconciliation_date, bank_balance_cents, ledger_balance_cents, divergence_cents, status, created_at")
         .order("reconciliation_date", { ascending: false })
         .limit(20);
@@ -63,7 +63,7 @@ export function usePayAuditLongRunningPayouts() {
 
       if (error) { console.error("Error fetching long-running payouts:", error); return []; }
 
-      return (data || []).map((p: any) => {
+      return (data || []).map((p: unknown) => {
         const hoursProcessing = Math.round(
           (Date.now() - new Date(p.created_at).getTime()) / (1000 * 60 * 60)
         );
@@ -87,7 +87,7 @@ export function usePayAuditErrors() {
   return useQuery({
     queryKey: ["pay-audit-errors"],
     queryFn: async (): Promise<AuditTransactionError[]> => {
-      const { data, error } = await (supabase.from("pay_transaction_errors") as any)
+      const { data, error } = await (supabase.from("pay_transaction_errors") as unknown)
         .select("id, transaction_type, error_code, error_message, resolved, created_at")
         .eq("resolved", false)
         .order("created_at", { ascending: false })
@@ -109,10 +109,10 @@ export function usePayAuditSummary() {
       const threshold = subHours(new Date(), LONG_RUNNING_PAYOUT_HOURS).toISOString();
 
       const [webhookRes, reconRes, longRunRes, errorRes, pendingRes] = await Promise.all([
-        (supabase.from("pay_webhook_raw") as any)
+        (supabase.from("pay_webhook_raw") as unknown)
           .select("id", { count: "exact", head: true })
           .eq("processed", false),
-        (supabase.from("pay_reconciliation_log") as any)
+        (supabase.from("pay_reconciliation_log") as unknown)
           .select("id", { count: "exact", head: true })
           .eq("status", "divergent"),
         supabase
@@ -120,7 +120,7 @@ export function usePayAuditSummary() {
           .select("id", { count: "exact", head: true })
           .eq("status", "processing")
           .lt("created_at", threshold),
-        (supabase.from("pay_transaction_errors") as any)
+        (supabase.from("pay_transaction_errors") as unknown)
           .select("id", { count: "exact", head: true })
           .eq("resolved", false),
         supabase

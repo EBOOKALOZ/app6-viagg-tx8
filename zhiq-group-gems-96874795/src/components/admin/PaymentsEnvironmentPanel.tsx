@@ -76,8 +76,8 @@ export function PaymentsEnvironmentPanel() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ["admin-payment-orders"],
     queryFn: async (): Promise<OrderRow[]> => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)("admin_list_payment_orders", {
+      // @ts-expect-error RPC admin_list_payment_orders ausente no types.ts gerado
+      const { data, error } = await supabase.rpc("admin_list_payment_orders", {
         p_limit: 500,
       });
       if (error) throw new Error(error.message);

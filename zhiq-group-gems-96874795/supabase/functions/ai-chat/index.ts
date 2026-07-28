@@ -113,7 +113,7 @@ serve(async (req) => {
     });
 
     const responseText = await upstream.text();
-    let data: any;
+    let data: Record<string, unknown>;
     try {
       data = JSON.parse(responseText);
     } catch {
@@ -137,10 +137,11 @@ serve(async (req) => {
       status:  200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err: any) {
-    console.error("[ai-chat] erro:", err);
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error("[ai-chat] erro:", error);
     return new Response(
-      JSON.stringify({ ok: false, error: err.message || "Erro interno" }),
+      JSON.stringify({ ok: false, error: error.message || "Erro interno" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

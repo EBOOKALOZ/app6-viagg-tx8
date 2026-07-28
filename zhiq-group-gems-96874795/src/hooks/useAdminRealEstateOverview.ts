@@ -146,14 +146,14 @@ export function useAdminRealEstateOverview(opts: UseAdminRealEstateOverviewOptio
     refetchOnWindowFocus: false,
     queryFn: async () => {
       // ── 1. Listings ─────────────────────────────────────────────────────
-      const { data: listingsRaw } = await (supabase.from("real_estate_listings") as any)
+      const { data: listingsRaw } = await (supabase.from("real_estate_listings") as unknown)
         .select(
           "id, title, property_type, visibility_status, price_brl, created_at, updated_at, published_at, city, state, neighborhood, owner_user_id, agent_name, agency_name, total_area_m2, bedrooms, bathrooms, description"
         )
         .order("created_at", { ascending: false })
         .limit(2000);
 
-      const listings: any[] = listingsRaw || [];
+      const listings: unknown[] = listingsRaw || [];
 
       // IDs de usuário únicos
       const ownerIds = Array.from(
@@ -161,36 +161,36 @@ export function useAdminRealEstateOverview(opts: UseAdminRealEstateOverviewOptio
       ) as string[];
 
       // ── 2. Profiles + merchant_stores (p/ identificar lojista/pessoa) ───
-      const profileMap = new Map<string, any>();
-      const storeMap = new Map<string, any>();
+      const profileMap = new Map<string, unknown>();
+      const storeMap = new Map<string, unknown>();
 
       if (ownerIds.length > 0) {
         const [{ data: profs }, { data: stores }] = await Promise.all([
-          (supabase.from("profiles") as any)
+          (supabase.from("profiles") as unknown)
             .select("id, nome, nome_loja, telefone, cidade, estado, email")
             .in("id", ownerIds),
-          (supabase.from("merchant_stores") as any)
+          (supabase.from("merchant_stores") as unknown)
             .select("user_id, nome_loja, store_name, cidade, city, estado, region, telefone, phone")
             .in("user_id", ownerIds),
         ]);
-        (profs || []).forEach((p: any) => profileMap.set(p.id, p));
-        (stores || []).forEach((s: any) => storeMap.set(s.user_id, s));
+        (profs || []).forEach((p: unknown) => profileMap.set(p.id, p));
+        (stores || []).forEach((s: unknown) => storeMap.set(s.user_id, s));
       }
 
       // ── 3. Pacotes + compras ────────────────────────────────────────────
-      const { data: packagesRaw } = await (supabase.from("real_estate_credit_packages") as any)
+      const { data: packagesRaw } = await (supabase.from("real_estate_credit_packages") as unknown)
         .select("id, name, slug, price_brl, credits_amount, is_active, category, sort_order");
 
-      const packages: any[] = (packagesRaw || []).filter(
-        (p: any) => !p.category || p.category === "real_estate"
+      const packages: unknown[] = (packagesRaw || []).filter(
+        (p: unknown) => !p.category || p.category === "real_estate"
       );
 
-      const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as any)
+      const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as unknown)
         .select("id, user_id, package_id, price_brl, credits_amount, status, created_at")
         .order("created_at", { ascending: false })
         .limit(2000);
 
-      const purchases: any[] = purchasesRaw || [];
+      const purchases: unknown[] = purchasesRaw || [];
 
       // Map user -> último pacote comprado (nome) e contagem
       const userPackageMap = new Map<string, { name: string | null; slug: string | null; count: number }>();
@@ -206,12 +206,12 @@ export function useAdminRealEstateOverview(opts: UseAdminRealEstateOverviewOptio
       }
 
       // ── 4. Ledger de créditos (tentar isolar real_estate) ───────────────
-      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as any)
+      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as unknown)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(2000);
 
-      const ledgerAll: any[] = ledgerRaw || [];
+      const ledgerAll: unknown[] = ledgerRaw || [];
       const ledgerRE = ledgerAll.filter((e) => {
         const hay = `${e.module || ""} ${e.reason_code || ""} ${e.description || ""}`.toLowerCase();
         return (
@@ -238,11 +238,11 @@ export function useAdminRealEstateOverview(opts: UseAdminRealEstateOverviewOptio
       }
 
       // advertiser_accounts → user_id bridge
-      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as any)
+      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as unknown)
         .select("id, user_id")
         .limit(5000);
       const acctToUser = new Map<string, string>();
-      (accountsRaw || []).forEach((a: any) => {
+      (accountsRaw || []).forEach((a: unknown) => {
         if (a?.id && a?.user_id) acctToUser.set(a.id, a.user_id);
       });
 
@@ -253,13 +253,13 @@ export function useAdminRealEstateOverview(opts: UseAdminRealEstateOverviewOptio
       }
 
       // ── 5. Leads (advertiser_contact_intentions) p/ real_estate ─────────
-      const { data: intentionsRaw } = await (supabase.from("advertiser_contact_intentions") as any)
+      const { data: intentionsRaw } = await (supabase.from("advertiser_contact_intentions") as unknown)
         .select("listing_id, listing_module, status")
         .eq("listing_module", "real_estate")
         .limit(5000);
 
       const leadsByListing = new Map<string, number>();
-      (intentionsRaw || []).forEach((i: any) => {
+      (intentionsRaw || []).forEach((i: unknown) => {
         if (i.status === "cancelled") return;
         leadsByListing.set(i.listing_id, (leadsByListing.get(i.listing_id) || 0) + 1);
       });

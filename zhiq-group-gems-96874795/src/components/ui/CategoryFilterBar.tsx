@@ -104,9 +104,9 @@ function Pill({ isActive, onClick, isLight, emoji, Icon, label, count }: PillPro
         /* ── ATIVO ── */
         isActive && "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/30 scale-[1.03] ring-2 ring-orange-400/40",
         /* ── INATIVO claro ── */
-        !isActive && isLight && "bg-[#F5E62B] text-zinc-800 border border-yellow-300/60 hover:brightness-95 hover:shadow-md hover:scale-[1.02]",
+        !isActive && isLight && "bg-institutional-yellow text-zinc-800 border border-yellow-300/60 hover:brightness-95 hover:shadow-md hover:scale-[1.02]",
         /* ── INATIVO escuro ── */
-        !isActive && !isLight && "bg-[#F5E62B] text-zinc-900 border border-yellow-300/40 hover:brightness-95 hover:shadow-md hover:scale-[1.02]",
+        !isActive && !isLight && "bg-institutional-yellow text-zinc-900 border border-yellow-300/40 hover:brightness-95 hover:shadow-md hover:scale-[1.02]",
       )}
     >
       {/* Bolha do ícone */}

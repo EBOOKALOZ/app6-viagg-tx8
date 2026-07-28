@@ -18,7 +18,7 @@ export default function MotoboyInicio() {
       headerChildren={<MarketNavButtons />}
       blueFooter
       blueFooterLabel="🛵 Motoboy"
-      mainClassName="bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-[#F5E62B]"
+      mainClassName="bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-institutional-yellow"
     >
       <div className="min-h-[calc(100vh-160px)] flex flex-col items-center justify-center px-4 py-10">
         {/* Título */}
@@ -78,7 +78,7 @@ export default function MotoboyInicio() {
             <div className="relative z-10 flex flex-col items-center gap-4">
               {/* Ícone composto: motoboy */}
               <div className="relative">
-                <div className="w-20 h-20 rounded-3xl bg-[#F5E62B] flex items-center justify-center shadow-xl overflow-hidden border-2 border-zinc-900/20">
+                <div className="w-20 h-20 rounded-3xl bg-institutional-yellow flex items-center justify-center shadow-xl overflow-hidden border-2 border-zinc-900/20">
                   <img src={motoboyHero} alt="Motoboy" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextElementSibling!.classList.remove('hidden'); }} />
                   <Bike className="w-11 h-11 text-zinc-900 hidden" />
                 </div>
@@ -92,14 +92,14 @@ export default function MotoboyInicio() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 px-6 py-2.5 bg-[#F5E62B] rounded-2xl shadow-lg mt-1">
+              <div className="flex items-center gap-2 px-6 py-2.5 bg-institutional-yellow rounded-2xl shadow-lg mt-1">
                 <span className="text-zinc-900 font-black text-sm">Solicitar motoboy agora</span>
                 <ArrowRight className="w-4 h-4 text-zinc-900" />
               </div>
             </div>
 
             {/* Badge */}
-            <span className="absolute top-4 right-4 z-10 bg-[#F5E62B]/15 text-[#F5E62B] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide border border-[#F5E62B]/30">
+            <span className="absolute top-4 right-4 z-10 bg-institutional-yellow/15 text-[#F5E62B] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide border border-[#F5E62B]/30">
               Sem cadastro
             </span>
           </button>

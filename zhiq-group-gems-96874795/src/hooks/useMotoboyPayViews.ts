@@ -58,7 +58,8 @@ export function useMotoboyWalletOverview() {
     queryFn: async (): Promise<MotoboyWalletOverview | null> => {
       console.log('[DEBUG useMotoboyWalletOverview] Fetching overview for user:', user?.id);
       if (!user?.id) return null;
-      const { data, error } = await (supabase.from("v_motoboy_pay_wallet_overview") as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data, error } = await supabase.from("v_motoboy_pay_wallet_overview")
         .select("*")
         .eq("motoboy_profile_id", user.id)
         .maybeSingle();
@@ -83,7 +84,8 @@ export function useMotoboyEarningsDetailed(limit = 50) {
     queryKey: ["motoboy-earnings-detailed", user?.id, limit],
     queryFn: async (): Promise<MotoboyEarningEntry[]> => {
       if (!user?.id) return [];
-      const { data, error } = await (supabase.from("v_motoboy_pay_earnings_detailed") as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data, error } = await supabase.from("v_motoboy_pay_earnings_detailed")
         .select("*")
         .eq("motoboy_profile_id", user.id)
         .order("created_at", { ascending: false })
@@ -103,7 +105,8 @@ export function useMotoboyPayoutsDetailed() {
     queryKey: ["motoboy-payouts-detailed", user?.id],
     queryFn: async (): Promise<MotoboyPayoutEntry[]> => {
       if (!user?.id) return [];
-      const { data, error } = await (supabase.from("v_motoboy_pay_payouts_detailed") as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data, error } = await supabase.from("v_motoboy_pay_payouts_detailed")
         .select("*")
         .eq("motoboy_profile_id", user.id)
         .order("requested_at", { ascending: false });

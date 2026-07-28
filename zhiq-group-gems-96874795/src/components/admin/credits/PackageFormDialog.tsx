@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
+import type { AdminCreditProduct } from "@/hooks/useAdminCredits";
 
 export function PackageFormDialog({
   pkg,
@@ -27,10 +28,10 @@ export function PackageFormDialog({
   isSubmitting,
   isProduct = false,
 }: {
-  pkg?: any;
+  pkg?: Partial<AdminCreditProduct>;
   initialCategory?: string;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: Partial<AdminCreditProduct>) => void;
   isSubmitting: boolean;
   isProduct?: boolean;
 }) {

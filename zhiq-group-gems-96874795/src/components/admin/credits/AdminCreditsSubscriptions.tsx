@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { AdminCreditSubscription } from "@/hooks/useAdminCredits";
+import type { AdminCreditSubscription, AdminCreditProduct, AdminCreditsData } from "@/hooks/useAdminCredits";
 
-interface Props { data: any; }
+interface Props { data: AdminCreditsData; }
 
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700 border-emerald-300",
@@ -31,7 +31,7 @@ export function AdminCreditsSubscriptions({ data }: Props) {
   for (const s of subscriptions) {
     const key = s.product_id;
     if (!planSummary[key]) {
-      const prod = products.find((p: any) => p.id === key);
+      const prod = products.find((p: AdminCreditProduct) => p.id === key);
       planSummary[key] = {
         name: s.product_name || "—",
         type: s.product_type || "—",

@@ -81,7 +81,7 @@ export function CentralImpulsionamentoBanner() {
   const ridvActiveClass = 'text-white shadow-orange-500/30 shadow-lg';
 
   return (
-    <div className="sticky top-0 z-30 bg-[#F5E62B] border-b border-black/10 shadow-sm shrink-0">
+    <div className="sticky top-0 z-30 bg-institutional-yellow border-b border-black/10 shadow-sm shrink-0">
       <div
         className="flex items-center gap-2 px-3 pt-1.5 pb-1"
         style={{ borderBottom: '1px solid rgba(255,106,0,0.08)' }}

@@ -64,8 +64,9 @@ export function useMotoboyCommission(userId: string | undefined) {
         throw new Error('User ID is required');
       }
 
-      const { data: groups, error } = await (supabase
-        .from('whatsapp_groups') as any)
+      // @ts-expect-error - Type definitions are missing for whatsapp_groups
+      const { data: groups, error } = await supabase
+        .from('whatsapp_groups')
         .select('id, group_name, group_link, city_name, neighborhood, validation_status, is_active, is_valid, valid_for_commission, members_count, last_posted_at, created_at')
         .eq('owner_user_id', userId);
 
@@ -82,19 +83,19 @@ export function useMotoboyCommission(userId: string | undefined) {
         throw error;
       }
 
-      const allGroups: GroupDetail[] = (groups || []).map((g: any) => ({
-        id: g.id,
-        group_name: g.group_name || null,
-        group_link: g.group_link || null,
-        city_name: g.city_name || null,
-        neighborhood: g.neighborhood || null,
-        validation_status: g.validation_status || 'pending',
-        is_active: g.is_active ?? false,
-        is_valid: g.is_valid ?? false,
-        valid_for_commission: g.valid_for_commission ?? false,
-        members_count: g.members_count ?? 0,
-        last_posted_at: g.last_posted_at || null,
-        created_at: g.created_at,
+      const allGroups: GroupDetail[] = (groups || []).map((g: Record<string, unknown>) => ({
+        id: g.id as string,
+        group_name: (g.group_name as string) || null,
+        group_link: (g.group_link as string) || null,
+        city_name: (g.city_name as string) || null,
+        neighborhood: (g.neighborhood as string) || null,
+        validation_status: (g.validation_status as string) || 'pending',
+        is_active: (g.is_active as boolean) ?? false,
+        is_valid: (g.is_valid as boolean) ?? false,
+        valid_for_commission: (g.valid_for_commission as boolean) ?? false,
+        members_count: (g.members_count as number) ?? 0,
+        last_posted_at: (g.last_posted_at as string) || null,
+        created_at: g.created_at as string,
       }));
 
       const totalGroups = allGroups.length;
@@ -151,7 +152,7 @@ export function useMotoboyCommission(userId: string | undefined) {
     const channel = supabase
       .channel(`commission-groups-${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_groups' },
-        (payload: any) => {
+        (payload: Record<string, unknown>) => {
           console.log('[Commission Realtime] Group changed:', payload.eventType);
           queryClient.invalidateQueries({ queryKey: ['motoboy-commission', userId] });
         }
@@ -187,10 +188,10 @@ export function useMotoboyCommission(userId: string | undefined) {
       if (error) throw error;
       
       // Optimistic update
-      queryClient.setQueryData(['motoboy-commission', userId], (old: any) => ({
+      queryClient.setQueryData(['motoboy-commission', userId], (old: MotoboyCommissionData | undefined) => old ? ({
         ...old,
         isOnline: newStatus
-      }));
+      }) : undefined);
     } catch (err) {
       console.error('Error toggling online status:', err);
       throw err;

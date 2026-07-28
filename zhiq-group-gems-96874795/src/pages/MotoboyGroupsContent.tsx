@@ -627,7 +627,7 @@ export default function MotoboyGroupsContent() {
                   size="sm"
                   variant="outline"
                   onClick={handleClearInactiveGroups}
-                  className="bg-[#F5E62B] border-[#F5E62B] text-red-600 hover:bg-[#f0e000] hover:border-[#f0e000] hover:text-red-700 h-8 px-3 text-xs font-semibold"
+                  className="bg-institutional-yellow border-[#F5E62B] text-red-600 hover:bg-[#f0e000] hover:border-[#f0e000] hover:text-red-700 h-8 px-3 text-xs font-semibold"
                 >
                   <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   Limpar Inativos ({inactiveGroups.length})

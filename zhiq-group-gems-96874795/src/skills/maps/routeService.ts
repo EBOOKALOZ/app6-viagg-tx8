@@ -1,4 +1,4 @@
-﻿const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || "";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN || "";
 
 interface Coordinate {
     lat: number;
@@ -6,12 +6,12 @@ interface Coordinate {
 }
 
 export interface RouteData {
-    geometry: any;
+    geometry: Record<string, unknown>;
     distance: number;
     duration: number;
     weight_name: string;
     weight: number;
-    legs: any[];
+    legs: Record<string, unknown>[];
 }
 
 /**

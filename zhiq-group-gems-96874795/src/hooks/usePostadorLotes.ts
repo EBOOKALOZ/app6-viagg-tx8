@@ -26,7 +26,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
     } = useQuery<PostingLot[]>({
         queryKey: ["postador-lots-available", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_lotes_board") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_lotes_board")
                 .select("*")
                 .in("lot_status", ["available", "claimed"])
                 .order("lot_created_at", { ascending: false })
@@ -45,7 +46,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
     } = useQuery<PostingLot[]>({
         queryKey: ["postador-lots-cooldown", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_lotes_board") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_lotes_board")
                 .select("*")
                 .eq("lot_status", "cooldown")
                 .order("cooldown_until", { ascending: true })
@@ -64,7 +66,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
     } = useQuery<PostingLot[]>({
         queryKey: ["postador-lots-history", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_lotes_board") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_lotes_board")
                 .select("*")
                 .eq("operator_user_id", user!.id)
                 .in("lot_status", ["cooldown", "posted", "expired"])
@@ -84,7 +87,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
     } = useQuery<LotKPIs>({
         queryKey: ["postador-lots-kpis", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.rpc as any)("get_my_lot_kpis");
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.rpc("get_my_lot_kpis");
             if (error) {
                 console.error("[PostadorLotes] erro nos kpis:", error);
                 return { ok: true, posted_count: 0, claimed_count: 0, cooldown_count: 0, last_posted_at: null, next_available_at: null };
@@ -108,7 +112,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
             setActionState((prev) => ({ ...prev, [key]: "loading" }));
 
             try {
-                const { data, error } = await (supabase.rpc as any)(
+                // @ts-expect-error - Type definitions may be missing
+                const { data, error } = await supabase.rpc(
                     "claim_posting_lot",
                     { p_lot_id: lotId }
                 );
@@ -129,7 +134,7 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
                 setTimeout(() => setActionState((prev) => {
                     const n = { ...prev }; delete n[key]; return n;
                 }), 3000);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("[PostadorLotes] erro ao reservar lote (claimLot):", err);
                 toast.error("Erro ao reservar lote. Tente novamente.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));
@@ -169,7 +174,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
             try {
                 // Passo 1: Reservar (Claim) se ainda não estiver reservado
                 if (lot && lot.lot_status === "available") {
-                    const { data: claimData, error: claimErr } = await (supabase.rpc as any)(
+                    // @ts-expect-error - Type definitions may be missing
+                    const { data: claimData, error: claimErr } = await supabase.rpc(
                         "claim_posting_lot",
                         { p_lot_id: lotId }
                     );
@@ -182,7 +188,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
                 }
 
                 // Passo 2: Confirmar
-                const { data, error } = await (supabase.rpc as any)(
+                // @ts-expect-error - Type definitions may be missing
+                const { data, error } = await supabase.rpc(
                     "confirm_posting_lot",
                     {
                         p_lot_id: lotId,
@@ -210,9 +217,9 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
                 setTimeout(() => setActionState((prev) => {
                     const n = { ...prev }; delete n[key]; return n;
                 }), 3000);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("[PostadorLotes] erro ao confirmar lote (confirmLot):", err);
-                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err?.message ?? "unknown_error" });
+                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err instanceof Error ? err.message : String(err) });
                 toast.error("Erro ao confirmar postagem. Tente novamente.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));
             } finally {
@@ -239,7 +246,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
             setActionState((prev) => ({ ...prev, [key]: "loading" }));
 
             try {
-                const { data, error } = await (supabase.rpc as any)(
+                // @ts-expect-error - Type definitions may be missing
+                const { data, error } = await supabase.rpc(
                     "release_lot_claim",
                     { p_lot_id: lotId }
                 );
@@ -253,7 +261,7 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
                 toast.success("Lote liberado com sucesso.");
                 setActionState((prev) => { const n = { ...prev }; delete n[key]; return n; });
                 invalidateAll();
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("[PostadorLotes] erro ao liberar lote (releaseLot):", err);
                 toast.error("Erro ao liberar lote.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));
@@ -275,7 +283,8 @@ export function usePostadorLotes(callerProfileType: AuditProfileType = "postador
         async (lotId: string) => {
             if (!user) return;
             try {
-                await (supabase.from("posting_lot_events") as any).insert({
+                // @ts-expect-error - Type definitions may be missing
+                await supabase.from("posting_lot_events").insert({
                     lot_id: lotId,
                     event_type: "viewed",
                     user_id: user.id,

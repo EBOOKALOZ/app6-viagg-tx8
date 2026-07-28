@@ -15,20 +15,38 @@ import { PackageFormDialog } from "@/components/admin/credits/PackageFormDialog"
 import { toast } from "sonner";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 
+export interface VehiclePackage {
+  id: string;
+  name: string;
+  slug?: string;
+  credits_amount: number;
+  price_brl: number;
+  description: string;
+  badge_text: string | null;
+  package_type: string;
+  bonus_credits: number;
+  is_featured: boolean;
+  is_recommended: boolean;
+  sort_order: number;
+  features_json: string[];
+  is_active: boolean;
+  button_label?: string;
+}
+
 export function VehiclePackagesManager() {
-  const [editingPkg, setEditingPkg] = useState<any>(null);
+  const [editingPkg, setEditingPkg] = useState<VehiclePackage | null>(null);
   const [showCreatePkg, setShowCreatePkg] = useState<boolean>(false);
 
   const { data: vehiclePackages = [], isLoading: loadingPkgs } = useQuery({
     queryKey: ["admin-vehicle-packages"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("real_estate_credit_packages") as any)
+      const { data, error } = await supabase.from("real_estate_credit_packages")
         .select("*")
         .eq("category", "vehicles")
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []).map((p: any) => ({
-        id: p.id,
+      return (data || []).map((p: Record<string, unknown>) => ({
+        id: p.id as string,
         name: p.name || p.slug || "Plano sem nome",
         slug: p.slug || "",
         credits_amount: p.credits_amount || 0,
@@ -55,8 +73,8 @@ export function VehiclePackagesManager() {
   const qc = useQueryClient();
 
   const createVehiclePkg = useMutation({
-    mutationFn: async (input: any) => {
-      const payload: any = {
+    mutationFn: async (input: Partial<VehiclePackage>) => {
+      const payload: Record<string, unknown> = {
         name: input.name,
         slug: input.slug || input.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
         category: 'vehicles',
@@ -83,13 +101,13 @@ export function VehiclePackagesManager() {
       qc.invalidateQueries({ queryKey: ["admin-vehicle-packages"] });
       toast.success("Pacote de veículo criado!");
     },
-    onError: (err: any) => toast.error(`Falha: ${err.message}`),
+    onError: (err: Error) => toast.error(`Falha: ${err.message}`),
   });
 
   const updateVehiclePkg = useMutation({
-    mutationFn: async (input: any & { id: string }) => {
+    mutationFn: async (input: Partial<VehiclePackage> & { id: string }) => {
       const { id } = input;
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: input.name,
         credits_amount: Number(input.credits_amount) || 0,
         price_brl: Number(input.price_brl) || 0,
@@ -117,7 +135,7 @@ export function VehiclePackagesManager() {
       qc.invalidateQueries({ queryKey: ["admin-vehicle-packages"] });
       toast.success("Pacote atualizado!");
     },
-    onError: (err: any) => toast.error(`Falha: ${err.message}`),
+    onError: (err: Error) => toast.error(`Falha: ${err.message}`),
   });
 
   const deleteVehiclePkg = useMutation({
@@ -133,7 +151,7 @@ export function VehiclePackagesManager() {
         if (error.message?.includes("foreign key") || error.code === "23503") {
           const { error: updateErr } = await supabase
             .from("real_estate_credit_packages")
-            .update({ is_active: false } as any)
+            .update({ is_active: false })
             .eq("id", id);
           if (updateErr) throw updateErr;
           return "deactivated" as const;
@@ -150,7 +168,7 @@ export function VehiclePackagesManager() {
         toast.success("Pacote excluído!");
       }
     },
-    onError: (err: any) => toast.error(`Erro: ${err.message}`),
+    onError: (err: Error) => toast.error(`Erro: ${err.message}`),
   });
 
   const toggleVehiclePkg = useMutation({
@@ -166,7 +184,7 @@ export function VehiclePackagesManager() {
     },
   });
 
-  const handleSavePackage = (data: any) => {
+  const handleSavePackage = (data: Partial<VehiclePackage>) => {
     const packageData = {
       name: data.name,
       slug: data.slug || data.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
@@ -233,7 +251,7 @@ export function VehiclePackagesManager() {
               </CardContent>
             </Card>
           ) : (
-            vehiclePackages.map((pkg: any) => (
+            vehiclePackages.map((pkg: VehiclePackage) => (
               <Card key={pkg.id} className={cn(
                 "relative overflow-hidden border-2 transition-all hover:shadow-md",
                 pkg.is_featured ? "border-amber-400/50 shadow-amber-100" : "border-zinc-100"

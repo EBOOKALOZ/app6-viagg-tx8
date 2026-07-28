@@ -126,7 +126,7 @@ const { data: intentions = [], isLoading } = useQuery({
             </div>
             <Button
               onClick={() => setContactOpen(true)}
-              className="w-full bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black rounded-2xl text-sm"
+              className="w-full bg-institutional-yellow hover:brightness-95 text-zinc-900 font-black rounded-2xl text-sm"
             >
               <Plane className="w-4 h-4 mr-2" /> Confirmar meu interesse
             </Button>

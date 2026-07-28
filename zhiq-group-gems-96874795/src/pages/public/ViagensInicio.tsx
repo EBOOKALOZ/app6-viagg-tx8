@@ -122,7 +122,7 @@ function ProfileCardItem({
         className="group relative h-full overflow-hidden bg-gradient-to-br from-[#1C2028] via-[#171A21] to-[#121417] border border-[#F5E62B]/35 rounded-[28px] shadow-[0_18px_45px_rgba(0,0,0,0.45)] flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1 hover:border-[#F5E62B] hover:shadow-[0_30px_60px_rgba(0,0,0,0.55),0_0_35px_rgba(245,230,43,0.18)] w-full"
       >
         <div className="w-full flex items-center justify-center pt-6 px-8 relative">
-           <span className="text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider bg-gradient-to-r from-[#F5E62B]/15 to-[#F5E62B]/5 text-[#F5E62B] border border-[#F5E62B]/20 shadow-sm transition-all duration-300">
+           <span className="text-[11px] font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider bg-gradient-to-r from-institutional-yellow/15 to-institutional-yellow/5 text-[#F5E62B] border border-[#F5E62B]/20 shadow-sm transition-all duration-300">
              {profile.badge}
            </span>
         </div>
@@ -180,7 +180,7 @@ function ProfileCardItem({
               {onRegister && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onRegister(); }}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(245,230,43,0.30)] font-black text-[18px] text-[#0A192F] transition-all duration-250 bg-[#F5E62B] hover:bg-[#EADB15] active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(245,230,43,0.30)] font-black text-[18px] text-[#0A192F] transition-all duration-250 bg-institutional-yellow hover:bg-[#EADB15] active:scale-[0.98]"
                 >
                   {profile.registerLabel}
                   <ArrowRight className="w-5 h-5 text-[#0A192F]" />
@@ -189,7 +189,7 @@ function ProfileCardItem({
 
               <button
                 onClick={(e) => { e.stopPropagation(); onAccess(); }}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[17px] transition-all duration-250 bg-[#F5E62B] hover:bg-[#EADB15] text-[#0A192F] shadow-sm active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-[17px] transition-all duration-250 bg-institutional-yellow hover:bg-[#EADB15] text-[#0A192F] shadow-sm active:scale-[0.98]"
               >
                 {profile.buttonLabel}
               </button>
@@ -197,7 +197,7 @@ function ProfileCardItem({
           ) : (
             <button
               onClick={(e) => { e.stopPropagation(); onAccess(); }}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(245,230,43,0.30)] font-black text-[18px] text-[#0A192F] transition-all duration-250 bg-[#F5E62B] hover:bg-[#EADB15] active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl shadow-[0_10px_25px_rgba(245,230,43,0.30)] font-black text-[18px] text-[#0A192F] transition-all duration-250 bg-institutional-yellow hover:bg-[#EADB15] active:scale-[0.98]"
             >
               {profile.buttonLabel}
               <ArrowRight className="w-5 h-5 text-[#0A192F]" />
@@ -254,7 +254,7 @@ export default function ViagensInicio() {
         {/* Card de destaque — VIAGENS E TURISMO (full width) */}
         <div className="w-full max-w-3xl mb-5">
           <div className="relative overflow-hidden bg-gradient-to-br from-[#1E293B] to-[#0F172A] rounded-3xl shadow-2xl border-2 border-[#F5E62B]/50 p-6 text-left">
-            <span className="hidden sm:block absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-[#F5E62B]/20 text-[#F5E62B] border border-[#F5E62B]/40">
+            <span className="hidden sm:block absolute top-4 right-4 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-institutional-yellow/20 text-[#F5E62B] border border-[#F5E62B]/40">
               NACIONAL & REGIONAL
             </span>
 
@@ -268,7 +268,7 @@ export default function ViagensInicio() {
               </div>
 
               <div className="flex-1 min-w-0">
-                <span className="inline-block sm:hidden text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-[#F5E62B]/20 text-[#F5E62B] border border-[#F5E62B]/40 mb-1.5 w-fit">
+                <span className="inline-block sm:hidden text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide bg-institutional-yellow/20 text-[#F5E62B] border border-[#F5E62B]/40 mb-1.5 w-fit">
                   NACIONAL & REGIONAL
                 </span>
                 <p className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">EXPLORE DESTINOS E PASSEIOS</p>

@@ -98,7 +98,7 @@ export const useBackgroundMusic = ({
         intervalRef.current = null;
       }
     };
-  }, [src]);
+  }, [src, volume]);
 
   // Update volume when it changes
   useEffect(() => {
@@ -175,7 +175,7 @@ export const useBackgroundMusic = ({
         intervalRef.current = null;
       }
     }
-  }, [isPlaying, src, startTime, volume, startSegmentLoop]);
+  }, [isPlaying, src, startTime, volume, startSegmentLoop, hasUserInteracted]);
 
   // Manual controls (optional)
   const play = useCallback(() => {

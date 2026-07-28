@@ -53,8 +53,8 @@ export function useMarketplaceCart() {
   const { data: rawItems = [], isLoading: loadingItems, refetch: refetchItems } = useQuery<MarketplaceCartItem[]>({
     queryKey: ["marketplace-cart-items", sessionToken],
     queryFn: async () => {
-      // Get all open carts for this session
-      const { data: carts, error: cartsErr } = await (supabase.from("store_carts") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: carts, error: cartsErr } = await supabase.from("store_carts")
         .select("id, store_id")
         .eq("status", "active")
         .or(`session_token.eq.${sessionToken}`);
@@ -66,10 +66,11 @@ export function useMarketplaceCart() {
       if (!carts || carts.length === 0) return [];
 
       // Get all items from all carts
-      const cartIds = carts.map((c: any) => c.id);
-      const cartStoreMap = new Map(carts.map((c: any) => [c.id, c.store_id]));
+      const cartIds = carts.map((c: Record<string, unknown>) => c.id as string);
+      const cartStoreMap = new Map(carts.map((c: Record<string, unknown>) => [c.id as string, c.store_id as string]));
 
-      const { data: items, error: itemsErr } = await (supabase.from("store_cart_items") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: items, error: itemsErr } = await supabase.from("store_cart_items")
         .select("*")
         .in("cart_id", cartIds)
         .gt("quantity", 0)
@@ -80,17 +81,17 @@ export function useMarketplaceCart() {
         return [];
       }
 
-      return (items || []).map((item: any) => {
+      return (items || []).map((item: Record<string, unknown>) => {
         return {
-          id: item.id,
-          cart_id: item.cart_id,
-          store_id: item.store_id || cartStoreMap.get(item.cart_id) || "",
-          product_id: item.product_id,
-          product_title: item.product_title || "Produto",
-          product_image_url: item.product_image_url || null,
+          id: item.id as string,
+          cart_id: item.cart_id as string,
+          store_id: (item.store_id as string) || cartStoreMap.get(item.cart_id as string) || "",
+          product_id: item.product_id as string,
+          product_title: (item.product_title as string) || "Produto",
+          product_image_url: (item.product_image_url as string) || null,
           product_price: Number(item.product_price) || 0,
-          quantity: item.quantity,
-          customer_note: item.customer_note,
+          quantity: item.quantity as number,
+          customer_note: (item.customer_note as string) || null,
         };
       });
     },
@@ -104,14 +105,15 @@ export function useMarketplaceCart() {
     queryKey: ["marketplace-cart-stores", storeIds.join(",")],
     queryFn: async () => {
       if (storeIds.length === 0) return new Map();
-      const { data, error } = await (supabase.from("merchant_stores") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data, error } = await supabase.from("merchant_stores")
         .select("*")
         .in("id", storeIds);
       if (error) console.error("[useMarketplaceCart] stores error:", error);
       const map = new Map<string, { name: string; logo: string | null }>();
-      (data || []).forEach((s: any) => {
-        const name = s.store_name || s.nome_loja || s.nome || "Loja";
-        map.set(s.id, { name, logo: s.logo_url });
+      (data || []).forEach((s: Record<string, unknown>) => {
+        const name = (s.store_name as string) || (s.nome_loja as string) || (s.nome as string) || "Loja";
+        map.set(s.id as string, { name, logo: (s.logo_url as string) || null });
       });
       return map;
     },
@@ -157,8 +159,8 @@ export function useMarketplaceCart() {
         p_session_token: sessionToken,
       });
       if (error) throw new Error(error.message);
-      const result = data as any;
-      if (result && !result.success) throw new Error(result.error || "Falha ao adicionar");
+      const result = data as Record<string, unknown>;
+      if (result && !result.success) throw new Error((result.error as string) || "Falha ao adicionar");
       return result;
     },
     onSuccess: () => {
@@ -194,7 +196,7 @@ export function useMarketplaceCart() {
   // ── Remove item ──
   const removeItem = useCallback(async (itemId: string) => {
     await updateItemMutation.mutateAsync({ itemId, quantity: 0 });
-  }, []);
+  }, [updateItemMutation]);
 
   // ── Public API ──
   return {

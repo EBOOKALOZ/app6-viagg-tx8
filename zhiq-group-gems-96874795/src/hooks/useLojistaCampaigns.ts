@@ -83,7 +83,8 @@ export function useLojistaCampaigns() {
     const { data: campaigns = [], isLoading: loadingCampaigns, isError: errorCampaigns } = useQuery<LojistaCampaign[]>({
         queryKey: ["lojista-campaigns", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("campaign_queue") as any)
+            // @ts-expect-error - Some schemas might not be fully typed yet
+            const { data, error } = await supabase.from("campaign_queue")
                 .select("id, title, message_text, media_url, campaign_type, target_city, target_region, status, created_at, available_from, available_until")
                 .eq("created_by_user_id", user!.id)
                 .order("created_at", { ascending: false })
@@ -101,7 +102,8 @@ export function useLojistaCampaigns() {
         queryKey: ["lojista-postings", campaignIds],
         queryFn: async () => {
             if (!campaignIds.length) return [];
-            const { data, error } = await (supabase.from("posting_history") as any)
+            // @ts-expect-error - Some schemas might not be fully typed yet
+            const { data, error } = await supabase.from("posting_history")
                 .select("id, campaign_queue_id, whatsapp_group_id, operator_user_id, final_status, message_text, template_hash, execution_notes, posted_at")
                 .in("campaign_queue_id", campaignIds)
                 .order("posted_at", { ascending: false })

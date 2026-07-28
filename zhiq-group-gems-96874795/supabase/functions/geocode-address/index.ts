@@ -55,7 +55,7 @@ function isCityOnlySearch(text: string): boolean {
   
   // Remove palavras de localização para contar palavras significativas
   const words = normalized
-    .split(/[\s,\-]+/)
+    .split(/[\s,-]+/)
     .filter(w => w.length > 1 && !locationWords.includes(w));
   
   // Se restam poucas palavras significativas, é busca por cidade
@@ -63,7 +63,7 @@ function isCityOnlySearch(text: string): boolean {
   if (words.length <= 2) return true;
   
   // Padrão típico de cidade: "Nome, Estado" ou "Nome - UF"
-  const cityStatePattern = /^[\w\sáéíóúâêîôûãõç]+[,\-]\s*([\w\sáéíóúâêîôûãõç]+|[A-Z]{2})(\s*,\s*brasil)?$/i;
+  const cityStatePattern = /^[\w\sáéíóúâêîôûãõç]+[,-]\s*([\w\sáéíóúâêîôûãõç]+|[A-Z]{2})(\s*,\s*brasil)?$/i;
   if (cityStatePattern.test(normalized)) return true;
   
   return false;

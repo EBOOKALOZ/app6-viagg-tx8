@@ -1,4 +1,4 @@
-﻿/**
+/**
  * useAdminCredits â€” Admin hook for the Credits & Monetization module
  *
  * Connects to ALL real credit tables:
@@ -102,7 +102,7 @@ export interface AdminLedgerEntry {
   entry_type: string | null;
   intention_id: string | null;
   purchase_intention_id: string | null;
-  metadata: any;
+  metadata: unknown;
   created_at: string;
   // joined
   store_name?: string;
@@ -152,7 +152,9 @@ export interface AdminCreditsOverviewData {
   topPackages: { name: string; count: number }[];
 }
 
-// â”€â”€â”€ Main Hook â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Main Hook ─────────────────────────
+
+export type AdminCreditsData = ReturnType<typeof useAdminCredits>;
 
 export function useAdminCredits() {
   const qc = useQueryClient();
@@ -161,11 +163,11 @@ export function useAdminCredits() {
   const products = useQuery({
     queryKey: ["admin-credits-products"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("merchant_credit_products") as any)
+      const { data, error } = await (supabase.from("merchant_credit_products") as unknown)
         .select("*")
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []).map((p: any) => ({
+      return (data || []).map((p: unknown) => ({
         id: p.id,
         slug: p.slug,
         name: p.name,
@@ -196,19 +198,19 @@ export function useAdminCredits() {
   const subscriptions = useQuery({
     queryKey: ["admin-credits-subscriptions"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("merchant_credit_subscriptions") as any)
+      const { data, error } = await (supabase.from("merchant_credit_subscriptions") as unknown)
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
 
       // Enrich with store + product info
-      const storeIds = [...new Set((data || []).map((s: any) => s.store_id))];
-      const productIds = [...new Set((data || []).map((s: any) => s.product_id).filter(Boolean))];
+      const storeIds = [...new Set((data || []).map((s: unknown) => s.store_id))];
+      const productIds = [...new Set((data || []).map((s: unknown) => s.product_id).filter(Boolean))];
 
       const storeMap = await fetchStoreMap(storeIds as string[]);
       const prodMap = await fetchProductMap(productIds as string[]);
 
-      return (data || []).map((s: any) => {
+      return (data || []).map((s: unknown) => {
         const store = storeMap[s.store_id];
         const prod = prodMap[s.product_id];
         return {
@@ -229,16 +231,16 @@ export function useAdminCredits() {
   const balances = useQuery({
     queryKey: ["admin-credits-balances"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("merchant_credit_balances") as any)
+      const { data, error } = await (supabase.from("merchant_credit_balances") as unknown)
         .select("*")
         .order("updated_at", { ascending: false });
       if (error) throw error;
 
-      const storeIds = [...new Set((data || []).map((b: any) => b.store_id))];
+      const storeIds = [...new Set((data || []).map((b: unknown) => b.store_id))];
       const storeMap = await fetchStoreMap(storeIds as string[]);
 
       // Get last debit/credit dates from ledger
-      const { data: ledgerAgg } = await (supabase.from("merchant_credit_ledger") as any)
+      const { data: ledgerAgg } = await (supabase.from("merchant_credit_ledger") as unknown)
         .select("store_id, created_at, credits, entry_type, amount")
         .order("created_at", { ascending: false });
 
@@ -258,7 +260,7 @@ export function useAdminCredits() {
         if (s.status === "active") subMap[s.store_id] = "active";
       }
 
-      return (data || []).map((b: any) => {
+      return (data || []).map((b: unknown) => {
         const store = storeMap[b.store_id];
         return {
           id: b.id,
@@ -287,16 +289,16 @@ export function useAdminCredits() {
   const ledger = useQuery({
     queryKey: ["admin-credits-ledger"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("merchant_credit_ledger") as any)
+      const { data, error } = await (supabase.from("merchant_credit_ledger") as unknown)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
 
-      const storeIds = [...new Set((data || []).map((e: any) => e.store_id))];
+      const storeIds = [...new Set((data || []).map((e: unknown) => e.store_id))];
       const storeMap = await fetchStoreMap(storeIds as string[]);
 
-      return (data || []).map((e: any) => ({
+      return (data || []).map((e: unknown) => ({
         id: e.id,
         store_id: e.store_id,
         credits: e.credits ?? 0,
@@ -323,18 +325,18 @@ export function useAdminCredits() {
   const billingEvents = useQuery({
     queryKey: ["admin-credits-billing-events"],
     queryFn: async () => {
-      const { data: events, error } = await (supabase.from("m1_billing_events") as any)
+      const { data: events, error } = await (supabase.from("m1_billing_events") as unknown)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
 
-      const storeIds = [...new Set((events || []).map((e: any) => e.merchant_store_id))];
+      const storeIds = [...new Set((events || []).map((e: unknown) => e.merchant_store_id))];
       const storeMap = await fetchStoreMap(storeIds as string[]);
 
       // get matching entries for charges
-      const eventIds = (events || []).map((e: any) => e.id);
-      const { data: entries } = await (supabase.from("m1_billing_entries") as any)
+      const eventIds = (events || []).map((e: unknown) => e.id);
+      const { data: entries } = await (supabase.from("m1_billing_entries") as unknown)
         .select("billing_event_id, charge_amount_cents")
         .in("billing_event_id", eventIds.slice(0, 200));
 
@@ -343,7 +345,7 @@ export function useAdminCredits() {
         chargeMap[en.billing_event_id] = en.charge_amount_cents || 0;
       }
 
-      return (events || []).map((e: any) => ({
+      return (events || []).map((e: unknown) => ({
         id: e.id,
         merchant_store_id: e.merchant_store_id,
         product_id: e.product_id,
@@ -366,7 +368,7 @@ export function useAdminCredits() {
   const usageRules = useQuery({
     queryKey: ["admin-credits-usage-rules"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("merchant_credit_usage_rules") as any)
+      const { data, error } = await (supabase.from("merchant_credit_usage_rules") as unknown)
         .select("*");
       if (error) throw error;
       return data || [];
@@ -511,7 +513,7 @@ export function useAdminCredits() {
 
   const toggleProduct = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await (adminDb.from("merchant_credit_products") as any)
+      const { error } = await (adminDb.from("merchant_credit_products") as unknown)
         .update({ is_active, updated_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
@@ -520,11 +522,11 @@ export function useAdminCredits() {
   });
 
   const updateProduct = useMutation({
-    mutationFn: async (updates: { id: string; [key: string]: any }) => {
+    mutationFn: async (updates: { id: string; [key: string]: unknown }) => {
       const { id, ...rest } = updates;
       // Remove campos gerados ou nÃ£o permitidos no UPDATE
       const { credits_amount, price_brl, ...allowed } = rest;
-      const { error } = await (adminDb.from("merchant_credit_products") as any)
+      const { error } = await (adminDb.from("merchant_credit_products") as unknown)
         .update(allowed)
         .eq("id", id);
       if (error) throw error;
@@ -534,7 +536,7 @@ export function useAdminCredits() {
 
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (adminDb.from("merchant_credit_products") as any)
+      const { error } = await (adminDb.from("merchant_credit_products") as unknown)
         .delete()
         .eq("id", id);
       if (error) throw error;
@@ -568,7 +570,7 @@ export function useAdminCredits() {
          throw new Error('O total de crÃ©ditos deve ser maior que zero');
        }
        const price_cents = Math.round(input.price_brl * 100);
-       const { error } = await (adminDb.from("merchant_credit_products") as any)
+       const { error } = await (adminDb.from("merchant_credit_products") as unknown)
          .insert({
            slug,
            name: input.name,
@@ -641,12 +643,12 @@ export function useAdminCredits() {
 
 async function fetchStoreMap(storeIds: string[]): Promise<Record<string, { store_name: string; email: string; full_name: string }>> {
   if (!storeIds.length) return {};
-  const { data: stores } = await (supabase.from("merchant_stores") as any)
+  const { data: stores } = await (supabase.from("merchant_stores") as unknown)
     .select("id, store_name, user_id")
     .in("id", storeIds);
 
-  const userIds = (stores || []).map((s: any) => s.user_id).filter(Boolean);
-  const { data: profiles } = await (supabase.from("profiles") as any)
+  const userIds = (stores || []).map((s: unknown) => s.user_id).filter(Boolean);
+  const { data: profiles } = await (supabase.from("profiles") as unknown)
     .select("id, email, full_name")
     .in("id", userIds);
 
@@ -669,7 +671,7 @@ async function fetchStoreMap(storeIds: string[]): Promise<Record<string, { store
 
 async function fetchProductMap(productIds: string[]): Promise<Record<string, { name: string; product_type: string; credits_amount: number }>> {
   if (!productIds.length) return {};
-  const { data } = await (supabase.from("merchant_credit_products") as any)
+  const { data } = await (supabase.from("merchant_credit_products") as unknown)
     .select("id, name, product_type, credits_amount, credits_base, credits_bonus")
     .in("id", productIds);
 
@@ -686,7 +688,7 @@ async function fetchProductMap(productIds: string[]): Promise<Record<string, { n
 
 // â”€â”€â”€ CSV Export Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export function exportToCSV(rows: Record<string, any>[], filename: string) {
+export function exportToCSV(rows: Record<string, unknown>[], filename: string) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]);
   const csvContent = [

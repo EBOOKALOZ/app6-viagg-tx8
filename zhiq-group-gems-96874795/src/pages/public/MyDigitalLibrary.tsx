@@ -122,7 +122,7 @@ export default function MyDigitalLibrary() {
 
     return (
         <MarketLayout>
-            <div className="bg-[#F5E62B] min-h-screen py-12 px-4">
+            <div className="bg-institutional-yellow min-h-screen py-12 px-4">
                 <div className="container max-w-5xl mx-auto space-y-12">
                     
                     {/* PAGE HEADER */}

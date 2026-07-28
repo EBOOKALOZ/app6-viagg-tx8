@@ -70,7 +70,7 @@ export default function DigitalDeliveryGateway() {
 
     return (
         <MarketLayout>
-            <div className="bg-[#F5E62B] min-h-screen py-12 px-4 flex items-center justify-center">
+            <div className="bg-institutional-yellow min-h-screen py-12 px-4 flex items-center justify-center">
                 <Card className="max-w-xl w-full border-none shadow-3xl rounded-[48px] bg-white overflow-hidden p-12">
                     
                     <div className="flex flex-col items-center text-center space-y-8">

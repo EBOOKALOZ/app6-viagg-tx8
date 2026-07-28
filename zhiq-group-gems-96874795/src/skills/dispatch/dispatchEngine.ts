@@ -31,7 +31,7 @@ export async function findAvailableProfessionals(serviceType: ServiceType): Prom
 
     try {
         const { data, error } = await supabase
-            .from(tableName as any)
+            .from(tableName as never)
             .select(`id, ${idColumn}, lat, lng, status`)
             .eq("status", "online");
 
@@ -41,7 +41,7 @@ export async function findAvailableProfessionals(serviceType: ServiceType): Prom
         }
 
         // Normalização para o formato ProfessionalLocation
-        return (data || []).map((row: any) => ({
+        return (data || []).map((row: Record<string, unknown>) => ({
             id: row.id,
             professional_id: row[idColumn],
             lat: row.lat,
@@ -97,7 +97,7 @@ export async function createDispatchOffers(requestId: string, selectedProfession
 
     try {
         const { error } = await supabase
-            .from('service_offers' as any)
+            .from('service_offers' as never)
             .insert(offers);
 
         if (error) {

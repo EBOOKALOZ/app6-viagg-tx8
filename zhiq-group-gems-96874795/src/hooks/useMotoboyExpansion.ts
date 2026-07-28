@@ -376,7 +376,8 @@ export function useAddMotoboyGroup() {
         throw new Error('Você já atingiu o limite de 3 grupos ativos');
       }
 
-      const { data, error } = await supabase.rpc('try_create_motoboy_whatsapp_group' as any, {
+      // @ts-expect-error - RPC definition missing
+      const { data, error } = await supabase.rpc('try_create_motoboy_whatsapp_group', {
         p_link: link.trim(),
         p_cidade: cidade,
         p_estado: estado,

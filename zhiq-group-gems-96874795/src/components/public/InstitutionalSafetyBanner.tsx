@@ -51,7 +51,7 @@ export const InstitutionalSafetyBanner: React.FC = () => {
               A <strong className="text-white">Viagg-TX8</strong> conecta anunciantes e interessados, mas <strong className="text-yellow-300">não participa, não garante e não é responsável</strong> por qualquer negociação, pagamento ou transação realizada entre as partes.
             </p>
 
-            <div className="inline-flex items-center justify-center bg-[#F5E62B] text-[#D90000] font-black px-6 py-3 rounded-xl text-sm border-2 border-[#D90000]/20 shadow-lg uppercase tracking-wide animate-vtx-blink">
+            <div className="inline-flex items-center justify-center bg-institutional-yellow text-[#D90000] font-black px-6 py-3 rounded-xl text-sm border-2 border-[#D90000]/20 shadow-lg uppercase tracking-wide animate-vtx-blink">
               <AlertTriangle className="w-4 h-4 mr-2 shrink-0" />
               A PLATAFORMA NÃO É RESPONSÁVEL POR PAGAMENTOS OU ACORDOS ENTRE USUÁRIOS
             </div>
@@ -66,7 +66,7 @@ export const InstitutionalSafetyBanner: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {DISCLAIMER_ITEMS.map(({ Icon, text }, i) => (
                 <div key={i} className="flex flex-col items-center text-center gap-2 bg-black/20 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                  <div className="w-8 h-8 rounded-xl bg-[#F5E62B]/15 border border-[#F5E62B]/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-institutional-yellow/15 border border-[#F5E62B]/30 flex items-center justify-center">
                     <Icon className="w-4 h-4 text-yellow-300" />
                   </div>
                   <p className="text-white/85 text-xs font-medium leading-snug">{text}</p>

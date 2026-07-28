@@ -65,14 +65,14 @@ export function useAdvertiserCreditPackages() {
     queryKey: ["advertiser-credit-packages"],
     staleTime: 300_000,
     queryFn: async () => {
-      const { data, error } = await (supabase.from("advertiser_credit_packages") as any)
+      const { data, error } = await (supabase.from("advertiser_credit_packages") as unknown)
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
       if (error) throw error;
 
-      return (data || []).map((p: any): AdvertiserCreditPackage => ({
+      return (data || []).map((p: unknown): AdvertiserCreditPackage => ({
         id: p.id,
         name: p.name,
         slug: p.slug,
@@ -103,14 +103,14 @@ export function useAdvertiserPurchaseHistory() {
     refetchInterval: 30_000,
     queryFn: async () => {
       // Resolve account first
-      const { data: account } = await (supabase.from("advertiser_accounts") as any)
+      const { data: account } = await (supabase.from("advertiser_accounts") as unknown)
         .select("id")
         .eq("user_id", user!.id)
         .maybeSingle();
 
       if (!account) return [];
 
-      const { data, error } = await (supabase.from("advertiser_credit_purchases") as any)
+      const { data, error } = await (supabase.from("advertiser_credit_purchases") as unknown)
         .select("id, package_id, credits_total, amount_brl, payment_status, provider_name, created_at, paid_at, expires_at")
         .eq("advertiser_account_id", account.id)
         .order("created_at", { ascending: false })
@@ -152,11 +152,11 @@ export function useAdvertiserCreditPurchase() {
       setIsCreating(true);
       try {
         const { data: rpcResult, error } = await supabase.rpc(
-          "create_advertiser_credit_purchase" as any,
+          "create_advertiser_credit_purchase" as unknown,
           { p_package_id: packageId }
         );
 
-        const result = rpcResult as any;
+        const result = rpcResult as unknown;
 
         if (error || !result?.success) {
           return {
@@ -221,7 +221,7 @@ export function useAdvertiserCreditPurchase() {
    */
   const pollPurchaseStatus = useCallback(
     async (purchaseId: string): Promise<PurchaseStatus | null> => {
-      const { data, error } = await (supabase.from("advertiser_credit_purchases") as any)
+      const { data, error } = await (supabase.from("advertiser_credit_purchases") as unknown)
         .select("payment_status")
         .eq("id", purchaseId)
         .maybeSingle();

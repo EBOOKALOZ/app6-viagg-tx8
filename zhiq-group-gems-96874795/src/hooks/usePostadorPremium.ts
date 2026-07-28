@@ -38,7 +38,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<PendingQueueItem[]>({
         queryKey: ["postador-premium-queue"],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_queue_cards_view") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_queue_cards_view")
                 .select("*")
                 .order("priority", { ascending: false, nullsFirst: false })
                 .order("created_at", { ascending: false })
@@ -57,7 +58,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<PostadorKPIsView>({
         queryKey: ["postador-premium-kpis"],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_kpis_view") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_kpis_view")
                 .select("*").limit(1).maybeSingle();
             if (error) { console.error("[PostadorPremium] kpis error:", error); return { pending_count: 0, posted_count: 0, cancelled_count: 0, last_posted_at: null }; }
             return (data || { pending_count: 0, posted_count: 0, cancelled_count: 0, last_posted_at: null }) as PostadorKPIsView;
@@ -73,7 +75,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<PostadorOperatorKPIsView>({
         queryKey: ["postador-premium-operator-kpis", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_operator_kpis_view") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_operator_kpis_view")
                 .select("*").eq("operator_user_id", user!.id).maybeSingle();
             if (error) { console.error("[PostadorPremium] operator kpis error:", error); return { operator_user_id: user!.id, my_posted_count: 0, my_last_posted_at: null }; }
             return (data || { operator_user_id: user!.id, my_posted_count: 0, my_last_posted_at: null }) as PostadorOperatorKPIsView;
@@ -89,7 +92,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<PostadorHistoryViewItem[]>({
         queryKey: ["postador-premium-history"],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_history_view") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_history_view")
                 .select("*").order("posted_at", { ascending: false }).limit(30);
             if (error) { console.error("[PostadorPremium] history error:", error); return []; }
             return (data || []) as PostadorHistoryViewItem[];
@@ -105,7 +109,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<PostadorMyHistoryItem[]>({
         queryKey: ["postador-premium-my-history", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_history_by_operator_view") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_history_by_operator_view")
                 .select("*").eq("operator_user_id", user!.id).order("posted_at", { ascending: false }).limit(30);
             if (error) { console.error("[PostadorPremium] my history error:", error); return []; }
             return (data || []) as PostadorMyHistoryItem[];
@@ -121,7 +126,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<GroupRuntimeView[]>({
         queryKey: ["postador-premium-runtimes", user?.id],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("group_posting_runtime_view") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("group_posting_runtime_view")
                 .select("*")
                 .order("updated_at", { ascending: false });
             if (error) { console.error("[PostadorPremium] erro nos runtimes:", error); return []; }
@@ -149,7 +155,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
     } = useQuery<PostadorOperacionalBoardItem[]>({
         queryKey: ["postador-operational-board"],
         queryFn: async () => {
-            const { data, error } = await (supabase.from("postador_operacional_board") as any)
+            // @ts-expect-error - Type definitions may be missing
+            const { data, error } = await supabase.from("postador_operacional_board")
                 .select("*")
                 .in("target_status", ["available", "pending", "claimed"])
                 .order("target_created_at", { ascending: false })
@@ -208,10 +215,11 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
                 // ═══════════════════════════════════════
                 let usedClaimFlow = false;
 
-                let claimData: any = null;
-                let claimErr: any = null;
+                let claimData: Record<string, unknown> | null = null;
+                let claimErr: Error | Record<string, unknown> | null = null;
                 try {
-                    const claimResult = await (supabase.rpc as any)(
+                    // @ts-expect-error - Type definitions may be missing
+                    const claimResult = await supabase.rpc(
                         "claim_campaign_posting_target",
                         { p_target_id: targetId }
                     );
@@ -232,10 +240,11 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
                 // ═══════════════════════════════════════
                 let success = false;
 
-                let confirmData: any = null;
-                let confirmErr: any = null;
+                let confirmData: Record<string, unknown> | null = null;
+                let confirmErr: Error | Record<string, unknown> | null = null;
                 try {
-                    const confirmResult = await (supabase.rpc as any)(
+                    // @ts-expect-error - Type definitions may be missing
+                    const confirmResult = await supabase.rpc(
                         "confirm_campaign_posting",
                         {
                             p_target_id: targetId,
@@ -297,7 +306,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
                     // NOTE: O fallback não usa target_id. Usa campaignQueueId + groupId
                     // extraidos do board item se disponível. Isso é temporário.
                     const boardItem = operationalBoard.find(b => b.target_id === targetId);
-                    const { data, error } = await (supabase.rpc as any)(
+                    // @ts-expect-error - Type definitions may be missing
+                    const { data, error } = await supabase.rpc(
                         "register_postador_action",
                         {
                             p_campaign_queue_id: boardItem?.campaign_queue_id || targetId,
@@ -334,9 +344,9 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
                 setTimeout(() => setActionState((prev) => {
                     const n = { ...prev }; delete n[key]; return n;
                 }), 3000);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("[PostadorPremium] confirmPosting error:", err);
-                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err?.message ?? "unknown_error" });
+                if (auditId) void finishAuditEntry(auditId, { success: false, errorMessage: err instanceof Error ? err.message : String(err) });
                 toast.error("Ocorreu um erro inesperado. Tente novamente.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));
             } finally {
@@ -366,7 +376,8 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
             setActionState((prev) => ({ ...prev, [key]: "loading" }));
 
             try {
-                const { data, error } = await (supabase.rpc as any)(
+                // @ts-expect-error - Type definitions may be missing
+                const { data, error } = await supabase.rpc(
                     "release_my_claim",
                     { p_target_id: targetId }
                 );
@@ -382,7 +393,7 @@ export function usePostadorPremium(callerProfileType: AuditProfileType = "postad
                 toast.success("Claim liberado com sucesso.");
                 setActionState((prev) => { const n = { ...prev }; delete n[key]; return n; });
                 invalidateAll();
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error("[PostadorPremium] releaseClaim error:", err);
                 toast.error("Erro ao liberar claim.");
                 setActionState((prev) => ({ ...prev, [key]: "error" }));

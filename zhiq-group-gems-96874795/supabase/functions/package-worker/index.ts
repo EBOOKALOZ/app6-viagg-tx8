@@ -31,10 +31,10 @@ const ROTA: Record<string, string> = {
 };
 
 // IA de qualidade — LGPD e higiene (defesa em profundidade além do prompt)
-function qualidade(conteudo: any, link: string): { ok: boolean; problemas: string[] } {
+function qualidade(conteudo: Record<string, unknown>, link: string): { ok: boolean; problemas: string[] } {
   const problemas: string[] = [];
   const texto = JSON.stringify(conteudo).toLowerCase();
-  if (/\(?\d{2}\)?[\s.\-]*9?\d{4}[\s.\-]?\d{4}/.test(texto) || /\d{5}[\s.\-]\d{4}/.test(texto) || /\d{9,}/.test(texto)) {
+  if (/\(?\d{2}\)?[\s.-]*9?\d{4}[\s.-]?\d{4}/.test(texto) || /\d{5}[\s.-]\d{4}/.test(texto) || /\d{9,}/.test(texto)) {
     problemas.push("telefone detectado");
   }
   if (texto.includes("pix")) problemas.push("PIX detectado");
@@ -61,9 +61,9 @@ Deno.serve(async (req) => {
   const { data: novos, error: e1 } = await svc.rpc("orion_package_fila", { p_limite: 5 });
   if (e1) return json({ ok: false, error: e1.message }, 500);
   const { data: retries } = await svc.rpc("orion_package_fila_retry", { p_limite: 3 });
-  const itens = [...((novos || []) as any[]), ...((retries || []) as any[])];
+  const itens = [...((novos || []) as Record<string, unknown>[]), ...((retries || []) as Record<string, unknown>[])];
 
-  const resultados: any[] = [];
+  const resultados: Record<string, unknown>[] = [];
   for (const item of itens) {
     const t0 = Date.now();
     const link = `${SITE}${ROTA[item.tabela] ?? "/"}${item.listing_id}`;

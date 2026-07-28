@@ -1,0 +1,2 @@
+-- O Schema completo e atualizado é gerenciado através do diretório /supabase/migrations/
+-- A tipagem correspondente para o TypeScript (Database interface) foi gerada e está mantida nos arquivos types.ts / supabase_types.ts.

@@ -24,10 +24,10 @@ export async function runTerritoryDominanceAgent(city: string): Promise<AgentRun
     logs.push(`🏰 TerritoryDominanceAgent started for ${city}`);
 
     // 0. Get known neighborhoods from demand data
-    const { data: demandData } = await (supabase.from("neighborhood_product_demand") as any)
+    const { data: demandData } = await (supabase.from("neighborhood_product_demand") as never)
       .select("neighborhood")
       .eq("city", city);
-    const neighborhoods = [...new Set((demandData || []).map((d: any) => d.neighborhood))];
+    const neighborhoods = [...new Set((demandData || []).map((d: Record<string, unknown>) => String(d.neighborhood)))];
     logs.push(`📍 ${neighborhoods.length} known neighborhoods`);
 
     // 1. Cluster city into zones
@@ -74,8 +74,9 @@ export async function runTerritoryDominanceAgent(city: string): Promise<AgentRun
       logs,
       duration_ms: Date.now() - startTime,
     };
-  } catch (err: any) {
-    logs.push(`❌ Error: ${err?.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logs.push(`❌ Error: ${msg}`);
     return {
       agent: "TerritoryDominanceAgent",
       success: false,

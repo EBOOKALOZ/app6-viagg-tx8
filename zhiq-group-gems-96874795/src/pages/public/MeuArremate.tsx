@@ -5,8 +5,8 @@
  * cada botão chama a RPC guardada correspondente (arremate_*). Chat + contato via RPC.
  * A mesma tela serve os 2 lados; os botões aparecem conforme o papel.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState, ReactNode } from "react";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
@@ -44,6 +44,9 @@ export default function MeuArremate() {
   const [file, setFile] = useState<File | null>(null);
   const [entregaForm, setEntregaForm] = useState<{ pickup: string; drop: string; frete: string } | null>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
+  
+  const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+  const isStoreContext = outletContext?.isStoreContext;
 
   const load = useCallback(async () => {
     if (!listingId || !user) return;
@@ -53,10 +56,41 @@ export default function MeuArremate() {
     if (s) setRole(s.winner_user_id === user.id ? "buyer" : s.seller_user_id === user.id ? "seller" : "admin");
     const { data: m } = await (supabase.rpc as any)("arremate_list_messages", { p_listing_id: listingId });
     setMsgs(Array.isArray(m) ? m : []);
+    
+    // Auto-redirect se estiver fora do contexto de loja mas o leilão tiver store_id
+    if (!isStoreContext) {
+      const { data: listingData } = await supabase.from("auction_listings").select("store_id").eq("id", listingId).single();
+      if (listingData && listingData.store_id) {
+        navigate(`/loja/${listingData.store_id}/meu-arremate/${listingId}`);
+        return;
+      }
+    }
+    
     setLoading(false);
-  }, [listingId, user]);
+  }, [listingId, user, isStoreContext, navigate]);
 
   useEffect(() => { load(); }, [load]);
+  
+  useEffect(() => {
+    if (!listingId) return;
+    const channel = supabase.channel(`arremate-${listingId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orion_auction_settlements", filter: `listing_id=eq.${listingId}` },
+        () => load()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orion_arremate_messages", filter: `listing_id=eq.${listingId}` },
+        () => load()
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [listingId, load]);
+
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const call = async (rpc: string, extra: Record<string, any> = {}, okMsg?: string) => {
@@ -131,8 +165,18 @@ export default function MeuArremate() {
     } finally { setBusy(null); }
   };
 
-  if (loading) return <MarketLayout><div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-[#FF6A00]" /></div></MarketLayout>;
-  if (!settlement) return <MarketLayout><div className="max-w-lg mx-auto py-24 text-center text-gray-500">Arremate não encontrado ou sem acesso.</div></MarketLayout>;
+  if (loading || (!isStoreContext && loading)) {
+    if (isStoreContext) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div>;
+    return <MarketLayout><div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-orange-500" /></div></MarketLayout>;
+  }
+
+  if (!settlement) {
+    if (isStoreContext) return <div className="p-12 text-center text-slate-500">Arremate não encontrado ou não finalizado.</div>;
+    return <MarketLayout><div className="p-12 text-center text-slate-500">Arremate não encontrado ou não finalizado.</div></MarketLayout>;
+  }
+
+  const Wrapper = ({ children }: { children: ReactNode }) => 
+    isStoreContext ? <div className="w-full max-w-4xl mx-auto py-6">{children}</div> : <MarketLayout>{children}</MarketLayout>;
 
   const st = settlement.arremate_status || "aguardando_contato";
   const stepIdx = Math.max(0, STEPS.findIndex((s) => s.key === st));
@@ -155,8 +199,8 @@ export default function MeuArremate() {
   );
 
   return (
-    <MarketLayout>
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+    <Wrapper>
+      <div className={cn("max-w-3xl mx-auto px-4 py-6 space-y-5", isStoreContext ? "" : "min-h-screen")}>
         <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-800">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </button>
@@ -309,6 +353,6 @@ export default function MeuArremate() {
           )}
         </div>
       </div>
-    </MarketLayout>
+    </Wrapper>
   );
 }

@@ -32,8 +32,9 @@ export function useDriverCommission(userId: string | undefined) {
       if (!userId) throw new Error('User ID is required');
 
       const [{ data: groups }, { data: profile }] = await Promise.all([
+        // @ts-expect-error - ignore
         supabase
-          .from('driver_whatsapp_groups' as any)
+          .from('driver_whatsapp_groups')
           .select('id, status')
           .eq('user_id', userId),
         supabase
@@ -43,7 +44,7 @@ export function useDriverCommission(userId: string | undefined) {
           .maybeSingle(),
       ]);
 
-      const allGroups: { status: string }[] = (groups as any[]) || [];
+      const allGroups: { status: string }[] = (groups as { status: string }[]) || [];
       const activeGroups = allGroups.filter(g => g.status === 'ativo').length;
       const totalGroups = allGroups.length;
       const commissionRate = calcDriverCommission(activeGroups);
@@ -81,7 +82,7 @@ export function useDriverCommission(userId: string | undefined) {
     if (!userId) return;
     const newStatus = !query.data?.isOnline;
     await supabase.from('driver_profiles').update({ is_online: newStatus }).eq('user_id', userId);
-    queryClient.setQueryData(['driver-commission', userId], (old: any) => ({ ...old, isOnline: newStatus }));
+    queryClient.setQueryData<DriverCommissionData>(['driver-commission', userId], (old) => old ? { ...old, isOnline: newStatus } : undefined);
   };
 
   return {

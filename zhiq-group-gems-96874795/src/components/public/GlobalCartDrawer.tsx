@@ -96,7 +96,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
   if (totalItems === 0 && step !== "success" && open) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-[#F5E62B] flex flex-col">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-institutional-yellow flex flex-col">
           <SheetHeader className="sr-only"><SheetTitle>Cesta Vazia</SheetTitle></SheetHeader>
           <DrawerIntelligentHeader onClose={handleClose} />
           <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 pt-10">
@@ -122,7 +122,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
     <>
       {open && <SessionSafetyFlash key={String(open)} />}
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-[#F5E62B] flex flex-col">
+      <SheetContent side="right" className="w-full sm:max-w-md p-0 bg-institutional-yellow flex flex-col">
         <SheetHeader className="sr-only"><SheetTitle>Cesta de Compras</SheetTitle></SheetHeader>
 
         {/* ═══ CABEÇALHO INTELIGENTE COMPLETO ═══ */}
@@ -151,7 +151,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-black/10 bg-[#F5E62B] px-5 py-4 space-y-3 shrink-0">
+            <div className="border-t border-black/10 bg-institutional-yellow px-5 py-4 space-y-3 shrink-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-bold text-slate-900">
                   Total ({totalItems} {totalItems === 1 ? "item" : "itens"} de {totalStores} {totalStores === 1 ? "loja" : "lojas"})
@@ -181,7 +181,7 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
         {step === "signup" && (
           <div className="flex-1 overflow-y-auto">
             {/* Review summary */}
-            <div className="px-4 py-3 bg-[#F5E62B] border-b border-black/10">
+            <div className="px-4 py-3 bg-institutional-yellow border-b border-black/10">
               <p className="text-[12px] text-slate-900 font-bold mb-2">
                 Revise abaixo as lojas e os produtos que receberão sua intenção:
               </p>
@@ -441,7 +441,7 @@ function DrawerIntelligentHeader({ onClose }: { onClose: () => void }) {
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
   return (
-    <div className="bg-[#F5E62B] border-b border-black/10 shadow-sm shrink-0 relative">
+    <div className="bg-institutional-yellow border-b border-black/10 shadow-sm shrink-0 relative">
       {/* Hero Card de Clima + IA RIDV (RETRÁTIL) */}
       <div className={cn(
         "transition-all duration-300 ease-in-out overflow-hidden px-3 pt-2",

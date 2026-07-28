@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, AlertTriangle, Info } from "lucide-react";
-import type { AuditIssue } from "@/hooks/useAdminCredits";
+import type { AuditIssue, AdminCreditsData } from "@/hooks/useAdminCredits";
 
-interface Props { data: any; }
+interface Props { data: AdminCreditsData; }
 
 const SEVERITY_CONFIG = {
   critical: { icon: ShieldAlert, color: "bg-red-100 text-red-700 border-red-300", label: "Crítico", iconColor: "text-red-500" },

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { FooterNeutral } from "@/components/FooterNeutral";
@@ -149,11 +149,14 @@ export default function ProductLandingPage() {
             });
         }, { kind: "favorite", label: "favoritar este anúncio", payload: { id } });
     };
-    const [showDiscountModal, setShowDiscountModal] = useState(false);
-    const [showLeadModal, setShowLeadModal] = useState(false);
+    const [leadModalOpen, setLeadModalOpen] = useState(false);
+    const [discountModalOpen, setDiscountModalOpen] = useState(false);
+
+    const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+    const isStoreContext = outletContext?.isStoreContext;
     const sliderRef = useRef<HTMLDivElement>(null);
 
-    // â”€â”€ Fetch Product â”€â”€
+    // ─── Fetch Product ───
     const { data: product, isLoading, error } = useQuery<Product | null>({
         queryKey: ["public-product", id],
         queryFn: async () => {
@@ -214,7 +217,7 @@ export default function ProductLandingPage() {
     const globalCart = useGlobalCart();
     const { trackProductVisit } = useMarketplaceTracking();
 
-    // â”€â”€ Fetch Store info â”€â”€
+    // ─── Fetch Store info ───
     const { data: store } = useQuery<StoreData | null>({
         queryKey: ["public-store", product?.merchant_store_id],
         queryFn: async () => {
@@ -297,7 +300,7 @@ export default function ProductLandingPage() {
     // Cart must be after product and store query so we can use the real store_id
     const cart = useStoreCart(store?.store_id || product?.merchant_store_id);
 
-    // â”€â”€ Fetch related products from same store â”€â”€
+    // ─── Fetch related products from same store ───
     const { data: relatedProducts = [] } = useQuery<Product[]>({
         queryKey: ["related-products", product?.merchant_store_id, id],
         queryFn: async () => {
@@ -339,7 +342,7 @@ export default function ProductLandingPage() {
         staleTime: 60_000,
     });
 
-    // â”€â”€ Auto-scroll slider every 9 seconds â”€â”€
+    // ─── Auto-scroll slider every 9 seconds ───
     useEffect(() => {
         const el = sliderRef.current;
         if (!el) return;
@@ -358,7 +361,8 @@ export default function ProductLandingPage() {
 
     const style = parseCardStyle(product?.cta_label || null);
     const imgSrc = normalizeImageUrl(product?.image_url);
-// â”€â”€ M1: Track product_click on page load â”€â”€
+
+    // ─── M1: Track product_click on page load ───
     useEffect(() => {
         if (product?.merchant_store_id && store) {
             trackM1Event({
@@ -372,7 +376,7 @@ export default function ProductLandingPage() {
         }
     }, [product?.id, product?.merchant_store_id, store]);
 
-    // â”€â”€ Marketplace Tracking: product_visit â”€â”€
+    // ─── Marketplace Tracking: product_visit ───
     useEffect(() => {
         if (product && product.id) {
             trackProductVisit(product.id, product.merchant_store_id, {
@@ -388,7 +392,7 @@ export default function ProductLandingPage() {
         }
     }, [product, store, trackProductVisit]);
 
-    // ── Credit Deduction: -1 credit per product view (via RPC atômica) ──
+    // ─── Credit Deduction: -1 credit per product view (via RPC atômica) ──
     useEffect(() => {
         if (!product?.id || !store?.store_id) return;
 
@@ -397,12 +401,8 @@ export default function ProductLandingPage() {
 
         const deductCredit = async () => {
             try {
-                // Resolve o merchant_store_id real a partir do que já temos
-                // (store.store_id já vem resolvido pela query de store acima).
                 const realStoreId = store.store_id!;
 
-                // Débito atômico via RPC SECURITY DEFINER (backend-driven).
-                // Substitui o antigo cálculo wallet.balance - 1 feito no client.
                 const { data: rpcResult, error: rpcError } = await (supabase as any)
                     .rpc("deduct_store_product_view_credit", {
                         p_product_id: product.id,
@@ -429,8 +429,6 @@ export default function ProductLandingPage() {
     }, [product?.id, product?.title, store?.store_id]);
 
     const handleCTA = async () => {
-        console.log("[handleCTA] store:", store, "product:", product?.id);
-
         // M1: Track buy_click
         if (product?.merchant_store_id) {
             trackM1Event({
@@ -442,7 +440,7 @@ export default function ProductLandingPage() {
                 bairro: store?.bairro,
             });
         }
-        // Track contact_seller event (existing)
+        // Track contact_seller event
         if (product) {
             trackProductEvent({
                 product_id: product.id,
@@ -477,27 +475,19 @@ export default function ProductLandingPage() {
             } catch { /* ignore */ }
         }
 
-        console.log("[handleCTA] resolved phone:", phone);
-
-        // Priority: external_link â†’ WhatsApp â†’ lead modal
+        // Priority: external_link → WhatsApp → lead modal
         if (product?.external_link) {
             window.open(product.external_link, "_blank");
         } else if (phone) {
-            // Ensure proper BR format: remove leading 55 if present, then prepend 55
             const cleanPhone = phone.replace(/^55/, '');
-            const msg = encodeURIComponent(`OlÃ¡! Vi o produto "${product?.title}" no marketplace Viagg-TX8 e quero comprar!`);
+            const msg = encodeURIComponent(`Olá! Vi o produto "${product?.title}" no marketplace Viagg-TX8 e quero comprar!`);
             window.open(`https://wa.me/55${cleanPhone}?text=${msg}`, "_blank");
         } else {
-            // Show lead capture modal as fallback
-            setShowLeadModal(true);
+            setLeadModalOpen(true);
         }
     };
 
-    // ── NOVO FLUXO (07-21): /produto/:id REDIRECIONA para a loja com o produto
-    //    em destaque (/loja/:storeId?product=:id). Só redireciona quando a loja
-    //    REAL foi resolvida (store_resolved) — produtos sem loja caem no fallback
-    //    abaixo (renderiza a página de produto). Resolução robusta preservada
-    //    (advertiser_listings → advertiser_account_id → merchant_stores).
+    // ─── NOVO FLUXO: /produto/:id REDIRECIONA para a loja com o produto
     const canRedirect = !!store?.store_id && (store as any)?.store_resolved === true;
     useEffect(() => {
         if (canRedirect && id) {
@@ -505,10 +495,17 @@ export default function ProductLandingPage() {
         }
     }, [canRedirect, store?.store_id, id, navigate]);
 
-    // â”€â”€ Loading / Redirecionando â”€â”€
+    // ─── Loading / Redirecionando ───
     if (isLoading || canRedirect) {
+        if (isStoreContext) return (
+            <div className="flex-1 flex flex-col items-center justify-center p-12">
+                <Loader2 className="h-10 w-10 animate-spin text-[#FF6A00]" />
+                <p className="mt-4 font-black uppercase text-zinc-500 tracking-wider">Buscando detalhes...</p>
+            </div>
+        );
+
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+            <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
                 <div className="text-center space-y-3">
                     <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
                     <p className="text-sm text-gray-400">{canRedirect ? "Abrindo a loja..." : "Carregando produto..."}</p>
@@ -517,10 +514,21 @@ export default function ProductLandingPage() {
         );
     }
 
-    // â”€â”€ Not Found â”€â”€
+    // ─── Not Found ───
     if (!product || error) {
+        if (isStoreContext) return (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-4">
+                <Store className="h-16 w-16 text-zinc-300 mx-auto" />
+                <h1 className="text-2xl font-black text-zinc-900">Produto não encontrado</h1>
+                <p className="text-zinc-600 font-medium">O produto foi removido ou não existe.</p>
+                <button onClick={() => navigate(-1)} className="mt-4 font-black text-[#FF6A00] uppercase underline hover:text-[#e65c00]">
+                    Voltar
+                </button>
+            </div>
+        );
+
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+            <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
                 <div className="text-center space-y-3 px-6">
                     <ShoppingBag className="h-12 w-12 text-gray-200 mx-auto" />
                     <h1 className="text-xl font-bold text-gray-700">Produto não encontrado</h1>
@@ -536,16 +544,10 @@ export default function ProductLandingPage() {
             ? <Facebook className="h-4 w-4" />
             : <Globe className="h-4 w-4" />;
 
-    return (
-        <MarketLayout 
-            mainClassName="bg-[#F5E62B] flex flex-col"
-            blueFooter={true}
-            blueFooterLabel="Produto"
-        >
-            <div className="flex-1 bg-[#F5E62B] flex flex-col">
-            <div className="w-full px-4 lg:px-8 xl:px-12 py-6 lg:py-8 flex-1 flex flex-col">
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+    const content = (
+        <>
+          <div className="w-full px-4 lg:px-8 xl:px-12 py-6 lg:py-8 flex-1 flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
                     {/* ESQUERDA: imagem + titulo + descricao */}
                     <div className="lg:col-span-8 flex flex-col gap-6 w-full">
@@ -638,10 +640,10 @@ export default function ProductLandingPage() {
                                         }}
                                     />
                                 )}
-                                <button onClick={() => setShowDiscountModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl bg-[#68c7f2] text-zinc-900 hover:opacity-90 transition-colors">
+                                <button onClick={() => setDiscountModalOpen(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl bg-[#68c7f2] text-zinc-900 hover:opacity-90 transition-colors">
                                     <Percent className="h-4 w-4" /> Fazer uma oferta
                                 </button>
-                                <button onClick={() => setShowLeadModal(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl border-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                                <button onClick={() => setLeadModalOpen(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl border-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
                                     <MessageCircle className="h-4 w-4" /> Falar com o vendedor
                                 </button>
                             </div>
@@ -689,7 +691,6 @@ export default function ProductLandingPage() {
 
 
             </div>
-            </div>
 
             {/* â•â•â• LEAD CAPTURE MODAL â•â•â• */}
             {product && (
@@ -720,19 +721,33 @@ export default function ProductLandingPage() {
                         merchant_store_id: product.merchant_store_id,
                         store_name: store?.store_name,
                     }}
-                    open={showDiscountModal}
-                    onClose={() => setShowDiscountModal(false)}
+                    open={discountModalOpen}
+                    onClose={() => setDiscountModalOpen(false)}
                 />
             )}
 
             {/* â•â•â• LEAD CAPTURE MODAL â•â•â• */}
             <LeadCaptureModal
                 product={product}
-                open={showLeadModal}
-                onClose={() => setShowLeadModal(false)}
+                open={leadModalOpen}
+                onClose={() => setLeadModalOpen(false)}
             />
 
             <InstitutionalSafetyBanner />
+        </>
+    );
+
+    if (isStoreContext) return content;
+    
+    return (
+        <MarketLayout
+            search={search}
+            setSearch={setSearch}
+            mainClassName="bg-institutional-yellow flex flex-col"
+            blueFooter
+            headerChildren={<MarketNavButtons />}
+        >
+            {content}
         </MarketLayout>
     );
 }

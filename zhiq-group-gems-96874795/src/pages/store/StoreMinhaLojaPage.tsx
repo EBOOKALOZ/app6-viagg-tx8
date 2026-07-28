@@ -43,8 +43,8 @@ export default function StoreMinhaLojaPage() {
   const fullAddress = addressParts.join(' • ');
 
   return (
-    <MarketLayout hideFooter hideStoreNav mainClassName="bg-[#F5E62B]">
-    <div className="p-4 md:p-8 animate-fade-in pb-24 bg-[#F5E62B] min-h-screen">
+    <MarketLayout hideFooter hideStoreNav mainClassName="bg-institutional-yellow">
+    <div className="p-4 md:p-8 animate-fade-in pb-24 bg-institutional-yellow min-h-screen">
 
       {/* Pré-visualização do perfil público (o cabeçalho completo real vem do MarketLayout) */}
       <div className="rounded-[40px] overflow-hidden border border-zinc-200 shadow-2xl mb-8 bg-zinc-50/50">

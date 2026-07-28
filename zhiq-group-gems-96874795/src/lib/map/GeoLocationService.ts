@@ -40,8 +40,8 @@ export async function geocodeAddress(text: string, city?: string): Promise<MapAd
   if (!res.ok) throw new Error("Geocodificação falhou");
   const results = await res.json();
 
-  return results.map((r: any) => {
-    const a = r.address ?? {};
+  return results.map((r: Record<string, unknown>) => {
+    const a = (r.address as Record<string, unknown>) ?? {};
     return {
       street:       a.road ?? a.pedestrian,
       number:       a.house_number,
@@ -64,9 +64,9 @@ export async function autocomplete(query: string): Promise<MapAddress[]> {
   const res = await fetch(url, { headers: nominatimHeaders() });
   if (!res.ok) return [];
   const results = await res.json();
-  return results.map((r: any) => ({
-    formattedAddress: r.display_name,
-    latLng: { lat: parseFloat(r.lat), lng: parseFloat(r.lon) },
+  return results.map((r: Record<string, unknown>) => ({
+    formattedAddress: String(r.display_name || ''),
+    latLng: { lat: parseFloat(String(r.lat || 0)), lng: parseFloat(String(r.lon || 0)) },
   } as MapAddress));
 }
 

@@ -17,7 +17,7 @@ export async function recommendProductsToStores(city: string): Promise<ProductRe
   console.log(`[DemandIntelligence] 💡 Generating product recommendations for ${city}...`);
 
   // Get top demanded products in this city
-  const { data: demands } = await (supabase.from("neighborhood_product_demand") as any)
+  const { data: demands } = await (supabase.from("neighborhood_product_demand") as never)
     .select("*")
     .eq("city", city)
     .order("demand_score", { ascending: false })
@@ -28,7 +28,7 @@ export async function recommendProductsToStores(city: string): Promise<ProductRe
   const topProducts = (demands as NeighborhoodProductDemand[]).slice(0, 10);
 
   // Get stores in the city
-  const { data: stores } = await (supabase.from("merchant_stores") as any)
+  const { data: stores } = await (supabase.from("merchant_stores") as never)
     .select("id, store_name, city")
     .eq("city", city);
 
@@ -40,7 +40,7 @@ export async function recommendProductsToStores(city: string): Promise<ProductRe
     product_name: null,
     neighborhood: d.neighborhood,
     demand_score: d.demand_score,
-    stores_without: stores.map((s: any) => s.id),
+    stores_without: stores.map((s: Record<string, unknown>) => String(s.id)),
   }));
 
   console.log(`[DemandIntelligence] 💡 ${recommendations.length} recommendations generated`);

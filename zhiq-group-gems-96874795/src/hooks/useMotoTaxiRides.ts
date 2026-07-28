@@ -287,7 +287,7 @@ export function useMotoTaxiRides() {
           table: 'service_orders',
         },
         (payload) => {
-          const rawRecord = payload.new as any;
+          const rawRecord = payload.new as Record<string, unknown>;
           
           // Só processar se é do tipo mototaxi e é minha corrida
           if (rawRecord?.service_type !== 'mototaxi' || rawRecord?.motoboy_id !== user.id) {
@@ -525,7 +525,7 @@ export function useMotoTaxiRides() {
       }
       
       return true;
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('[useMotoTaxiRides] Erro ao aceitar:', error);
       toast.error('Erro ao aceitar corrida');
       return false;
@@ -617,7 +617,7 @@ export function useMotoTaxiRides() {
       
       await loadActiveRide(rideIdToUse);
       return true;
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('[useMotoTaxiRides] Erro ao iniciar:', error);
       toast.error('Erro ao iniciar corrida');
       return false;
@@ -664,7 +664,7 @@ export function useMotoTaxiRides() {
       clearRoute();
       
       return true;
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('[useMotoTaxiRides] Erro ao finalizar:', error);
       toast.error('Erro ao finalizar corrida');
       return false;
@@ -710,7 +710,7 @@ export function useMotoTaxiRides() {
       clearRoute();
       
       return true;
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('[useMotoTaxiRides] Erro ao cancelar:', error);
       toast.error('Erro ao cancelar corrida');
       return false;

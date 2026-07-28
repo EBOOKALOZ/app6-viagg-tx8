@@ -116,14 +116,14 @@ export default function PublicServicesHome() {
           </div>
           <button
             onClick={() => navigate("/auth")}
-            className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+            className="shrink-0 bg-institutional-yellow hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
           >
             Anunciar meu serviço →
           </button>
         </div>
       </div>
 
-      <div className="w-full py-10 bg-[#F5E62B]">
+      <div className="w-full py-10 bg-institutional-yellow">
         <div className="max-w-[1920px] mx-auto space-y-6">
           <div className="px-4 lg:px-6 flex flex-col items-center text-center gap-2">
             <div className="flex items-center gap-2 justify-center">

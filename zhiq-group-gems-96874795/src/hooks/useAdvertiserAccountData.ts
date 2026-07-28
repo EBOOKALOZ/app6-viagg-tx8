@@ -58,11 +58,14 @@ export function useAdvertiserAccountData() {
       // 1. Fetch Advertiser Account
       // A linha de advertiser_accounts tem PK própria (id) + user_id; o
       // vínculo correto com o usuário logado é user_id (id pode divergir).
-      let { data: account, error: accountError } = await supabase
+      const fetchResult = await supabase
         .from("advertiser_accounts")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
+      
+      let account = fetchResult.data;
+      const accountError = fetchResult.error;
 
       // If account doesn't exist, try to ensure it
       if (!account && !accountError) {
@@ -104,7 +107,7 @@ export function useAdvertiserAccountData() {
         .eq('id', user.id)
         .maybeSingle();
 
-      // 3. Fetch Plan Details if any
+      // 3. Fetch Plan Details if unknown
       let planDetails = null;
       if (safeAccount.package_id) {
         const { data: pkg } = await supabase
@@ -127,19 +130,19 @@ export function useAdvertiserAccountData() {
       // 4. Fetch Stats (Listings & Credits) — soma TODAS as tabelas de anúncio
       const [reList, vList, advList, balData] = await Promise.all([
         supabase.from("real_estate_listings").select("visibility_status").eq("owner_user_id", user.id),
-        (supabase.from("vehicle_listings" as any).select("visibility_status").eq("owner_user_id", user.id)) as any,
+        (supabase.from("vehicle_listings" as unknown).select("visibility_status").eq("owner_user_id", user.id)) as unknown,
         safeAccount.id
-          ? (supabase.from("advertiser_listings" as any).select("listing_status").eq("advertiser_account_id", safeAccount.id)) as any
-          : { data: [] as any[] },
+          ? (supabase.from("advertiser_listings" as unknown).select("listing_status").eq("advertiser_account_id", safeAccount.id)) as unknown
+          : { data: [] as unknown[] },
         safeAccount.id
-          ? (supabase.from("advertiser_credit_balances" as any).select("available_credits, consumed_credits").eq("advertiser_account_id", safeAccount.id).maybeSingle()) as any
+          ? (supabase.from("advertiser_credit_balances" as unknown).select("available_credits, consumed_credits").eq("advertiser_account_id", safeAccount.id).maybeSingle()) as unknown
           : { data: null },
       ]);
 
       const allListings: { status: string }[] = [];
-      for (const r of (reList?.data ?? []) as any[]) allListings.push({ status: String(r?.visibility_status ?? '').toLowerCase() });
-      for (const v of (vList?.data ?? []) as any[]) allListings.push({ status: String(v?.visibility_status ?? '').toLowerCase() });
-      for (const a of (advList?.data ?? []) as any[]) allListings.push({ status: String(a?.listing_status ?? '').toLowerCase() });
+      for (const r of (reList?.data ?? []) as unknown[]) allListings.push({ status: String(r?.visibility_status ?? '').toLowerCase() });
+      for (const v of (vList?.data ?? []) as unknown[]) allListings.push({ status: String(v?.visibility_status ?? '').toLowerCase() });
+      for (const a of (advList?.data ?? []) as unknown[]) allListings.push({ status: String(a?.listing_status ?? '').toLowerCase() });
 
       const isActive = (s: string) => s === 'published' || s === 'active';
       const isPaused = (s: string) => s === 'paused' || s === 'draft';
@@ -150,8 +153,8 @@ export function useAdvertiserAccountData() {
         active_listings: allListings.filter(l => isActive(l.status)).length,
         paused_listings: allListings.filter(l => isPaused(l.status)).length,
         expired_listings: allListings.filter(l => isExpired(l.status)).length,
-        available_credits: (balData?.data as any)?.available_credits ?? 0,
-        contacts_unlocked: !!planDetails?.is_premium || ((balData?.data as any)?.available_credits ?? 0) > 0,
+        available_credits: (balData?.data as unknown)?.available_credits ?? 0,
+        contacts_unlocked: !!planDetails?.is_premium || ((balData?.data as unknown)?.available_credits ?? 0) > 0,
       };
 
       const defaultSettings = {

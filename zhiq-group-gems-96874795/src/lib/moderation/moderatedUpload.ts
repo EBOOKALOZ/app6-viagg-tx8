@@ -16,11 +16,16 @@ import { supabase } from "@/integrations/supabase/client";
 export interface ModerationResult {
   status: "approved" | "manual_review" | "blocked";
   recordId: string | null;
+  /** Presente quando o módulo (ex: 'travel') tem tabela de mídia dedicada e a
+   * edge já criou a linha diretamente — usar este id para qualquer referência
+   * local, nunca inserir uma linha de mídia a partir do frontend. */
+  mediaId: string | null;
   confidence: number;
   category: string;
   reason: string;
   publicUrl: string | null;
   storagePath: string | null;
+  bucket: string | null;
 }
 
 function blobToBase64(blob: Blob): Promise<string> {
@@ -43,6 +48,9 @@ export async function moderatedUpload(
     listingId?: string;
     category?: string;
     targetBucket?: string;
+    /** Ordem de exibição — obrigatório para módulos com tabela de mídia
+     * dedicada (a edge grava a linha diretamente com este sort_order). */
+    sortOrder?: number;
   },
 ): Promise<ModerationResult> {
   const image_base64 = await blobToBase64(blob);
@@ -56,6 +64,7 @@ export async function moderatedUpload(
       listing_id: opts.listingId ?? null,
       category: opts.category ?? "product",
       target_bucket: opts.targetBucket ?? "marketing-materials",
+      sort_order: opts.sortOrder ?? 0,
     },
   });
   if (error) throw new Error(error.message);
@@ -64,10 +73,12 @@ export async function moderatedUpload(
   return {
     status: data.status,
     recordId: data.record_id ?? null,
+    mediaId: data.media_id ?? null,
     confidence: Number(data.confidence ?? 0),
     category: String(data.category ?? ""),
     reason: String(data.reason ?? ""),
     publicUrl: data.publicUrl ?? null,
     storagePath: data.storagePath ?? null,
+    bucket: data.bucket ?? null,
   };
 }

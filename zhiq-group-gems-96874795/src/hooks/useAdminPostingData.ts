@@ -127,14 +127,14 @@ export function useAdminPostingData() {
         queryKey: ["admin-posting-groups"],
         queryFn: async () => {
             const { data, error } = await (supabase
-                .from("whatsapp_groups") as any)
+                .from("whatsapp_groups") as unknown)
                 .select("id, group_link, group_name, city_name, neighborhood, validation_status, is_active, is_valid, valid_for_commission, members_count, created_at, owner_user_id")
                 .order("created_at", { ascending: false });
 
             if (error) throw error;
 
             // Fetch owner profiles
-            const ownerIds = [...new Set((data || []).map((g: any) => g.owner_user_id).filter(Boolean))];
+            const ownerIds = [...new Set((data || []).map((g: unknown) => g.owner_user_id).filter(Boolean))];
             const profileMap: Record<string, { name: string; email: string }> = {};
 
             if (ownerIds.length > 0) {
@@ -143,31 +143,31 @@ export function useAdminPostingData() {
                     .select("id, name, email")
                     .in("id", ownerIds);
 
-                (profiles || []).forEach((p: any) => {
+                (profiles || []).forEach((p: unknown) => {
                     profileMap[p.id] = { name: p.name || "Sem nome", email: p.email || "" };
                 });
             }
 
             // Fetch last post dates
-            const groupIds = (data || []).map((g: any) => g.id);
+            const groupIds = (data || []).map((g: unknown) => g.id);
             const postMap: Record<string, string> = {};
 
             if (groupIds.length > 0) {
                 const { data: posts } = await (supabase
-                    .from("posting_history") as any)
+                    .from("posting_history") as unknown)
                     .select("whatsapp_group_id, posted_at")
                     .in("whatsapp_group_id", groupIds)
                     .eq("final_status", "posted")
                     .order("posted_at", { ascending: false });
 
-                (posts || []).forEach((p: any) => {
+                (posts || []).forEach((p: unknown) => {
                     if (!postMap[p.whatsapp_group_id]) {
                         postMap[p.whatsapp_group_id] = p.posted_at;
                     }
                 });
             }
 
-            return (data || []).map((g: any): AdminGroup => ({
+            return (data || []).map((g: unknown): AdminGroup => ({
                 id: g.id,
                 group_link: g.group_link || "",
                 group_name: g.group_name || "",
@@ -200,14 +200,14 @@ export function useAdminPostingData() {
             // Try operational view first, fall back to direct table
             let result;
             try {
-                result = await (supabase.from as any)("v_campaign_queue_operational")
+                result = await (supabase.from as unknown)("v_campaign_queue_operational")
                     .select("*")
                     .order("priority", { ascending: false })
                     .order("scheduled_for", { ascending: true, nullsFirst: false })
                     .order("created_at", { ascending: false })
                     .limit(100);
             } catch {
-                result = await (supabase.from as any)("campaign_queue")
+                result = await (supabase.from as unknown)("campaign_queue")
                     .select("id, title, campaign_type, whatsapp_group_id, target_city, target_region, status, priority, scheduled_for, posted_at, reviewed_at, operator_user_id, created_at")
                     .order("priority", { ascending: false })
                     .order("created_at", { ascending: false })
@@ -228,7 +228,7 @@ export function useAdminPostingData() {
         queryKey: ["admin-posting-logs"],
         queryFn: async () => {
             const { data, error } = await (supabase
-                .from("posting_history") as any)
+                .from("posting_history") as unknown)
                 .select("id, campaign_queue_id, created_by_user_id, operator_user_id, whatsapp_group_id, campaign_type, title, target_city, target_region, queue_status_before, final_status, posted_at, execution_notes, error_message, created_at")
                 .order("posted_at", { ascending: false })
                 .limit(50);
@@ -256,29 +256,29 @@ export function useAdminPostingData() {
 
             // Count groups per operator
             const { data: groupCounts } = await (supabase
-                .from("whatsapp_groups") as any)
+                .from("whatsapp_groups") as unknown)
                 .select("created_by, id")
                 .eq("is_active", true);
 
             const groupMap: Record<string, number> = {};
-            (groupCounts || []).forEach((g: any) => {
+            (groupCounts || []).forEach((g: unknown) => {
                 groupMap[g.created_by] = (groupMap[g.created_by] || 0) + 1;
             });
 
             // Count postings per operator
             const { data: postCounts } = await (supabase
-                .from("posting_history") as any)
+                .from("posting_history") as unknown)
                 .select("operator_user_id, id")
                 .eq("final_status", "posted");
 
             const postMap: Record<string, number> = {};
-            (postCounts || []).forEach((p: any) => {
+            (postCounts || []).forEach((p: unknown) => {
                 if (p.operator_user_id) postMap[p.operator_user_id] = (postMap[p.operator_user_id] || 0) + 1;
             });
 
             return (profiles || [])
-                .filter((p: any) => groupMap[p.id] || postMap[p.id])
-                .map((p: any): AdminOperator => ({
+                .filter((p: unknown) => groupMap[p.id] || postMap[p.id])
+                .map((p: unknown): AdminOperator => ({
                     id: p.id,
                     name: p.name || "Sem nome",
                     email: p.email || "",

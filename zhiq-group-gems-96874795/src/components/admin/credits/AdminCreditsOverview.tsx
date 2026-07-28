@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AdminCreditsData } from "@/hooks/useAdminCredits";
 import { Badge } from "@/components/ui/badge";
 import {
   Coins, TrendingUp, TrendingDown, Users, CreditCard,
@@ -9,7 +10,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#ec4899", "#06b6d4", "#84cc16"];
 
 interface Props {
-  data: any;
+  data: AdminCreditsData;
 }
 
 export function AdminCreditsOverview({ data }: Props) {
@@ -130,7 +131,7 @@ export function AdminCreditsOverview({ data }: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {overview.topConsumers.slice(0, 8).map((c: any, i: number) => (
+              {overview.topConsumers.slice(0, 8).map((c: { store_name: string; consumed: number }, i: number) => (
                 <div key={i} className="flex items-center justify-between py-1.5 border-b border-dashed last:border-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}.</span>
@@ -153,7 +154,7 @@ export function AdminCreditsOverview({ data }: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {overview.topBalances.slice(0, 8).map((c: any, i: number) => (
+              {overview.topBalances.slice(0, 8).map((c: { store_name: string; balance: number }, i: number) => (
                 <div key={i} className="flex items-center justify-between py-1.5 border-b border-dashed last:border-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}.</span>

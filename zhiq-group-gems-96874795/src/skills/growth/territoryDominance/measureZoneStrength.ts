@@ -29,7 +29,7 @@ export function classifyDominanceLevel(demandScore: number, groupCount: number):
 export async function measureZoneStrength(city: string): Promise<ZoneStrength[]> {
   console.log(`[TerritoryDominance] 📏 Measuring zone strength in ${city}...`);
 
-  const { data: zones } = await (supabase.from("city_zones") as any)
+  const { data: zones } = await (supabase.from("city_zones") as never)
     .select("id, zone_name")
     .eq("city", city)
     .eq("is_active", true);
@@ -40,10 +40,10 @@ export async function measureZoneStrength(city: string): Promise<ZoneStrength[]>
 
   for (const zone of zones) {
     // Call the RPC to refresh zone metrics
-    await (supabase as any).rpc("refresh_zone_dominance", { p_zone_id: zone.id });
+    await supabase.rpc("refresh_zone_dominance", { p_zone_id: zone.id });
 
     // Fetch updated metrics
-    const { data: metrics } = await (supabase.from("zone_dominance_metrics") as any)
+    const { data: metrics } = await (supabase.from("zone_dominance_metrics") as never)
       .select("*")
       .eq("zone_id", zone.id)
       .single();

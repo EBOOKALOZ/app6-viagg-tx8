@@ -13,7 +13,8 @@ export function useGrowthMetrics() {
   const { data: cities = [], isLoading, refetch } = useQuery<GrowthOverviewRow[]>({
     queryKey: ["growth-metrics"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("admin_growth_overview") as any)
+      // @ts-expect-error - admin_growth_overview is a DB view not yet mapped in types
+      const { data, error } = await supabase.from("admin_growth_overview")
         .select("*");
 
       if (error) {

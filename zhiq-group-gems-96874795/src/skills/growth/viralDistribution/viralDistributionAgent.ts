@@ -58,8 +58,9 @@ export async function runViralDistributionAgent(city: string): Promise<AgentRunR
       logs,
       duration_ms: Date.now() - startTime,
     };
-  } catch (err: any) {
-    logs.push(`❌ Error: ${err?.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logs.push(`❌ Error: ${msg}`);
     return {
       agent: "ViralDistributionAgent",
       success: false,

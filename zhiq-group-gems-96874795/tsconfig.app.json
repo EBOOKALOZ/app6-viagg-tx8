@@ -14,6 +14,13 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Tipos globais explícitos: evita a varredura implícita de todo
+       node_modules/@types (um deles, @types/mapbox__point-geometry, vem
+       sem index.d.ts no lockfile e quebrava o tsc com TS2688). Os libs
+       de que o app precisa entram por import ou via /// reference em
+       src/vite-env.d.ts. */
+    "types": [],
+
     /* Linting */
     "strict": false,
     "noUnusedLocals": false,

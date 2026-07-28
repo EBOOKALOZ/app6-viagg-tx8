@@ -8,7 +8,7 @@
  * 4. Comprime para no máximo 100KB mantendo a melhor qualidade possível
  * 5. Suporta descompressão de arquivos ZIP contendo imagens
  */
-import heic2any from "heic2any";
+// Lazy load heic2any instead of static import
 
 // ─── Constants ──────────────────────────
 const MAX_SIZE_BYTES = 100 * 1024; // 100 KB
@@ -83,6 +83,8 @@ export async function processImage(
     report("converting", "Convertendo HEIC (iPhone) → JPEG...", 15);
     console.log(`[ImageProcessor] HEIC detected: ${normalizedFile.name}, converting...`);
     try {
+      const heic2anyModule = await import("heic2any");
+      const heic2any = heic2anyModule.default || heic2anyModule;
       const jpegBlob = await heic2any({
         blob: normalizedFile,
         toType: "image/jpeg",

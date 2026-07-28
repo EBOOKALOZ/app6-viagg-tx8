@@ -130,7 +130,7 @@ interface Recipient {
   optedOut: boolean;
 }
 
-async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipient> {
+async function resolveRecipient(supabase: unknown, ev: EventPayload): Promise<Recipient> {
   // Resolve o destinatário por store_id.
   if (ev.store_id) {
     const { data: store } = await supabase
@@ -217,7 +217,7 @@ async function resolveRecipient(supabase: any, ev: EventPayload): Promise<Recipi
 // Best-effort: busca título (+ preço) e imagem do anúncio pelo listing_id,
 // cobrindo os módulos product / real_estate / vehicle. Assim o bloco do produto
 // aparece no e-mail de lead independente do tipo de anúncio.
-async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
+async function resolveListing(supabase: unknown, ev: EventPayload): Promise<void> {
   if (!ev.listing_id) return;
   const mod = ev.listing_module || "product";
 
@@ -252,7 +252,7 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
       .select("public_masked_storage_path, moderation_status, sort_order")
       .eq("listing_id", ev.listing_id)
       .order("sort_order", { ascending: true });
-    const ok = (media || []).find((m: any) =>
+    const ok = (media || []).find((m: Record<string, unknown>) =>
       m.public_masked_storage_path &&
       ["approved", "approved_clean", "approved_masked"].includes(m.moderation_status)
     );
@@ -296,7 +296,7 @@ async function resolveListing(supabase: any, ev: EventPayload): Promise<void> {
 
 // Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
 // quando a edge function roda, pois o net.http_post é disparado após o commit).
-async function resolveOrderImage(supabase: any, ev: EventPayload): Promise<void> {
+async function resolveOrderImage(supabase: unknown, ev: EventPayload): Promise<void> {
   if (!ev.intention_id) return;
   const { data: item } = await supabase
     .from("purchase_intention_items")

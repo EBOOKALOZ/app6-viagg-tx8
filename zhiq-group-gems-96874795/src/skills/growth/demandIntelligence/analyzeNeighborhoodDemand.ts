@@ -15,7 +15,7 @@ export interface DemandMap {
 export async function analyzeNeighborhoodDemand(city: string): Promise<DemandMap> {
   console.log(`[DemandIntelligence] 📊 Analyzing demand for ${city}...`);
 
-  const { data, error } = await (supabase.from("neighborhood_product_demand") as any)
+  const { data, error } = await (supabase.from("neighborhood_product_demand") as never)
     .select("*")
     .eq("city", city)
     .order("demand_score", { ascending: false });

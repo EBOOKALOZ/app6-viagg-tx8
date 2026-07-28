@@ -34,7 +34,7 @@ export function useAdminStores() {
         queryKey: ["admin-stores-full"],
         queryFn: async () => {
             // 1. Fetch all merchant_stores
-            const { data: rawStores, error: storesErr } = await (supabase.from("merchant_stores") as any)
+            const { data: rawStores, error: storesErr } = await (supabase.from("merchant_stores") as unknown)
                 .select("*")
                 .order("created_at", { ascending: false });
 
@@ -42,26 +42,26 @@ export function useAdminStores() {
             if (!rawStores || rawStores.length === 0) return [];
 
             // 2. Fetch profiles for owner info
-            const userIds = [...new Set(rawStores.map((s: any) => s.user_id).filter(Boolean))] as string[];
-            const profilesMap: Record<string, any> = {};
+            const userIds = [...new Set(rawStores.map((s: unknown) => s.user_id).filter(Boolean))] as string[];
+            const profilesMap: Record<string, unknown> = {};
             if (userIds.length > 0) {
-                const { data: profiles } = await (supabase.from("profiles") as any)
+                const { data: profiles } = await (supabase.from("profiles") as unknown)
                     .select("id, nome_loja, name, email, telefone, whatsapp, logo_url, cidade, estado, bairro, categoria, cpf_cnpj")
                     .in("id", userIds);
                 if (profiles) {
-                    profiles.forEach((p: any) => { profilesMap[p.id] = p; });
+                    profiles.forEach((p: unknown) => { profilesMap[p.id] = p; });
                 }
             }
 
             // 3. Fetch product counts per store
-            const storeIds = rawStores.map((s: any) => s.id);
+            const storeIds = rawStores.map((s: unknown) => s.id);
             const productCountMap: Record<string, number> = {};
             if (storeIds.length > 0) {
-                const { data: products } = await (supabase.from("merchant_marketing_products") as any)
+                const { data: products } = await (supabase.from("merchant_marketing_products") as unknown)
                     .select("merchant_store_id")
                     .in("merchant_store_id", storeIds);
                 if (products) {
-                    products.forEach((p: any) => {
+                    products.forEach((p: unknown) => {
                         productCountMap[p.merchant_store_id] = (productCountMap[p.merchant_store_id] || 0) + 1;
                     });
                 }
@@ -71,11 +71,11 @@ export function useAdminStores() {
             const m1EventMap: Record<string, number> = {};
             const m1ChargedMap: Record<string, number> = {};
             try {
-                const { data: m1Events } = await (supabase.from("m1_billing_events") as any)
+                const { data: m1Events } = await (supabase.from("m1_billing_events") as unknown)
                     .select("merchant_store_id, charged_value")
                     .in("merchant_store_id", storeIds);
                 if (m1Events) {
-                    m1Events.forEach((e: any) => {
+                    m1Events.forEach((e: unknown) => {
                         m1EventMap[e.merchant_store_id] = (m1EventMap[e.merchant_store_id] || 0) + 1;
                         m1ChargedMap[e.merchant_store_id] = (m1ChargedMap[e.merchant_store_id] || 0) + (e.charged_value || 0);
                     });
@@ -85,7 +85,7 @@ export function useAdminStores() {
             }
 
             // 5. Enrich stores
-            const enriched = rawStores.map((s: any) => {
+            const enriched = rawStores.map((s: unknown) => {
                 const profile = profilesMap[s.user_id] || {};
                 return {
                     id: s.id,
@@ -121,7 +121,7 @@ export function useAdminStores() {
                     });
                     if (authEmails && Array.isArray(authEmails)) {
                         const authEmailMap: Record<string, string> = {};
-                        authEmails.forEach((e: any) => {
+                        authEmails.forEach((e: unknown) => {
                             if (e.auth_email) authEmailMap[e.user_id] = e.auth_email;
                         });
                         enriched.forEach(s => {

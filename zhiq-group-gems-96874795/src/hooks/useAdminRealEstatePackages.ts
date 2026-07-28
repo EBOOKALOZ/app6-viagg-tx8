@@ -22,7 +22,7 @@ export function useAdminRealEstatePackages() {
       
       console.log("[AdminRealEstatePackages] Data received:", data);
       
-       return (data || []).map((p: any) => ({
+       return (data || []).map((p: unknown) => ({
          id: p.id,
          name: p.name || p.slug || "Plano sem nome",
          slug: p.slug || "",
@@ -53,7 +53,7 @@ export function useAdminRealEstatePackages() {
   const createPackage = useMutation({
     mutationFn: async (input: Partial<RealEstatePackage>) => {
       // Campos permitidos no banco para evitar erros de colunas extras ou nulas
-       const payload: any = {
+       const payload: unknown = {
          name: input.name,
          slug: input.slug || input.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-") || "package-" + Date.now(),
          credits_amount: Number(input.credits_amount) || 0,
@@ -86,7 +86,7 @@ export function useAdminRealEstatePackages() {
       qc.invalidateQueries({ queryKey: ["real-estate-packages"] });
       toast.success("Pacote criado com sucesso!");
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       console.error("[AdminRealEstatePackages] Mutation Error:", err);
       toast.error(`Falha ao criar: ${err.message || "Erro desconhecido"}`);
     },
@@ -96,7 +96,7 @@ export function useAdminRealEstatePackages() {
     mutationFn: async (input: Partial<RealEstatePackage> & { id: string }) => {
       const { id } = input;
       
-       const payload: any = {
+       const payload: unknown = {
          name: input.name,
          credits_amount: Number(input.credits_amount) || 0,
          price_brl: Number(input.price_brl) || 0,
@@ -129,7 +129,7 @@ export function useAdminRealEstatePackages() {
       qc.invalidateQueries({ queryKey: ["real-estate-packages"] });
       toast.success("Pacote atualizado!");
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       console.error("[AdminRealEstatePackages] Mutation Error:", err);
       toast.error(`Falha ao salvar: ${err.message || "Erro desconhecido"}`);
     },
@@ -166,7 +166,7 @@ export function useAdminRealEstatePackages() {
         toast.success("Pacote excluído!");
       }
     },
-    onError: (err: any) => toast.error(`Erro ao excluir: ${err.message}`),
+    onError: (err: unknown) => toast.error(`Erro ao excluir: ${err.message}`),
   });
 
   const togglePackage = useMutation({

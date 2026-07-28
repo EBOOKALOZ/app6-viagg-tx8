@@ -32,7 +32,7 @@ export async function detectGrowthStage(cities: CityGrowthMetrics[]): Promise<St
       console.log(`[CityExpansion] 🔄 ${city.city}: ${city.growth_stage} → ${newStage}`);
 
       // Persist the new stage
-      await (supabase.from("city_growth_metrics") as any)
+      await (supabase.from("city_growth_metrics") as never)
         .update({
           growth_stage: newStage,
           previous_stage: city.growth_stage,

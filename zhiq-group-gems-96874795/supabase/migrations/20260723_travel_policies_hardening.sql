@@ -34,20 +34,12 @@ CREATE POLICY travel_listings_public_read ON public.travel_listings
   );
 
 -- ── 2. travel_media: acompanha a visibilidade do anúncio ─────
-DROP POLICY IF EXISTS travel_media_public_read ON public.travel_media;
-CREATE POLICY travel_media_public_read ON public.travel_media
-  FOR SELECT TO anon, authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.travel_listings tl
-      WHERE tl.id = listing_id
-        AND (
-          tl.visibility_status = 'published'
-          OR tl.owner_user_id = auth.uid()
-          OR public.is_admin()
-        )
-    )
-  );
+-- A policy definitiva de travel_media (público vê só mídia APROVADA de
+-- anúncio publicado; dono/admin veem tudo) está em
+-- 20260723_travel_media_visibility_hardening.sql, que é a fonte única
+-- desta policy. NÃO recriamos travel_media_public_read aqui para não
+-- sobrescrever aquela versão (mais restritiva, com check de
+-- moderation_status) — ela roda por ordem de nome e deve prevalecer.
 
 -- ── 3. travel_credit_purchases: fim do FOR ALL ───────────────
 DROP POLICY IF EXISTS travel_credit_purchases_owner_all ON public.travel_credit_purchases;
@@ -69,6 +61,15 @@ CREATE POLICY travel_credit_purchases_owner_insert ON public.travel_credit_purch
 
 -- ── 4. travel_negotiation_messages: RLS real + GRANTs ────────
 -- Participantes = anunciante do lead OU o próprio lead logado.
+-- Guard de idempotência/ordem: as policies abaixo referenciam
+-- advertiser_contact_intentions.contact_user_id (criada em
+-- 20260723_travel_schema_sync_oficial.sql). Como o Supabase aplica
+-- migrations em ordem lexicográfica de nome e "policies" < "schema",
+-- garantimos a coluna aqui para esta migration ser auto-suficiente
+-- independentemente da ordem de aplicação.
+ALTER TABLE public.advertiser_contact_intentions
+  ADD COLUMN IF NOT EXISTS contact_user_id uuid;
+
 DROP POLICY IF EXISTS tnm_select ON public.travel_negotiation_messages;
 CREATE POLICY tnm_select ON public.travel_negotiation_messages
   FOR SELECT TO authenticated

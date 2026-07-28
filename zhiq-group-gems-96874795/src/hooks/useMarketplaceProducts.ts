@@ -22,7 +22,7 @@ export const useMarketplaceProducts = (userId?: string) => {
   });
 
   const createProduct = useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: { owner_user_id: string; title: string; description: string; price: number; cover_image_url: string }) => {
       // Create product in the new merchant context
       const { data, error } = await supabase
         .from("merchant_products")
@@ -43,13 +43,13 @@ export const useMarketplaceProducts = (userId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["product-listings"] });
       toast.success("Anúncio criado com sucesso! Enviado para revisão.");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao criar anúncio: ${error.message}`);
     },
   });
 
   const updateProduct = useMutation({
-    mutationFn: async ({ id, ...payload }: any) => {
+    mutationFn: async ({ id, ...payload }: { id: string; title: string; description: string; price: number; cover_image_url: string }) => {
       // Update product in the new merchant context
       const { data, error } = await supabase
         .from("merchant_products")
@@ -70,7 +70,7 @@ export const useMarketplaceProducts = (userId?: string) => {
       queryClient.invalidateQueries({ queryKey: ["marketplace-products"] });
       toast.success("Anúncio atualizado com sucesso!");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(`Erro ao atualizar: ${error.message}`);
     },
   });
@@ -78,7 +78,7 @@ export const useMarketplaceProducts = (userId?: string) => {
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("marketplace_products")
+        .from("merchant_products")
         .delete()
         .eq("id", id);
 

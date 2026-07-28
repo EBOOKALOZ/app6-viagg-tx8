@@ -184,11 +184,11 @@ export function MarketLayout({
     }, []);
 
     return (
-        <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-[#F5E62B]")}>
+        <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-institutional-yellow")}>
             {/* ═══ TOP BAR (STICKY HEADER WITH RETRACTABLE TRANSITIONS) ═══ */}
             <div className={cn(
                 "sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
-                isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-[#F5E62B]"
+                isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-institutional-yellow"
             )}>
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
                     {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta (RETRÁTIL) ── */}

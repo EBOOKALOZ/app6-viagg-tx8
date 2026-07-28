@@ -110,7 +110,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
   const getBadgeStyle = (variant: PremiumBadgeVariant) => {
     switch (variant) {
       case 'verified': return 'bg-emerald-500 text-white backdrop-blur-md border-emerald-400/30';
-      case 'featured': return 'bg-[#F5E62B] text-zinc-900 font-black backdrop-blur-md border-amber-300/30';
+      case 'featured': return 'bg-institutional-yellow text-zinc-900 font-black backdrop-blur-md border-amber-300/30';
       case 'new': return 'bg-blue-500 text-white backdrop-blur-md border-blue-400/30';
       case 'premium': return 'bg-zinc-900 text-amber-400 backdrop-blur-md border-zinc-700';
       case 'sponsored': return 'bg-zinc-100 text-zinc-600 backdrop-blur-md border-zinc-200';

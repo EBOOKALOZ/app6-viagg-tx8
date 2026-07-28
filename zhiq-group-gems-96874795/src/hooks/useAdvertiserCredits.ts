@@ -38,7 +38,7 @@ export function useAdvertiserCredits() {
     if (!user?.id) return;
     (async () => {
       try {
-        const { data } = await (supabase.from("advertiser_accounts") as any)
+        const { data } = await (supabase.from("advertiser_accounts") as unknown)
           .select("id")
           .eq("user_id", user.id)
           .maybeSingle();
@@ -53,12 +53,12 @@ export function useAdvertiserCredits() {
     refetchInterval: 30_000,
     queryFn: async () => {
       // 1. Planos â€” mesma fonte do painel admin (merchant_credit_products)
-      const { data: productsData } = await (supabase.from("merchant_credit_products") as any)
+      const { data: productsData } = await (supabase.from("merchant_credit_products") as unknown)
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
-      const products: CreditProduct[] = (productsData || []).map((p: any) => {
+      const products: CreditProduct[] = (productsData || []).map((p: unknown) => {
         const creditsTotal = p.credits_total ?? p.credits_amount ?? ((p.credits_base || 0) + (p.credits_bonus || 0));
         const priceCents = p.price_cents ?? (p.price_brl ? Math.round(p.price_brl * 100) : 0);
         return {
@@ -95,11 +95,11 @@ export function useAdvertiserCredits() {
       // 2. Pacotes extras â€” mesma fonte do painel admin (credit_packages)
       let creditPackages: CreditPackage[] = [];
       try {
-        const { data: pkgData } = await (supabase.from("credit_packages") as any)
+        const { data: pkgData } = await (supabase.from("credit_packages") as unknown)
           .select("*")
           .eq("is_active", true);
         if (pkgData) {
-          creditPackages = pkgData.map((p: any) => ({
+          creditPackages = pkgData.map((p: unknown) => ({
             id: p.id, slug: p.slug, name: p.name,
             package_type: p.package_type,
             credits_amount: p.credits_amount,
@@ -111,11 +111,11 @@ export function useAdvertiserCredits() {
       } catch { /* optional */ }
 
       // 3. Regras de uso â€” mesma fonte do painel admin (merchant_credit_usage_rules)
-      const { data: rulesData } = await (supabase.from("merchant_credit_usage_rules") as any)
+      const { data: rulesData } = await (supabase.from("merchant_credit_usage_rules") as unknown)
         .select("*")
         .eq("is_active", true);
 
-      const usageRules: UsageRule[] = (rulesData || []).map((r: any) => ({
+      const usageRules: UsageRule[] = (rulesData || []).map((r: unknown) => ({
         feature_code: r.feature_code || "",
         module: r.module_name || r.module,
         event_type: r.event_type,
@@ -128,17 +128,17 @@ export function useAdvertiserCredits() {
       //    advertiser_credit_balances foi aposentada (FASE 2 Carteira de Créditos).
       let balance: AdvertiserCreditBalance = { available_credits: 0, consumed_credits: 0 };
       if (user?.id) {
-        const { data: w } = await (supabase.from("wallets") as any)
+        const { data: w } = await (supabase.from("wallets") as unknown)
           .select("balance_cents, reserved_cents")
           .eq("owner_uid", user.id)
           .maybeSingle();
         const legacyAvailable = Number(w?.balance_cents ?? 0) / 100;
         const legacyConsumed = Number(w?.reserved_cents ?? 0) / 100;
 
-        const { data: payAccounts } = await (supabase.from("pay_financial_accounts") as any)
+        const { data: payAccounts } = await (supabase.from("pay_financial_accounts") as unknown)
           .select("available_balance")
           .eq("owner_id", user.id);
-        const totalPayReais = (payAccounts || []).reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
+        const totalPayReais = (payAccounts || []).reduce((sum: number, acc: unknown) => sum + Number(acc.available_balance || 0), 0);
 
         balance = {
           available_credits: Math.max(legacyAvailable, totalPayReais),
@@ -147,7 +147,7 @@ export function useAdvertiserCredits() {
       }
 
       // 5. Ledger (Ãºltimas 20 entradas)
-      const { data: ledgerData } = await (supabase.from("advertiser_credit_ledger") as any)
+      const { data: ledgerData } = await (supabase.from("advertiser_credit_ledger") as unknown)
         .select("*")
         .eq("advertiser_account_id", advertiserAccountId)
         .order("created_at", { ascending: false })
@@ -177,11 +177,11 @@ export function useAdvertiserCredits() {
     }
 
     const { data: rpcResult, error } = await supabase.rpc(
-      "accept_arremate_offer_advertiser" as any,
+      "accept_arremate_offer_advertiser" as unknown,
       { p_offer_id: offerId, p_advertiser_account_id: advertiserAccountId }
     );
 
-    const result = rpcResult as any;
+    const result = rpcResult as unknown;
     if (error || !result?.success) {
       const { toast } = await import("sonner");
       if (result?.error === "insufficient_credits") {

@@ -13,7 +13,7 @@ export function usePayTreasuryStats() {
     queryKey: ["pay-treasury-stats"],
     queryFn: async (): Promise<TreasuryStats> => {
       // Try RPC first
-      const { data: rpc, error: rpcErr } = await (supabase.rpc as any)(
+      const { data: rpc, error: rpcErr } = await (supabase.rpc as unknown)(
         "pay_treasury_stats", {}
       );
       if (!rpcErr && rpc) {

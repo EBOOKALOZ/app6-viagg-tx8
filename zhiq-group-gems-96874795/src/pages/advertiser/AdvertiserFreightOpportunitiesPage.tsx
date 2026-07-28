@@ -40,6 +40,8 @@ export default function AdvertiserFreightOpportunitiesPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [negotiating, setNegotiating] = useState<QuoteRequestRow | null>(null);
   const [prop, setProp] = useState({ price: "", pickup: "", delivery: "", vehicle: "", notes: "", insurance: false, services: [] as string[] });
+  // Contato do cliente LIBERADO (após pagar a comissão de abertura)
+  const [contact, setContact] = useState<any | null>(null);
 
   const stats = data?.stats;
   const lists: Record<Tab, QuoteRequestRow[]> = {
@@ -56,6 +58,44 @@ export default function AdvertiserFreightOpportunitiesPage() {
     try { await fn(); toast.success(msg); await invalidate(); }
     catch (e: any) { toast.error(e.message || "Erro na operação."); }
     finally { setBusy(null); }
+  };
+
+  // ── ACEITAR SERVIÇO E ABRIR CONTATO ──────────────────────────────────────
+  // Mostra a comissão (3% parametrizável) ANTES de confirmar; a cobrança na
+  // carteira acontece SOMENTE aqui e libera os dados completos do cliente.
+  const openContactFlow = async (r: QuoteRequestRow, price: number | null) => {
+    const basePrice = price ?? r.suggested_price_brl ?? null;
+    setBusy(`acc-${r.id}`);
+    try {
+      let msg = "Confirmar: Aceitar Serviço e Abrir Contato?";
+      if (basePrice) {
+        const prev = await freightQuoteActions.commissionPreview(basePrice, r.cargo_type);
+        msg = prev.enabled && prev.commission_brl > 0
+          ? `Aceitar Serviço e Abrir Contato por ${brlLabel(basePrice)}?\n\nComissão da plataforma: ${brlLabel(prev.commission_brl)} (${prev.percent}%), debitada da sua carteira somente agora.\nEm seguida você recebe nome, WhatsApp, telefone, endereço completo, fotos e observações do cliente.`
+          : `Aceitar Serviço e Abrir Contato por ${brlLabel(basePrice)}? Os dados completos do cliente serão liberados em seguida.`;
+      }
+      if (!window.confirm(msg)) return;
+      const res = await freightQuoteActions.acceptAndUnlock(r.id, price);
+      toast.success(res.already_unlocked
+        ? "Contato já estava liberado — nenhuma nova cobrança. 📞"
+        : "Serviço aceito! Contato do cliente liberado. 🚚");
+      setContact(res.contact);
+      await invalidate();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao abrir contato.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const viewContact = async (r: QuoteRequestRow, myPrice: number | null) => {
+    try {
+      const res = await freightQuoteActions.getUnlockedContact(r.id);
+      setContact(res.contact);
+    } catch {
+      // Ainda não desbloqueado (ex.: cliente aceitou minha proposta) → fluxo de abertura
+      await openContactFlow(r, myPrice);
+    }
   };
 
   const submitProposal = async () => {
@@ -78,6 +118,8 @@ export default function AdvertiserFreightOpportunitiesPage() {
         <h1 className="text-2xl font-black text-white uppercase tracking-tight">🚚 Oportunidades</h1>
         <p className="text-xs font-bold text-[#A7B0BE]">
           Solicitações de transporte compatíveis com sua frota e rotas — distribuídas automaticamente pelo ORION.
+          Visualizar é <span className="text-emerald-400">grátis</span>; a comissão da plataforma é cobrada
+          apenas ao clicar em <span className="text-white">Aceitar Serviço e Abrir Contato</span>.
         </p>
       </div>
 
@@ -178,6 +220,13 @@ export default function AdvertiserFreightOpportunitiesPage() {
                     ))}
                   </div>
                 )}
+                {/* Preview GRATUITO — dados sensíveis só após abrir o contato */}
+                {tab !== "respondidas" && (
+                  <p className="text-[10px] font-bold text-zinc-400">
+                    🔒 Endereço completo, telefone{r.photos.length > 0 ? `, ${r.photos.length} foto(s)` : ""} e
+                    contato do cliente são liberados ao Aceitar o Serviço — a comissão é cobrada somente nesse momento.
+                  </p>
+                )}
                 {Array.isArray((r.orion_analysis as any)?.reasons) && (
                   <p className="text-[10px] text-violet-600 font-bold flex items-start gap-1">
                     <Sparkles className="w-3 h-3 mt-0.5 shrink-0" /> ORION: {r.allowed_vehicle_types.join(", ")}
@@ -193,20 +242,25 @@ export default function AdvertiserFreightOpportunitiesPage() {
                         Sua proposta: {brlLabel(myProp.price_brl)} · {myProp.status === "aceita" ? "ACEITA ✅" : myProp.status === "recusada" ? "não selecionada" : "aguardando cliente"}
                       </span>
                     )}
+                    {myProp?.status === "aceita" && (
+                      <button
+                        disabled={busy === `acc-${r.id}`}
+                        onClick={() => viewContact(r, myProp.price_brl ?? null)}
+                        className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider hover:bg-emerald-600 disabled:opacity-60"
+                      >
+                        {busy === `acc-${r.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : "📞 Ver Contato do Cliente"}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {r.suggested_price_brl ? (
                       <button
                         disabled={busy === `acc-${r.id}`}
-                        onClick={() => {
-                          if (!window.confirm(`Confirmar atendimento desta rota por ${brlLabel(r.suggested_price_brl)}? O serviço fica reservado para você e a comissão da plataforma (se configurada) será registrada.`)) return;
-                          act("Serviço aceito! Rota reservada para você. 🚚", `acc-${r.id}`, () =>
-                            freightQuoteActions.acceptOpportunity(r.id, null));
-                        }}
+                        onClick={() => openContactFlow(r, null)}
                         className="px-4 py-2.5 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider hover:bg-emerald-600 disabled:opacity-60"
                       >
-                        {busy === `acc-${r.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : "✅ Aceitar serviço"}
+                        {busy === `acc-${r.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin inline" /> : "✅ Aceitar Serviço e Abrir Contato"}
                       </button>
                     ) : null}
                     <button
@@ -315,6 +369,88 @@ export default function AdvertiserFreightOpportunitiesPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL: CONTATO DO CLIENTE LIBERADO (após comissão de abertura) */}
+      {contact && (() => {
+        const c = contact.client || {};
+        const wa = String(c.whatsapp || "").replace(/\D/g, "");
+        const tel = String(c.phone || "").replace(/\D/g, "");
+        const mapsHref = (p: any) =>
+          p?.lat && p?.lng
+            ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p?.address, p?.city, p?.state].filter(Boolean).join(", "))}`;
+        const AddressBlock = ({ label, place }: { label: string; place: any }) => (
+          <div className="rounded-2xl border border-zinc-200 p-3 space-y-0.5">
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-wider">{label}</p>
+            <p className="text-xs font-bold text-zinc-800">
+              {[place?.address, place?.city && `${place.city}/${place?.state || ""}`, place?.cep && `CEP ${place.cep}`].filter(Boolean).join(" · ") || "—"}
+            </p>
+            <a href={mapsHref(place)} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] font-black text-[#FF6A00] uppercase tracking-wider hover:underline">
+              <MapPin className="w-3 h-3" /> Ver no mapa
+            </a>
+          </div>
+        );
+        return (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setContact(null)} />
+            <div className="relative bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-zinc-900 uppercase tracking-wider">📞 Contato do Cliente Liberado</h3>
+                <button onClick={() => setContact(null)} className="p-1.5 rounded-lg hover:bg-zinc-100"><X className="w-4 h-4" /></button>
+              </div>
+
+              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-1">
+                <p className="text-sm font-black text-zinc-900">{c.name || "Cliente Viagg-TX8"}</p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {wa && (
+                    <a href={`https://wa.me/${wa.startsWith("55") ? wa : `55${wa}`}`} target="_blank" rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider hover:bg-emerald-600">
+                      WhatsApp
+                    </a>
+                  )}
+                  {tel && (
+                    <a href={`tel:+55${tel}`}
+                      className="px-4 py-2 rounded-xl border border-zinc-300 text-zinc-700 text-[10px] font-black uppercase tracking-wider hover:bg-zinc-50">
+                      Ligar {c.phone}
+                    </a>
+                  )}
+                  {!wa && !tel && (
+                    <p className="text-[11px] text-zinc-500">Cliente sem telefone cadastrado — negocie pela plataforma.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-2.5">
+                <AddressBlock label="🟢 Origem (coleta)" place={contact.origin} />
+                <AddressBlock label="🔴 Destino (entrega)" place={contact.dest} />
+              </div>
+
+              {(contact.desired_date || contact.desired_time) && (
+                <p className="text-[11px] font-bold text-zinc-600">
+                  📅 {contact.desired_date ? new Date(contact.desired_date + "T12:00:00").toLocaleDateString("pt-BR") : ""} {contact.desired_time || ""}
+                </p>
+              )}
+              {contact.notes && (
+                <p className="text-[11px] text-zinc-600 italic border-l-2 border-zinc-200 pl-3">"{contact.notes}"</p>
+              )}
+              {Array.isArray(contact.photos) && contact.photos.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap">
+                  {contact.photos.map((u: string, i: number) => (
+                    <a key={i} href={u} target="_blank" rel="noopener noreferrer">
+                      <img src={u} alt="" className="w-16 h-16 rounded-lg object-cover border border-zinc-200" />
+                    </a>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-zinc-400">
+                A negociação e o pagamento do frete acontecem diretamente entre você e o cliente.
+                A comissão da plataforma já foi cobrada — este contato fica liberado permanentemente em "Respondidas".
+              </p>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

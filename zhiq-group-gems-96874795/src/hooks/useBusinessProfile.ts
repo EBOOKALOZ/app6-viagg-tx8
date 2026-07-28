@@ -36,7 +36,7 @@ export interface BusinessProfileRow {
 }
 
 async function readRow(userId: string, moduleKey: string): Promise<BusinessProfileRow | null> {
-  const { data } = await (supabase.from("advertiser_module_profiles") as any)
+  const { data } = await (supabase.from("advertiser_module_profiles") as unknown)
     .select("*")
     .eq("user_id", userId)
     .eq("module_key", moduleKey)
@@ -66,15 +66,15 @@ export function useBusinessProfile(module: BusinessModuleDef) {
   const saveProfile = useCallback(
     async (patch: Partial<BusinessProfileRow>): Promise<BusinessProfileRow> => {
       if (!user?.id) throw new Error("Sessão expirada — entre novamente.");
-      const { data, error } = await (supabase.rpc as any)("upsert_business_profile", {
+      const { data, error } = await (supabase.rpc as unknown)("upsert_business_profile", {
         p_module: module.key,
         p_patch: patch,
       });
       if (error) throw new Error(error.message || "Erro ao salvar o perfil.");
-      if (!(data as any)?.success) {
-        throw new Error((data as any)?.error === "not_authenticated"
+      if (!(data as unknown)?.success) {
+        throw new Error((data as unknown)?.error === "not_authenticated"
           ? "Sessão expirada — entre novamente."
-          : `Erro ao salvar: ${(data as any)?.error || "verifique se a migration foi aplicada."}`);
+          : `Erro ao salvar: ${(data as unknown)?.error || "verifique se a migration foi aplicada."}`);
       }
       // Verificação: a linha relida precisa refletir o patch enviado.
       const row = await readRow(user.id, module.key);
@@ -90,13 +90,13 @@ export function useBusinessProfile(module: BusinessModuleDef) {
     async (appearance: StoreAppearance | null): Promise<void> => {
       if (!user?.id) throw new Error("Sessão expirada — entre novamente.");
       const payload = appearance ? sanitizeAppearance(appearance) : null;
-      const { data, error } = await (supabase.rpc as any)("set_business_appearance", {
+      const { data, error } = await (supabase.rpc as unknown)("set_business_appearance", {
         p_module: module.key,
         p_appearance: payload,
       });
       if (error) throw new Error(error.message || "Erro ao salvar a aparência.");
-      if (!(data as any)?.success) {
-        throw new Error(`Erro ao salvar: ${(data as any)?.error || "verifique se a migration foi aplicada."}`);
+      if (!(data as unknown)?.success) {
+        throw new Error(`Erro ao salvar: ${(data as unknown)?.error || "verifique se a migration foi aplicada."}`);
       }
       const row = await readRow(user.id, module.key);
       const persisted = JSON.stringify(sanitizeAppearance(row?.appearance));

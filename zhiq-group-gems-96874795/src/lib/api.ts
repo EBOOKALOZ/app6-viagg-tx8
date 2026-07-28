@@ -114,16 +114,17 @@ export async function getUserGroups(userId: string) {
 export async function getProfileGroups(userId: string, profileType: string) {
   if (profileType === 'motoboy') {
     // Unified table – motoboy groups are linked via owner_user_id
-    const { data, error } = await (supabase
-      .from('whatsapp_groups') as any)
+    // @ts-expect-error - unified table schema issues
+    const { data, error } = await supabase
+      .from('whatsapp_groups')
       .select('id, owner_user_id, group_link, group_name, city_name, state_code, neighborhood, validation_status, is_active, created_at, updated_at')
       .eq('owner_user_id', userId)
       .order('created_at', { ascending: false });
 
     // Map columns to match the interface expected by the Groups page
-    const mapped = (data || []).map((g: any) => ({
-      id: g.id,
-      user_id: g.owner_user_id,
+    const mapped = (data || []).map((g: Record<string, unknown>) => ({
+      id: String(g.id || ''),
+      user_id: String(g.owner_user_id || ''),
       link: g.group_link || '',
       cidade: g.city_name || g.group_name || '',
       estado: g.state_code || '',
@@ -163,7 +164,8 @@ export async function addProfileGroup(
   groupData: { link: string; cidade: string; estado?: string; tipo?: string }
 ) {
   if (profileType === 'motoboy') {
-    const { data, error } = await supabase.rpc('try_create_whatsapp_group' as any, {
+    // @ts-expect-error - RPC param mismatch
+    const { data, error } = await supabase.rpc('try_create_whatsapp_group', {
       p_link: groupData.link.trim(),
       p_city: groupData.cidade,
       p_group_type: groupData.tipo || 'Geral',
@@ -175,15 +177,16 @@ export async function addProfileGroup(
     }
 
     const result = Array.isArray(data) ? data[0] : data;
-    if (result && result.created === false) {
-      return { data: null, error: { code: '23505', message: 'duplicate' } };
+    if (result && typeof result === 'object' && 'created' in result && result.created === false) {
+      return { data: null, error: new Error('duplicate') };
     }
 
     return { data: result, error: null };
   }
 
   if (profileType === 'driver') {
-    const { data, error } = await supabase.rpc('try_create_driver_whatsapp_group' as any, {
+    // @ts-expect-error - RPC param mismatch
+    const { data, error } = await supabase.rpc('try_create_driver_whatsapp_group', {
       p_link: groupData.link.trim(),
       p_cidade: groupData.cidade,
       p_estado: groupData.estado || '',
@@ -196,15 +199,16 @@ export async function addProfileGroup(
     }
 
     const result = Array.isArray(data) ? data[0] : data;
-    if (result && result.created === false) {
-      return { data: null, error: { code: '23505', message: 'duplicate' } as any };
+    if (result && typeof result === 'object' && 'created' in result && result.created === false) {
+      return { data: null, error: { code: '23505', message: 'duplicate' } as unknown as Error };
     }
 
     return { data: result, error: null };
   }
 
   if (profileType === 'merchant') {
-    const { data, error } = await supabase.rpc('try_create_merchant_whatsapp_group' as any, {
+    // @ts-expect-error - RPC param mismatch
+    const { data, error } = await supabase.rpc('try_create_merchant_whatsapp_group', {
       p_link: groupData.link.trim(),
       p_cidade: groupData.cidade,
       p_estado: groupData.estado || '',
@@ -217,8 +221,8 @@ export async function addProfileGroup(
     }
 
     const result = Array.isArray(data) ? data[0] : data;
-    if (result && result.created === false) {
-      return { data: null, error: { code: '23505', message: 'duplicate' } as any };
+    if (result && typeof result === 'object' && 'created' in result && result.created === false) {
+      return { data: null, error: { code: '23505', message: 'duplicate' } as unknown as Error };
     }
 
     return { data: result, error: null };
@@ -229,7 +233,8 @@ export async function addProfileGroup(
 
 // Add WhatsApp group (legacy) — uses RPC to avoid 23505
 export async function addWhatsAppGroup(userId: string, name: string, link?: string) {
-  const { data, error } = await supabase.rpc('try_create_whatsapp_group' as any, {
+  // @ts-expect-error - RPC param mismatch
+  const { data, error } = await supabase.rpc('try_create_whatsapp_group', {
     p_link: (link || '').trim(),
     p_city: name,
     p_group_type: 'Geral',
@@ -501,7 +506,7 @@ export async function getAdminUserDetails(userId: string) {
       isAdmin: roles.includes('admin'),
       driverProfile: driverProfile || null,
       availableCredits: 0, // Fallback
-      creditHistory: [] as any[],
+      creditHistory: [] as Record<string, unknown>[],
     },
     error: null
   };

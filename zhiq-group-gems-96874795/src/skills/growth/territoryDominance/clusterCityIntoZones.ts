@@ -20,7 +20,7 @@ export async function clusterCityIntoZones(city: string, neighborhoods: string[]
   }
 
   // Check existing zones
-  const { data: existingZones } = await (supabase.from("city_zones") as any)
+  const { data: existingZones } = await (supabase.from("city_zones") as never)
     .select("id, zone_name, city")
     .eq("city", city)
     .eq("is_active", true);
@@ -31,12 +31,12 @@ export async function clusterCityIntoZones(city: string, neighborhoods: string[]
     // Return existing zones with their neighborhoods
     const clusters: ZoneCluster[] = [];
     for (const zone of existingZones) {
-      const { data: zn } = await (supabase.from("zone_neighborhoods") as any)
+      const { data: zn } = await (supabase.from("zone_neighborhoods") as never)
         .select("neighborhood")
         .eq("zone_id", zone.id);
       clusters.push({
         zone_name: zone.zone_name,
-        neighborhoods: (zn || []).map((z: any) => z.neighborhood),
+        neighborhoods: (zn || []).map((z: Record<string, unknown>) => String(z.neighborhood)),
         city,
         zone_id: zone.id,
       });
@@ -54,7 +54,7 @@ export async function clusterCityIntoZones(city: string, neighborhoods: string[]
     const zoneName = `${city} - Zona ${zoneIndex}`;
 
     // Create zone in DB
-    const { data: newZone } = await (supabase.from("city_zones") as any)
+    const { data: newZone } = await (supabase.from("city_zones") as never)
       .insert({ city, zone_name: zoneName, is_active: true })
       .select("id")
       .single();
@@ -62,7 +62,7 @@ export async function clusterCityIntoZones(city: string, neighborhoods: string[]
     if (newZone) {
       // Link neighborhoods
       const links = chunk.map((n) => ({ zone_id: newZone.id, neighborhood: n, city }));
-      await (supabase.from("zone_neighborhoods") as any).insert(links);
+      await (supabase.from("zone_neighborhoods") as never).insert(links);
 
       clusters.push({
         zone_name: zoneName,

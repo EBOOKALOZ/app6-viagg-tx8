@@ -35,7 +35,7 @@ export function usePayWithdrawalQueue(filters?: {
       const { data, error } = await q;
       if (error) { console.error("Error fetching withdrawal queue:", error); return []; }
 
-      return (data || []).map((p: any) => ({
+      return (data || []).map((p: unknown) => ({
         id: p.id,
         user_id: p.user_id || p.owner_id || "",
         owner_type: p.owner_type || "platform",
@@ -77,7 +77,7 @@ export function useRequestWithdrawal() {
       const idempotencyKey = generateIdempotencyKey("wd");
 
       // Try RPC first
-      const { data, error } = await (supabase.rpc as any)("pay_request_withdrawal", {
+      const { data, error } = await (supabase.rpc as unknown)("pay_request_withdrawal", {
         p_amount_cents: params.amountCents,
         p_destination_account_id: params.destinationAccountId,
         p_observation: params.observation || null,
@@ -93,7 +93,7 @@ export function useRequestWithdrawal() {
             status: "pending_approval",
             owner_type: "platform",
             idempotency_key: idempotencyKey,
-          } as any)
+          } as unknown)
           .select()
           .single();
 
@@ -117,7 +117,7 @@ export function useApproveWithdrawal() {
 
   return useMutation({
     mutationFn: async (payoutId: string) => {
-      const { data, error } = await (supabase.rpc as any)("pay_approve_withdrawal", {
+      const { data, error } = await (supabase.rpc as unknown)("pay_approve_withdrawal", {
         p_payout_id: payoutId,
       });
 
@@ -125,7 +125,7 @@ export function useApproveWithdrawal() {
         // Fallback: direct update
         const { error: updateError } = await supabase
           .from("payout_requests")
-          .update({ status: "approved", approved_at: new Date().toISOString() } as any)
+          .update({ status: "approved", approved_at: new Date().toISOString() } as unknown)
           .eq("id", payoutId);
 
         if (updateError) throw updateError;
@@ -147,14 +147,14 @@ export function useCancelWithdrawal() {
 
   return useMutation({
     mutationFn: async (payoutId: string) => {
-      const { data, error } = await (supabase.rpc as any)("pay_cancel_withdrawal", {
+      const { data, error } = await (supabase.rpc as unknown)("pay_cancel_withdrawal", {
         p_payout_id: payoutId,
       });
 
       if (error) {
         const { error: updateError } = await supabase
           .from("payout_requests")
-          .update({ status: "canceled" } as any)
+          .update({ status: "canceled" } as unknown)
           .eq("id", payoutId);
 
         if (updateError) throw updateError;
@@ -176,14 +176,14 @@ export function useReprocessWithdrawal() {
 
   return useMutation({
     mutationFn: async (payoutId: string) => {
-      const { data, error } = await (supabase.rpc as any)("pay_reprocess_withdrawal", {
+      const { data, error } = await (supabase.rpc as unknown)("pay_reprocess_withdrawal", {
         p_payout_id: payoutId,
       });
 
       if (error) {
         const { error: updateError } = await supabase
           .from("payout_requests")
-          .update({ status: "queued" } as any)
+          .update({ status: "queued" } as unknown)
           .eq("id", payoutId)
           .eq("status", "failed");
 

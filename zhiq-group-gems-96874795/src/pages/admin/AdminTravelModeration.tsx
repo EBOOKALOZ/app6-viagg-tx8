@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { TravelListingModerationAction, TravelModerationResult } from "@/integrations/supabase/types-travel";
-import { resolveTravelMediaRow, travelImgFallback } from "@/lib/viagem/travelMedia";
+import { resolveTravelMedia, travelImgFallback } from "@/lib/viagem/travelMedia";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ interface PendingTravelListing {
   moderation_reason: string | null;
   owner_user_id: string | null;
   created_at: string;
-  travel_media?: { original_storage_path: string | null; public_masked_storage_path: string | null; sort_order: number }[];
+  travel_media?: { bucket: string | null; storage_path: string | null; public_url: string | null; moderation_status: string | null; sort_order: number }[];
 }
 
 function priceLabel(l: PendingTravelListing): string {
@@ -60,7 +60,7 @@ export const AdminTravelModeration = () => {
     queryKey: ["admin-travel-moderation-queue"],
     queryFn: async () => {
       const { data, error } = await (supabase.from("travel_listings") as any)
-        .select("id, title, category, destination, city, state, entry_price, price_per_person, total_price, departure_date, duration_days, moderation_reason, owner_user_id, created_at, travel_media(original_storage_path, public_masked_storage_path, sort_order)")
+        .select("id, title, category, destination, city, state, entry_price, price_per_person, total_price, departure_date, duration_days, moderation_reason, owner_user_id, created_at, travel_media(bucket, storage_path, public_url, moderation_status, sort_order)")
         .eq("visibility_status", "pending_review")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -136,14 +136,19 @@ export const AdminTravelModeration = () => {
         <div className="grid grid-cols-1 gap-6">
           {listings.map((item) => {
             const media = [...(item.travel_media || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-            const thumb = media.length > 0 ? resolveTravelMediaRow(media[0]) : null;
+            const thumbState = media.length > 0 ? resolveTravelMedia(media[0]) : { kind: "empty" as const };
             return (
               <Card key={item.id} className="bg-zinc-900/80 border-zinc-800 overflow-hidden group hover:border-sky-500/30 transition-all duration-300">
                 <div className="flex flex-col lg:flex-row">
                   {/* Visual */}
                   <div className="lg:w-1/4 bg-zinc-950 flex flex-col justify-center items-center gap-4 border-r border-zinc-800 min-h-[180px] relative overflow-hidden">
-                    {thumb ? (
-                      <img src={thumb} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" onError={travelImgFallback} />
+                    {thumbState.kind === "ready" ? (
+                      <img src={thumbState.url} alt="" className="absolute inset-0 w-full h-full object-cover opacity-80" onError={travelImgFallback} />
+                    ) : thumbState.kind === "reviewing" ? (
+                      <div className="p-4 rounded-3xl bg-amber-500/5 border border-amber-500/10 text-center">
+                        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mx-auto mb-2" />
+                        <p className="text-[9px] font-black text-amber-500 uppercase">Foto em análise</p>
+                      </div>
                     ) : (
                       <div className="p-4 rounded-3xl bg-sky-500/5 border border-sky-500/10">
                         <Plane className="w-16 h-16 text-zinc-700 group-hover:text-sky-500 transition-colors" />

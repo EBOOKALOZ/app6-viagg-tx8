@@ -60,13 +60,13 @@ async function chamarProvedor(
   try {
     if (m.provider === "openai") {
       // conteúdo do usuário: string (texto) OU blocos (texto + imagem)
-      const userContent: any = image
+      const userContent: unknown[] | string = image
         ? [
             { type: "text", text: prompt },
             { type: "image_url", image_url: { url: image.url || `data:${image.mime || "image/jpeg"};base64,${image.b64}` } },
           ]
         : prompt;
-      const messages: any[] = [];
+      const messages: Record<string, unknown>[] = [];
       if (system) messages.push({ role: "system", content: system });
       messages.push({ role: "user", content: userContent });
       const r = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -89,7 +89,7 @@ async function chamarProvedor(
       };
     }
     if (m.provider === "anthropic") {
-      const userContent: any = image
+      const userContent: unknown[] | string = image
         ? [
             image.url
               ? { type: "image", source: { type: "url", url: image.url } }
@@ -97,7 +97,7 @@ async function chamarProvedor(
             { type: "text", text: prompt },
           ]
         : prompt;
-      const body: any = {
+      const body: Record<string, unknown> = {
         model: m.model_code, max_tokens: maxTokens,
         messages: [{ role: "user", content: userContent }],
       };

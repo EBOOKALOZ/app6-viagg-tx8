@@ -1,0 +1,1 @@
+UPDATE public.auction_listings SET ends_at = now() - interval '1 minute', status = 'ended' WHERE id = '982f22d0-8d35-49fc-b90b-a90916f9711f';

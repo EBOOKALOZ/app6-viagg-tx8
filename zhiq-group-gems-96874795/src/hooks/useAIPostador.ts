@@ -23,7 +23,7 @@ export function useAIPostador(profile: ProfileType) {
       const result = await bridgeProfileToPostador(profile);
       setState({ sending: false, result, error: null });
       return result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg = err?.message ?? "Erro ao enviar ao Impulsionar";
       setState({ sending: false, result: null, error: msg });
       return null;

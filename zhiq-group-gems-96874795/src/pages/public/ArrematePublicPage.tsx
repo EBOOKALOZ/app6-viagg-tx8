@@ -192,7 +192,7 @@ export default function ArrematePublicPage() {
     );
 
     return (
-      <MarketLayout search={search} setSearch={setSearch} onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)} headerChildren={<MarketNavButtons />} mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="👨‍⚖️ Arremates" myAccountPath="/meus-lances">
+      <MarketLayout search={search} setSearch={setSearch} onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)} headerChildren={<MarketNavButtons />} mainClassName="flex flex-col bg-institutional-yellow" blueFooter blueFooterLabel="👨‍⚖️ Arremates" myAccountPath="/meus-lances">
         <TrustRow />
         <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-10 w-10 animate-spin text-orange-400" />
@@ -214,7 +214,7 @@ export default function ArrematePublicPage() {
     );
 
     return (
-      <MarketLayout search={search} setSearch={setSearch} onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)} headerChildren={<MarketNavButtons />} mainClassName="flex flex-col bg-[#F5E62B]" blueFooter blueFooterLabel="👨‍⚖️ Arremates" myAccountPath="/meus-lances">
+      <MarketLayout search={search} setSearch={setSearch} onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)} headerChildren={<MarketNavButtons />} mainClassName="flex flex-col bg-institutional-yellow" blueFooter blueFooterLabel="👨‍⚖️ Arremates" myAccountPath="/meus-lances">
         <TrustRow />
         <div className="flex flex-col items-center justify-center flex-1 gap-4 py-24">
           <AlertTriangle className="h-12 w-12 text-gray-300" />
@@ -233,7 +233,7 @@ export default function ArrematePublicPage() {
       {/* ─── CABEÇALHO OFICIAL DA LOJA (mesmo componente dos demais módulos) ─── */}
       {storeInfo && !isStoreContext && (
         <StoreThemeScope appearance={storeInfo.appearance}>
-          <div className="w-full bg-[#F5E62B]">
+          <div className="w-full bg-institutional-yellow">
             <StoreHeader
               store={storeInfo}
               productsCount={advertiserData?.totalCount || 0}
@@ -468,8 +468,10 @@ export default function ArrematePublicPage() {
   );
 
   if (isStoreContext) {
+      // Fundo institucional do módulo Leilões — bg-store-background não existe
+      // no Tailwind (classe morta): o tema da loja vazava e a página ficava branca.
       return (
-          <div className="flex-1 flex flex-col bg-store-background text-store-primary min-h-screen">
+          <div className="flex-1 flex flex-col bg-institutional-yellow min-h-screen">
               {content}
           </div>
       );
@@ -481,7 +483,7 @@ export default function ArrematePublicPage() {
       setSearch={setSearch}
       onSearchSubmit={(v) => navigate(`/busca?q=${encodeURIComponent(v)}`)}
       headerChildren={<MarketNavButtons />}
-      mainClassName="flex flex-col bg-[#F5E62B]"
+      mainClassName="flex flex-col bg-institutional-yellow"
       blueFooter
       blueFooterLabel="👨‍⚖️ Arremates"
       myAccountPath="/meus-lances"

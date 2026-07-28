@@ -23,10 +23,13 @@ import { Building2,
   Truck,
   MessageSquare,
   ShoppingBag,
+  Briefcase,
   Eye,
   Headphones,
   Trophy,
-  Palette
+  Palette,
+  Activity,
+  BrainCircuit
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -250,6 +253,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     ] : []),
     { name: "Meus Produtos", href: "/anunciante/meus-anuncios", icon: Package },
     { name: "Leilões", href: "/anunciante/leiloes", icon: Gavel },
+    { name: "BI Leilões", href: "/anunciante/leiloes/inteligencia", icon: BrainCircuit },
     { name: "Meus Leilões", href: "/anunciante/leiloes/perfil", icon: Store },
     { name: "Aparência dos Leilões", href: "/anunciante/leiloes/aparencia", icon: Palette },
     { name: "Arremates", href: "/anunciante/arremates/gestao", icon: Trophy },

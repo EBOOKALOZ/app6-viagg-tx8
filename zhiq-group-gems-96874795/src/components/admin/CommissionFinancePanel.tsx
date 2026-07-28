@@ -57,10 +57,9 @@ const catLabel = (t: string) => CATEGORY_META[t]?.label ?? t;
 
 /* Estrito: SÓ função inexistente (PGRST202); erros de runtime vão
    para a faixa vermelha com a mensagem real. */
-const isMissingRpc = (err: any) =>
-  !!err && /could not find the function|PGRST202/i.test(err.message || String(err));
-
-const isMissingTable = (err: any) =>
+const isMissingRpc = (err: unknown) =>
+  String(err).includes("Could not find the function") || String(err).includes("PGRST202");
+const isMissingTable = (err: unknown) =>
   !!err && /could not find the table|PGRST205|relation .* does not exist/i.test(err.message || String(err));
 
 const REVENUE_STATUSES = new Set(["held", "released"]);
@@ -75,7 +74,7 @@ const fmtBRLCompact = (cents: number) =>
 
 /** Fallback pré-migration: agrega pay_escrow_holds no cliente */
 async function fetchFinanceFallback(): Promise<FinanceRow[]> {
-  const { data, error } = await (supabase.from("pay_escrow_holds") as any)
+  const { data, error } = await supabase.from("pay_escrow_holds")
     .select("service_type, status, amount_cents, platform_fee_cents, professional_amount_cents, created_at")
     .limit(10000);
   if (error) throw error;
@@ -101,7 +100,8 @@ export function CommissionFinancePanel() {
   const financeQuery = useQuery({
     queryKey: ["admin-commission-finance"],
     queryFn: async (): Promise<{ rows: FinanceRow[]; fallback: boolean; missingTable: boolean }> => {
-      const { data, error } = await (supabase.rpc as any)("admin_commission_finance", { p_days: 730 });
+      // @ts-expect-error RPC admin_commission_finance ausente
+      const { data, error } = await supabase.rpc("admin_commission_finance", { p_days: 730 });
       if (!error) return { rows: (data || []) as FinanceRow[], fallback: false, missingTable: false };
       if (isMissingTable(error)) return { rows: [], fallback: true, missingTable: true };
       if (isMissingRpc(error)) {
@@ -124,8 +124,6 @@ export function CommissionFinancePanel() {
   const missingTable = financeQuery.data?.missingTable ?? false;
 
   // ── OPERAÇÕES CONCLUÍDAS (composição por corrida/entrega) ─────────────────
-  // Fonte OFICIAL: pay_escrow_holds — cada linha é cópia exata da liquidação
-  // (Total = Ganho + Comissão, por construção). Aqui só FORMATAMOS.
   const [opDays, setOpDays] = useState("30");
   const [opStatus, setOpStatus] = useState("all");
   const [opCat, setOpCat] = useState("all");
@@ -134,17 +132,17 @@ export function CommissionFinancePanel() {
   const opsQuery = useQuery({
     queryKey: ["admin-commission-ops"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("pay_escrow_holds") as any)
+      const { data, error } = await supabase.from("pay_escrow_holds")
         .select("id, created_at, released_at, service_type, service_id, status, professional_user_id, amount_cents, platform_fee_cents, professional_amount_cents, metadata")
         .order("created_at", { ascending: false })
         .limit(400);
       if (error) throw error;
-      const ops: any[] = data || [];
+      const ops: Record<string, unknown>[] = data || [];
       // Nomes dos profissionais em UMA consulta (admin lê profiles)
       const ids = Array.from(new Set(ops.map((o) => o.professional_user_id).filter(Boolean)));
-      let names: Record<string, string> = {};
-      if (ids.length) {
-        const { data: profs } = await (supabase.from("profiles") as any)
+      const names: Record<string, string> = {};
+      if (ids.length > 0) {
+        const { data: profs } = await supabase.from("profiles")
           .select("id, name").in("id", ids);
         for (const p of profs || []) names[p.id] = p.name;
       }
@@ -317,7 +315,7 @@ export function CommissionFinancePanel() {
         <Alert className="bg-destructive/10 border-destructive/30">
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <AlertDescription className="text-xs text-black">
-            Erro ao carregar dados financeiros: {String((financeQuery.error as any)?.message || financeQuery.error)}
+            Erro ao carregar dados financeiros: {financeQuery.error instanceof Error ? financeQuery.error.message : String(financeQuery.error)}
           </AlertDescription>
         </Alert>
       )}
@@ -511,7 +509,7 @@ export function CommissionFinancePanel() {
                 {!opsQuery.isLoading && opsFiltered.length === 0 && (
                   <TableRow><TableCell colSpan={9} className="py-6 text-center text-xs text-muted-foreground">Nenhuma operação no filtro atual.</TableCell></TableRow>
                 )}
-                {opsFiltered.slice(0, 100).map((o: any) => (
+                {opsFiltered.slice(0, 100).map((o: Record<string, unknown>) => (
                   <TableRow key={o.id}>
                     <TableCell className="whitespace-nowrap text-[11px] text-muted-foreground">
                       {new Date(o.created_at).toLocaleString("pt-BR")}

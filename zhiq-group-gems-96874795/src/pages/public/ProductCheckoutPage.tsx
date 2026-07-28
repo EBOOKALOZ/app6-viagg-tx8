@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SessionSafetyFlash } from "@/components/public/SessionSafetyFlash";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useOutletContext } from "react-router-dom";
 import { 
     ShoppingCart, 
     CheckCircle2, 
@@ -36,6 +36,10 @@ export default function ProductCheckoutPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [step, setStep] = useState<CheckoutStep>("details");
+    
+    const outletContext = useOutletContext<{ isStoreContext?: boolean } | null>();
+    const isStoreContext = outletContext?.isStoreContext;
+    
     const [activeOrder, setActiveOrder] = useState<any>(null);
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [isExpired, setIsExpired] = useState(false);
@@ -184,12 +188,15 @@ export default function ProductCheckoutPage() {
         }
     };
 
-    if (isLoading) return <MarketLayout><div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-emerald-500" /></div></MarketLayout>;
+    if (isLoading) {
+        if (isStoreContext) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-emerald-500" /></div>;
+        return <MarketLayout><div className="min-h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-emerald-500" /></div></MarketLayout>;
+    }
 
-    return (
-        <MarketLayout>
+    const content = (
+        <>
             <SessionSafetyFlash />
-            <div className="bg-[#F5E62B] min-h-screen py-12 px-4">
+            <div className="bg-institutional-yellow min-h-screen py-12 px-4">
                 <div className="container max-w-4xl mx-auto space-y-8">
                     
                     <Button variant="ghost" onClick={() => navigate(-1)} className="font-black uppercase text-[10px] tracking-widest text-zinc-400 gap-2 mb-4">
@@ -372,6 +379,9 @@ export default function ProductCheckoutPage() {
                     </div>
                 </div>
             </div>
-        </MarketLayout>
+        </>
     );
+
+    if (isStoreContext) return content;
+    return <MarketLayout>{content}</MarketLayout>;
 }

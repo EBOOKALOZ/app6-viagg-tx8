@@ -133,7 +133,7 @@ export function Account360Panel({ userId, onClose, onViewStore }: Account360Pane
 }
 
 // Helpers
-function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
     return (
         <div className="flex items-center gap-2.5 py-0.5">
             <Icon className="h-3.5 w-3.5 text-zinc-500 shrink-0" />

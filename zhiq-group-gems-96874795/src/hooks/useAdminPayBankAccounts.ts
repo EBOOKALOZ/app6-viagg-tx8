@@ -10,7 +10,7 @@ export function usePayPlatformBankAccounts() {
   return useQuery({
     queryKey: ["pay-platform-bank-accounts"],
     queryFn: async (): Promise<PlatformBankAccount[]> => {
-      const { data, error } = await (supabase.from("external_bank_accounts") as any)
+      const { data, error } = await (supabase.from("external_bank_accounts") as unknown)
         .select("*")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
@@ -20,7 +20,7 @@ export function usePayPlatformBankAccounts() {
         return [];
       }
 
-      return (data || []).map((a: any) => ({
+      return (data || []).map((a: unknown) => ({
         id: a.id,
         user_id: a.user_id || "",
         owner_type: a.owner_type || "platform",
@@ -53,7 +53,7 @@ export function useCreateBankAccount() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (account: Partial<PlatformBankAccount>) => {
-      const { data, error } = await (supabase.from("external_bank_accounts") as any)
+      const { data, error } = await (supabase.from("external_bank_accounts") as unknown)
         .insert({
           account_label: account.account_label,
           account_type: account.account_type || "personal",
@@ -86,7 +86,7 @@ export function useUpdateBankAccount() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<PlatformBankAccount>) => {
-      const { error } = await (supabase.from("external_bank_accounts") as any)
+      const { error } = await (supabase.from("external_bank_accounts") as unknown)
         .update(updates)
         .eq("id", id);
       if (error) throw error;
@@ -103,11 +103,11 @@ export function useSetDefaultBankAccount() {
   return useMutation({
     mutationFn: async (accountId: string) => {
       // Unset all defaults first
-      await (supabase.from("external_bank_accounts") as any)
+      await (supabase.from("external_bank_accounts") as unknown)
         .update({ is_default: false })
         .eq("is_default", true);
       // Set the new default
-      const { error } = await (supabase.from("external_bank_accounts") as any)
+      const { error } = await (supabase.from("external_bank_accounts") as unknown)
         .update({ is_default: true })
         .eq("id", accountId);
       if (error) throw error;
@@ -123,7 +123,7 @@ export function useToggleBankAccountActive() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await (supabase.from("external_bank_accounts") as any)
+      const { error } = await (supabase.from("external_bank_accounts") as unknown)
         .update({ is_active })
         .eq("id", id);
       if (error) throw error;

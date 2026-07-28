@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Zap } from "lucide-react";
-import type { AdminBillingEvent } from "@/hooks/useAdminCredits";
+import type { AdminBillingEvent, AdminCreditsData } from "@/hooks/useAdminCredits";
 
 const COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#8b5cf6", "#ef4444", "#ec4899"];
 const EVENT_LABELS: Record<string, string> = {
@@ -13,7 +13,7 @@ const EVENT_LABELS: Record<string, string> = {
   purchase_completed: "Compra Concluída",
 };
 
-interface Props { data: any; }
+interface Props { data: AdminCreditsData; }
 
 export function AdminCreditsEvents({ data }: Props) {
   const { billingEvents } = data;

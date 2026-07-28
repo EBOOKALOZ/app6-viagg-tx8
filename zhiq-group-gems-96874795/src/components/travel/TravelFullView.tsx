@@ -6,7 +6,7 @@ import { StoreLocationMap } from "@/components/StoreLocationMap";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 import { Plane, MapPin, Calendar, Users, Check, Loader2, DollarSign, Clock, ShieldCheck } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
-import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
+import { resolveTravelMediaUrl } from "@/lib/viagem/travelMedia";
 import { DetailPageLayout, DetailRelated } from "@/components/detail/DetailPageLayout";
 import { AdvertiserSummaryCard } from "@/components/public/advertiser/AdvertiserSummaryCard";
 
@@ -60,17 +60,14 @@ export function TravelFullView({ listingId, embedded = false, onBack, relacionad
     queryKey: ["travel-detail-media", listingId],
     enabled: !!listingId,
     queryFn: async () => {
-      // Só mídia já aprovada aparece publicamente (pendente/rejeitada fica de
-      // fora da vitrine, mesmo em anúncio publicado). O IN cobre os rótulos de
-      // aprovação usados pelo pipeline (approved/approved_clean/masked...).
+      // resolveTravelMediaUrl() já filtra por moderation_status aprovado —
+      // mídia pendente/rejeitada nunca vira URL, mesmo em anúncio publicado.
       const { data } = await (supabase.from("travel_media") as any)
-        .select("original_storage_path, public_masked_storage_path, sort_order, moderation_status")
+        .select("bucket, storage_path, public_url, sort_order, moderation_status")
         .eq("listing_id", listingId)
         .order("sort_order", { ascending: true });
-      const APPROVED = new Set(["approved", "approved_clean", "approved_masked", "masked"]);
       return ((data || []) as any[])
-        .filter((m: any) => !m.moderation_status || APPROVED.has(m.moderation_status))
-        .map((m: any) => resolveTravelMediaRow(m))
+        .map((m: any) => resolveTravelMediaUrl(m))
         .filter(Boolean);
     },
   });

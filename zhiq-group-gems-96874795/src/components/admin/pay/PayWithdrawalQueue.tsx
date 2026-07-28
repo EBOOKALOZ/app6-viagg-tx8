@@ -33,21 +33,21 @@ export default function PayWithdrawalQueue() {
     try {
       await approveMut.mutateAsync(id);
       toast.success("Saque aprovado com sucesso");
-    } catch (e: any) { toast.error("Erro ao aprovar", { description: e?.message }); }
+    } catch (e: unknown) { toast.error("Erro ao aprovar", { description: e instanceof Error ? e.message : "Erro desconhecido" }); }
   };
 
   const handleCancel = async (id: string) => {
     try {
       await cancelMut.mutateAsync(id);
       toast.success("Saque cancelado");
-    } catch (e: any) { toast.error("Erro ao cancelar", { description: e?.message }); }
+    } catch (e: unknown) { toast.error("Erro ao cancelar", { description: e instanceof Error ? e.message : "Erro desconhecido" }); }
   };
 
   const handleReprocess = async (id: string) => {
     try {
       await reprocessMut.mutateAsync(id);
       toast.success("Saque reenfileirado para processamento");
-    } catch (e: any) { toast.error("Erro ao reprocessar", { description: e?.message }); }
+    } catch (e: unknown) { toast.error("Erro ao reprocessar", { description: e instanceof Error ? e.message : "Erro desconhecido" }); }
   };
 
   return (

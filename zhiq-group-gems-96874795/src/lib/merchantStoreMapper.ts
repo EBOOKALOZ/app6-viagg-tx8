@@ -50,7 +50,7 @@ export const MERCHANT_STORE_SELECT_COLUMNS = MERCHANT_STORE_ALLOWED_COLUMNS.join
  * Campos desconhecidos são descartados e logados no console.
  */
 export function mapFormToStorePayload(
-  formData: Record<string, any>,
+  formData: Record<string, unknown>,
   userId: string
 ): SafeMerchantStorePayload {
   const allowedSet = new Set<string>(MERCHANT_STORE_ALLOWED_COLUMNS);
@@ -94,12 +94,12 @@ export function mapFormToStorePayload(
 
 /* ─── Helpers ─── */
 
-function sanitize(value: any): string | null {
+function sanitize(value: unknown): string | null {
   if (value === undefined || value === null || value === '') return null;
   return String(value).trim();
 }
 
-function sanitizePhone(value: any): string | null {
+function sanitizePhone(value: unknown): string | null {
   if (!value) return null;
   const digits = String(value).replace(/\D/g, '');
   return digits || null;

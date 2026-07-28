@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface AIAdsListingCategory {
   total:    number;
   hoje:     number;
-  recentes: any[];
+  recentes: unknown[];
 }
 
 export interface AIAdsData {
@@ -24,14 +24,14 @@ export interface AIAdsData {
   promoted: {
     total:         number;
     por_categoria: Record<string, number>;
-    recentes:      any[];
+    recentes: unknown[];
   };
   fila: {
     lotes_disponiveis:   number;
     lotes_claimed:       number;
     lotes_postados_hoje: number;
     lotes_cooldown:      number;
-    detalhes:            any[];
+    detalhes: unknown[];
   };
   campanhas_queue: {
     pendente:    number;
@@ -40,7 +40,7 @@ export interface AIAdsData {
     postado:     number;
     falhou:      number;
     cancelado:   number;
-    detalhes:    any[];
+    detalhes: unknown[];
   };
 }
 
@@ -48,7 +48,7 @@ export interface AIAdsData {
 export type GLMAdsListingCategory = AIAdsListingCategory;
 export type GLMAdsData            = AIAdsData;
 
-function extractRows(result: PromiseSettledResult<any>): any[] {
+function extractRows(result: PromiseSettledResult<unknown>): unknown[] {
   return result.status === "fulfilled" ? (result.value?.data ?? []) : [];
 }
 
@@ -64,15 +64,15 @@ export function useAIAds() {
         viagens, veiculos, servicos, fretes, imoveis, marketplace,
         promoted, lotes, campaignQueue,
       ] = await Promise.allSettled([
-        (supabase.from("travel_listings") as any).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
-        (supabase.from("vehicle_listings") as any).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
-        (supabase.from("service_listings") as any).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
-        (supabase.from("freight_listings") as any).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
-        (supabase.from("real_estate_listings") as any).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
-        (supabase.from("advertiser_listings") as any).select("id, title, city, created_at").order("created_at", { ascending: false }).limit(200),
-        (supabase.from("promoted_listing_slots") as any).select("id, listing_type, listing_title, listing_city, created_at").order("created_at", { ascending: false }).limit(300),
-        (supabase.from("posting_lots") as any).select("id, status, store_name, target_city, items_count, posted_at, created_at").order("created_at", { ascending: false }).limit(150),
-        (supabase.from("campaign_queue") as any).select("id, title, status, created_at").order("created_at", { ascending: false }).limit(150),
+        (supabase.from("travel_listings") as unknown).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
+        (supabase.from("vehicle_listings") as unknown).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
+        (supabase.from("service_listings") as unknown).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
+        (supabase.from("freight_listings") as unknown).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
+        (supabase.from("real_estate_listings") as unknown).select("id, title, city, state, created_at").order("created_at", { ascending: false }).limit(200),
+        (supabase.from("advertiser_listings") as unknown).select("id, title, city, created_at").order("created_at", { ascending: false }).limit(200),
+        (supabase.from("promoted_listing_slots") as unknown).select("id, listing_type, listing_title, listing_city, created_at").order("created_at", { ascending: false }).limit(300),
+        (supabase.from("posting_lots") as unknown).select("id, status, store_name, target_city, items_count, posted_at, created_at").order("created_at", { ascending: false }).limit(150),
+        (supabase.from("campaign_queue") as unknown).select("id, title, status, created_at").order("created_at", { ascending: false }).limit(150),
       ]);
 
       const viagensData     = extractRows(viagens);
@@ -85,18 +85,18 @@ export function useAIAds() {
       const lotesData       = extractRows(lotes);
       const cqData          = extractRows(campaignQueue);
 
-      const countToday = (items: any[]) => items.filter(i => i.created_at >= todayISO).length;
-      const buildCat   = (items: any[]): AIAdsListingCategory => ({ total: items.length, hoje: countToday(items), recentes: items.slice(0, 5) });
+      const countToday = (items: unknown[]) => items.filter(i => i.created_at >= todayISO).length;
+      const buildCat   = (items: unknown[]): AIAdsListingCategory => ({ total: items.length, hoje: countToday(items), recentes: items.slice(0, 5) });
 
       const porCategoria: Record<string, number> = {};
-      promotedData.forEach((p: any) => {
+      promotedData.forEach((p: unknown) => {
         const cat = p.listing_type || "outros";
         porCategoria[cat] = (porCategoria[cat] || 0) + 1;
       });
 
-      const lotePostadosHoje = lotesData.filter((l: any) => l.posted_at && l.posted_at >= todayISO).length;
+      const lotePostadosHoje = lotesData.filter((l: unknown) => l.posted_at && l.posted_at >= todayISO).length;
 
-      const cqCount = (statuses: string[]) => cqData.filter((c: any) => statuses.includes(c.status)).length;
+      const cqCount = (statuses: string[]) => cqData.filter((c: unknown) => statuses.includes(c.status)).length;
 
       return {
         listings: {
@@ -109,10 +109,10 @@ export function useAIAds() {
         },
         promoted: { total: promotedData.length, por_categoria: porCategoria, recentes: promotedData.slice(0, 15) },
         fila: {
-          lotes_disponiveis:   lotesData.filter((l: any) => l.status === "available").length,
-          lotes_claimed:       lotesData.filter((l: any) => l.status === "claimed").length,
+          lotes_disponiveis:   lotesData.filter((l: unknown) => l.status === "available").length,
+          lotes_claimed:       lotesData.filter((l: unknown) => l.status === "claimed").length,
           lotes_postados_hoje: lotePostadosHoje,
-          lotes_cooldown:      lotesData.filter((l: any) => l.status === "cooldown").length,
+          lotes_cooldown:      lotesData.filter((l: unknown) => l.status === "cooldown").length,
           detalhes:            lotesData.slice(0, 40),
         },
         campanhas_queue: {

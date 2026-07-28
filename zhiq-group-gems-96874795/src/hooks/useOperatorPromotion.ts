@@ -80,8 +80,9 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
     setLoading(true);
     setError(null);
     try {
+      // @ts-expect-error - Type definitions may be missing
       const { data, error: err } = await supabase
-        .from("operator_promotional_slots" as any)
+        .from("operator_promotional_slots")
         .select("*")
         .eq("profile_type", profileType)
         .neq("status", "removed")
@@ -89,8 +90,8 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
 
       if (err) throw new Error(err.message);
       setSlots((data ?? []) as OperatorPromotionalSlot[]);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -99,7 +100,8 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
   // ── Fetch categorias de serviço do perfil ────────────────────────────────
   const fetchCategories = useCallback(async () => {
     const { data } = await supabase
-      .from("operator_service_categories" as any)
+      // @ts-expect-error - Type definitions may be missing
+      .from("operator_service_categories")
       .select("service_type, label, description, icon, sort_order")
       .eq("profile_type", profileType)
       .eq("is_active", true)
@@ -112,7 +114,8 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data } = await supabase
-      .from("operator_promotion_summary" as any)
+      // @ts-expect-error - Type definitions may be missing
+      .from("operator_promotion_summary")
       .select("*")
       .eq("user_id", user.id)
       .eq("profile_type", profileType)
@@ -124,8 +127,9 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
   const createSlot = useCallback(async (input: CreateSlotInput): Promise<{ ok: boolean; error?: string }> => {
     setError(null);
     try {
+      // @ts-expect-error - Type definitions may be missing
       const { data, error: err } = await supabase.rpc(
-        "create_operator_promotional_slot" as any,
+        "create_operator_promotional_slot",
         {
           p_profile_type:       input.profile_type,
           p_service_type:       input.service_type,
@@ -143,14 +147,14 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
         },
       );
       if (err) throw new Error(err.message);
-      const result = data as any;
+      const result = data as Record<string, unknown>;
       if (!result?.ok) throw new Error(result?.error ?? "Erro ao criar slot");
       await fetchSlots();
       await fetchSummary();
       return { ok: true };
-    } catch (e: any) {
-      setError(e.message);
-      return { ok: false, error: e.message };
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }, [fetchSlots, fetchSummary]);
 
@@ -161,19 +165,20 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
     reason?: string,
   ): Promise<{ ok: boolean; error?: string }> => {
     try {
+      // @ts-expect-error - Type definitions may be missing
       const { data, error: err } = await supabase.rpc(
-        "update_operator_slot_status" as any,
+        "update_operator_slot_status",
         { p_slot_id: slotId, p_status: status, p_reason: reason ?? null },
       );
       if (err) throw new Error(err.message);
-      const result = data as any;
+      const result = data as Record<string, unknown>;
       if (!result?.ok) throw new Error(result?.error ?? "Erro ao atualizar status");
       await fetchSlots();
       await fetchSummary();
       return { ok: true };
-    } catch (e: any) {
-      setError(e.message);
-      return { ok: false, error: e.message };
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }, [fetchSlots, fetchSummary]);
 
@@ -186,8 +191,9 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
     setPosting(true);
     setError(null);
     try {
+      // @ts-expect-error - Type definitions may be missing
       const { data, error: err } = await supabase.rpc(
-        "generate_operator_posting_lots" as any,
+        "generate_operator_posting_lots",
         {
           p_profile_type:  profileType,
           p_slot_ids:      slotIds,
@@ -197,14 +203,14 @@ export function useOperatorPromotion(profileType: OperatorProfileType) {
         },
       );
       if (err) throw new Error(err.message);
-      const result = data as any;
+      const result = data as Record<string, unknown>;
       if (!result?.ok) throw new Error(result?.error ?? "Erro ao postar slots");
       await fetchSlots();
       await fetchSummary();
       return { ok: true, lotId: result.lot_id };
-    } catch (e: any) {
-      setError(e.message);
-      return { ok: false, error: e.message };
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     } finally {
       setPosting(false);
     }

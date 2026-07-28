@@ -19,7 +19,7 @@ function ensureChannel() {
   channel = supabase
     .channel(CHANNEL_NAME)
     .on(
-      "postgres_changes" as any,
+      "postgres_changes",
       { event: "INSERT", schema: "public", table: "platform_events" },
       (payload: { new: PlatformEvent }) => {
         const event = payload.new as PlatformEvent;

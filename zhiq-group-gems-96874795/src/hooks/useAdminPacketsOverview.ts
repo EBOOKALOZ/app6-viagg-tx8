@@ -101,7 +101,7 @@ export interface AdminPacketOverviewData {
   revenueDaily: AdminDailyRevenue[];
   topConsumers: AdminTopConsumer[];
   topAdvertisers: AdminTopConsumer[];
-  packages: any[];
+  packages: unknown[];
   periodGrowth: { day: string; stores: number; products: number; revenue: number }[];
   salesByStoreAndCategory?: {
     store_name: string;
@@ -135,43 +135,43 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       prevStart.setDate(now.getDate() - periodDays * 2);
 
       // ── 1. Lojas (merchant_stores) ─────────────────────────────────────
-      const { data: storesRaw } = await (supabase.from("merchant_stores") as any)
+      const { data: storesRaw } = await (supabase.from("merchant_stores") as unknown)
         .select("id, user_id, store_name, nome_loja, city, cidade, estado, region, telefone, phone, created_at")
         .limit(1000);
-      const storesAll: any[] = storesRaw || [];
+      const storesAll: unknown[] = storesRaw || [];
 
       // ── 2. Perfis (profiles) ───────────────────────────────────────────
       const storeUserIds = storesAll.map((s) => s.user_id).filter(Boolean);
-      const profileMap = new Map<string, any>();
+      const profileMap = new Map<string, unknown>();
       if (storeUserIds.length > 0) {
-        const { data: profiles } = await (supabase.from("profiles") as any)
+        const { data: profiles } = await (supabase.from("profiles") as unknown)
           .select("id, nome, cpf_cnpj, email, telefone, cidade, estado")
           .in("id", storeUserIds);
-        (profiles || []).forEach((p: any) => profileMap.set(p.id, p));
+        (profiles || []).forEach((p: unknown) => profileMap.set(p.id, p));
       }
 
       // ── 3. advertiser_accounts (bridge) ─────────────────────────────────
-      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as any)
+      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as unknown)
         .select("id, user_id")
         .limit(5000);
       const acctToUser = new Map<string, string>();
-      (accountsRaw || []).forEach((a: any) => {
+      (accountsRaw || []).forEach((a: unknown) => {
         if (a?.id && a?.user_id) acctToUser.set(a.id, a.user_id);
       });
 
       // ── 4. Listings (veículos) ──────────────────────────────────────────
-      const { data: vehicleListingsRaw } = await (supabase.from("vehicle_listings") as any)
+      const { data: vehicleListingsRaw } = await (supabase.from("vehicle_listings") as unknown)
         .select("id, title, owner_user_id, created_at, price_brl, category")
         .limit(5000);
-      const vehicleListings: any[] = vehicleListingsRaw || [];
+      const vehicleListings: unknown[] = vehicleListingsRaw || [];
 
       // ── 5. Advertiser Listings (produtos marketplace) ────────────────────
-      const { data: advListingsRaw } = await (supabase.from("advertiser_listings") as any)
+      const { data: advListingsRaw } = await (supabase.from("advertiser_listings") as unknown)
         .select("id, title, advertiser_account_id, created_at, price, category, listing_status")
         .limit(5000);
-      const advListings: any[] = advListingsRaw || [];
+      const advListings: unknown[] = advListingsRaw || [];
 
-      const listingsAll: any[] = [
+      const listingsAll: unknown[] = [
         ...vehicleListings.map((l) => ({ ...l, owner_user_id: l.owner_user_id, source: 'vehicle' as const })),
         ...advListings.map((l) => ({
           ...l,
@@ -181,46 +181,46 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       ].filter((l) => l.owner_user_id);
 
       // ── 6. Categorias ────────────────────────────────────────────────────
-      const { data: categoriesRaw } = await (supabase.from("product_categories") as any)
+      const { data: categoriesRaw } = await (supabase.from("product_categories") as unknown)
         .select("*")
         .limit(100);
-      const categoriesDb: any[] = categoriesRaw || [];
+      const categoriesDb: unknown[] = categoriesRaw || [];
 
       // ── 7. Pacotes ───────────────────────────────────────────────────────
-      const { data: packagesRaw } = await (supabase.from("real_estate_credit_packages") as any)
+      const { data: packagesRaw } = await (supabase.from("real_estate_credit_packages") as unknown)
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
-      const packagesAll: any[] = packagesRaw || [];
+      const packagesAll: unknown[] = packagesRaw || [];
 
       // ── 8. Compras de pacotes ────────────────────────────────────────────
-      const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as any)
+      const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as unknown)
         .select("id, owner_user_id, package_id, amount_brl, credits_total, created_at, paid_at")
         .limit(5000);
-      const purchasesAll: any[] = purchasesRaw || [];
+      const purchasesAll: unknown[] = purchasesRaw || [];
 
       // ── 9. Ledger de créditos ────────────────────────────────────────────
-      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as any)
+      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as unknown)
         .select("*")
         .limit(10000);
-      const ledgerAll: any[] = ledgerRaw || [];
+      const ledgerAll: unknown[] = ledgerRaw || [];
 
       // ── 10. Billing Events (vendas) ──────────────────────────────────────
-      const { data: billingEventsRaw } = await (supabase.from("m1_billing_events") as any)
+      const { data: billingEventsRaw } = await (supabase.from("m1_billing_events") as unknown)
         .select("merchant_store_id, product_id, event_type, sale_value_cents, created_at")
         .gte("created_at", periodStart.toISOString())
         .limit(10000);
-      const billingEventsAll: any[] = billingEventsRaw || [];
+      const billingEventsAll: unknown[] = billingEventsRaw || [];
 
       // ── PROCESSAMENTO ────────────────────────────────────────────────────
 
       // Mapas
-      const storeByUserId = new Map<string, any>();
+      const storeByUserId = new Map<string, unknown>();
       storesAll.forEach((s) => {
         if (s.user_id) storeByUserId.set(s.user_id, s);
       });
 
-      const storeById = new Map<string, any>();
+      const storeById = new Map<string, unknown>();
       storesAll.forEach((s) => storeById.set(s.id, s));
 
       const productsCountByUser = new Map<string, number>();
@@ -230,7 +230,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       });
 
       const creditsByUser = new Map<string, number>();
-      ledgerAll.forEach((e: any) => {
+      ledgerAll.forEach((e: unknown) => {
         const amount = Math.abs(Number(e.amount) || 0);
         const isDebit = (e.amount ?? 0) < 0 || e.entry_type === "debit";
         if (!isDebit) return;
@@ -239,13 +239,13 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       });
 
       const revenueByUser = new Map<string, number>();
-      purchasesAll.forEach((p: any) => {
+      purchasesAll.forEach((p: unknown) => {
         const uid = p.owner_user_id;
         if (uid) revenueByUser.set(uid, (revenueByUser.get(uid) || 0) + Number(p.amount_brl || 0));
       });
 
       const lastActivityByUser = new Map<string, string>();
-      [...ledgerAll, ...listingsAll, ...purchasesAll].forEach((e: any) => {
+      [...ledgerAll, ...listingsAll, ...purchasesAll].forEach((e: unknown) => {
         const uid = e.advertiser_account_id ? acctToUser.get(e.advertiser_account_id) || e.advertiser_user_id : e.owner_user_id;
         if (!uid) return;
         const date = e.created_at || e.published_at;
@@ -264,11 +264,11 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       const totalActivePackages = packagesAll.filter((p) => p.is_active !== false).length;
 
       const periodCredits = ledgerAll
-        .filter((e: any) => {
+        .filter((e: unknown) => {
           const d = new Date(e.created_at);
           return d >= periodStart;
         })
-        .reduce((sum: number, e: any) => {
+        .reduce((sum: number, e: unknown) => {
           const amount = Math.abs(Number(e.amount) || 0);
           const isDebit = (e.amount ?? 0) < 0 || e.entry_type === "debit";
           return sum + (isDebit ? amount : 0);
@@ -277,25 +277,25 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       const creditsPerHour = creditsPerDay / 24;
 
       const periodRevenue = purchasesAll
-        .filter((p: any) => {
+        .filter((p: unknown) => {
           const d = new Date(p.created_at || p.paid_at);
           return d >= periodStart;
         })
-        .reduce((sum: number, p: any) => sum + Number(p.amount_brl || 0), 0);
+        .reduce((sum: number, p: unknown) => sum + Number(p.amount_brl || 0), 0);
       const revenuePerDay = periodRevenue / periodDays;
       const revenuePerHour = revenuePerDay / 24;
 
-      const storesPeriod = storesAll.filter((s: any) => {
+      const storesPeriod = storesAll.filter((s: unknown) => {
         const d = new Date(s.created_at);
         return d >= periodStart;
       }).length;
-      const storesPrev = storesAll.filter((s: any) => {
+      const storesPrev = storesAll.filter((s: unknown) => {
         const d = new Date(s.created_at);
         return d >= prevStart && d < periodStart;
       }).length;
       const growthPct = pct(storesPeriod, storesPrev);
 
-      const activeStores = storesAll.filter((s: any) => {
+      const activeStores = storesAll.filter((s: unknown) => {
         const uid = s.user_id;
         return creditsByUser.get(uid || "") || 0 > 0;
       }).length;
@@ -349,7 +349,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       });
 
       // ── Categorias ──────────────────────────────────────────────────────
-      const catStats: AdminCategoryStats[] = categoriesDb.map((c: any) => {
+      const catStats: AdminCategoryStats[] = categoriesDb.map((c: unknown) => {
         const count = listingsAll.filter((l) => {
           const cat = l.category;
           return cat === c.id || cat === c.name || cat === c.slug;
@@ -366,7 +366,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       // ── Consumo por hora ────────────────────────────────────────────────
       const hourlyMap = new Map<string, number>();
       const hourlyStores = new Map<string, Set<string>>();
-      ledgerAll.forEach((e: any) => {
+      ledgerAll.forEach((e: unknown) => {
         const d = new Date(e.created_at);
         const hourKey = d.toISOString().slice(0, 13);
         const amount = Math.abs(Number(e.amount) || 0);
@@ -394,7 +394,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
 
       // ── Consumo diário ──────────────────────────────────────────────────
       const dailyMap = new Map<string, number>();
-      ledgerAll.forEach((e: any) => {
+      ledgerAll.forEach((e: unknown) => {
         const d = new Date(e.created_at);
         const dayKey = toISODate(d);
         const amount = Math.abs(Number(e.amount) || 0);
@@ -410,7 +410,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
       // ── Receita por hora ────────────────────────────────────────────────
       const revenueHourlyMap = new Map<string, number>();
       const revenueHourlyCount = new Map<string, number>();
-      purchasesAll.forEach((p: any) => {
+      purchasesAll.forEach((p: unknown) => {
         const d = new Date(p.created_at || p.paid_at);
         const hourKey = d.toISOString().slice(0, 13);
         revenueHourlyMap.set(hourKey, (revenueHourlyMap.get(hourKey) || 0) + Number(p.amount_brl || 0));
@@ -427,7 +427,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
 
       // ── Receita diária ──────────────────────────────────────────────────
       const revenueDailyMap = new Map<string, number>();
-      purchasesAll.forEach((p: any) => {
+      purchasesAll.forEach((p: unknown) => {
         const d = new Date(p.created_at || p.paid_at);
         const dayKey = toISODate(d);
         revenueDailyMap.set(dayKey, (revenueDailyMap.get(dayKey) || 0) + Number(p.amount_brl || 0));
@@ -478,7 +478,7 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
         products: listingsAll.filter((l) => toISODate(new Date(l.created_at)) === day).length,
         revenue: purchasesAll
           .filter((p) => toISODate(new Date(p.created_at || p.paid_at)) === day)
-          .reduce((sum: number, p: any) => sum + Number(p.amount_brl || 0), 0),
+          .reduce((sum: number, p: unknown) => sum + Number(p.amount_brl || 0), 0),
       }));
 
       // ── VENDAS POR LOJA E CATEGORIA ──────────────────────────────────────
@@ -488,11 +488,11 @@ export function useAdminPacketsOverview(opts: { periodDays?: number } = {}) {
 
       // Mapa product_id -> categoria (baseado nos listings que temos)
       const productCategoryMap = new Map<string, string>();
-      listingsAll.forEach((l: any) => {
+      listingsAll.forEach((l: unknown) => {
         productCategoryMap.set(l.id, l.category || "Sem categoria");
       });
 
-      billingEventsAll.forEach((ev: any) => {
+      billingEventsAll.forEach((ev: unknown) => {
         const storeId = ev.merchant_store_id;
         const productId = ev.product_id;
         const saleValue = Number(ev.sale_value_cents || 0) / 100;

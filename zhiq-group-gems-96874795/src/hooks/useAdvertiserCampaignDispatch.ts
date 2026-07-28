@@ -28,7 +28,7 @@ export function useAdvertiserCampaignDispatch() {
         setLoadingId(listingId);
         try {
             const { data, error } = await supabase.rpc(
-                "create_advertiser_campaign_queue_item" as any,
+                "create_advertiser_campaign_queue_item" as unknown,
                 {
                     p_listing_id: listingId,
                     p_listing_type: listingType,
@@ -50,7 +50,7 @@ export function useAdvertiserCampaignDispatch() {
                 duration: 5000,
             });
             return true;
-        } catch (err: any) {
+        } catch (err: unknown) {
             toast.error(err.message ?? "Erro inesperado");
             return false;
         } finally {

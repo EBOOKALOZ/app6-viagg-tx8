@@ -37,7 +37,8 @@ export function useWalletOverview() {
                 console.log("[Wallet] Buscando dados para USER ID:", user.id);
 
                 // 1) Puxar Contas Financeiras Oficiais do motor pay_*
-                const { data: accounts, error: accountError } = await (supabase.from('pay_financial_accounts') as any)
+                // @ts-expect-error - Type definitions may be missing
+                const { data: accounts, error: accountError } = await supabase.from('pay_financial_accounts')
                     .select('id, account_type, available_balance')
                     .eq('owner_id', user.id)
                     .in('account_type', [
@@ -51,14 +52,15 @@ export function useWalletOverview() {
                     return defaultOverview;
                 }
 
-                const balance_reais = (accounts || []).reduce((acc: number, curr: any) => acc + Number(curr.available_balance || 0), 0);
+                const balance_reais = (accounts || []).reduce((acc: number, curr: Record<string, unknown>) => acc + Number(curr.available_balance || 0), 0);
                 const balance_cents = Math.round(balance_reais * 100);
 
                 let total_recargas = 0;
                 let total_gastos = 0;
 
                 try {
-                    const { data: statementData, error: statementError } = await (supabase.from('v_wallet_statement') as any)
+                    // @ts-expect-error - Type definitions may be missing
+                    const { data: statementData, error: statementError } = await supabase.from('v_wallet_statement')
                         .select('amount_cents, direction')
                         .eq('owner_user_id', user.id);
 
@@ -66,12 +68,12 @@ export function useWalletOverview() {
                         console.error("[Wallet] Erro ao buscar v_wallet_statement:", statementError);
                     } else if (statementData && Array.isArray(statementData)) {
                         total_recargas = statementData
-                            .filter(e => String(e.direction).toLowerCase() === 'credit')
-                            .reduce((acc, curr) => acc + ((curr as any).amount_cents || 0) / 100, 0);
+                            .filter(e => String((e as Record<string, unknown>).direction).toLowerCase() === 'credit')
+                            .reduce((acc, curr) => acc + (Number((curr as Record<string, unknown>).amount_cents) || 0) / 100, 0);
 
                         total_gastos = statementData
-                            .filter(e => String(e.direction).toLowerCase() === 'debit')
-                            .reduce((acc, curr) => acc + ((curr as any).amount_cents || 0) / 100, 0);
+                            .filter(e => String((e as Record<string, unknown>).direction).toLowerCase() === 'debit')
+                            .reduce((acc, curr) => acc + (Number((curr as Record<string, unknown>).amount_cents) || 0) / 100, 0);
                     }
                 } catch (innerErr) {
                     console.error("[Wallet] Falha não esperada no fetch do statement:", innerErr);

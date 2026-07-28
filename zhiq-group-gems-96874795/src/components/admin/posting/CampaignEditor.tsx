@@ -126,8 +126,8 @@ export function CampaignEditor() {
       const url = await uploadMediaFile(file);
       setEditor({ ...editor, mediaUrl: url, mediaType: isVideo ? "video" : "image" });
       toast.success("Arquivo enviado");
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao enviar arquivo");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao enviar arquivo");
     } finally {
       setIsUploading(false);
     }
@@ -215,8 +215,8 @@ export function CampaignEditor() {
 
       invalidateAll();
       setEditor(null);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao salvar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro desconhecido ao salvar");
     } finally {
       setIsSubmitting(false);
     }
@@ -247,8 +247,8 @@ export function CampaignEditor() {
       toast.success("Campanha cancelada");
       invalidateAll();
       queryClient.invalidateQueries({ queryKey: ["admin-campaign-queue-status"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao cancelar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro desconhecido");
     }
   };
 
@@ -274,8 +274,8 @@ export function CampaignEditor() {
       toast.success("Campanha pausada");
       invalidateAll();
       queryClient.invalidateQueries({ queryKey: ["admin-campaign-queue-status"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao pausar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao pausar");
     }
   };
 
@@ -301,8 +301,8 @@ export function CampaignEditor() {
       toast.success("Campanha retomada");
       invalidateAll();
       queryClient.invalidateQueries({ queryKey: ["admin-campaign-queue-status"] });
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao retomar");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Erro ao retomar");
     }
   };
 

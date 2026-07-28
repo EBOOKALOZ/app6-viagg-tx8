@@ -318,10 +318,10 @@ export function useMotoboyRides() {
       
       await loadRideStatus();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error accepting ride:', error);
       toast.error('Erro ao aceitar corrida', {
-        description: error?.message || 'Tente novamente',
+        description: error instanceof Error ? error.message : 'Tente novamente',
       });
       return false;
     }
@@ -361,10 +361,10 @@ export function useMotoboyRides() {
       
       await loadRideStatus();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error starting ride:', error);
       toast.error('Erro ao iniciar corrida', {
-        description: error?.message || 'Tente novamente',
+        description: error instanceof Error ? error.message : 'Tente novamente',
       });
       return false;
     }
@@ -396,10 +396,10 @@ export function useMotoboyRides() {
       routeCalculatedRef.current = null;
       clearRoute();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error completing ride:', error);
       toast.error('Erro ao finalizar corrida', {
-        description: error?.message || 'Tente novamente',
+        description: error instanceof Error ? error.message : 'Tente novamente',
       });
       return false;
     }
@@ -432,10 +432,10 @@ export function useMotoboyRides() {
       routeCalculatedRef.current = null;
       clearRoute();
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error cancelling ride:', error);
       toast.error('Erro ao cancelar corrida', {
-        description: error?.message || 'Tente novamente',
+        description: error instanceof Error ? error.message : 'Tente novamente',
       });
       return false;
     }

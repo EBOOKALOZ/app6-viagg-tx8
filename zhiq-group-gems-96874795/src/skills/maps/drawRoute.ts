@@ -3,14 +3,14 @@ import mapboxgl from "mapbox-gl";
 /**
  * Desenha uma geometria de rota em um mapa fornecido usando uma camada colorida
  */
-export function drawRoute(map: mapboxgl.Map, geometry: any, sourceId = "route", layerId = "route-line") {
+export function drawRoute(map: mapboxgl.Map, geometry: Record<string, unknown> | mapboxgl.GeoJSONGeometry, sourceId = "route", layerId = "route-line") {
     // If the source already exists, just update the data
     if (map.getSource(sourceId)) {
         const src = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
         src.setData({
             type: "Feature",
             properties: {},
-            geometry: geometry
+            geometry: geometry as mapboxgl.GeoJSONGeometry
         });
         return;
     }
@@ -21,7 +21,7 @@ export function drawRoute(map: mapboxgl.Map, geometry: any, sourceId = "route", 
         data: {
             type: "Feature",
             properties: {},
-            geometry: geometry
+            geometry: geometry as mapboxgl.GeoJSONGeometry
         }
     });
 

@@ -46,8 +46,8 @@ export default function PayWithdrawalForm() {
       });
       setAmountInput("");
       setObservation("");
-    } catch (err: any) {
-      toast.error("Erro ao solicitar saque", { description: err?.message });
+    } catch (err: unknown) {
+      toast.error("Erro na solicitação", { description: err instanceof Error ? err.message : "Erro desconhecido" });
     }
   };
 

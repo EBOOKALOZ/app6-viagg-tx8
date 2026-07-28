@@ -35,11 +35,12 @@ export function useMototaxiHistory({ initialPage = 1 }: UseMototaxiHistoryOption
       console.log('[useMototaxiHistory] Buscando histórico - página:', page);
 
       // Primeiro, buscar contagem total e total de ganhos
-      const { count, error: countError } = await (supabase
-        .from('moto_taxi_corridas_legacy' as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { count, error: countError } = await supabase
+        .from('moto_taxi_corridas_legacy')
         .select('*', { count: 'exact', head: true })
         .eq('moto_taxi_id', user.id)
-        .in('status', ['finalizada', 'cancelada']) as any);
+        .in('status', ['finalizada', 'cancelada']);
 
       if (countError) {
         console.error('[useMototaxiHistory] Erro ao contar:', countError);
@@ -49,11 +50,12 @@ export function useMototaxiHistory({ initialPage = 1 }: UseMototaxiHistoryOption
       setTotalCount(count || 0);
 
       // Buscar total de ganhos líquidos (apenas finalizadas)
-      const { data: earningsData, error: earningsError } = await (supabase
-        .from('moto_taxi_corridas_legacy' as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data: earningsData, error: earningsError } = await supabase
+        .from('moto_taxi_corridas_legacy')
         .select('net_amount, estimated_price, commission_rate')
         .eq('moto_taxi_id', user.id)
-        .eq('status', 'finalizada') as any);
+        .eq('status', 'finalizada');
 
       if (earningsError) {
         console.error('[useMototaxiHistory] Erro ao buscar ganhos:', earningsError);
@@ -76,8 +78,9 @@ export function useMototaxiHistory({ initialPage = 1 }: UseMototaxiHistoryOption
       // Buscar página atual de corridas com offset
       const offset = (page - 1) * ITEMS_PER_PAGE;
       
-      const { data: ridesData, error: ridesError } = await (supabase
-        .from('moto_taxi_corridas_legacy' as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data: ridesData, error: ridesError } = await supabase
+        .from('moto_taxi_corridas_legacy')
         .select(`
           id,
           origin_address,
@@ -98,7 +101,7 @@ export function useMototaxiHistory({ initialPage = 1 }: UseMototaxiHistoryOption
         .eq('moto_taxi_id', user.id)
         .in('status', ['finalizada', 'cancelada'])
         .order('created_at', { ascending: false })
-        .range(offset, offset + ITEMS_PER_PAGE - 1) as any);
+        .range(offset, offset + ITEMS_PER_PAGE - 1);
 
       if (ridesError) {
         console.error('[useMototaxiHistory] Erro ao buscar corridas:', ridesError);

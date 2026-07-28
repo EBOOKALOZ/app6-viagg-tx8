@@ -88,6 +88,14 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                             const el = e.currentTarget;
                             if (el.dataset.retried) { el.style.display = "none"; return; }
                             el.dataset.retried = "1";
+                            
+                            // Travel images fallback (se o bucket novo estiver bloqueado ou a imagem não existir lá)
+                            if (imgSrc.includes("/travel-public/")) {
+                                const fb = imgSrc.replace("/travel-public/", "/real-estate-original/").split("?")[0];
+                                el.src = fb;
+                                return;
+                            }
+
                             try {
                                 const res = await fetch(imgSrc);
                                 if (!res.ok) { el.style.display = "none"; return; }
@@ -176,6 +184,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                             // Imóveis e Veículos não vão para a cesta — abrem a página de detalhes
                             const cat = product.category?.toLowerCase() || "";
                             const isViewOnly =
+                                product.cta_label?.toLowerCase() === "ver mais" ||
                                 product.cta_label === "Ver Imóvel" || product.cta_label === "Conhecer" ||
                                 product.cta_label === "Ver Veículo" ||
                                 cat.includes("imóvei") || cat.includes("imovei") ||

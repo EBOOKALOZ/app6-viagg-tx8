@@ -12,7 +12,7 @@ import type { ArremateOffer } from "./useArremate";
 
 export type { ArremateOffer };
 
-function normalizeOffer(raw: any): ArremateOffer {
+function normalizeOffer(raw: unknown): ArremateOffer {
   return {
     ...raw,
     listing_id: raw.arremate_listing_id,
@@ -36,13 +36,13 @@ export function useAdvertiserArremate() {
       if (!user?.id) return [];
 
       // Listings owned by this advertiser (arremate type)
-      const { data: listings } = await (supabase.from("auction_listings") as any)
+      const { data: listings } = await (supabase.from("auction_listings") as unknown)
         .select("id")
         .eq("owner_user_id", user.id)
         .eq("listing_type", "arremate");
 
       if (!listings?.length) return [];
-      const listingIds = listings.map((l: any) => l.id);
+      const listingIds = listings.map((l: unknown) => l.id);
 
       const { data, error } = await supabase
         .from("arremate_offers")
@@ -61,13 +61,13 @@ export function useAdvertiserArremate() {
     mutationFn: async ({ offerId, accept, message }: {
       offerId: string; accept: boolean; message?: string;
     }) => {
-      const { data, error } = await supabase.rpc("respond_arremate_offer" as any, {
+      const { data, error } = await supabase.rpc("respond_arremate_offer" as unknown, {
         p_offer_id: offerId,
         p_accept: accept,
         p_response_message: message || null,
       });
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown;
       if (!result.success) throw new Error(result.error);
       return result;
     },
@@ -76,7 +76,7 @@ export function useAdvertiserArremate() {
       queryClient.invalidateQueries({ queryKey: ["advertiser-arremate-offers"] });
       queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao responder oferta");
     },
   });

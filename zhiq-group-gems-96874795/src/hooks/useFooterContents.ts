@@ -97,10 +97,10 @@ export function useFooterContents() {
       } else {
         setContents(fetchedContents);
       }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast({
         title: 'Erro ao carregar conteúdos',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: 'destructive',
       });
     } finally {
@@ -168,10 +168,10 @@ export function useFooterContents() {
       }
 
       await fetchContents();
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast({
         title: 'Erro ao salvar',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: 'destructive',
       });
     } finally {
@@ -215,10 +215,10 @@ export function useFooterContents() {
 
       await fetchContents();
       return data as FooterContent;
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast({
         title: 'Erro ao criar nova versão',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: 'destructive',
       });
       return null;
@@ -243,10 +243,10 @@ export function useFooterContents() {
       });
 
       await fetchContents();
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast({
         title: 'Erro ao excluir',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: 'destructive',
       });
     } finally {
@@ -281,10 +281,10 @@ export function useFooterContents() {
       });
 
       await fetchContents();
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       toast({
         title: 'Erro ao alterar status',
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: 'destructive',
       });
     } finally {

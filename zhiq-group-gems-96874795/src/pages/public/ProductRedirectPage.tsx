@@ -58,7 +58,7 @@ export default function ProductRedirectPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+            <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
                 <div className="text-center space-y-3 px-6">
                     <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
                         <AlertCircle className="h-8 w-8 text-red-400" />
@@ -79,7 +79,7 @@ export default function ProductRedirectPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+        <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
             <div className="text-center space-y-3">
                 <Loader2 className="h-8 w-8 animate-spin text-orange-500 mx-auto" />
                 <p className="text-sm text-gray-400">Redirecionando...</p>

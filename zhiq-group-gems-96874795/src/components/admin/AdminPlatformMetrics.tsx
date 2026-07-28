@@ -55,19 +55,19 @@ export default function AdminPlatformMetrics() {
                 { count: motoboysCount },
                 { count: deliveriesCount },
             ] = await Promise.all([
-                (supabase.from("stores") as any).select("*", { count: "exact", head: true }),
-                (supabase.from("products") as any).select("*", { count: "exact", head: true }),
-                (supabase.from("product_leads") as any).select("*", { count: "exact", head: true }),
-                (supabase.from("discount_requests") as any).select("*", { count: "exact", head: true }),
-                (supabase.from("motoboy_profiles") as any).select("*", { count: "exact", head: true }),
-                (supabase.from("service_orders") as any).select("*", { count: "exact", head: true }),
+                supabase.from("stores").select("*", { count: "exact", head: true }),
+                supabase.from("products").select("*", { count: "exact", head: true }),
+                supabase.from("product_leads").select("*", { count: "exact", head: true }),
+                supabase.from("discount_requests").select("*", { count: "exact", head: true }),
+                supabase.from("motoboy_profiles").select("*", { count: "exact", head: true }),
+                supabase.from("service_orders").select("*", { count: "exact", head: true }),
             ]);
 
             // Distinct cities
-            const { data: citiesData } = await (supabase.from("stores") as any)
+            const { data: citiesData } = await supabase.from("stores")
                 .select("city")
                 .not("city", "is", null);
-            const uniqueCities = new Set((citiesData || []).map((r: any) => r.city).filter(Boolean));
+            const uniqueCities = new Set((citiesData || []).map((r: Record<string, unknown>) => r.city).filter(Boolean));
 
             setMetrics({
                 stores: storesCount ?? 0,
@@ -82,15 +82,15 @@ export default function AdminPlatformMetrics() {
 
             // Daily leads (last 14 days)
             const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-            const { data: leadsDaily } = await (supabase.from("product_leads") as any)
+            const { data: leadsDaily } = await supabase.from("product_leads")
                 .select("created_at")
                 .gte("created_at", fourteenDaysAgo)
                 .order("created_at", { ascending: true });
 
             if (leadsDaily) {
                 const grouped: Record<string, number> = {};
-                leadsDaily.forEach((l: any) => {
-                    const day = l.created_at?.slice(0, 10);
+                leadsDaily.forEach((l: Record<string, unknown>) => {
+                    const day = l.created_at ? String(l.created_at).split("T")[0] : "";
                     if (day) grouped[day] = (grouped[day] || 0) + 1;
                 });
                 setDailyLeads(Object.entries(grouped).map(([date, count]) => ({ date, count })));

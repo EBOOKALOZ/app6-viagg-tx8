@@ -77,8 +77,8 @@ export default function PayBankAccounts() {
       }
       setShowForm(false);
       setForm({});
-    } catch (e: any) {
-      toast({ title: "Erro", description: e?.message, variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Erro", description: e instanceof Error ? e.message : "Erro desconhecido", variant: "destructive" });
     }
   };
 
@@ -117,7 +117,7 @@ export default function PayBankAccounts() {
                 <c.icon className={`h-3.5 w-3.5 ${c.color}`} />
                 <span className="text-[8px] text-muted-foreground font-extrabold uppercase tracking-[0.15em]">{c.label}</span>
               </div>
-              <p className={`font-black tabular-nums ${c.color} ${(c as any).isText ? "text-sm truncate" : "text-lg"}`}>{c.value}</p>
+              <p className={`font-black tabular-nums ${c.color} ${(c as { isText?: boolean }).isText ? "text-sm truncate" : "text-lg"}`}>{c.value}</p>
             </CardContent>
           </Card>
         ))}
@@ -253,7 +253,7 @@ export default function PayBankAccounts() {
               <div className="space-y-1"><Label className="text-[11px] font-bold">Nome da Conta</Label>
                 <Input value={form.account_label || ""} onChange={e => setForm(p => ({ ...p, account_label: e.target.value }))} placeholder="Ex: Conta Principal" className="h-8 text-sm" /></div>
               <div className="space-y-1"><Label className="text-[11px] font-bold">Tipo</Label>
-                <Select value={form.account_type || "personal"} onValueChange={v => setForm(p => ({ ...p, account_type: v as any }))}>
+                <Select value={form.account_type || "personal"} onValueChange={v => setForm(p => ({ ...p, account_type: v }))}>
                   <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="personal">Pessoal</SelectItem><SelectItem value="business">Empresarial</SelectItem></SelectContent>
                 </Select></div>

@@ -88,7 +88,7 @@ export function useWeatherEvents(lat?: number, lng?: number, city?: string, enab
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed?.ts && Date.now() - parsed.ts < CACHE_TTL) {
-          setEvents(parsed.events.map((e: any) => ({ ...e, at: new Date(e.at) })));
+          setEvents(parsed.events.map((e: Record<string, unknown>) => ({ ...e, at: new Date(String(e.at)) })));
           setExtras(parsed.extras);
           setLoading(false);
         }
@@ -107,14 +107,18 @@ export function useWeatherEvents(lat?: number, lng?: number, city?: string, enab
         if (!res.ok) throw new Error(`forecast ${res.status}`);
         const f = await res.json();
 
-        const list: WeatherEvent[] = (f.list || []).map((s: any) => {
-          const at = new Date(s.dt * 1000);
-          const gustKmh = Math.round((s.wind?.gust ?? s.wind?.speed ?? 0) * 3.6);
-          const windKmh = Math.round((s.wind?.speed ?? 0) * 3.6);
-          const rainMm = Number(s.rain?.['3h'] ?? 0);
-          const pop = Math.round((s.pop ?? 0) * 100);
-          const { cat, emoji } = categorize(s.weather?.[0]?.id ?? 800, s.weather?.[0]?.icon ?? '01d', gustKmh);
-          const desc: string = s.weather?.[0]?.description ?? '';
+        const list: WeatherEvent[] = (f.list || []).map((s: Record<string, unknown>) => {
+          const at = new Date(Number(s.dt) * 1000);
+          const s_wind = s.wind as Record<string, unknown> | undefined;
+          const gustKmh = Math.round((Number(s_wind?.gust ?? s_wind?.speed ?? 0)) * 3.6);
+          const windKmh = Math.round((Number(s_wind?.speed ?? 0)) * 3.6);
+          const s_rain = s.rain as Record<string, unknown> | undefined;
+          const rainMm = Number(s_rain?.['3h'] ?? 0);
+          const pop = Math.round(Number(s.pop ?? 0) * 100);
+          const s_weather = s.weather as Record<string, unknown>[] | undefined;
+          const { cat, emoji } = categorize(Number(s_weather?.[0]?.id ?? 800), String(s_weather?.[0]?.icon ?? '01d'), gustKmh);
+          const desc: string = String(s_weather?.[0]?.description ?? '');
+          const s_main = s.main as Record<string, unknown> | undefined;
           return {
             at,
             hourLabel: at.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -122,7 +126,7 @@ export function useWeatherEvents(lat?: number, lng?: number, city?: string, enab
             title: desc.charAt(0).toUpperCase() + desc.slice(1),
             category: cat,
             intensity: intensityOf(cat, rainMm, pop, gustKmh),
-            temp: Math.round(s.main?.temp ?? 0),
+            temp: Math.round(Number(s_main?.temp ?? 0)),
             pop,
             rainMm,
             windKmh,

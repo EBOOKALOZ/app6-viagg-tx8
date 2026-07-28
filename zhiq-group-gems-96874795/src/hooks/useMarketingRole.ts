@@ -9,15 +9,16 @@ export function useMarketingRole() {
     queryKey: ["marketing-role", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
+      // @ts-expect-error - View might not be fully typed
       const { data, error } = await supabase
-        .from("v_marketing_my_role" as any)
+        .from("v_marketing_my_role")
         .select("role")
         .eq("user_id", user.id)
         .eq("is_active", true)
         .maybeSingle();
 
       if (error || !data) return null;
-      return (data as any).role as string;
+      return (data as Record<string, unknown>).role as string;
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000,

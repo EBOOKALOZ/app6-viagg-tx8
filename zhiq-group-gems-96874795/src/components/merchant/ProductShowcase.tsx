@@ -509,7 +509,7 @@ export default function ProductShowcase({ storeId }: ProductShowcaseProps) {
                         </Button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-[#F5E62B] p-4 rounded-3xl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-institutional-yellow p-4 rounded-3xl">
                         {products.map(p => {
                             const style = parseCardStyle(p.cta_label);
                             const imgSrc = normalizeImageUrl(p.image_url);

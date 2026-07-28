@@ -82,7 +82,7 @@ export default function PayWithdrawalsTab() {
     ? all.filter(w =>
         w.id.includes(search) ||
         w.idempotency_key?.includes(search) ||
-        (w as any).provider_payout_id?.toString().includes(search)
+        (w as { provider_payout_id?: string | number }).provider_payout_id?.toString().includes(search)
       )
     : all;
 
@@ -97,8 +97,8 @@ export default function PayWithdrawalsTab() {
       toast({ title: "Saque solicitado", description: "Aguardando aprovação" });
       setShowNewForm(false);
       setAmount(""); setDestAccountId(""); setObservation("");
-    } catch (e: any) {
-      toast({ title: "Erro", description: e?.message || "Falha ao solicitar", variant: "destructive" });
+    } catch (e: unknown) {
+      toast({ title: "Erro", description: e instanceof Error ? e.message : "Falha ao solicitar", variant: "destructive" });
     }
   };
 
@@ -139,7 +139,7 @@ export default function PayWithdrawalsTab() {
                 <span className="text-[8px] text-muted-foreground font-extrabold uppercase tracking-[0.15em]">{c.label}</span>
               </div>
               <p className={`text-lg font-black tabular-nums ${c.color}`}>
-                {(c as any).isAmount ? c.value : c.value}
+                {(c as { isAmount?: boolean }).isAmount ? c.value : c.value}
               </p>
             </CardContent>
           </Card>

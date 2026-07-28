@@ -36,8 +36,8 @@ export async function unlockGlobalAudio(): Promise<boolean> {
   console.log('[AudioUnlock] Tentativa', unlockAttempts);
 
   try {
-    // ESTRATÉGIA 1: Criar e resumir AudioContext com oscilador
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    // @ts-expect-error - vendor prefix
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (AudioContextClass) {
       const audioContext = new AudioContextClass();
       

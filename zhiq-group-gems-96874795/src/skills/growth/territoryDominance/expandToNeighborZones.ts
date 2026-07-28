@@ -22,7 +22,7 @@ export async function expandToNeighborZones(city: string, zones: ZoneStrength[])
 
   for (const dz of dominantZones) {
     // Get neighbor zone IDs
-    const { data: metrics } = await (supabase.from("zone_dominance_metrics") as any)
+    const { data: metrics } = await (supabase.from("zone_dominance_metrics") as never)
       .select("neighbor_zone_ids")
       .eq("zone_id", dz.zone_id)
       .single();

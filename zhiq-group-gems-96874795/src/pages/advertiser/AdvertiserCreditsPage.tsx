@@ -82,6 +82,12 @@ export default function AdvertiserCreditsPage() {
     : isFretes ? "fretes" : isViagens ? "viagens" : "mercado";
   const seg = SEGMENT_META[segKey];
 
+  // Fretes migrou o desbloqueio para a carteira em R$ (wallet_unlock_contact):
+  // não há mais custo fixo em créditos por desbloqueio, então a estimativa de
+  // "~N desbloqueios" e o card de regra "Desbloqueio WhatsApp" saem só para
+  // fretes. Os demais segmentos seguem no modelo de créditos (inalterado).
+  const showUnlockEstimate = isSpecialModule && !isFretes;
+
   // ── Rule costs — UNCHANGED ───────────────────────────────────────────────────
   const { data: ruleCosts = { click: 6, interest: 9, whatsapp: 12 } } = useQuery({
     queryKey: ["credit-rule-costs", isVeiculos ? "vehicle" : isServicos ? "service" : isFretes ? "freight" : isViagens ? "travel" : "real_estate"],
@@ -307,7 +313,7 @@ export default function AdvertiserCreditsPage() {
             {pkgs.map((p) => {
               const totalCredits = (p.credits_amount || 0) + (p.bonus_credits || 0);
               const costPerCredit = (p.price_brl > 0 && totalCredits > 0) ? (p.price_brl / totalCredits) : 0;
-              const estWhatsApp = (isSpecialModule && totalCredits > 0 && ruleCosts.whatsapp > 0)
+              const estWhatsApp = (showUnlockEstimate && totalCredits > 0 && ruleCosts.whatsapp > 0)
                 ? Math.floor(totalCredits / ruleCosts.whatsapp) : 0;
               const estClick = (isSpecialModule && totalCredits > 0 && ruleCosts.click > 0)
                 ? Math.floor(totalCredits / ruleCosts.click) : 0;
@@ -398,15 +404,17 @@ export default function AdvertiserCreditsPage() {
                         {isSpecialModule && totalCredits > 0 && (
                           <div className="bg-[#0D0F12] rounded-2xl p-4 space-y-3 border border-[#2A3038] mt-2">
                             <p className="text-[10px] text-[#A7B0BE] font-black uppercase tracking-widest">Estimativa de uso</p>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className={cn("grid gap-3", showUnlockEstimate ? "grid-cols-2" : "grid-cols-1")}>
                               <div className="text-center bg-[#1B1F24] rounded-xl py-3">
                                 <p className="text-[#FF6A00] font-black text-xl">{estClick}</p>
                                 <p className="text-[9px] text-[#A7B0BE] uppercase tracking-wider mt-0.5">cliques</p>
                               </div>
-                              <div className="text-center bg-[#1B1F24] rounded-xl py-3">
-                                <p className="text-emerald-400 font-black text-xl">{estWhatsApp}</p>
-                                <p className="text-[9px] text-[#A7B0BE] uppercase tracking-wider mt-0.5">desbloqueios</p>
-                              </div>
+                              {showUnlockEstimate && (
+                                <div className="text-center bg-[#1B1F24] rounded-xl py-3">
+                                  <p className="text-emerald-400 font-black text-xl">{estWhatsApp}</p>
+                                  <p className="text-[9px] text-[#A7B0BE] uppercase tracking-wider mt-0.5">desbloqueios</p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -580,11 +588,19 @@ export default function AdvertiserCreditsPage() {
                 <MessageCircle className="w-5 h-5" />
               </div>
               <div className="space-y-2">
-                <p className="text-[#FF6A00] font-black text-sm uppercase tracking-wide">Cobrança só no desbloqueio</p>
-                <p className="text-[#C9D2DE] text-[13px] leading-relaxed">
-                  <strong>Até você desbloquear o WhatsApp do seu cliente, tudo fica sem cobrança</strong> — o consumo
-                  é apenas somado e só <strong>entra na conta no momento do desbloqueio do contato</strong>.
-                </p>
+                <p className="text-[#FF6A00] font-black text-sm uppercase tracking-wide">Cobrança só ao liberar o contato</p>
+                {isFretes ? (
+                  <p className="text-[#C9D2DE] text-[13px] leading-relaxed">
+                    <strong>Você só paga quando libera o contato de um interessado</strong> — uma comissão
+                    em <strong>reais</strong>, debitada direto da sua <strong>carteira</strong>. Navegar e
+                    receber interessados continua sem cobrança.
+                  </p>
+                ) : (
+                  <p className="text-[#C9D2DE] text-[13px] leading-relaxed">
+                    <strong>Até você desbloquear o WhatsApp do seu cliente, tudo fica sem cobrança</strong> — o consumo
+                    é apenas somado e só <strong>entra na conta no momento do desbloqueio do contato</strong>.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -683,7 +699,9 @@ export default function AdvertiserCreditsPage() {
             {[
               { icon: MousePointer, cost: ruleCosts.click,    label: "Clique no anúncio",    desc: "Debitado quando um usuário clica e visualiza o seu anúncio.",              color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20"    },
               { icon: Star,         cost: ruleCosts.interest, label: "Interesse do cliente", desc: "Debitado quando um usuário clica no botão INTERESSE do seu anúncio.",    color: "text-yellow-400",  bg: "bg-yellow-500/10",  border: "border-yellow-500/20"  },
-              { icon: MessageCircle,cost: ruleCosts.whatsapp, label: "Desbloqueio WhatsApp", desc: "Debitado quando você desbloqueia o contato direto do cliente interessado.",color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+              // Desbloqueio via créditos foi aposentado em Fretes (agora é % em
+              // R$ pela carteira). O card só aparece nos demais segmentos.
+              ...(showUnlockEstimate ? [{ icon: MessageCircle, cost: ruleCosts.whatsapp, label: "Desbloqueio WhatsApp", desc: "Debitado quando você desbloqueia o contato direto do cliente interessado.", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" }] : []),
             ].map((item, i) => (
               <div key={i} className={cn("bg-[#1B1F24] border rounded-3xl p-6 flex flex-col gap-4", item.border)}>
                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center", item.bg)}>

@@ -120,13 +120,13 @@ Deno.serve(async (req) => {
   const { data: groups } = await svc
     .from("whatsapp_groups")
     .select("id, group_name, group_link, city_name, state_code, neighborhood, members_count, is_active, validation_status, created_at, last_posted_at")
-    .in("id", targets.map((t: any) => t.group_id));
+    .in("id", targets.map((t: Record<string, unknown>) => t.group_id));
 
   let analyzed = 0;
   const results: unknown[] = [];
 
-  for (const t of targets as any[]) {
-    const g = (groups ?? []).find((x: any) => x.id === t.group_id);
+  for (const t of targets as Record<string, unknown>[]) {
+    const g = (groups ?? []).find((x: Record<string, unknown>) => x.id === t.group_id);
     if (!g) continue;
 
     // ── VERIFICAÇÃO REAL DO LINK (prévia pública) ──────────────────

@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
+import { resolveTravelMediaUrl } from "@/lib/viagem/travelMedia";
 import { cn } from "@/lib/utils";
 import { Plane, PlusCircle, List, MessageSquare, Coins, Wallet, Pencil, Loader2, ArrowRight, Eye, TrendingUp, Heart } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -37,13 +37,13 @@ export default function AdvertiserViagemPage() {
       // Mídia de todos os anúncios em UMA consulta (.in) — sem N+1.
       const ids = list.map((s: any) => s.id);
       const { data: mediaRows } = await (supabase.from("travel_media") as any)
-        .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+        .select("listing_id, bucket, storage_path, public_url, moderation_status, sort_order")
         .in("listing_id", ids)
         .order("sort_order", { ascending: true });
       const thumbMap = new Map<string, string>();
       for (const m of (mediaRows as any[]) || []) {
         if (!thumbMap.has(m.listing_id)) {
-          const url = resolveTravelMediaRow(m);
+          const url = resolveTravelMediaUrl(m);
           if (url) thumbMap.set(m.listing_id, url);
         }
       }

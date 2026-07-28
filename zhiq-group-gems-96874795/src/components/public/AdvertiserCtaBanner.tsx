@@ -33,7 +33,7 @@ export function AdvertiserCtaBanner({
         </div>
         <button
           onClick={() => navigate(to)}
-          className="shrink-0 bg-[#F5E62B] hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
+          className="shrink-0 bg-institutional-yellow hover:brightness-95 text-zinc-900 font-black text-sm px-6 py-3 rounded-2xl shadow-lg transition-all whitespace-nowrap"
         >
           {buttonLabel} →
         </button>

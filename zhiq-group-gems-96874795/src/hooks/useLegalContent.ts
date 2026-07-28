@@ -61,9 +61,9 @@ export function useLegalContent(type: string | undefined) {
 
         if (qErr) throw qErr;
         setContent((data as LegalContent) || null);
-      } catch (err: any) {
+      } catch (err: Error | unknown) {
         console.error('Error fetching legal content:', err);
-        setError(err.message || 'Erro ao carregar conteúdo');
+        setError(err instanceof Error ? err.message : 'Erro ao carregar conteúdo');
       } finally {
         setLoading(false);
       }

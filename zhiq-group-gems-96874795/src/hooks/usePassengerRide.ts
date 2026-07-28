@@ -166,14 +166,15 @@ export function usePassengerRide() {
       console.log('[usePassengerRide] Buscando corrida ativa para passageiro:', user.id);
       
       // Query ÚNICA na tabela moto_taxi_corridas_legacy
-      const { data, error } = await (supabase
-        .from('moto_taxi_corridas_legacy' as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase
+        .from('moto_taxi_corridas_legacy')
         .select('*')
         .eq('passenger_id', user.id)
         .in('status', ['pesquisando', 'aceita', 'a_caminho', 'em_andamento'])
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle() as any);
+        .maybeSingle();
       
       if (error) {
         console.error('[usePassengerRide] Erro ao buscar corrida:', error);
@@ -292,11 +293,12 @@ export function usePassengerRide() {
       
       pollInterval = setInterval(async () => {
         try {
-          const { data } = await (supabase
-            .from('moto_taxi_corridas_legacy' as any)
+          // @ts-expect-error - Type definitions may be missing
+          const { data } = await supabase
+            .from('moto_taxi_corridas_legacy')
             .select('*')
             .eq('id', currentRide.id)
-            .single() as any);
+            .single();
           
           if (!data || data.passenger_id !== user.id) return;
           
@@ -422,8 +424,9 @@ export function usePassengerRide() {
         // 2B. MOTO-TÁXI: INSERT em moto_taxi_corridas_legacy (comportamento original)
         console.log('[usePassengerRide] 🏍️ Inserindo em moto_taxi_corridas_legacy');
         
-        const { data, error } = await (supabase
-          .from('moto_taxi_corridas_legacy' as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { data, error } = await supabase
+          .from('moto_taxi_corridas_legacy')
           .insert({
             passenger_id: user.id,
             status: 'pesquisando',
@@ -439,7 +442,7 @@ export function usePassengerRide() {
             passenger_count: params.passengerCount || 1,
           })
           .select()
-          .single() as any);
+          .single();
 
         if (error) throw error;
         
@@ -490,7 +493,7 @@ export function usePassengerRide() {
       });
       
       return currentRide;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[usePassengerRide] Erro ao criar:', error);
       toast.error('Erro ao solicitar corrida');
       return null;
@@ -506,15 +509,16 @@ export function usePassengerRide() {
     if (!currentRide?.id) return;
 
     try {
-      await (supabase
-        .from('moto_taxi_corridas_legacy' as any)
+      // @ts-expect-error - Type definitions may be missing
+      await supabase
+        .from('moto_taxi_corridas_legacy')
         .update({ 
           status: 'cancelada',
           canceled_at: new Date().toISOString(),
           canceled_by: 'passenger'
         })
         .eq('id', currentRide.id)
-        .eq('passenger_id', user?.id) as any);
+        .eq('passenger_id', user?.id);
 
       toast.info('Corrida cancelada');
       setCurrentRide(null);

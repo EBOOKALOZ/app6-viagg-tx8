@@ -95,9 +95,9 @@ export function useAdvertiserLeadsDashboard() {
     refetchInterval: 30_000,
     queryFn: async (): Promise<CreditDashboard> => {
       const { data, error } = await supabase.rpc(
-        "get_my_advertiser_credit_dashboard" as any
+        "get_my_advertiser_credit_dashboard" as unknown
       );
-      const result = data as any;
+      const result = data as unknown;
       if (error || !result?.success) {
         return {
           available_credits: 0,
@@ -126,9 +126,9 @@ export function useAdvertiserLeadsDashboard() {
     refetchInterval: 20_000,
     queryFn: async (): Promise<PendingSummary> => {
       const { data } = await supabase.rpc(
-        "get_advertiser_pending_contact_summary" as any
+        "get_advertiser_pending_contact_summary" as unknown
       );
-      const r = data as any;
+      const r = data as unknown;
       return {
         pending_count: r?.pending_count ?? 0,
         credits_needed: r?.credits_needed ?? 0,
@@ -144,7 +144,7 @@ export function useAdvertiserLeadsDashboard() {
     enabled: !!user?.id,
     refetchInterval: 60_000,
     queryFn: async (): Promise<LeadItem[]> => {
-      const { data, error } = await (supabase.from("advertiser_contact_intentions") as any)
+      const { data, error } = await (supabase.from("advertiser_contact_intentions") as unknown)
         .select("*")
         .eq("advertiser_user_id", user!.id)
         .neq("status", "cancelled")
@@ -213,7 +213,7 @@ export function useAdvertiserLeadsDashboard() {
 
       // Marca a intenção como desbloqueada (best-effort) para refletir na UI
       try {
-        await (supabase.from("advertiser_contact_intentions") as any)
+        await (supabase.from("advertiser_contact_intentions") as unknown)
           .update({ status: "unlocked", unlock_paid_at: new Date().toISOString() })
           .eq("id", intentionId);
       } catch { /* RLS/estado — não bloqueia o desbloqueio já pago */ }
@@ -232,7 +232,7 @@ export function useAdvertiserLeadsDashboard() {
   // ── Poll status de compra específica ──────────────────────────────────────
   const pollPurchaseStatus = useCallback(
     async (purchaseId: string): Promise<PurchaseStatusType | null> => {
-      const { data, error } = await (supabase.from("advertiser_credit_purchases") as any)
+      const { data, error } = await (supabase.from("advertiser_credit_purchases") as unknown)
         .select("payment_status, checkout_payload, paid_at")
         .eq("id", purchaseId)
         .maybeSingle();

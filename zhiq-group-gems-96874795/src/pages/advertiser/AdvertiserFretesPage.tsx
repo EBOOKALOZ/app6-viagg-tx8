@@ -18,7 +18,7 @@ interface Action { to: string; icon: LucideIcon; title: string; desc: string; }
 const ACTIONS: Action[] = [
   { to: "/anunciante/fretes/anuncios/novo/frete", icon: PlusCircle, title: "Anunciar frete", desc: "Publique um novo anúncio" },
   { to: "/anunciante/fretes/mensagens", icon: MessageSquare, title: "Interessados", desc: "Mensagens e contatos recebidos" },
-  { to: "/anunciante/fretes/creditos", icon: Coins, title: "Créditos", desc: "Compre créditos p/ desbloquear contatos" },
+  { to: "/anunciante/fretes/creditos", icon: Coins, title: "Créditos", desc: "Impulsione e destaque seus anúncios" },
 ];
 
 export default function AdvertiserFretesPage() {
@@ -282,8 +282,8 @@ export default function AdvertiserFretesPage() {
       <div className="flex items-start gap-2 bg-blue-50 rounded-2xl p-3 border border-blue-100">
         <Coins className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
         <p className="text-[11px] text-blue-700 leading-relaxed">
-          Para falar com um interessado, você desbloqueia o contato dele usando créditos.
-          O consumo só entra na conta no desbloqueio — e ao adquirir um pacote os créditos são abatidos.
+          Para falar com um interessado, você libera o contato dele em <strong>Interessados</strong>,
+          pagando uma comissão em reais direto da sua carteira — só no momento em que libera.
         </p>
       </div>
     </div>

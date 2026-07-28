@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,9 @@ export const ServiceDetailPage = () => {
     interestType: 'whatsapp_click' | 'message_request';
   }>({ open: false, interestType: 'message_request' });
 
+  const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+  const isStoreContext = outletContext?.isStoreContext;
+
   const {
     data: service,
     isLoading,
@@ -46,7 +49,7 @@ export const ServiceDetailPage = () => {
         .from('service_listings' as any)
         // NÃO usar select('*'): total_price é base INTERNA da comissão de 2% e
         // não pode vazar no payload público. Selecionar só o que a página exibe.
-        .select('id, title, description, service_type, price_label, city, state, neighborhood, public_address_label, visibility_status, owner_user_id, store_id, profile_id')
+        .select('id, title, description, service_type, price_label, city, state, neighborhood, public_address_label, visibility_status, owner_user_id, store_id, profile_id, latitude, longitude')
         .eq('id', id)
         .maybeSingle();
 
@@ -128,7 +131,7 @@ export const ServiceDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+      <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-zinc-900 animate-spin mx-auto" />
           <p className="font-black text-zinc-400 uppercase tracking-widest text-xs">
@@ -141,7 +144,7 @@ export const ServiceDetailPage = () => {
 
   if (error || !service) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5E62B] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-institutional-yellow p-6">
         <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl p-10 text-center space-y-6">
           <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
             <Info className="w-10 h-10 text-red-500" />
@@ -178,9 +181,7 @@ export const ServiceDetailPage = () => {
     ? media.map((m: any) => getListingImageUrl(m.original_storage_path, 'original')!).filter(Boolean)
     : (mainImageUrl ? [mainImageUrl] : []);
 
-  return (
-    <>
-      <MarketLayout hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🔧 Serviços" myAccountPath="/minha-conta">
+  const content = (
         <DetailPageLayout
           bg="#F5E62B"
           accent="#7c3aed"
@@ -244,7 +245,19 @@ export const ServiceDetailPage = () => {
             href: `/servicos/${s.id}`,
           }))}
         />
-      </MarketLayout>
+  );
+
+  return (
+    <>
+      {isStoreContext ? (
+          <div className="min-h-screen relative bg-institutional-yellow">
+              {content}
+          </div>
+      ) : (
+          <MarketLayout hideCart={true} mainClassName="min-h-screen relative bg-institutional-yellow" blueFooter blueFooterLabel="🛠️ Serviços" myAccountPath="/minha-conta">
+              {content}
+          </MarketLayout>
+      )}
 
       {id && service && (
         <ContactIntentionModal

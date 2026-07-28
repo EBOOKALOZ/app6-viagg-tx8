@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const CACHE_TTL = 5 * 60 * 1000;
-let cached: { data: any; ts: number } = { data: null, ts: 0 };
+let cached: { data: Record<string, unknown> | null; ts: number } = { data: null, ts: 0 };
 
 async function fetchAwesomeApi() {
   const res = await fetch(
@@ -65,7 +65,7 @@ serve(async (req) => {
     });
   }
 
-  let data: any = null;
+  let data: Record<string, unknown> | null = null;
 
   // Try primary source
   try {

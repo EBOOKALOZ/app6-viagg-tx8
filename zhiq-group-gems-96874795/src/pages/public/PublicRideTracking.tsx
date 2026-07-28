@@ -141,7 +141,7 @@ export default function PublicRideTracking() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] to-[#F5E62B] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] to-institutional-yellow flex items-center justify-center">
         <Loader2 className="w-10 h-10 text-white animate-spin" />
       </div>
     );
@@ -149,7 +149,7 @@ export default function PublicRideTracking() {
 
   if (notFound || !ride) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] to-[#F5E62B] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] to-institutional-yellow flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full shadow-2xl space-y-4">
           <XCircle className="w-16 h-16 text-red-400 mx-auto" />
           <h2 className="text-xl font-black text-zinc-900">Corrida não encontrada</h2>
@@ -171,7 +171,7 @@ export default function PublicRideTracking() {
   const currentStepIdx = STATUS_TIMELINE.indexOf(ride.status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-[#F5E62B]">
+    <div className="min-h-screen bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-institutional-yellow">
       {/* Header */}
       <header className="pt-8 pb-4 px-4 text-center">
         <div className="flex items-center justify-center gap-2 mb-1">

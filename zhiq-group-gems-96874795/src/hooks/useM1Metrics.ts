@@ -123,7 +123,8 @@ export function useM1Metrics() {
   const { data: merchantStoreId } = useQuery({
     queryKey: ["m1-store-id", userId],
     queryFn: async () => {
-      const { data } = await (supabase.from("merchant_stores") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data } = await supabase.from("merchant_stores")
         .select("id")
         .eq("user_id", userId)
         .maybeSingle();
@@ -143,7 +144,8 @@ export function useM1Metrics() {
     queryFn: async () => {
       // Try RPC first
       try {
-        const { data, error } = await (supabase.rpc as any)("m1_get_merchant_metrics", {
+        // @ts-expect-error - RPC dynamic call
+        const { data, error } = await supabase.rpc("m1_get_merchant_metrics", {
           p_merchant_store_id: merchantStoreId,
           p_from: from,
           p_to: to,
@@ -157,7 +159,8 @@ export function useM1Metrics() {
 
       // Fallback: direct query from m1_billing_events
       console.debug("[useM1Metrics] RPC unavailable, using direct query fallback");
-      const { data: events } = await (supabase.from("m1_billing_events") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: events } = await supabase.from("m1_billing_events")
         .select("event_type, source_type, product_id, city, bairro, sale_value_cents, campaign_id, created_at")
         .eq("merchant_store_id", merchantStoreId)
         .gte("created_at", from)
@@ -165,18 +168,18 @@ export function useM1Metrics() {
         .order("created_at", { ascending: false })
         .limit(5000);
 
-      const rows = (events || []) as any[];
+      const rows = (events || []) as Record<string, unknown>[];
       const store_views = rows.filter(r => r.event_type === "store_view").length;
       const product_clicks = rows.filter(r => r.event_type === "product_click").length;
       const buy_clicks = rows.filter(r => r.event_type === "buy_click").length;
       const purchases = rows.filter(r => r.event_type === "purchase_completed").length;
       const total_sale_cents = rows.filter(r => r.event_type === "purchase_completed")
-        .reduce((s, r) => s + (r.sale_value_cents || 0), 0);
+        .reduce((s, r) => s + (Number(r.sale_value_cents) || 0), 0);
 
       // by_source
       const srcMap = new Map<string, { sv: number; pc: number; bc: number; pu: number }>();
       rows.forEach(r => {
-        const key = r.source_type || "direct";
+        const key = (r.source_type as string) || "direct";
         const cur = srcMap.get(key) || { sv: 0, pc: 0, bc: 0, pu: 0 };
         if (r.event_type === "store_view") cur.sv++;
         else if (r.event_type === "product_click") cur.pc++;
@@ -191,8 +194,8 @@ export function useM1Metrics() {
       // by_bairro
       const bairroMap = new Map<string, { city: string; sv: number; pc: number; bc: number; pu: number }>();
       rows.forEach(r => {
-        const bKey = r.bairro || "Desconhecido";
-        const cur = bairroMap.get(bKey) || { city: r.city || "", sv: 0, pc: 0, bc: 0, pu: 0 };
+        const bKey = (r.bairro as string) || "Desconhecido";
+        const cur = bairroMap.get(bKey) || { city: (r.city as string) || "", sv: 0, pc: 0, bc: 0, pu: 0 };
         if (r.event_type === "store_view") cur.sv++;
         else if (r.event_type === "product_click") cur.pc++;
         else if (r.event_type === "buy_click") cur.bc++;
@@ -206,12 +209,13 @@ export function useM1Metrics() {
       // by_product
       const prodMap = new Map<string, { sv: number; pc: number; bc: number; pu: number }>();
       rows.filter(r => r.product_id).forEach(r => {
-        const cur = prodMap.get(r.product_id) || { sv: 0, pc: 0, bc: 0, pu: 0 };
+        const productId = r.product_id as string;
+        const cur = prodMap.get(productId) || { sv: 0, pc: 0, bc: 0, pu: 0 };
         if (r.event_type === "store_view") cur.sv++;
         else if (r.event_type === "product_click") cur.pc++;
         else if (r.event_type === "buy_click") cur.bc++;
         else if (r.event_type === "purchase_completed") cur.pu++;
-        prodMap.set(r.product_id, cur);
+        prodMap.set(productId, cur);
       });
       const by_product: M1ProductBreakdown[] = Array.from(prodMap.entries()).map(([k, v]) => ({
         product_id: k, store_views: v.sv, product_clicks: v.pc, buy_clicks: v.bc, purchases: v.pu,
@@ -220,7 +224,7 @@ export function useM1Metrics() {
       // daily
       const dayMap = new Map<string, { sv: number; pc: number; bc: number; pu: number }>();
       rows.forEach(r => {
-        const dt = r.created_at?.split("T")[0] || "";
+        const dt = (r.created_at as string)?.split("T")[0] || "";
         if (!dt) return;
         const cur = dayMap.get(dt) || { sv: 0, pc: 0, bc: 0, pu: 0 };
         if (r.event_type === "store_view") cur.sv++;
@@ -236,30 +240,32 @@ export function useM1Metrics() {
       // by_campaign
       const campMap = new Map<string, { sv: number; pc: number; bc: number; pu: number }>();
       rows.filter(r => r.campaign_id).forEach(r => {
-        const cur = campMap.get(r.campaign_id) || { sv: 0, pc: 0, bc: 0, pu: 0 };
+        const campaignId = r.campaign_id as string;
+        const cur = campMap.get(campaignId) || { sv: 0, pc: 0, bc: 0, pu: 0 };
         if (r.event_type === "store_view") cur.sv++;
         else if (r.event_type === "product_click") cur.pc++;
         else if (r.event_type === "buy_click") cur.bc++;
         else if (r.event_type === "purchase_completed") cur.pu++;
-        campMap.set(r.campaign_id, cur);
+        campMap.set(campaignId, cur);
       });
       const by_campaign: M1CampaignBreakdown[] = Array.from(campMap.entries()).map(([k, v]) => ({
         campaign_id: k, store_views: v.sv, product_clicks: v.pc, buy_clicks: v.bc, purchases: v.pu,
       })).sort((a, b) => (b.product_clicks + b.buy_clicks) - (a.product_clicks + a.buy_clicks)).slice(0, 10);
 
       // Billing totals
-      const { data: billingData } = await (supabase.from("m1_billing_entries") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: billingData } = await supabase.from("m1_billing_entries")
         .select("charge_amount_cents, sale_value_cents")
         .eq("merchant_store_id", merchantStoreId)
         .eq("status", "charged")
         .gte("created_at", from)
         .lte("created_at", to);
-      const billingRows = (billingData || []) as any[];
-      const total_charged_cents = billingRows.reduce((s, r) => s + (r.charge_amount_cents || 0), 0);
+      const billingRows = (billingData || []) as Record<string, unknown>[];
+      const total_charged_cents = billingRows.reduce((s, r) => s + (Number(r.charge_amount_cents) || 0), 0);
 
-      const purchaseEvents = rows.filter(r => r.event_type === "purchase_completed" && r.sale_value_cents > 0);
+      const purchaseEvents = rows.filter(r => r.event_type === "purchase_completed" && Number(r.sale_value_cents) > 0);
       const avg_ticket_cents = purchaseEvents.length > 0
-        ? Math.round(purchaseEvents.reduce((s, r) => s + r.sale_value_cents, 0) / purchaseEvents.length)
+        ? Math.round(purchaseEvents.reduce((s, r) => s + Number(r.sale_value_cents), 0) / purchaseEvents.length)
         : 0;
 
       const conversion_rate = store_views > 0
@@ -280,18 +286,19 @@ export function useM1Metrics() {
   // ── Product titles enrichment ──
   const productIds = useMemo(() => {
     if (!metricsRaw?.by_product) return [];
-    return metricsRaw.by_product.map((p: any) => p.product_id).filter(Boolean);
+    return metricsRaw.by_product.map((p: M1ProductBreakdown) => p.product_id).filter(Boolean);
   }, [metricsRaw]);
 
   const { data: productTitles } = useQuery({
     queryKey: ["m1-product-titles", productIds],
     queryFn: async () => {
       if (!productIds.length) return {};
-      const { data } = await (supabase.from("merchant_marketing_products") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data } = await supabase.from("merchant_marketing_products")
         .select("id, title")
         .in("id", productIds);
       const map: Record<string, string> = {};
-      (data || []).forEach((p: any) => { map[p.id] = p.title; });
+      (data || []).forEach((p: Record<string, unknown>) => { map[p.id as string] = p.title as string; });
       return map;
     },
     enabled: productIds.length > 0,
@@ -306,7 +313,8 @@ export function useM1Metrics() {
   } = useQuery({
     queryKey: ["m1-extract", merchantStoreId, period, extractPage],
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)("m1_get_billing_extract", {
+      // @ts-expect-error - RPC dynamic call
+      const { data, error } = await supabase.rpc("m1_get_billing_extract", {
         p_merchant_store_id: merchantStoreId,
         p_from: from,
         p_to: to,
@@ -327,7 +335,7 @@ export function useM1Metrics() {
     return {
       ...EMPTY_METRICS,
       ...metricsRaw,
-      by_product: (metricsRaw.by_product || []).map((p: any) => ({
+      by_product: (metricsRaw.by_product || []).map((p: M1ProductBreakdown) => ({
         ...p,
         product_title: productTitles?.[p.product_id] || `Produto ${(p.product_id || "").slice(0, 8)}`,
       })),

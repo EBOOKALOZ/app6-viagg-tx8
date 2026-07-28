@@ -58,8 +58,8 @@ export function useMotoboyWalletAccount() {
 
       // FONTE OFICIAL: conta pay_* (motoboy_wallet). A tabela legada
       // financial_accounts não recebe mais nada — usar o id dela deixava
-      // Resumo Hoje/timeline/gráfico eternamente zerados.
-      const { data, error } = await (supabase as any)
+      // @ts-expect-error - Some view or table typings may be missing in Supabase generated types
+      const { data, error } = await supabase
         .from('pay_financial_accounts')
         .select('id, available_balance')
         .eq('owner_type', 'motoboy_profile')
@@ -103,7 +103,8 @@ export function useMotoboyBalance() {
       // FONTE OFICIAL: carteira pay_* (motoboy_wallet). A tabela legada
       // financial_accounts foi descontinuada como fonte de saldo — o dinheiro
       // real (liquidação pay_release_ride_payment) cai em pay_financial_accounts.
-      const { data, error } = await (supabase as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data, error } = await supabase
         .from('pay_financial_accounts')
         .select('available_balance, current_balance')
         .eq('owner_type', 'motoboy_profile')
@@ -168,7 +169,8 @@ export function useTodaySummary() {
 
       // Extrato OFICIAL do motor pay_* (v_wallet_statement) — a tabela
       // legada ledger_entries não recebe mais lançamentos.
-      const { data, error } = await (supabase as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data, error } = await supabase
         .from('v_wallet_statement')
         .select('amount_cents, direction, created_at')
         .eq('owner_user_id', user.id)
@@ -212,7 +214,8 @@ export function useFinancialTimeline() {
 
       // Extrato OFICIAL pay_* (v_wallet_statement) — débitos chegam com
       // direction='debit' e viram cents negativos p/ manter o shape antigo.
-      const { data, error } = await (supabase as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data, error } = await supabase
         .from('v_wallet_statement')
         .select('amount_cents, direction, created_at, source_type, source_id')
         .eq('owner_user_id', user.id)
@@ -225,15 +228,15 @@ export function useFinancialTimeline() {
         return [];
       }
 
-      const entries: LedgerEntry[] = ((data || []) as any[]).map((r, i) => ({
+      const entries: LedgerEntry[] = ((data || []) as Record<string, unknown>[]).map((r, i) => ({
         id: `${r.source_id ?? 'mov'}-${r.created_at}-${i}`,
         amount_cents: r.direction === 'debit'
           ? -Number(r.amount_cents || 0)
           : Number(r.amount_cents || 0),
-        created_at: r.created_at,
-        entry_type: r.source_type,
+        created_at: r.created_at as string,
+        entry_type: r.source_type as string | null,
         reference_type: null,
-        reference_id: r.source_id ?? null,
+        reference_id: (r.source_id as string) ?? null,
         batch_id: null,
       }));
 
@@ -245,22 +248,23 @@ export function useFinancialTimeline() {
         .map((e) => e.reference_id as string);
 
       if (serviceIds.length > 0) {
-        const { data: escrows, error: escrowError } = await (supabase
-          .from('pay_escrow_holds') as any)
+        // @ts-expect-error - Some view or table typings may be missing
+        const { data: escrows, error: escrowError } = await supabase
+          .from('pay_escrow_holds')
           .select('service_id, amount_cents, platform_fee_cents, professional_amount_cents')
           .in('service_id', serviceIds);
 
         if (!escrowError && escrows) {
-          const byService = new Map<string, any>();
+          const byService = new Map<string, Record<string, unknown>>();
           for (const esc of escrows) {
-            if (esc.service_id) byService.set(esc.service_id, esc);
+            if (esc.service_id) byService.set(esc.service_id as string, esc as Record<string, unknown>);
           }
           for (const entry of entries) {
             const esc = entry.reference_id ? byService.get(entry.reference_id) : undefined;
-            if (esc && entry.amount_cents > 0 && esc.amount_cents > 0) {
-              entry.gross_cents = esc.amount_cents;
-              entry.fee_cents = esc.platform_fee_cents;
-              entry.fee_percent = Math.round((esc.platform_fee_cents / esc.amount_cents) * 100);
+            if (esc && entry.amount_cents > 0 && Number(esc.amount_cents) > 0) {
+              entry.gross_cents = Number(esc.amount_cents);
+              entry.fee_cents = Number(esc.platform_fee_cents);
+              entry.fee_percent = Math.round((Number(esc.platform_fee_cents) / Number(esc.amount_cents)) * 100);
             }
           }
         }
@@ -285,7 +289,8 @@ export function useEarningsChart() {
       const sevenDaysAgo = subDays(new Date(), 7).toISOString();
 
       // Créditos do extrato oficial pay_* dos últimos 7 dias
-      const { data: rows, error } = await (supabase as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { data: rows, error } = await supabase
         .from('v_wallet_statement')
         .select('amount_cents, created_at, direction')
         .eq('owner_user_id', user.id)
@@ -351,8 +356,9 @@ export function useCommissionData() {
       // Enquanto a migration de sincronização não roda, os campos persistidos
       // podem estar zerados/NULL — a contagem viva evita mostrar "0 grupos"
       // para quem já tem grupos válidos.
-      const { count: liveValidCount } = await (supabase
-        .from('whatsapp_groups') as any)
+      // @ts-expect-error - Some view or table typings may be missing
+      const { count: liveValidCount } = await supabase
+        .from('whatsapp_groups')
         .select('id', { count: 'exact', head: true })
         .eq('owner_user_id', user.id)
         .eq('valid_for_commission', true);

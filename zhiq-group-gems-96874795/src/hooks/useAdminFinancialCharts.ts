@@ -17,7 +17,7 @@ export function useAdminFinancialCharts() {
                 .gte("created_at", thirtyDaysAgo)
                 .order("created_at", { ascending: true });
 
-            const revenueByDate = revenueData?.reduce((acc: any, curr) => {
+            const revenueByDate = revenueData?.reduce((acc: unknown, curr) => {
                 const date = format(parseISO(curr.created_at), "dd/MMM", { locale: ptBR });
                 acc[date] = (acc[date] || 0) + Number(curr.amount_cents || 0) / 100;
                 return acc;
@@ -32,11 +32,11 @@ export function useAdminFinancialCharts() {
             const { data: ridesData } = await supabase
                 .from("service_orders")
                 .select("created_at")
-                .eq("status", "delivered" as any)
+                .eq("status", "delivered" as unknown)
                 .gte("created_at", thirtyDaysAgo)
                 .order("created_at", { ascending: true });
 
-            const ridesByDate = ridesData?.reduce((acc: any, curr) => {
+            const ridesByDate = ridesData?.reduce((acc: unknown, curr) => {
                 const date = format(parseISO(curr.created_at!), "dd/MMM", { locale: ptBR });
                 acc[date] = (acc[date] || 0) + 1;
                 return acc;
@@ -48,8 +48,8 @@ export function useAdminFinancialCharts() {
             }));
 
             // Gráfico 3: Distribuição de receita (Accounts balances sum)
-            // @ts-ignore: bypass outdated types.ts
-            const { data: ledgers } = await (supabase.from("ledger_entries") as any)
+            // @ts-expect-error: bypass outdated types.ts
+            const { data: ledgers } = await (supabase.from("ledger_entries") as unknown)
                 .select("amount_cents, direction, profile_type");
 
             let totalPlataforma = 0;

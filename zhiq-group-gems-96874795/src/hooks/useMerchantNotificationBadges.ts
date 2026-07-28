@@ -32,7 +32,8 @@ export function useMerchantNotificationBadges() {
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
-      const { data } = await (supabase.from("merchant_stores") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data } = await supabase.from("merchant_stores")
         .select("id").eq("user_id", user.id).limit(1).maybeSingle();
       if (data) setStoreId(data.id);
     })();
@@ -67,7 +68,8 @@ export function useMerchantNotificationBadges() {
     if (!storeId) return;
     try {
       // Get all merchant listings with their types
-      const { data: listings } = await (supabase.from("auction_listings") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: listings } = await supabase.from("auction_listings")
         .select("id, listing_type")
         .eq("store_id", storeId);
 
@@ -75,12 +77,13 @@ export function useMerchantNotificationBadges() {
       let arrematePending = 0;
 
       if (listings?.length) {
-        const auctionListingIds = listings.filter((l: any) => l.listing_type !== "arremate").map((l: any) => l.id);
-        const arremateListingIds = listings.filter((l: any) => l.listing_type === "arremate").map((l: any) => l.id);
+        const auctionListingIds = listings.filter((l: Record<string, unknown>) => l.listing_type !== "arremate").map((l: Record<string, unknown>) => l.id);
+        const arremateListingIds = listings.filter((l: Record<string, unknown>) => l.listing_type === "arremate").map((l: Record<string, unknown>) => l.id);
 
         // Count pending offers for auction listings
         if (auctionListingIds.length) {
-          const { count } = await (supabase.from("arremate_offers") as any)
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          const { count } = await supabase.from("arremate_offers")
             .select("id", { count: "exact", head: true })
             .in("arremate_listing_id", auctionListingIds)
             .eq("status", "pending");
@@ -89,7 +92,8 @@ export function useMerchantNotificationBadges() {
 
         // Count pending offers for arremate listings
         if (arremateListingIds.length) {
-          const { count } = await (supabase.from("arremate_offers") as any)
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          const { count } = await supabase.from("arremate_offers")
             .select("id", { count: "exact", head: true })
             .in("arremate_listing_id", arremateListingIds)
             .eq("status", "pending");
@@ -100,7 +104,8 @@ export function useMerchantNotificationBadges() {
         if (arremateListingIds.length && arrematePending === 0) {
           // Count offers from the last 24h that are not rejected/cancelled
           const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-          const { count: recentCount } = await (supabase.from("arremate_offers") as any)
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          const { count: recentCount } = await supabase.from("arremate_offers")
             .select("id", { count: "exact", head: true })
             .in("arremate_listing_id", arremateListingIds)
             .not("status", "in", "(rejected,cancelled)")
@@ -110,7 +115,8 @@ export function useMerchantNotificationBadges() {
       }
 
       // New purchase intentions
-      const { count: ordersPending } = await (supabase.from("purchase_intentions") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { count: ordersPending } = await supabase.from("purchase_intentions")
         .select("id", { count: "exact", head: true })
         .eq("store_id", storeId)
         .in("status", ["new"]);
@@ -226,7 +232,7 @@ export function useMerchantNotificationBadges() {
       if (unreadIds.length > 0) {
         const { error } = await supabase
           .from('user_notifications')
-          .update({ is_read: true, read_at: new Date().toISOString() } as any)
+          .update({ is_read: true, read_at: new Date().toISOString() })
           .eq('user_id', user.id)
           .eq('source_module', module)
           .eq('is_read', false);

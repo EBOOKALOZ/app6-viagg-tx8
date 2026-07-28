@@ -17,7 +17,7 @@ export function usePI2WalletOverview(filters?: {
   return useQuery({
     queryKey: ["pi2-wallet-overview", filters],
     queryFn: async () => {
-      let q = (supabase.from("admin_pi2_motoboy_wallet_overview") as any)
+      let q = (supabase.from("admin_pi2_motoboy_wallet_overview") as unknown)
         .select("*", { count: "exact" })
         .order("last_movement_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -50,7 +50,7 @@ export function usePI2SplitDetails(filters?: {
   return useQuery({
     queryKey: ["pi2-split-details", filters],
     queryFn: async () => {
-      let q = (supabase.from("admin_pi2_motoboy_split_details") as any)
+      let q = (supabase.from("admin_pi2_motoboy_split_details") as unknown)
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -84,7 +84,7 @@ export function usePI2WithdrawalDetails(filters?: {
   return useQuery({
     queryKey: ["pi2-withdrawal-details", filters],
     queryFn: async () => {
-      let q = (supabase.from("admin_pi2_motoboy_withdrawal_details") as any)
+      let q = (supabase.from("admin_pi2_motoboy_withdrawal_details") as unknown)
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -109,7 +109,7 @@ export function usePI2Summary() {
   return useQuery({
     queryKey: ["pi2-summary"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("admin_pi2_motoboy_wallet_overview") as any)
+      const { data, error } = await (supabase.from("admin_pi2_motoboy_wallet_overview") as unknown)
         .select("*");
 
       if (error) {
@@ -122,11 +122,11 @@ export function usePI2Summary() {
 
       const rows = data || [];
       return {
-        totalAvailable: rows.reduce((s: number, r: any) => s + Number(r.available_balance || r.saldo_disponivel || 0), 0),
-        totalSplitPaid: rows.reduce((s: number, r: any) => s + Number(r.total_split_completed || r.total_creditos || 0), 0),
-        totalWithdrawalsPaid: rows.reduce((s: number, r: any) => s + Number(r.total_withdrawals_paid || r.total_debitos || 0), 0),
-        totalPendingWithdrawals: rows.reduce((s: number, r: any) => s + Number(r.open_withdrawal_value || r.valor_em_aberto || 0), 0),
-        openWithdrawalsCount: rows.reduce((s: number, r: any) => s + Number(r.open_withdrawals_count || r.saques_em_aberto || 0), 0),
+        totalAvailable: rows.reduce((s: number, r: unknown) => s + Number(r.available_balance || r.saldo_disponivel || 0), 0),
+        totalSplitPaid: rows.reduce((s: number, r: unknown) => s + Number(r.total_split_completed || r.total_creditos || 0), 0),
+        totalWithdrawalsPaid: rows.reduce((s: number, r: unknown) => s + Number(r.total_withdrawals_paid || r.total_debitos || 0), 0),
+        totalPendingWithdrawals: rows.reduce((s: number, r: unknown) => s + Number(r.open_withdrawal_value || r.valor_em_aberto || 0), 0),
+        openWithdrawalsCount: rows.reduce((s: number, r: unknown) => s + Number(r.open_withdrawals_count || r.saques_em_aberto || 0), 0),
         motoboyCount: rows.length,
       };
     },

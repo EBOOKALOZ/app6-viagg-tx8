@@ -37,7 +37,7 @@ export interface QuoteRequestRow {
   photos: string[];
   notes: string | null;
   allowed_vehicle_types: string[];
-  orion_analysis: any;
+  orion_analysis: Record<string, unknown>;
   accepted_proposal_id: string | null;
   expires_at: string | null;
   created_at: string;
@@ -62,7 +62,7 @@ export interface QuoteProposalRow {
 
 const asArr = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : []);
 
-function mapRequest(r: any): QuoteRequestRow {
+function mapRequest(r: Record<string, unknown>): QuoteRequestRow {
   return {
     ...r,
     characteristics: asArr(r.characteristics),
@@ -71,11 +71,12 @@ function mapRequest(r: any): QuoteRequestRow {
   } as QuoteRequestRow;
 }
 
-async function rpc(name: string, args: Record<string, unknown>): Promise<any> {
-  const { data, error } = await (supabase.rpc as any)(name, args);
+async function rpc(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  // @ts-expect-error - RPC dynamic call
+  const { data, error } = await supabase.rpc(name, args);
   if (error) throw new Error(error.message || `Erro em ${name}.`);
-  if (!(data as any)?.success) {
-    const code = (data as any)?.error || "erro_desconhecido";
+  if (!(data as Record<string, unknown>)?.success) {
+    const code = (data as Record<string, unknown>)?.error || "erro_desconhecido";
     const friendly: Record<string, string> = {
       not_authenticated: "Sessão expirada — entre novamente.",
       request_closed: "Esta solicitação já foi encerrada.",
@@ -83,6 +84,9 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<any> {
       invalid_price: "Informe um valor de frete válido.",
       not_owner: "Apenas o dono da solicitação pode fazer isso.",
       invalid_transition: "Ação não permitida para o status atual.",
+      insufficient_credits: "Saldo insuficiente na carteira — recarregue seus créditos para abrir o contato.",
+      not_unlocked: "Contato ainda não liberado — aceite o serviço para desbloquear.",
+      request_not_found: "Solicitação não encontrada.",
     };
     throw new Error(friendly[code] || `Erro: ${code} (a migration foi aplicada?)`);
   }
@@ -113,6 +117,20 @@ export const freightQuoteActions = {
   deleteRoute: (id: string) => rpc("delete_freight_route", { p_id: id }),
   adminSetCommission: (settings: Record<string, unknown>) =>
     rpc("admin_set_freight_commission", { p_settings: settings }),
+  // ── V2.1: Aceitar Serviço e Abrir Contato ──
+  /** Comissão que SERÁ cobrada (transparência antes do aceite). */
+  commissionPreview: (price: number, category?: string | null) =>
+    rpc("preview_freight_commission", { p_price: price, p_category: category ?? null }) as Promise<{
+      enabled: boolean; percent: number; commission_brl: number;
+    }>,
+  /** Aceita o serviço, registra a comissão e libera o contato do cliente. */
+  acceptAndUnlock: (requestId: string, price: number | null) =>
+    rpc("accept_freight_opportunity_unlock", { p_request_id: requestId, p_price: price }) as Promise<{
+      already_unlocked: boolean; contact: Record<string, unknown>; commission_brl?: number;
+    }>,
+  /** Contato já liberado (ou libera sem cobrança se o cliente aceitou minha proposta). */
+  getUnlockedContact: (requestId: string) =>
+    rpc("get_freight_quote_contact", { p_request_id: requestId }) as Promise<{ contact: Record<string, unknown> }>,
 };
 
 // ─── V2: Minha Frota + Minhas Rotas ─────────────────────────
@@ -160,15 +178,17 @@ export function useFreightFleet() {
     queryKey: ["freight-fleet", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
+      // @ts-expect-error - Some schemas might not be fully typed yet
       const [{ data: vehicles }, { data: routes }] = await Promise.all([
-        (supabase.from("freight_fleet_vehicles") as any)
+        supabase.from("freight_fleet_vehicles")
           .select("*").eq("owner_user_id", user!.id).order("created_at", { ascending: false }),
-        (supabase.from("freight_routes") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_routes")
           .select("*").eq("owner_user_id", user!.id).order("created_at", { ascending: false }),
       ]);
       return {
-        vehicles: ((vehicles || []) as any[]).map((v) => ({ ...v, accepted_cargo: asArr(v.accepted_cargo) })) as FleetVehicleRow[],
-        routes: ((routes || []) as any[]).map((r) => ({ ...r, days_available: asArr(r.days_available) })) as FreightRouteRow[],
+        vehicles: ((vehicles || []) as Record<string, unknown>[]).map((v) => ({ ...v, accepted_cargo: asArr(v.accepted_cargo) })) as FleetVehicleRow[],
+        routes: ((routes || []) as Record<string, unknown>[]).map((r) => ({ ...r, days_available: asArr(r.days_available) })) as FreightRouteRow[],
       };
     },
   });
@@ -190,39 +210,45 @@ export function useMyFreightQuotes() {
     enabled: !!user?.id,
     refetchInterval: 15_000, // "notificação": novas propostas aparecem sozinhas
     queryFn: async () => {
-      const { data: reqs } = await (supabase.from("freight_quote_requests") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: reqs } = await supabase.from("freight_quote_requests")
         .select("*")
         .eq("client_user_id", user!.id)
         .order("created_at", { ascending: false });
-      const requests: QuoteRequestRow[] = ((reqs || []) as any[]).map(mapRequest);
+      const requests: QuoteRequestRow[] = ((reqs || []) as Record<string, unknown>[]).map(mapRequest);
       if (requests.length === 0) return { requests, proposalsByRequest: {} as Record<string, QuoteProposalRow[]> };
 
       const ids = requests.map((r) => r.id);
-      const { data: props } = await (supabase.from("freight_quote_proposals") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: props } = await supabase.from("freight_quote_proposals")
         .select("*")
         .in("request_id", ids)
         .order("price_brl", { ascending: true });
-      const proposals = ((props || []) as any[]).map((p) => ({ ...p, services: asArr(p.services) })) as QuoteProposalRow[];
+      const proposals = ((props || []) as Record<string, unknown>[]).map((p) => ({ ...p, services: asArr(p.services) })) as QuoteProposalRow[];
 
       // Identidade pública dos transportadores (Minha Empresa — empresa_fretes)
       const uids = Array.from(new Set(proposals.map((p) => p.transporter_user_id)));
       const companies: Record<string, QuoteProposalRow["company"]> = {};
       if (uids.length) {
+        // @ts-expect-error - Some schemas might not be fully typed yet
         const [{ data: mods }, { data: profs }, { data: counts }] = await Promise.all([
-          (supabase.from("advertiser_module_profiles") as any)
+          supabase.from("advertiser_module_profiles")
             .select("user_id, display_name, logo_url, city")
             .eq("module_key", "empresa_fretes")
             .in("user_id", uids),
-          (supabase.from("profiles") as any).select("id, full_name, name").in("id", uids),
-          (supabase.from("freight_listings") as any).select("id, owner_user_id").in("owner_user_id", uids),
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          supabase.from("profiles").select("id, full_name, name").in("id", uids),
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          supabase.from("freight_listings").select("id, owner_user_id").in("owner_user_id", uids),
         ]);
         const listingCount: Record<string, number> = {};
-        ((counts || []) as any[]).forEach((l) => {
-          listingCount[l.owner_user_id] = (listingCount[l.owner_user_id] || 0) + 1;
+        ((counts || []) as Record<string, unknown>[]).forEach((l) => {
+          const ownerId = l.owner_user_id as string;
+          listingCount[ownerId] = (listingCount[ownerId] || 0) + 1;
         });
         uids.forEach((uid) => {
-          const mod = ((mods || []) as any[]).find((m) => m.user_id === uid);
-          const prof = ((profs || []) as any[]).find((p) => p.id === uid);
+          const mod = ((mods || []) as Record<string, unknown>[]).find((m) => m.user_id === uid);
+          const prof = ((profs || []) as Record<string, unknown>[]).find((p) => p.id === uid);
           companies[uid] = {
             name: mod?.display_name || prof?.full_name || prof?.name || "Transportador parceiro",
             logoUrl: mod?.logo_url || null,
@@ -277,37 +303,48 @@ export function useTransporterFreightQuotes() {
     queryFn: async () => {
       const [{ data: open }, { data: listings }, { data: reactions }, { data: myProps },
              { data: fleetVs }, { data: routes }, { data: comms }] = await Promise.all([
-        (supabase.from("freight_quote_requests") as any)
+        // Solicitações abertas — leitura direta protegida por RLS (policy
+        // fqr_select_open: authenticated vê status aguardando/recebendo). PII
+        // sensível (endereço completo/telefone/fotos) só é revelada ao abrir o
+        // contato via get_freight_quote_contact (build_freight_quote_contact).
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_quote_requests")
           .select("*")
           .in("status", ["aguardando", "recebendo", "negociacao"])
           .gt("expires_at", new Date().toISOString())
           .neq("client_user_id", user!.id)
           .order("created_at", { ascending: false })
           .limit(100),
-        (supabase.from("freight_listings") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_listings")
           .select("id, vehicle_type, city, state, coverage_routes")
           .eq("owner_user_id", user!.id),
-        (supabase.from("freight_quote_reactions") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_quote_reactions")
           .select("*")
           .eq("transporter_user_id", user!.id),
-        (supabase.from("freight_quote_proposals") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_quote_proposals")
           .select("*")
           .eq("transporter_user_id", user!.id)
           .order("created_at", { ascending: false }),
-        (supabase.from("freight_fleet_vehicles") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_fleet_vehicles")
           .select("*").eq("owner_user_id", user!.id).eq("is_active", true),
-        (supabase.from("freight_routes") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_routes")
           .select("*").eq("owner_user_id", user!.id).eq("is_active", true),
-        (supabase.from("freight_service_commissions") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        supabase.from("freight_service_commissions")
           .select("commission_brl").eq("transporter_user_id", user!.id),
       ]);
 
-      const fleetRows = (listings || []) as any[];
-      const fleetVehicles = (fleetVs || []) as any[];       // V2: Minha Frota
-      const fleetRoutes = (routes || []) as any[];          // V2: Minhas Rotas
+      const fleetRows = (listings || []) as Record<string, unknown>[];
+      const fleetVehicles = (fleetVs || []) as Record<string, unknown>[];       // V2: Minha Frota
+      const fleetRoutes = (routes || []) as Record<string, unknown>[];          // V2: Minhas Rotas
       const fleetVehicleTypes = Array.from(new Set([
-        ...fleetRows.map((f) => f.vehicle_type),
-        ...fleetVehicles.map((v) => v.vehicle_type),
+        ...fleetRows.map((f) => f.vehicle_type as string),
+        ...fleetVehicles.map((v) => v.vehicle_type as string),
       ].filter(Boolean)));
       const fleetStates = new Set([
         ...fleetRows.map((f) => String(f.state || "").toUpperCase()),
@@ -324,12 +361,12 @@ export function useTransporterFreightQuotes() {
       const maxFleetKg = Math.max(0, ...fleetVehicles.map((v) => Number(v.max_weight_kg) || 0));
 
       const reactionByReq: Record<string, string> = {};
-      ((reactions || []) as any[]).forEach((r) => { reactionByReq[r.request_id] = r.action; });
-      const myProposals = ((myProps || []) as any[]).map((p) => ({ ...p, services: asArr(p.services) })) as QuoteProposalRow[];
+      ((reactions || []) as Record<string, unknown>[]).forEach((r) => { reactionByReq[r.request_id as string] = r.action as string; });
+      const myProposals = ((myProps || []) as Record<string, unknown>[]).map((p) => ({ ...p, services: asArr(p.services) })) as QuoteProposalRow[];
       const proposalByReq: Record<string, QuoteProposalRow> = {};
       myProposals.forEach((p) => { proposalByReq[p.request_id] = p; });
 
-      const all = ((open || []) as any[]).map(mapRequest);
+      const all = ((open || []) as Record<string, unknown>[]).map(mapRequest);
 
       // DISTRIBUIÇÃO AUTOMÁTICA (ORION): só solicitações compatíveis com a
       // frota anunciada — tipo de veículo permitido ∩ frota, e região (cidade/
@@ -363,10 +400,13 @@ export function useTransporterFreightQuotes() {
       const openIds = new Set(all.map((r) => r.id));
       const closedAnsweredIds = myProposals.filter((p) => !openIds.has(p.request_id)).map((p) => p.request_id);
       if (closedAnsweredIds.length) {
-        const { data: closed } = await (supabase.from("freight_quote_requests") as any)
+        // Respondidas encerradas — RLS fqr_select_proposer libera a leitura
+        // porque o transportador tem proposta nessas solicitações.
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data: closed } = await supabase.from("freight_quote_requests")
           .select("*")
           .in("id", closedAnsweredIds);
-        ((closed || []) as any[]).map(mapRequest).forEach((r) => {
+        ((closed || []) as Record<string, unknown>[]).map(mapRequest).forEach((r) => {
           answered.push({ request: r, proposal: proposalByReq[r.id] });
         });
       }
@@ -386,7 +426,7 @@ export function useTransporterFreightQuotes() {
         proposals: myProposals.length,
         acceptRate: myProposals.length ? Math.round((100 * accepted.length) / myProposals.length) : null,
         revenueBrl: accepted.reduce((s, p) => s + (Number(p.price_brl) || 0), 0),
-        commissionBrl: ((comms || []) as any[]).reduce((s, c) => s + (Number(c.commission_brl) || 0), 0),
+        commissionBrl: ((comms || []) as Record<string, unknown>[]).reduce((s, c) => s + (Number(c.commission_brl) || 0), 0),
       };
 
       return {

@@ -86,7 +86,7 @@ export function useAdminTerritorialExpansion() {
             return;
         }
 
-        let citiesData = data as any[];
+        let citiesData = data as unknown[];
 
         // Se estiver vazio, insere as 295 cidades
         if (!data || data.length === 0) {
@@ -138,7 +138,7 @@ export function useAdminTerritorialExpansion() {
                 `)
                 .order('city_name', { ascending: true });
             if (newData) {
-                citiesData = newData as any[];
+                citiesData = newData as unknown[];
             }
         }
 
@@ -184,7 +184,7 @@ export function useAdminTerritorialExpansion() {
     }, []);
 
     const updateCityStatus = async (id: string, newStatus: SC_City_Status) => {
-        const payload: any = { city_status: newStatus };
+        const payload: unknown = { city_status: newStatus };
         if (newStatus === 'ativo') payload.activated_at = new Date().toISOString();
         else payload.activated_at = null; // reseta a data se reverter status
 

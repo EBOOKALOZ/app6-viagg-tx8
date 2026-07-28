@@ -1,0 +1,1 @@
+CREATE OR REPLACE FUNCTION public.sync_profile_email() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$ BEGIN RETURN NEW; END; $$;

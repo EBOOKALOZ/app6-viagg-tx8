@@ -44,7 +44,8 @@ export function useMerchantArremateDeals() {
     enabled: !!user?.id,
     refetchInterval: 30_000,
     queryFn: async (): Promise<ArremateDeal[]> => {
-      const { data, error } = await (supabase.from("orion_alc_deals") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data, error } = await supabase.from("orion_alc_deals")
         .select("id, listing_id, seller_user_id, buyer_user_id, amount, listing_type, category, city, status, first_contact_at, concluded_at, canceled_at, created_at, updated_at")
         .eq("seller_user_id", user!.id)
         .order("created_at", { ascending: false })
@@ -71,10 +72,11 @@ export function useMerchantArremateDeals() {
 
 // ── Ação oficial: dispara a RPC do backend e revalida ──
 export async function runDealAction(fn: string, args: Record<string, unknown>) {
-  const { data, error } = await (supabase.rpc as any)(fn, args);
+  // @ts-expect-error - RPC dynamic call
+  const { data, error } = await supabase.rpc(fn, args);
   if (error) return { ok: false, error: error.message };
-  if (data && typeof data === "object" && (data as any).success === false) {
-    return { ok: false, error: (data as any).error || "erro" };
+  if (data && typeof data === "object" && (data as Record<string, unknown>).success === false) {
+    return { ok: false, error: (data as Record<string, unknown>).error || "erro" };
   }
   return { ok: true, data };
 }
@@ -85,7 +87,8 @@ export function useArremateSettlement(listingId: string | null) {
     queryKey: ["arremate-settlement", listingId],
     enabled: !!listingId,
     queryFn: async () => {
-      const { data } = await (supabase.from("orion_auction_settlements") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data } = await supabase.from("orion_auction_settlements")
         .select("listing_id, status, valor_final, comissao_valor, valor_liquido, winner_user_id, arremate_status")
         .eq("listing_id", listingId)
         .maybeSingle();

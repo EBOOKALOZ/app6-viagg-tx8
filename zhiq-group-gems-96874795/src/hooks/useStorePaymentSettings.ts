@@ -51,7 +51,8 @@ export function useStorePaymentSettings(storeId: string | undefined | null) {
     queryKey: ["store-payment-settings", storeId],
     queryFn: async () => {
       if (!storeId) return null;
-      const { data, error } = await (supabase.from("store_payment_settings") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("store_payment_settings")
         .select("*")
         .eq("store_id", storeId)
         .maybeSingle();
@@ -84,20 +85,23 @@ export function useStorePaymentSettings(storeId: string | undefined | null) {
     mutationFn: async (updates: Partial<StorePaymentSettings>) => {
       if (!storeId) throw new Error("No store ID");
       const payload = { ...updates, store_id: storeId, updated_at: new Date().toISOString() };
-      delete (payload as any).id;
+      if ("id" in payload) { delete payload.id; }
 
-      const { data: existing } = await (supabase.from("store_payment_settings") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data: existing } = await supabase.from("store_payment_settings")
         .select("id")
         .eq("store_id", storeId)
         .maybeSingle();
 
       if (existing?.id) {
-        const { error } = await (supabase.from("store_payment_settings") as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { error } = await supabase.from("store_payment_settings")
           .update(payload)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await (supabase.from("store_payment_settings") as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { error } = await supabase.from("store_payment_settings")
           .insert(payload);
         if (error) throw error;
       }

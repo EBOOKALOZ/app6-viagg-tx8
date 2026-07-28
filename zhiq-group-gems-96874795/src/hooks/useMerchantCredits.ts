@@ -79,7 +79,7 @@ export interface LedgerEntry {
   balance_after: number;
   reason_code: string;
   description: string | null;
-  metadata: any;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -128,7 +128,8 @@ export function useMerchantCredits() {
     }
     (async () => {
       try {
-        const { data } = await (supabase.from("merchant_stores") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data } = await supabase.from("merchant_stores")
           .select("id")
           .eq("user_id", user.id)
           .limit(1)
@@ -161,7 +162,8 @@ export function useMerchantCredits() {
 
       if (storeId) {
         // 1. Balance from merchant_credit_balances
-        const { data: balData } = await (supabase.from("merchant_credit_balances") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data: balData } = await supabase.from("merchant_credit_balances")
           .select("available_credits, reserved_credits, consumed_credits")
           .eq("store_id", storeId)
           .maybeSingle();
@@ -174,7 +176,8 @@ export function useMerchantCredits() {
         }
 
         // 2. Active subscription
-        const { data: subData } = await (supabase.from("merchant_credit_subscriptions") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data: subData } = await supabase.from("merchant_credit_subscriptions")
           .select("*")
           .eq("store_id", storeId)
           .eq("status", "active")
@@ -197,35 +200,36 @@ export function useMerchantCredits() {
       }
 
       // 3. Available products
-      const { data: productsData } = await (supabase.from("merchant_credit_products") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: productsData } = await supabase.from("merchant_credit_products")
         .select("*")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
 
-      const products: CreditProduct[] = (productsData || []).map((p: any) => {
-        const creditsTotal = p.credits_total ?? p.credits_amount ?? ((p.credits_base || 0) + (p.credits_bonus || 0));
-        const priceCents = p.price_cents ?? (p.price_brl ? Math.round(p.price_brl * 100) : 0);
+      const products: CreditProduct[] = (productsData || []).map((p: Record<string, unknown>) => {
+        const creditsTotal = Number(p.credits_total ?? p.credits_amount ?? ((Number(p.credits_base) || 0) + (Number(p.credits_bonus) || 0)));
+        const priceCents = Number(p.price_cents ?? (p.price_brl ? Math.round(Number(p.price_brl) * 100) : 0));
         return {
-          id: p.id,
-          slug: p.slug,
-          name: p.name,
-          type: p.product_type || p.type,
-          credits_base: p.credits_base || 0,
-          credits_bonus: p.credits_bonus || 0,
+          id: p.id as string,
+          slug: p.slug as string,
+          name: p.name as string,
+          type: (p.product_type || p.type) as CreditProduct["type"],
+          credits_base: Number(p.credits_base) || 0,
+          credits_bonus: Number(p.credits_bonus) || 0,
           credits_total: creditsTotal,
           price_cents: priceCents,
-          price_brl: p.price_brl,
-          credits_amount: p.credits_amount,
-          cost_per_credit_cents: p.cost_per_credit_cents ?? (creditsTotal > 0 ? Math.round(priceCents / creditsTotal) : 0),
-          rollover_enabled: p.rollover_enabled ?? false,
-          rollover_percent: p.rollover_percent ?? 0,
-          is_recommended: p.is_recommended ?? false,
-          is_active: p.is_active ?? true,
-          sort_order: p.sort_order ?? 0,
-          description: p.description,
-          badge_text: p.badge_text,
-          action_label: p.action_label ?? null,
-          action_enabled: p.action_enabled ?? true,
+          price_brl: p.price_brl as number | undefined,
+          credits_amount: p.credits_amount as number | undefined,
+          cost_per_credit_cents: Number(p.cost_per_credit_cents ?? (creditsTotal > 0 ? Math.round(priceCents / creditsTotal) : 0)),
+          rollover_enabled: Boolean(p.rollover_enabled ?? false),
+          rollover_percent: Number(p.rollover_percent ?? 0),
+          is_recommended: Boolean(p.is_recommended ?? false),
+          is_active: Boolean(p.is_active ?? true),
+          sort_order: Number(p.sort_order ?? 0),
+          description: p.description as string | null,
+          badge_text: p.badge_text as string | null,
+          action_label: (p.action_label ?? null) as string | null,
+          action_enabled: Boolean(p.action_enabled ?? true),
           features_json: (() => {
              if (Array.isArray(p.features_json)) return p.features_json;
              if (typeof p.features_json === 'string') {
@@ -239,19 +243,20 @@ export function useMerchantCredits() {
       // 3.1 Fetch credit_packages (extra packages)
       let creditPackages: CreditPackage[] = [];
       try {
-        const { data: pkgData } = await (supabase.from("credit_packages") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data: pkgData } = await supabase.from("credit_packages")
           .select("*")
           .eq("is_active", true);
         if (pkgData) {
-          creditPackages = pkgData.map((p: any) => ({
-            id: p.id,
-            slug: p.slug,
-            name: p.name,
-            package_type: p.package_type,
-            credits_amount: p.credits_amount,
-            price_brl: p.price_brl,
-            reference_credit_value_brl: p.reference_credit_value_brl,
-            active: p.active
+          creditPackages = pkgData.map((p: Record<string, unknown>) => ({
+            id: p.id as string,
+            slug: p.slug as string,
+            name: p.name as string,
+            package_type: p.package_type as string,
+            credits_amount: Number(p.credits_amount),
+            price_brl: Number(p.price_brl),
+            reference_credit_value_brl: p.reference_credit_value_brl as number | undefined,
+            active: Boolean(p.active)
           }));
         }
       } catch (err) {
@@ -260,38 +265,40 @@ export function useMerchantCredits() {
 
       // 4. Ledger entries from merchant_credit_ledger
       if (storeId) {
-        const { data: ledgerData } = await (supabase.from("merchant_credit_ledger") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data: ledgerData } = await supabase.from("merchant_credit_ledger")
           .select("*")
           .eq("store_id", storeId)
           .order("created_at", { ascending: false })
           .limit(30);
 
-        ledger = (ledgerData || []).map((e: any) => ({
-          id: e.id,
-          store_id: e.store_id,
-          purchase_intention_id: e.purchase_intention_id || null,
-          entry_type: e.entry_type,
-          amount: e.amount,
-          balance_before: e.balance_before ?? 0,
-          balance_after: e.balance_after ?? 0,
-          reason_code: e.reason_code || "",
-          description: e.description,
-          metadata: e.metadata,
-          created_at: e.created_at,
+        ledger = (ledgerData || []).map((e: Record<string, unknown>) => ({
+          id: e.id as string,
+          store_id: e.store_id as string,
+          purchase_intention_id: (e.purchase_intention_id as string) || null,
+          entry_type: e.entry_type as "credit" | "debit",
+          amount: Number(e.amount),
+          balance_before: Number(e.balance_before ?? 0),
+          balance_after: Number(e.balance_after ?? 0),
+          reason_code: (e.reason_code as string) || "",
+          description: e.description as string | null,
+          metadata: (e.metadata as Record<string, unknown>) || {},
+          created_at: e.created_at as string,
         }));
       }
 
       // 5. Usage rules
-      const { data: rulesData } = await (supabase.from("merchant_credit_usage_rules") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data: rulesData } = await supabase.from("merchant_credit_usage_rules")
         .select("*")
         .eq("is_active", true);
 
-      const usageRules: UsageRule[] = (rulesData || []).map((r: any) => ({
-        feature_code: r.feature_code || "",
-        module: r.module_name || r.module,
-        event_type: r.event_type,
+      const usageRules: UsageRule[] = (rulesData || []).map((r: Record<string, unknown>) => ({
+        feature_code: (r.feature_code as string) || "",
+        module: (r.module_name as string) || (r.module as string),
+        event_type: r.event_type as string,
         credits_cost: Number(r.credits_cost) || 0,
-        description: r.feature_name || r.description,
+        description: (r.feature_name as string) || (r.description as string),
       }));
 
       // 6. Result metrics (last 3 months)
@@ -302,14 +309,15 @@ export function useMerchantCredits() {
         // Schema real: period_date (date), period_type, credits_spent,
         // purchase_intentions_received, store_clicks/product_clicks/buy_clicks,
         // estimated_revenue_generated. (Não existem colunas module/period_month.)
-        const { data: metricsData } = await (supabase.from("merchant_credit_result_metrics") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data: metricsData } = await supabase.from("merchant_credit_result_metrics")
           .select("*")
           .eq("store_id", storeId)
           .gte("period_date", monthStart);
 
-        resultMetrics = (metricsData || []).map((m: any) => ({
-          module: m.period_type ?? "geral",
-          period_month: m.period_date,
+        resultMetrics = (metricsData || []).map((m: Record<string, unknown>) => ({
+          module: (m.period_type as string) ?? "geral",
+          period_month: m.period_date as string,
           credits_spent: Number(m.credits_spent ?? 0),
           events_generated:
             Number(m.store_clicks ?? 0) +
@@ -365,7 +373,8 @@ export function useMerchantCredits() {
 
     const providerPaymentId = pixCode || boletoLine || `cartao-${Date.now()}`;
 
-    const { data: order, error } = await (supabase.from("credit_purchases") as any)
+    // @ts-expect-error - Some schemas might not be fully typed yet
+    const { data: order, error } = await supabase.from("credit_purchases")
       .insert({
         store_id: storeId,
         product_name: product.name,
@@ -400,7 +409,8 @@ export function useMerchantCredits() {
 
   // ── Poll order status ──
   const getOrderStatus = useCallback(async (orderId: string) => {
-    const { data, error } = await (supabase.from("credit_purchases") as any)
+    // @ts-expect-error - Some schemas might not be fully typed yet
+    const { data, error } = await supabase.from("credit_purchases")
       .select("*")
       .eq("id", orderId)
       .single();
@@ -416,7 +426,8 @@ export function useMerchantCredits() {
 
   // ── Cancel order ──
   const cancelOrder = useCallback(async (orderId: string) => {
-    await (supabase.from("credit_purchases") as any)
+    // @ts-expect-error - Some schemas might not be fully typed yet
+    await supabase.from("credit_purchases")
       .update({ status: "cancelled" })
       .eq("id", orderId);
   }, []);
@@ -432,14 +443,15 @@ export function useMerchantCredits() {
     reasonCode: string;
     description: string;
     purchaseIntentionId?: string;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
   }) => {
     if (!storeId) return false;
 
     // Débito server-side atômico (LOTE B2): valida ownership, trava a linha
     // (FOR UPDATE) e grava saldo+ledger na mesma transação. Substitui o
     // UPDATE client-side direto (manipulável e sem lock).
-    const { data, error } = await (supabase.rpc as any)("merchant_debit_credits", {
+    // @ts-expect-error - RPC dynamic call
+    const { data, error } = await supabase.rpc("merchant_debit_credits", {
       p_store_id: storeId,
       p_amount: params.amount,
       p_reason_code: params.reasonCode,

@@ -100,8 +100,7 @@ Deno.serve(async (req) => {
 
   // Aplica com retry em 40001 (serialization_failure).
   let attempt = 0;
-  // deno-lint-ignore no-explicit-any
-  let lastErr: any = null;
+  let lastErr: unknown = null;
   while (attempt < 4) {
     const { data, error } = await svc.rpc("pay_webhook_apply_event", {
       p_provider_name: "mercadopago",

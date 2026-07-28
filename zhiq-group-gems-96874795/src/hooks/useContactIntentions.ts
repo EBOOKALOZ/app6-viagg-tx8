@@ -103,7 +103,7 @@ export function useContactIntentions() {
     queryFn: async () => {
       // P0/LGPD: colunas EXPLÍCITAS não-PII — visitor_phone/name/message só saem
       // pela RPC wallet_reveal_contact (lockdown de coluna no banco; select("*") falha)
-      const { data, error } = await (supabase.from("advertiser_contact_intentions") as any)
+      const { data, error } = await (supabase.from("advertiser_contact_intentions") as unknown)
         .select("id, created_at, listing_module, listing_id, advertiser_user_id, interest_type, masked_preview, city, region, status, credits_cost, unlock_paid_at, notified_at, opened_at")
         .eq("advertiser_user_id", user!.id)
         .neq("status", "cancelled")
@@ -129,18 +129,18 @@ export function useContactIntentions() {
       const imageMap = new Map<string, string>();
 
       if (realEstateIds.length > 0) {
-        const { data: props } = await (supabase.from("real_estate_listings") as any)
+        const { data: props } = await (supabase.from("real_estate_listings") as unknown)
           .select("id, title")
           .in("id", realEstateIds);
-        (props || []).forEach((p: any) => {
+        (props || []).forEach((p: unknown) => {
           if (p.title) titleMap.set(p.id, p.title);
         });
 
-        const { data: mediaRows } = await (supabase.from("real_estate_media") as any)
+        const { data: mediaRows } = await (supabase.from("real_estate_media") as unknown)
           .select("listing_id, public_masked_storage_path, original_storage_path, sort_order")
           .in("listing_id", realEstateIds)
           .order("sort_order", { ascending: true });
-        (mediaRows || []).forEach((m: any) => {
+        (mediaRows || []).forEach((m: unknown) => {
           if (imageMap.has(m.listing_id)) return;
           // A moderação às vezes só copia o path original pra public_masked_storage_path
           // sem gerar arquivo novo no bucket público — só confia se for path DIFERENTE.
@@ -152,20 +152,20 @@ export function useContactIntentions() {
       }
 
       if (vehicleIds.length > 0) {
-        const { data: vehs } = await (supabase.from("vehicle_listings") as any)
+        const { data: vehs } = await (supabase.from("vehicle_listings") as unknown)
           .select("id, title, brand, model")
           .in("id", vehicleIds);
-        (vehs || []).forEach((v: any) => {
+        (vehs || []).forEach((v: unknown) => {
           const title = v.title || [v.brand, v.model].filter(Boolean).join(" ") || null;
           if (title) titleMap.set(v.id, title);
         });
 
         const missingVehicleIds = vehicleIds.filter(id => !imageMap.has(id));
         if (missingVehicleIds.length > 0) {
-          const { data: vMedia } = await (supabase.from("vehicle_media") as any)
+          const { data: vMedia } = await (supabase.from("vehicle_media") as unknown)
             .select("listing_id, public_masked_storage_path, original_storage_path")
             .in("listing_id", missingVehicleIds);
-          (vMedia || []).forEach((m: any) => {
+          (vMedia || []).forEach((m: unknown) => {
             if (imageMap.has(m.listing_id)) return;
             const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
             const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
@@ -177,18 +177,18 @@ export function useContactIntentions() {
       }
 
       if (serviceIds.length > 0) {
-        const { data: servs } = await (supabase.from("service_listings") as any)
+        const { data: servs } = await (supabase.from("service_listings") as unknown)
           .select("id, title")
           .in("id", serviceIds);
-        (servs || []).forEach((s: any) => {
+        (servs || []).forEach((s: unknown) => {
           if (s.title) titleMap.set(s.id, s.title);
         });
 
-        const { data: sMedia } = await (supabase.from("service_media") as any)
+        const { data: sMedia } = await (supabase.from("service_media") as unknown)
           .select("listing_id, public_masked_storage_path, original_storage_path, sort_order")
           .in("listing_id", serviceIds)
           .order("sort_order", { ascending: true });
-        (sMedia || []).forEach((m: any) => {
+        (sMedia || []).forEach((m: unknown) => {
           if (imageMap.has(m.listing_id)) return;
           const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
           const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
@@ -199,18 +199,18 @@ export function useContactIntentions() {
       }
 
       if (freightIds.length > 0) {
-        const { data: frts } = await (supabase.from("freight_listings") as any)
+        const { data: frts } = await (supabase.from("freight_listings") as unknown)
           .select("id, title")
           .in("id", freightIds);
-        (frts || []).forEach((f: any) => {
+        (frts || []).forEach((f: unknown) => {
           if (f.title) titleMap.set(f.id, f.title);
         });
 
-        const { data: fMedia } = await (supabase.from("freight_media") as any)
+        const { data: fMedia } = await (supabase.from("freight_media") as unknown)
           .select("listing_id, public_masked_storage_path, original_storage_path, sort_order")
           .in("listing_id", freightIds)
           .order("sort_order", { ascending: true });
-        (fMedia || []).forEach((m: any) => {
+        (fMedia || []).forEach((m: unknown) => {
           if (imageMap.has(m.listing_id)) return;
           const hasMasked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
           const path = hasMasked ? m.public_masked_storage_path : m.original_storage_path;
@@ -222,17 +222,17 @@ export function useContactIntentions() {
 
       // ── Viagens & Turismo ──
       if (travelIds.length > 0) {
-        const { data: travels } = await (supabase.from("travel_listings") as any)
+        const { data: travels } = await (supabase.from("travel_listings") as unknown)
           .select("id, title")
           .in("id", travelIds);
-        (travels || []).forEach((t: any) => {
+        (travels || []).forEach((t: unknown) => {
           if (t.title) titleMap.set(t.id, t.title);
         });
-        const { data: tMedia } = await (supabase.from("travel_media") as any)
+        const { data: tMedia } = await (supabase.from("travel_media") as unknown)
           .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
           .in("listing_id", travelIds)
           .order("sort_order", { ascending: true });
-        (tMedia || []).forEach((m: any) => {
+        (tMedia || []).forEach((m: unknown) => {
           if (imageMap.has(m.listing_id)) return;
           const p = m.public_masked_storage_path || m.original_storage_path;
           if (!p) return;
@@ -256,10 +256,10 @@ export function useContactIntentions() {
         };
 
         // 1. merchant_marketing_products
-        const { data: mmpRows } = await (supabase.from("merchant_marketing_products") as any)
+        const { data: mmpRows } = await (supabase.from("merchant_marketing_products") as unknown)
           .select("*")
           .in("id", productIds);
-        (mmpRows || []).forEach((p: any) => {
+        (mmpRows || []).forEach((p: unknown) => {
           const title = p.title || p.name || p.nome || null;
           if (title) titleMap.set(p.id, title);
           const rawImg = p.image_url || p.cover_image_url || p.imagem_url || p.thumbnail_url || null;
@@ -270,10 +270,10 @@ export function useContactIntentions() {
         // 2. advertiser_listings — completa o que faltar (título OU imagem)
         const missing = productIds.filter(id => !titleMap.has(id) || !imageMap.has(id));
         if (missing.length > 0) {
-          const { data: alRows } = await (supabase.from("advertiser_listings") as any)
+          const { data: alRows } = await (supabase.from("advertiser_listings") as unknown)
             .select("id, title, cover_image_url, advertiser_listing_media(media_url)")
             .in("id", missing);
-          (alRows || []).forEach((p: any) => {
+          (alRows || []).forEach((p: unknown) => {
             if (p.title && !titleMap.has(p.id)) titleMap.set(p.id, p.title);
             if (imageMap.has(p.id)) return;
             const mediaPath = p.cover_image_url || p.advertiser_listing_media?.[0]?.media_url || null;
@@ -296,7 +296,7 @@ export function useContactIntentions() {
     queryKey: ["contact-intention-pricing"],
     staleTime: 300_000,
     queryFn: async () => {
-      const { data } = await (supabase.from("contact_intention_pricing") as any)
+      const { data } = await (supabase.from("contact_intention_pricing") as unknown)
         .select("listing_module, interest_type, credits_cost, label")
         .eq("is_active", true);
       return (data || []) as IntentionPricing[];
@@ -317,7 +317,7 @@ export function useContactIntentions() {
           table: "advertiser_contact_intentions",
           filter: `advertiser_user_id=eq.${user.id}`,
         },
-        (payload: any) => {
+        (payload: unknown) => {
           queryClient.invalidateQueries({ queryKey: ["contact-intentions", user.id] });
           // Bip de notificação ao receber lead em tempo real
           void playLeadNotificationSound();
@@ -462,11 +462,11 @@ export function useContactIntentions() {
 
         queryClient.invalidateQueries({ queryKey: ["contact-intentions", user?.id] });
         return { success: true };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return { success: false, error: err?.message || "Erro inesperado ao excluir contato" };
       }
     },
-    [user?.id, queryClient]
+    [user, queryClient]
   );
 
   return {
@@ -500,12 +500,12 @@ export function useRegisterContactIntention() {
     async (params: RegisterIntentionParams): Promise<{ success: boolean; error?: string; intention_id?: string }> => {
       setIsLoading(true);
       try {
-        let rpcResult: any;
-        let rpcError: any;
+        let rpcResult: unknown;
+        let rpcError: unknown;
 
         if (params.listingModule === "travel") {
           const { data, error } = await supabase.rpc(
-            "register_travel_contact_intention" as any,
+            "register_travel_contact_intention" as unknown,
             {
               p_listing_id:      params.listingId,
               p_interest_type:   params.interestType ?? "message_request",
@@ -519,7 +519,7 @@ export function useRegisterContactIntention() {
           rpcResult = data; rpcError = error;
         } else {
           const { data, error } = await supabase.rpc(
-            "register_contact_intention" as any,
+            "register_contact_intention" as unknown,
             {
               p_listing_module:  params.listingModule,
               p_listing_id:      params.listingId,
@@ -534,14 +534,14 @@ export function useRegisterContactIntention() {
           rpcResult = data; rpcError = error;
         }
 
-        const result = rpcResult as any;
+        const result = rpcResult as unknown;
 
         if (rpcError || !result?.success) {
           return { success: false, error: result?.error || rpcError?.message || "unknown" };
         }
 
         return { success: true, intention_id: result?.intention_id || undefined };
-      } catch (err: any) {
+      } catch (err: unknown) {
         return { success: false, error: err?.message || "unexpected_error" };
       } finally {
         setIsLoading(false);

@@ -58,7 +58,8 @@ function useStoreId() {
     if (!user?.id) return;
     (async () => {
       try {
-        const { data } = await (supabase.from("merchant_stores") as any)
+        // @ts-expect-error - Some schemas might not be fully typed yet
+        const { data } = await supabase.from("merchant_stores")
           .select("id")
           .eq("user_id", user.id)
           .single();
@@ -79,7 +80,8 @@ export function useMerchantWalletOverview() {
     queryKey: ["merchant-wallet-overview", storeId],
     queryFn: async (): Promise<MerchantWalletOverview | null> => {
       if (!storeId) return null;
-      const { data, error } = await (supabase.from("v_merchant_credit_wallet_overview") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data, error } = await supabase.from("v_merchant_credit_wallet_overview")
         .select("*")
         .eq("store_id", storeId)
         .maybeSingle();
@@ -100,7 +102,8 @@ export function useMerchantCreditPurchaseHistory() {
     queryKey: ["merchant-credit-purchase-history", storeId],
     queryFn: async (): Promise<MerchantCreditPurchase[]> => {
       if (!storeId) return [];
-      const { data, error } = await (supabase.from("v_merchant_credit_purchase_history") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data, error } = await supabase.from("v_merchant_credit_purchase_history")
         .select("*")
         .eq("store_id", storeId)
         .order("created_at", { ascending: false });
@@ -119,7 +122,8 @@ export function useMerchantCreditLedgerDetailed() {
     queryKey: ["merchant-credit-ledger-detailed", storeId],
     queryFn: async (): Promise<MerchantCreditLedgerEntry[]> => {
       if (!storeId) return [];
-      const { data, error } = await (supabase.from("v_merchant_credit_ledger_detailed") as any)
+      // @ts-expect-error - Some schemas might not be fully typed yet
+      const { data, error } = await supabase.from("v_merchant_credit_ledger_detailed")
         .select("*")
         .eq("store_id", storeId)
         .order("created_at", { ascending: false })

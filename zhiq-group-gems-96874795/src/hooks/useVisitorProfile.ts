@@ -91,10 +91,12 @@ export function useVisitorProfile() {
 
       try {
         if (data.id) {
-          await (supabase.from("visitor_profiles") as any)
+          // @ts-expect-error - Type definitions may be missing
+          await supabase.from("visitor_profiles")
             .update(payload).eq("id", data.id);
         } else {
-          const { data: inserted } = await (supabase.from("visitor_profiles") as any)
+          // @ts-expect-error - Type definitions may be missing
+          const { data: inserted } = await supabase.from("visitor_profiles")
             .insert(payload).select("id").single();
           if (inserted) savedId = inserted.id;
         }
@@ -115,7 +117,7 @@ export function useVisitorProfile() {
     }
   }, []);
 
-  const update = useCallback((key: keyof VisitorProfile, value: any) => {
+  const update = useCallback(<K extends keyof VisitorProfile>(key: K, value: VisitorProfile[K]) => {
     setProfile(prev => ({ ...prev, [key]: value }));
   }, []);
 

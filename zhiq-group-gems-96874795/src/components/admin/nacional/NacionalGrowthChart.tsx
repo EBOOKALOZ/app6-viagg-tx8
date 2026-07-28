@@ -28,7 +28,7 @@ export function NacionalGrowthChart() {
     const date = subDays(new Date(), 29 - i);
     return {
       date: format(date, 'dd/MM'),
-      grupos: Math.floor(Math.random() * 5) + (funnel?.[0] as any)?.total_groups_count || 1,
+      grupos: Math.floor(Math.random() * 5) + ((funnel?.[0] as Record<string, unknown>)?.total_groups_count as number) || 1,
     };
   });
 

@@ -64,15 +64,12 @@ export function FreightCreditReportCard() {
     const navConsumed = (debits || [])
       .filter((e: any) => e?.metadata?.event === "listing_click" || e?.metadata?.event === "interest_click")
       .reduce((s: number, e: any) => s + Math.abs(Number(e.amount || 0)), 0);
-    const unlocksConsumed = (debits || [])
-      .filter((e: any) => e?.entry_type === "debit_unlock")
-      .reduce((s: number, e: any) => s + Math.abs(Number(e.amount || 0)), 0);
     const paid = (purchases || []).filter((p: any) =>
       ["paid", "approved", "confirmed"].includes(String(p.payment_status || "").toLowerCase())
     );
     const creditsBought = paid.reduce((s: number, p: any) => s + Number(p.credits_total || 0), 0);
     const valuePaid = paid.reduce((s: number, p: any) => s + Number(p.amount_brl || 0), 0);
-    return { navConsumed, unlocksConsumed, creditsBought, valuePaid, paidCount: paid.length };
+    return { navConsumed, creditsBought, valuePaid, paidCount: paid.length };
   }, [debits, purchases]);
 
   const loading = debitsLoading || purchasesLoading;
@@ -81,7 +78,7 @@ export function FreightCreditReportCard() {
     e?.metadata?.event === "listing_click" ? "Clique no anúncio (visita)"
     : e?.metadata?.event === "interest_click" ? "Clique no anúncio (interesse)"
     : e?.metadata?.event === "feature_listing" ? "Destacar anúncio"
-    : e?.entry_type === "debit_unlock" ? "Desbloqueio de contato"
+    : e?.entry_type === "debit_unlock" ? "Desbloqueio de contato (histórico — modelo antigo)"
     : e?.entry_type === "expired" ? "Créditos expirados (30 dias sem compra)"
     : "Consumo";
 
@@ -99,21 +96,13 @@ export function FreightCreditReportCard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-[#1B1F24] border-[#2A3038]">
           <CardContent className="p-5 space-y-1">
             <p className="text-[10px] font-black uppercase tracking-widest text-[#A7B0BE] flex items-center gap-1.5">
               <MousePointerClick className="w-3.5 h-3.5 text-amber-400" /> Navegação (cliques/interesses)
             </p>
             <p className="text-2xl font-black text-amber-400 tabular-nums">− {totals.navConsumed} cr</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-[#1B1F24] border-[#2A3038]">
-          <CardContent className="p-5 space-y-1">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#A7B0BE] flex items-center gap-1.5">
-              <TrendingDown className="w-3.5 h-3.5 text-red-400" /> Desbloqueios
-            </p>
-            <p className="text-2xl font-black text-red-400 tabular-nums">− {totals.unlocksConsumed} cr</p>
           </CardContent>
         </Card>
         <Card className="bg-[#1B1F24] border-[#2A3038]">

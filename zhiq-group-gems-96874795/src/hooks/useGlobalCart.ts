@@ -223,10 +223,10 @@ export function useGlobalCart() {
           p_session_token: sessionToken,
         });
         if (!error && data) {
-          const result = data as any;
+          const result = data as Record<string, unknown>;
           if (result?.success) {
-            cartId = result.cart_id || cartId;
-            itemId = result.item_id || itemId;
+            cartId = (result.cart_id as string) || cartId;
+            itemId = (result.item_id as string) || itemId;
             console.log("[GlobalCart] ✅ RPC success:", result);
           }
         } else {
@@ -248,10 +248,11 @@ export function useGlobalCart() {
       } else {
         // Cobra o lojista só na PRIMEIRA vez que o produto entra na cesta (não
         // a cada incremento de quantidade) — fire-and-forget, nunca bloqueia o carrinho.
-        supabase.rpc("consume_cart_add_credit" as any, {
+        // @ts-expect-error - RPC dynamic call
+        supabase.rpc("consume_cart_add_credit", {
           p_store_id: storeId,
           p_product_id: productId,
-        }).then(({ data }: any) => console.log("[GlobalCart] cart_add credit:", data))
+        }).then(({ data }: { data: unknown }) => console.log("[GlobalCart] cart_add credit:", data))
           .catch(() => { /* noop */ });
         entries.push({
           item_id: itemId,
@@ -347,9 +348,8 @@ export function useGlobalCart() {
           const paymentStatus =
             params.checkoutMode === "online_payment" ? "pending" : "not_applicable";
 
-          const { data: intention, error: piErr } = await (
-            supabase.from("purchase_intentions") as any
-          )
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          const { data: intention, error: piErr } = await supabase.from("purchase_intentions")
             .insert({
               cart_id: group.cart_id,
               store_id: group.store_id,
@@ -404,9 +404,8 @@ export function useGlobalCart() {
             customer_note: it.customer_note,
           }));
 
-          const { error: itErr } = await (
-            supabase.from("purchase_intention_items") as any
-          ).insert(itemsPayload);
+          // @ts-expect-error - Some schemas might not be fully typed yet
+          const { error: itErr } = await supabase.from("purchase_intention_items").insert(itemsPayload);
           if (itErr) console.warn("[GlobalCart] insert items error:", itErr);
 
           purchaseIntentions.push({
@@ -431,7 +430,8 @@ export function useGlobalCart() {
         for (const pi of result.purchase_intentions || []) {
           try {
             // Fix intention header with bairro/city
-            await (supabase.from("purchase_intentions") as any)
+            // @ts-expect-error - Some schemas might not be fully typed yet
+            await supabase.from("purchase_intentions")
               .update({
                 customer_bairro: params.bairro || "",
                 customer_city: params.city || "",
@@ -439,7 +439,8 @@ export function useGlobalCart() {
               .eq("id", pi.intention_id);
 
             // Fix product data via intention items (find items for this intention)
-            const { data: itemsData } = await (supabase.from("purchase_intention_items") as any)
+            // @ts-expect-error - Some schemas might not be fully typed yet
+            const { data: itemsData } = await supabase.from("purchase_intention_items")
               .select("*")
               .eq("intention_id", pi.intention_id);
             for (const item of itemsData || []) {
@@ -447,7 +448,8 @@ export function useGlobalCart() {
                 .find(g => g.store_id === pi.store_id)
                 ?.items.find(i => i.product_id === item.product_id);
               if (localItem && (localItem.product_image_url || localItem.product_title || localItem.product_price)) {
-                await (supabase.from("purchase_intention_items") as any)
+                // @ts-expect-error - Some schemas might not be fully typed yet
+                await supabase.from("purchase_intention_items")
                   .update({
                     product_title: localItem.product_title || "Produto",
                     product_image_url: localItem.product_image_url || null,
@@ -461,7 +463,8 @@ export function useGlobalCart() {
             // Cobrança ao lojista por receber a intenção de compra (5cr,
             // CREDIT_COSTS.visitor_checkout) — feita via RPC segura no banco,
             // que lê o valor real da regra e debita com trava (sem race condition).
-            await (supabase.rpc as any)("consume_purchase_intention_credit", {
+            // @ts-expect-error - RPC dynamic call
+            await supabase.rpc("consume_purchase_intention_credit", {
               p_store_id: pi.store_id,
               p_intention_id: pi.intention_id,
             });
@@ -511,21 +514,21 @@ export function useGlobalCart() {
           const local = getLocalCart();
           if (local.length === 0) {
             const entries: LocalCartEntry[] = [];
-            for (const group of data as any[]) {
+            for (const group of data as Record<string, unknown>[]) {
               if (!group.items) continue;
-              for (const item of group.items) {
+              for (const item of group.items as Record<string, unknown>[]) {
                 entries.push({
-                  item_id: item.item_id,
-                  cart_id: group.cart_id,
-                  store_id: group.store_id,
-                  product_id: item.product_id,
-                  product_title: item.product_title || "Produto",
-                  product_image_url: item.product_image_url,
-                  product_price: item.product_price || 0,
-                  quantity: item.quantity,
-                  customer_note: item.customer_note,
-                  store_name: group.store_name || "Loja",
-                  store_logo: group.store_logo,
+                  item_id: item.item_id as string,
+                  cart_id: group.cart_id as string,
+                  store_id: group.store_id as string,
+                  product_id: item.product_id as string,
+                  product_title: (item.product_title as string) || "Produto",
+                  product_image_url: (item.product_image_url as string) || null,
+                  product_price: (item.product_price as number) || 0,
+                  quantity: item.quantity as number,
+                  customer_note: (item.customer_note as string) || null,
+                  store_name: (group.store_name as string) || "Loja",
+                  store_logo: (group.store_logo as string) || null,
                   added_at: Date.now(),
                 });
               }

@@ -102,34 +102,38 @@ export function useWalletCenter(): WalletCenterData {
     refetchInterval: 20_000,
     queryFn: async () => {
       // Carteira de créditos (wallets) — RLS já filtra pelo dono
-      const { data: w } = await (supabase.from("wallets" as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data: w } = await supabase.from("wallets")
         .select("id, balance_cents, reserved_cents")
         .eq("owner_uid", user!.id)
-        .maybeSingle()) as any;
+        .maybeSingle();
 
-      const walletId = (w as any)?.id ?? null;
-      let balance = Number((w as any)?.balance_cents ?? 0);
-      const reserved = Number((w as any)?.reserved_cents ?? 0);
+      const walletData = w as Record<string, unknown> | null;
+      const walletId = walletData?.id ?? null;
+      let balance = Number(walletData?.balance_cents ?? 0);
+      const reserved = Number(walletData?.reserved_cents ?? 0);
 
       // Se o saldo do legado for 0 ou nulo, buscar das contas pay_financial_accounts do usuário
       if (balance === 0) {
-        const { data: payAccounts } = await (supabase.from("pay_financial_accounts" as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { data: payAccounts } = await supabase.from("pay_financial_accounts")
           .select("available_balance")
-          .eq("owner_id", user!.id)) as any;
+          .eq("owner_id", user!.id);
         if (payAccounts && Array.isArray(payAccounts)) {
-          const totalPayReais = payAccounts.reduce((sum: number, acc: any) => sum + Number(acc.available_balance || 0), 0);
+          const totalPayReais = payAccounts.reduce((sum: number, acc: Record<string, unknown>) => sum + Number(acc.available_balance || 0), 0);
           balance = Math.round(totalPayReais * 100);
         }
       }
 
       let txns: WCTxn[] = [];
       if (walletId) {
-        const { data: rows } = await (supabase.from("wallet_transactions" as any)
+        // @ts-expect-error - Type definitions may be missing
+        const { data: rows } = await supabase.from("wallet_transactions")
           .select("id, created_at, tx_type, status, amount_cents, description, ref_table")
           .eq("wallet_id", walletId)
           .order("created_at", { ascending: false })
-          .limit(500)) as any;
-        txns = ((rows || []) as any[]).map((t) => ({
+          .limit(500);
+        txns = ((rows || []) as Record<string, unknown>[]).map((t) => ({
           id: t.id,
           source: "credit" as WCSource,
           created_at: t.created_at,
@@ -153,7 +157,7 @@ export function useWalletCenter(): WalletCenterData {
   const financialCents = payOverview?.balanceCents ?? 0;
   const processingCents = payOverview?.pendingCents ?? 0;
   const payTxnsRaw = Array.isArray(payOverview?.transactions) ? payOverview!.transactions : [];
-  const payTxns: WCTxn[] = payTxnsRaw.map((t: any) => ({
+  const payTxns: WCTxn[] = payTxnsRaw.map((t: Record<string, unknown>) => ({
     id: t.id,
     source: "financial" as WCSource,
     created_at: t.created_at,

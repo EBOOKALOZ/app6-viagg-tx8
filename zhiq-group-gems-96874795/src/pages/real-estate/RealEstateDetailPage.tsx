@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -15,17 +15,27 @@ import { toast } from 'sonner';
 import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { MarketLayout } from '@/components/layout/MarketLayout';
+import { MarketNavButtons } from '@/components/layout/MarketNavButtons';
 import { StoreHeader } from '@/components/public/store/StoreHeader';
 import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { MarketPropertyCard } from '@/components/real-estate/MarketPropertyCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
+import { StoreThemeScope } from '@/components/public/store/StoreThemeScope';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
 import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
+import { StorePropertyCarousel } from '@/components/store/StorePropertyCarousel';
+import { StoreProductsCarousel } from '@/components/store/StoreProductsCarousel';
+import { RelatedPropertiesCarousel } from '@/components/store/RelatedPropertiesCarousel';
+import { DetailSeoHead } from '@/components/seo/DetailSeoHead';
+import { useAdvertiserSummary } from '@/components/public/advertiser/AdvertiserSummaryCard';
 
 export const RealEstateDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  
+  const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+  const isStoreContext = outletContext?.isStoreContext;
   const [intentionModal, setIntentionModal] = useState<{ open: boolean; interestType: 'whatsapp_click' | 'message_request' }>({ open: false, interestType: 'message_request' });
 
   // ─── QUERY: Listing Principal ─────────────────────────────────────────────
@@ -85,6 +95,11 @@ export const RealEstateDetailPage = () => {
     enabled: !!id,
   });
 
+  // ─── Reset scroll to top on mount ──────────────────────────────────────────
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [id]);
+
   // ─── Cobrança por CLIQUE no anúncio (6 cr do dono, anti-spam no backend) ──
   const clickChargedRef = useRef<string | null>(null);
   useEffect(() => {
@@ -118,28 +133,9 @@ export const RealEstateDetailPage = () => {
   });
 
   // ─── QUERY: Store Info ───────────────────────────────────────────────────
-  const { data: storeInfo } = useQuery({
-    queryKey: ['public-store-info-by-user', property?.user_id],
-    enabled: !!property?.user_id,
-    queryFn: async () => {
-      const { data: storeData } = await (supabase.from('merchant_stores') as any).select('*').eq('user_id', property.user_id).maybeSingle();
-      const { data: pData } = await (supabase.from("profiles") as any).select("*").eq("id", property.user_id).single();
-
-      return {
-          ...storeData,
-          store_name: storeData?.nome_loja || pData?.nome_loja || storeData?.store_name || "Imobiliária / Corretor",
-          logo_url: storeData?.logo_url || pData?.logo_url || pData?.avatar_url || null,
-          city: storeData?.cidade || pData?.cidade || storeData?.city,
-          region: storeData?.estado || pData?.estado || storeData?.region,
-          bairro: storeData?.bairro || storeData?.neighborhood || pData?.bairro,
-          logradouro: storeData?.rua || storeData?.street || pData?.rua || storeData?.endereco || pData?.endereco || storeData?.logradouro,
-          description: storeData?.descricao || pData?.descricao || storeData?.description,
-          categoria: storeData?.categoria || "Imóveis"
-      };
-    },
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
-  });
+  const { data: advertiserData } = useAdvertiserSummary(property?.owner_user_id, 'imoveis');
+  const storeInfo = advertiserData?.store;
+  const storeTargetId = advertiserData?.targetId || property?.owner_user_id;
 
 
   const handleShare = () => {
@@ -173,7 +169,7 @@ export const RealEstateDetailPage = () => {
 
   if (isPropertyLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5E62B] via-[#F8EC4A] to-[#F5E62B]">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-institutional-yellow via-[#F8EC4A] to-institutional-yellow">
         <div className="text-center space-y-4 bg-white/70 backdrop-blur-xl px-10 py-8 rounded-3xl shadow-xl border border-white/60">
           <Loader2 className="w-10 h-10 text-[#FF6A00] animate-spin mx-auto" />
           <p className="font-bold text-zinc-600 uppercase tracking-[0.2em] text-[11px]">Carregando imóvel…</p>
@@ -184,7 +180,7 @@ export const RealEstateDetailPage = () => {
 
   if (propertyError || !property) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F5E62B] via-[#F8EC4A] to-[#F5E62B] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-institutional-yellow via-[#F8EC4A] to-institutional-yellow p-6">
         <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl p-10 text-center space-y-6 bg-white">
           <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
              <Info className="w-10 h-10 text-red-500" />
@@ -220,9 +216,22 @@ export const RealEstateDetailPage = () => {
   const operationLabel = String(property.operation_type || '').toLowerCase() === 'aluguel' ? 'Aluguel' : 'Venda';
   const tipoLabel = String(property.property_type || 'Imóvel').replace(/_/g, ' ');
 
-  return (
-    <>
-      <MarketLayout hideCart={true} mainClassName="min-h-screen relative pb-24 bg-[#F5E62B]" blueFooter blueFooterLabel="🏠 Imóveis" myAccountPath="/imoveis/minha-conta">
+  const content = (
+      <>
+        {storeInfo && !isStoreContext && (
+          <StoreThemeScope appearance={storeInfo.appearance}>
+            <div className="w-full bg-institutional-yellow">
+              <StoreHeader
+                store={storeInfo}
+                productsCount={advertiserData?.totalCount || 0}
+                profileType={advertiserData?.type || "imoveis"}
+                showProfileButton={true}
+                profileId={storeTargetId}
+                compact={false}
+              />
+            </div>
+          </StoreThemeScope>
+        )}
         <DetailPageLayout
           bg="#F5E62B"
           accent="#2563eb"
@@ -275,10 +284,6 @@ export const RealEstateDetailPage = () => {
           ) : undefined}
           extras={(
             <>
-              <AdvertiserSummaryCard
-                advertiserId={storeInfo?.id || property.owner_user_id}
-                profileType="imoveis"
-              />
               <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <p className="text-[11px] leading-relaxed text-emerald-800" style={{ fontWeight: 600 }}>
@@ -302,7 +307,29 @@ export const RealEstateDetailPage = () => {
             href: `/imoveis/${r.id}`,
           }))}
         />
-      </MarketLayout>
+        {storeInfo && (
+          <div className="mx-auto max-w-4xl px-4 pb-24">
+            <StorePropertyCarousel storeId={storeTargetId} currentPropertyId={property.id} />
+            <StoreProductsCarousel storeId={storeTargetId} />
+            <RelatedPropertiesCarousel currentProperty={property} />
+          </div>
+        )}
+      </>
+  );
+
+  return (
+    <>
+      <DetailSeoHead property={property} storeInfo={storeInfo} />
+      
+      {isStoreContext ? (
+          <div className="min-h-screen relative bg-institutional-yellow">
+              {content}
+          </div>
+      ) : (
+          <MarketLayout hideCart={true} mainClassName="min-h-screen relative bg-institutional-yellow" blueFooter blueFooterLabel="🏠 Imóveis" myAccountPath="/imoveis/minha-conta" headerChildren={<MarketNavButtons />}>
+              {content}
+          </MarketLayout>
+      )}
 
       {id && property && (
         <ContactIntentionModal

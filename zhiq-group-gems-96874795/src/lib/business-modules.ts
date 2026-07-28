@@ -11,6 +11,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Building2, Car, Gavel, Trophy, Truck, Plane } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 
 export type BusinessModuleKey =
   | "imobiliaria"
@@ -77,17 +78,20 @@ async function fetchOwnListings(
   userId: string,
   opts?: { listingType?: "auction" | "arremate" | "not_arremate" },
 ): Promise<any[]> {
-  let q = (supabase.from(table) as any).select("*").order("created_at", { ascending: false }).limit(24);
+  // @ts-expect-error - dynamic table query
+  let q = supabase.from(table).select("*").order("created_at", { ascending: false }).limit(24);
   if (opts?.listingType === "arremate") q = q.eq("listing_type", "arremate");
   if (opts?.listingType === "not_arremate") q = q.neq("listing_type", "arremate");
 
   // Leilões/arremates podem estar ligados via store_id (RPC antiga só grava
   // store_id) — inclui as lojas do dono no filtro, como useAdvertiserAuctions.
   if (opts?.listingType) {
-    const { data: stores } = await (supabase.from("merchant_stores") as any)
+    // @ts-expect-error - dynamic table query
+    const { data: stores } = await supabase.from("merchant_stores")
       .select("id")
       .eq("user_id", userId);
-    const ids = ((stores || []) as any[]).map((s) => s.id).filter(Boolean);
+    // @ts-expect-error - dynamic query result
+    const ids = ((stores || [])).map((s) => s.id).filter(Boolean);
     q = ids.length
       ? q.or(`owner_user_id.eq.${userId},store_id.in.(${ids.join(",")})`)
       : q.eq("owner_user_id", userId);
@@ -96,10 +100,45 @@ async function fetchOwnListings(
   }
   const { data, error } = await q;
   if (error) return [];
-  return (data || []) as any[];
+  // @ts-expect-error - dynamic query result
+  return data || [];
 }
 
-function mapListing(r: any, editHref: string | null, priceLabel: string | null): BusinessListingItem {
+/**
+ * Preenche imageUrl com a 1ª foto das tabelas *_media (padrão mascarado:
+ * usa o path público mascarado quando existe, senão o original) — imóveis,
+ * veículos, fretes e viagens não têm coluna de imagem no próprio listing.
+ * Uma única query em lote para todos os anúncios sem imagem.
+ */
+async function attachMediaThumbs(
+  mediaTable: string,
+  items: BusinessListingItem[],
+): Promise<BusinessListingItem[]> {
+  const missing = items.filter((i) => !i.imageUrl).map((i) => i.id);
+  if (!missing.length) return items;
+  try {
+    // @ts-expect-error - dynamic table query
+    const { data } = await supabase.from(mediaTable)
+      .select("listing_id, original_storage_path, public_masked_storage_path, sort_order")
+      .in("listing_id", missing)
+      .order("sort_order", { ascending: true });
+    const thumbs = new Map<string, string>();
+    // @ts-expect-error - dynamic query result
+    for (const m of (data || [])) {
+      const key = String(m.listing_id);
+      if (thumbs.has(key)) continue;
+      const masked = !!m.public_masked_storage_path && m.public_masked_storage_path !== m.original_storage_path;
+      const path = masked ? m.public_masked_storage_path : m.original_storage_path;
+      const url = path ? getListingImageUrl(path, masked ? "public" : "original") : null;
+      if (url) thumbs.set(key, url);
+    }
+    return items.map((i) => (i.imageUrl ? i : { ...i, imageUrl: thumbs.get(i.id) ?? null }));
+  } catch {
+    return items;
+  }
+}
+
+function mapListing(r: Record<string, unknown>, editHref: string | null, priceLabel: string | null): BusinessListingItem {
   return {
     id: String(r.id),
     title: firstStr(r.title, r.nome, r.name) || "Anúncio",
@@ -127,8 +166,9 @@ export const BUSINESS_MODULES: Record<BusinessModuleKey, BusinessModuleDef> = {
     publicPathFor: (uid) => `/imobiliaria/${uid}?tab=imoveis`,
     profileType: "imoveis",
     fetchListings: async (uid) =>
-      (await fetchOwnListings("real_estate_listings", uid)).map((r) =>
-        mapListing(r, `/anunciante/imoveis/anuncios/editar/imovel/${r.id}`, brl(r.price_brl ?? r.price))),
+      attachMediaThumbs("real_estate_media",
+        (await fetchOwnListings("real_estate_listings", uid)).map((r) =>
+          mapListing(r, `/anunciante/imoveis/anuncios/editar/imovel/${r.id}`, brl(r.price_brl ?? r.price)))),
   },
   revenda: {
     key: "revenda",
@@ -145,8 +185,9 @@ export const BUSINESS_MODULES: Record<BusinessModuleKey, BusinessModuleDef> = {
     publicPathFor: (uid) => `/revenda/${uid}?tab=veiculos`,
     profileType: "veiculos",
     fetchListings: async (uid) =>
-      (await fetchOwnListings("vehicle_listings", uid)).map((r) =>
-        mapListing(r, `/anunciante/veiculos/anuncios/editar/veiculo/${r.id}`, brl(r.price_brl ?? r.price))),
+      attachMediaThumbs("vehicle_media",
+        (await fetchOwnListings("vehicle_listings", uid)).map((r) =>
+          mapListing(r, `/anunciante/veiculos/anuncios/editar/veiculo/${r.id}`, brl(r.price_brl ?? r.price)))),
   },
   leiloes: {
     key: "leiloes",
@@ -199,8 +240,9 @@ export const BUSINESS_MODULES: Record<BusinessModuleKey, BusinessModuleDef> = {
     publicPathFor: (uid) => `/freteiro/${uid}?tab=fretes`,
     profileType: "freteiro",
     fetchListings: async (uid) =>
-      (await fetchOwnListings("freight_listings", uid)).map((r) =>
-        mapListing(r, `/anunciante/fretes/anuncios/editar/frete/${r.id}`, brl(r.total_price ?? r.price_per_km))),
+      attachMediaThumbs("freight_media",
+        (await fetchOwnListings("freight_listings", uid)).map((r) =>
+          mapListing(r, `/anunciante/fretes/anuncios/editar/frete/${r.id}`, brl(r.total_price ?? r.price_per_km)))),
   },
   agencia_turismo: {
     key: "agencia_turismo",
@@ -217,8 +259,9 @@ export const BUSINESS_MODULES: Record<BusinessModuleKey, BusinessModuleDef> = {
     publicPathFor: (uid) => `/agencia/${uid}?tab=viagens`,
     profileType: "viagem",
     fetchListings: async (uid) =>
-      (await fetchOwnListings("travel_listings", uid)).map((r) =>
-        mapListing(r, `/anunciante/viagens/anuncios/editar/viagem/${r.id}`, brl(r.total_price ?? r.price_per_person))),
+      attachMediaThumbs("travel_media",
+        (await fetchOwnListings("travel_listings", uid)).map((r) =>
+          mapListing(r, `/anunciante/viagens/anuncios/editar/viagem/${r.id}`, brl(r.total_price ?? r.price_per_person)))),
   },
 };
 

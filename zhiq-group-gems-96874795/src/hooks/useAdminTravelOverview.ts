@@ -68,54 +68,54 @@ export function useAdminTravelOverview(opts: { periodDays?: number } = {}) {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       // 1. Listings
-      const { data: listingsRaw } = await (supabase.from("travel_listings") as any)
+      const { data: listingsRaw } = await (supabase.from("travel_listings") as unknown)
         .select("id, title, category, destination, visibility_status, price_per_person, total_price, entry_price, is_featured, departure_date, duration_days, available_spots, created_at, updated_at, published_at, city, state, owner_user_id")
         .order("created_at", { ascending: false })
         .limit(2000);
 
-      const listings: any[] = listingsRaw || [];
+      const listings: unknown[] = listingsRaw || [];
 
       const ownerIds = Array.from(
         new Set(listings.map((l) => l.owner_user_id).filter(Boolean))
       ) as string[];
 
       // 2. Profiles + stores
-      const profileMap = new Map<string, any>();
-      const storeMap = new Map<string, any>();
+      const profileMap = new Map<string, unknown>();
+      const storeMap = new Map<string, unknown>();
 
       if (ownerIds.length > 0) {
         const [{ data: profs }, { data: stores }] = await Promise.all([
-          (supabase.from("profiles") as any)
+          (supabase.from("profiles") as unknown)
             .select("id, nome, nome_loja, telefone, cidade, estado, email")
             .in("id", ownerIds),
-          (supabase.from("merchant_stores") as any)
+          (supabase.from("merchant_stores") as unknown)
             .select("user_id, nome_loja, store_name, cidade, city, estado, region, telefone, phone")
             .in("user_id", ownerIds),
         ]);
-        (profs || []).forEach((p: any) => profileMap.set(p.id, p));
-        (stores || []).forEach((s: any) => storeMap.set(s.user_id, s));
+        (profs || []).forEach((p: unknown) => profileMap.set(p.id, p));
+        (stores || []).forEach((s: unknown) => storeMap.set(s.user_id, s));
       }
 
       // 3. Packages + purchases
-      const { data: travelPkgs } = await (supabase.from("real_estate_credit_packages") as any)
+      const { data: travelPkgs } = await (supabase.from("real_estate_credit_packages") as unknown)
         .select("*")
         .eq("category", "travel")
         .order("sort_order", { ascending: true });
 
-      const travelPackagesDb: any[] = travelPkgs || [];
+      const travelPackagesDb: unknown[] = travelPkgs || [];
       const travelPackageIds = travelPackagesDb.map((p) => p.id);
 
-      const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as any)
+      const { data: purchasesRaw } = await (supabase.from("real_estate_credit_purchases") as unknown)
         .select("id, owner_user_id, package_id, amount_brl, credits_total, payment_status, created_at, paid_at")
         .order("created_at", { ascending: false })
         .limit(2000);
 
-      const allPurchases: any[] = purchasesRaw || [];
+      const allPurchases: unknown[] = purchasesRaw || [];
       const purchases = allPurchases.filter((p) => travelPackageIds.includes(p.package_id));
 
       const userPackageMap = new Map<string, { name: string | null; slug: string | null; count: number }>();
       for (const p of purchases) {
-        const pkg = travelPackagesDb.find((k: any) => k.id === p.package_id);
+        const pkg = travelPackagesDb.find((k: unknown) => k.id === p.package_id);
         const uid = p.owner_user_id;
         if (!uid) continue;
         const entry = userPackageMap.get(uid) || { name: null, slug: null, count: 0 };
@@ -125,12 +125,12 @@ export function useAdminTravelOverview(opts: { periodDays?: number } = {}) {
       }
 
       // 4. Ledger (travel module)
-      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as any)
+      const { data: ledgerRaw } = await (supabase.from("advertiser_credit_ledger") as unknown)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(3000);
 
-      const ledgerAll: any[] = ledgerRaw || [];
+      const ledgerAll: unknown[] = ledgerRaw || [];
       const ledgerTravel = ledgerAll.filter((e) => {
         const hay = `${e.module || ""} ${e.reason_code || ""} ${e.description || ""}`.toLowerCase();
         return hay.includes("travel") || hay.includes("viagem") || !e.module;
@@ -149,11 +149,11 @@ export function useAdminTravelOverview(opts: { periodDays?: number } = {}) {
         if (accId) creditsByAdvertiserAccount.set(accId, (creditsByAdvertiserAccount.get(accId) || 0) + amount);
       }
 
-      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as any)
+      const { data: accountsRaw } = await (supabase.from("advertiser_accounts") as unknown)
         .select("id, user_id")
         .limit(5000);
       const acctToUser = new Map<string, string>();
-      (accountsRaw || []).forEach((a: any) => {
+      (accountsRaw || []).forEach((a: unknown) => {
         if (a?.id && a?.user_id) acctToUser.set(a.id, a.user_id);
       });
 
@@ -164,13 +164,13 @@ export function useAdminTravelOverview(opts: { periodDays?: number } = {}) {
       }
 
       // 5. Leads
-      const { data: intentionsRaw } = await (supabase.from("advertiser_contact_intentions") as any)
+      const { data: intentionsRaw } = await (supabase.from("advertiser_contact_intentions") as unknown)
         .select("listing_id, listing_module, status")
         .in("listing_module", ["travel", "freight"])
         .limit(5000);
 
       const leadsByListing = new Map<string, number>();
-      (intentionsRaw || []).forEach((i: any) => {
+      (intentionsRaw || []).forEach((i: unknown) => {
         if (i.status === "cancelled") return;
         const isTravel = listings.some((l) => l.id === i.listing_id);
         if (!isTravel) return;

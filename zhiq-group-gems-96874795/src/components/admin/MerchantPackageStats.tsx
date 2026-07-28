@@ -21,15 +21,15 @@ export function MerchantPackageStats() {
     queryKey: ["admin-merchant-package-stats"],
     queryFn: async () => {
       // Buscar TODAS as compras (pagas + pendentes + aguardando)
-      const { data: purchases, error } = await (supabase.from("credit_purchases") as any)
+      const { data: purchases, error } = await supabase.from("credit_purchases")
         .select("product_name, credits_granted, amount_paid, store_id, status, created_at")
         .in("status", ["paid", "pending", "awaiting_payment"]);
 
       if (error) throw error;
 
       // Helper para normalizar nome para os 3 modelos
-      const normalizePackageName = (rawName: string): string => {
-        const name = (rawName || "").toUpperCase();
+      const normalizePackageName = (rawName: string | unknown): string => {
+        const name = (String(rawName || "")).toUpperCase();
         if (name.includes("ÚNICO") || name.includes("BÁSICO") || name.includes("INICIANTE")) {
           return "CRÉDITO INICIANTE";
         }
@@ -39,13 +39,13 @@ export function MerchantPackageStats() {
         if (name.includes("LOJISTA")) {
           return "CRÉDITO LOJISTA";
         }
-        return rawName || "Sem nome";
+        return String(rawName || "Sem nome");
       };
 
       // Agrupar por product_name normalizado
       const grouped = new Map<string, PackageStat>();
 
-      (purchases || []).forEach((p: any) => {
+      (purchases || []).forEach((p: Record<string, unknown>) => {
         const name = normalizePackageName(p.product_name);
         if (!grouped.has(name)) {
           grouped.set(name, {
@@ -61,7 +61,7 @@ export function MerchantPackageStats() {
         }
         const stat = grouped.get(name)!;
         stat.total_purchases += 1;
-        stat.total_credits += (p.credits_granted || 0);
+        stat.total_credits += Number(p.credits_granted || 0);
 
         if (p.status === "paid") {
           stat.paid_purchases += 1;
@@ -74,10 +74,10 @@ export function MerchantPackageStats() {
 
       // Contar stores únicas por pacote normalizado
       const storesByPackage = new Map<string, Set<string>>();
-      (purchases || []).forEach((p: any) => {
+      (purchases || []).forEach((p: Record<string, unknown>) => {
         const name = normalizePackageName(p.product_name);
         if (!storesByPackage.has(name)) storesByPackage.set(name, new Set());
-        if (p.store_id) storesByPackage.get(name)!.add(p.store_id);
+        if (p.store_id) storesByPackage.get(name)!.add(p.store_id as string);
       });
 
       storesByPackage.forEach((stores, name) => {
@@ -96,7 +96,7 @@ export function MerchantPackageStats() {
       const totalRevenue = result.reduce((s, r) => s + r.total_revenue, 0);
       const totalPendingRevenue = result.reduce((s, r) => s + r.pending_revenue, 0);
       const totalCredits = result.reduce((s, r) => s + r.total_credits, 0);
-      const allStores = new Set((purchases || []).map((p: any) => p.store_id).filter(Boolean));
+      const allStores = new Set((purchases || []).map((p: Record<string, unknown>) => p.store_id as string).filter(Boolean));
 
       return {
         packages: result,

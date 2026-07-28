@@ -23,7 +23,7 @@ export function MerchantCreditBuyers() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-merchant-credit-buyers"],
     queryFn: async () => {
-      const { data: purchases, error } = await (supabase.from("credit_purchases") as any)
+      const { data: purchases, error } = await supabase.from("credit_purchases")
         .select("store_id, product_name, amount_paid, credits_granted, status, created_at")
         .eq("status", "paid")
         .order("created_at", { ascending: false });
@@ -31,40 +31,38 @@ export function MerchantCreditBuyers() {
       if (error) throw error;
       if (!purchases || purchases.length === 0) return { buyers: [], total: 0 };
 
-      const storeIds = [...new Set(purchases.map((p: any) => p.store_id).filter(Boolean))] as string[];
+      const storeIds = [...new Set(purchases.map((p: Record<string, unknown>) => p.store_id).filter(Boolean))] as string[];
 
       const { data: stores } = storeIds.length > 0
-        ? await (supabase.from("merchant_stores") as any)
+        ? await supabase.from("merchant_stores")
             .select("id, user_id, nome_loja, store_name, cidade, city, estado, region")
             .in("id", storeIds)
-        : { data: [] as any[] };
+        : { data: [] as Record<string, unknown>[] };
 
-      const userIds = [...new Set((stores || []).map((s: any) => s.user_id).filter(Boolean))] as string[];
+      const userIds = [...new Set((stores || []).map((s: Record<string, unknown>) => s.user_id).filter(Boolean))] as string[];
 
       const { data: profiles } = userIds.length > 0
-        ? await (supabase.from("profiles") as any)
+        ? await supabase.from("profiles")
             .select("id, full_name, name, email")
             .in("id", userIds)
-        : { data: [] as any[] };
+        : { data: [] as Record<string, unknown>[] };
 
-      const storesMap: Record<string, any> = {};
-      (stores || []).forEach((s: any) => { storesMap[s.id] = s; });
+      const storesMap: Record<string, Record<string, unknown>> = {};
+      (stores || []).forEach((s: Record<string, unknown>) => { storesMap[s.id as string] = s; });
 
-      const profilesMap: Record<string, any> = {};
-      (profiles || []).forEach((p: any) => { profilesMap[p.id] = p; });
+      const profilesMap: Record<string, Record<string, unknown>> = {};
+      (profiles || []).forEach((p: Record<string, unknown>) => { profilesMap[p.id as string] = p; });
 
       const grouped = new Map<string, StoreBuyer>();
-      purchases.forEach((p: any) => {
-        const sid = p.store_id;
+      purchases.forEach((p: Record<string, unknown>) => {
+        const sid = p.store_id as string;
         if (!sid) return;
         const store = storesMap[sid] || {};
-        const profile = profilesMap[store.user_id] || {};
+        const profile = profilesMap[store.user_id as string] || {};
 
         if (!grouped.has(sid)) {
           grouped.set(sid, {
             store_id: sid,
-            store_name: store.nome_loja || store.store_name || profile.full_name || profile.name || "Loja sem nome",
-            owner_name: profile.full_name || profile.name || null,
             email: profile.email || null,
             cidade: store.cidade || store.city || null,
             estado: store.estado || store.region || null,

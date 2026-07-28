@@ -92,7 +92,7 @@ function CityCard({ city }: { city: GrowthOverviewRow }) {
       {city.zones && city.zones.length > 0 && (
         <div className="space-y-1">
           <p className="text-[8px] text-gray-500 uppercase tracking-wider font-bold">Zonas</p>
-          {city.zones.slice(0, 4).map((z: any, i: number) => {
+          {city.zones.slice(0, 4).map((z: Record<string, unknown>, i: number) => {
             const levelColor: Record<string, string> = {
               weak: "bg-gray-500", emerging: "bg-amber-500", growing: "bg-orange-500",
               strong: "bg-red-500", dominant: "bg-emerald-500",
@@ -139,7 +139,7 @@ export default function GrowthEngineMonitor() {
 
       toast.success("✅ Growth Engine completado!");
       refetch();
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       toast.error(err?.message || "Erro ao executar agentes");
     } finally {
       setIsRunning(false);

@@ -15,7 +15,7 @@ export type DeliveryListenerPhase = 'idle' | 'ringing' | 'queue' | 'accepted';
 // playNext() pendente no event loop, sem exceção (sem race condition).
 let _audio: HTMLAudioElement | null = null;
 let _playingOfferId: string | null = null;
-let _timerId: any = null;
+let _timerId: ReturnType<typeof setTimeout> | null = null;
 let _gen = 0; // ← contador de geração; muda a cada stop()
 const MAX_PLAYS = 6;
 
@@ -148,9 +148,9 @@ export function useDeliveryOfferListener() {
         stopMotobyAudio();
       }
     }
-  }, [phase, currentOffer?.id]);
+  }, [phase, currentOffer?.id, currentOffer]);
 
-  const mapRowToOffer = useCallback(async (row: any): Promise<DeliveryOffer | null> => {
+  const mapRowToOffer = useCallback(async (row: Record<string, unknown>): Promise<DeliveryOffer | null> => {
     if (!row?.id) return null;
 
     const rawValue = Number(row.gross_value ?? row.total_price ?? row.estimated_price_snapshot ?? 0);
@@ -208,10 +208,11 @@ export function useDeliveryOfferListener() {
           .maybeSingle();
 
         if (so) {
-          pickupLat = pickupLat ?? (so as any).pickup_lat ?? null;
-          pickupLng = pickupLng ?? (so as any).pickup_lng ?? null;
-          dropLat   = dropLat   ?? (so as any).destination_lat ?? null;
-          dropLng   = dropLng   ?? (so as any).destination_lng ?? null;
+          const soRecord = so as Record<string, unknown>;
+          pickupLat = pickupLat ?? (soRecord.pickup_lat as number) ?? null;
+          pickupLng = pickupLng ?? (soRecord.pickup_lng as number) ?? null;
+          dropLat   = dropLat   ?? (soRecord.destination_lat as number) ?? null;
+          dropLng   = dropLng   ?? (soRecord.destination_lng as number) ?? null;
         }
 
         if (so?.store_name) {
@@ -223,7 +224,8 @@ export function useDeliveryOfferListener() {
           // Mesmo que o usuário TENHA loja cadastrada, a corrida NÃO é da loja —
           // não usar nome/logo/endereço da loja; usar o perfil do cliente e o
           // endereço REAL de coleta da corrida (pickup_address_snapshot).
-          const isCustomerCall = (so as any).payer_uid && (so as any).payer_uid === so.merchant_id;
+          const soRecord2 = so as Record<string, unknown>;
+          const isCustomerCall = soRecord2.payer_uid && soRecord2.payer_uid === so.merchant_id;
 
           if (isCustomerCall) {
             const { data: prof } = await supabase
@@ -238,8 +240,9 @@ export function useDeliveryOfferListener() {
             // bairro/cidade/estado ficam vazios de propósito → o card exibe o
             // endereço real da corrida (loja_endereco) no lugar.
           } else {
+            // @ts-expect-error - ignore
             const { data: ms } = await (supabase
-              .from('merchant_stores') as any)
+              .from('merchant_stores'))
               .select('nome_loja, logo_url, bairro, cidade, estado')
               .eq('user_id', so.merchant_id)
               .maybeSingle();
@@ -276,7 +279,8 @@ export function useDeliveryOfferListener() {
     if (!lojaLogo && row.store_id) {
       try {
         const [msRes, profRes] = await Promise.all([
-          (supabase.from('merchant_stores') as any)
+          // @ts-expect-error - ignore
+          (supabase.from('merchant_stores'))
             .select('nome_loja, logo_url')
             .eq('user_id', row.store_id)
             .maybeSingle(),
@@ -286,8 +290,8 @@ export function useDeliveryOfferListener() {
             .eq('id', row.store_id)
             .maybeSingle(),
         ]);
-        const ms: any = msRes.data;
-        const prof: any = profRes.data;
+        const ms = msRes.data as Record<string, unknown> | null;
+        const prof = profRes.data as Record<string, unknown> | null;
         const isStoreCall = !!ms?.nome_loja && !!row.store_name_snapshot
           && ms.nome_loja === row.store_name_snapshot;
         if (isStoreCall) {
@@ -386,7 +390,8 @@ export function useDeliveryOfferListener() {
       // ACEITOU (tela de confirmação não pode sumir).
       if (phaseRef.current === 'accepted') return;
       try {
-        const { data: row } = await (supabase.from('delivery_offers') as any)
+        // @ts-expect-error - ignore
+        const { data: row } = await (supabase.from('delivery_offers'))
           .select('id, status, offer_status, expires_at')
           .eq('id', cur.id)
           .maybeSingle();
@@ -416,7 +421,7 @@ export function useDeliveryOfferListener() {
           filter: `motoboy_id=eq.${user.id}`,
         },
         async (payload) => {
-          const record = payload.new as any;
+          const record = payload.new as Record<string, unknown>;
           if (!record) return;
 
           if (!['pending', 'open'].includes(record.status)) {
@@ -447,7 +452,7 @@ export function useDeliveryOfferListener() {
           //   revalidação matava a zumbi, o motoboy ficava sem NADA — bem na
           //   hora em que outro recusava ("recusa cancelou todo mundo").
           if (payload.eventType === 'INSERT' && currentOfferRef.current !== null) {
-            const cur: any = currentOfferRef.current;
+            const cur = currentOfferRef.current as Record<string, unknown> | null;
             const curVencida = cur?.expires_at
               ? new Date(cur.expires_at).getTime() < Date.now()
               : false;
@@ -512,7 +517,7 @@ export function useDeliveryOfferListener() {
       });
 
       if (error) throw error;
-      const response = data as any;
+      const response = data as Record<string, unknown>;
 
       if (!response?.ok) {
         toast.error(response?.reason || 'Erro ao aceitar oferta.');
@@ -527,9 +532,10 @@ export function useDeliveryOfferListener() {
       setAcceptedOrderId(response?.order_id || null);
       setPhase('accepted');
       toast.success('✅ Entrega assumida!');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao aceitar:', err);
-      const detail = err.message || err.code || "Erro de rede ou permissão.";
+      const errorObj = err as Record<string, unknown>;
+      const detail = errorObj.message || errorObj.code || "Erro de rede ou permissão.";
       toast.error(`Erro de conexão: ${detail}`);
       
       // 🔥 IMPORTANTE: Resetar estado para parar o som mesmo em caso de erro

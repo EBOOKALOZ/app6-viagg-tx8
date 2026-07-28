@@ -26,7 +26,7 @@ export function useAIConfig() {
     queryKey: QK,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown)
         .from("ai_platform_config")
         .select("provider, model, base_url, temperature, max_tokens, notes, updated_at")
         .eq("singleton", true)
@@ -39,7 +39,7 @@ export function useAIConfig() {
   const mutation = useMutation({
     mutationFn: async (cfg: Omit<AIConfig, "updated_at">) => {
       // Tenta via RPC (valida admin no servidor)
-      const { error: rpcErr } = await (supabase as any).rpc("update_ai_platform_config", {
+      const { error: rpcErr } = await (supabase as unknown).rpc("update_ai_platform_config", {
         p_provider:    cfg.provider,
         p_model:       cfg.model,
         p_base_url:    cfg.base_url,
@@ -50,7 +50,7 @@ export function useAIConfig() {
 
       // Fallback: update direto (funciona enquanto RLS de service_role cobrir)
       if (rpcErr) {
-        const { error: updateErr } = await (supabase as any)
+        const { error: updateErr } = await (supabase as unknown)
           .from("ai_platform_config")
           .update({
             provider:    cfg.provider,

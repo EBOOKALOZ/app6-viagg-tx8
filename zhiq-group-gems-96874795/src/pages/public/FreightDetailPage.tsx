@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,9 @@ export const FreightDetailPage = () => {
     interestType: 'whatsapp_click' | 'message_request';
   }>({ open: false, interestType: 'message_request' });
 
+  const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+  const isStoreContext = outletContext?.isStoreContext;
+
   const {
     data: freight,
     isLoading,
@@ -47,7 +50,7 @@ export const FreightDetailPage = () => {
         .from('freight_listings' as any)
         // NÃO usar select('*'): total_price é base INTERNA da comissão de 2% e
         // não pode vazar no payload público. Selecionar só o que a página exibe.
-        .select('id, title, description, vehicle_type, price_label, price_per_km, coverage_routes, city, state, neighborhood, public_address_label, is_featured, subcategoria, visibility_status, owner_user_id, store_id, profile_id')
+        .select('id, title, description, vehicle_type, price_label, price_per_km, coverage_routes, city, state, neighborhood, public_address_label, is_featured, subcategoria, visibility_status, owner_user_id, store_id, profile_id, latitude, longitude')
         .eq('id', id)
         .maybeSingle();
 
@@ -105,32 +108,35 @@ export const FreightDetailPage = () => {
     }
   };
 
-  // Visita do anúncio de frete → cobra o clique (dívida sem pacote, igual serviços).
+  // Visita do anúncio → telemetria SEM débito (freight_track_event, 2026-07-23).
+  // Substitui a RPC legada charge_freight_listing_click que debitava créditos do
+  // dono por clique. Visualizar é grátis: a cobrança oficial é a comissão %
+  // cobrada SÓ ao Aceitar Serviço e Abrir Contato (carteira pay_*).
   const chargedIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!id || chargedIdRef.current === id) return;
     chargedIdRef.current = id;
-    supabase.rpc('charge_freight_listing_click' as any, {
+    supabase.rpc('freight_track_event' as any, {
       p_listing_id: id,
+      p_event: 'listing_click',
       p_fingerprint: getVisitorFingerprint(),
-    }).then(({ data }: any) => console.log('[FREIGHT_CLICK]', data)).catch(() => { /* noop */ });
+    }).then(() => {}, () => { /* noop */ });
   }, [id]);
 
   const handleInterest = () => {
-    try {
-      supabase.rpc('charge_freight_interest_click' as any, {
-        p_listing_id: id,
-        p_fingerprint: getVisitorFingerprint()
-      }).then((result) => console.log("[CPC_RESULT_FREIGHT_INTEREST]", result));
-    } catch (err) {
-      console.error("[CPC_TRY_CATCH]", err);
-    }
+    // Interesse = telemetria sem débito; o lead em si é registrado pelo
+    // ContactIntentionModal (fluxo oficial). Nada é cobrado aqui.
+    supabase.rpc('freight_track_event' as any, {
+      p_listing_id: id,
+      p_event: 'interest_click',
+      p_fingerprint: getVisitorFingerprint(),
+    }).then(() => {}, () => { /* noop */ });
     setIntentionModal({ open: true, interestType: 'message_request' });
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5E62B]">
+      <div className="min-h-screen flex items-center justify-center bg-institutional-yellow">
         <div className="text-center space-y-4">
           <Loader2 className="w-12 h-12 text-zinc-900 animate-spin mx-auto" />
           <p className="font-black text-zinc-400 uppercase tracking-widest text-xs">
@@ -143,7 +149,7 @@ export const FreightDetailPage = () => {
 
   if (error || !freight) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5E62B] p-6">
+      <div className="min-h-screen flex items-center justify-center bg-institutional-yellow p-6">
         <Card className="max-w-md w-full border-none shadow-2xl rounded-3xl p-10 text-center space-y-6">
           <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto">
             <Info className="w-10 h-10 text-red-500" />
@@ -179,9 +185,7 @@ export const FreightDetailPage = () => {
     ? media.map((m: any) => getListingImageUrl(m.original_storage_path, 'original')!).filter(Boolean)
     : (mainImageUrl ? [mainImageUrl] : []);
 
-  return (
-    <>
-      <MarketLayout hideCart={true} mainClassName="min-h-screen relative bg-[#F5E62B]" blueFooter blueFooterLabel="🚚 Fretes & Mudanças" myAccountPath="/minha-conta">
+  const content = (
         <DetailPageLayout
           bg="#F5E62B"
           accent="#ca8a04"
@@ -249,7 +253,19 @@ export const FreightDetailPage = () => {
             href: `/fretes/${f.id}`,
           }))}
         />
-      </MarketLayout>
+  );
+
+  return (
+    <>
+      {isStoreContext ? (
+          <div className="min-h-screen relative bg-institutional-yellow">
+              {content}
+          </div>
+      ) : (
+          <MarketLayout hideCart={true} mainClassName="min-h-screen relative bg-institutional-yellow" blueFooter blueFooterLabel="🚛 Fretes & Mudanças" myAccountPath="/minha-conta">
+              {content}
+          </MarketLayout>
+      )}
 
       {id && freight && (
         <ContactIntentionModal

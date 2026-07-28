@@ -8,7 +8,7 @@ import type { CityGrowthMetrics } from "../growthAgentTypes";
 export async function monitorCityMetrics(): Promise<CityGrowthMetrics[]> {
   console.log("[CityExpansion] 📊 Monitoring city metrics...");
 
-  const { data, error } = await (supabase.from("city_growth_metrics") as any)
+  const { data, error } = await (supabase.from("city_growth_metrics") as never)
     .select("*")
     .order("demand_score", { ascending: false });
 

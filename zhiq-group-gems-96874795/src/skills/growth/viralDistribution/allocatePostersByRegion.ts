@@ -17,22 +17,22 @@ export async function allocatePostersByRegion(city: string, trends: ViralTrend[]
   console.log(`[ViralDistribution] 🗺️ Allocating posters for ${city}...`);
 
   // Get zones with their dominance metrics
-  const { data: zones } = await (supabase.from("city_zones") as any)
+  const { data: zones } = await (supabase.from("city_zones") as never)
     .select("id, zone_name, city")
     .eq("city", city)
     .eq("is_active", true);
 
   if (!zones || zones.length === 0) return [];
 
-  const { data: metrics } = await (supabase.from("zone_dominance_metrics") as any)
+  const { data: metrics } = await (supabase.from("zone_dominance_metrics") as never)
     .select("*")
     .eq("city", city);
 
-  const metricsMap = new Map((metrics || []).map((m: any) => [m.zone_id, m]));
+  const metricsMap = new Map((metrics || []).map((m: Record<string, unknown>) => [m.zone_id, m]));
   const viralNeighborhoods = new Set(trends.filter((t) => t.trendDirection === "rising").map((t) => t.neighborhood));
 
-  const allocations: PosterAllocation[] = zones.map((z: any) => {
-    const m = metricsMap.get(z.id) || { poster_count: 0, demand_score: 0 };
+  const allocations: PosterAllocation[] = zones.map((z: Record<string, unknown>) => {
+    const m = (metricsMap.get(z.id) as Record<string, unknown>) || { poster_count: 0, demand_score: 0 };
     const isViralZone = viralNeighborhoods.size > 0; // Simplified — full implementation would check zone-neighborhood mapping
 
     return {

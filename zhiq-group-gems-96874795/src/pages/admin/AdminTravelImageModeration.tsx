@@ -1,16 +1,19 @@
 /**
  * AdminTravelImageModeration — aprovação de imagens de VIAGENS.
  * Painel exclusivo do módulo (espelho de AdminRealEstateImageModeration /
- * Imóveis), lendo travel_media do bucket oficial travel-public e decidindo
- * pela RPC auditada admin_moderate_travel_media (SECURITY DEFINER +
- * public.is_admin() + travel_audit_log).
+ * Imóveis). Decisão de aprovação passa pela edge moderate-image (ação
+ * approve_travel_media / reject_travel_media) — NÃO mais por RPC SQL pura,
+ * porque aprovar mídia envolve mover o arquivo do bucket de quarentena
+ * ('moderacao') para o bucket público, algo que só a edge (service_role,
+ * acesso à API de Storage) é capaz de fazer. Ver migration
+ * 20260723_travel_media_pipeline_definitivo.sql e travel_audit_log.
  * Rota: /admin/viagens/aprovacao-imagens
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { TravelMediaModerationAction, TravelModerationResult } from "@/integrations/supabase/types-travel";
-import { getTravelMediaUrl, travelImgFallback } from "@/lib/viagem/travelMedia";
+import type { TravelMediaModerationAction } from "@/integrations/supabase/types-travel";
+import { resolveTravelMedia, travelImgFallback } from "@/lib/viagem/travelMedia";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +36,10 @@ interface TravelMediaItem {
   listing_id: string;
   owner_user_id: string;
   sort_order: number;
-  original_storage_path: string | null;
-  public_masked_storage_path: string | null;
+  bucket: string | null;
+  storage_path: string | null;
+  public_url: string | null;
+  moderation_record_id: string | null;
   moderation_status: string;
   created_at: string;
   listing: {
@@ -58,7 +63,6 @@ export const AdminTravelImageModeration = () => {
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("pendentes");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showOriginal, setShowOriginal] = useState(false);
   const [reason, setReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
@@ -66,10 +70,10 @@ export const AdminTravelImageModeration = () => {
     queryKey: ["admin-travel-image-moderation", statusFilter],
     queryFn: async () => {
       let q = (supabase.from("travel_media") as any)
-        .select("id, listing_id, owner_user_id, sort_order, original_storage_path, public_masked_storage_path, moderation_status, created_at, listing:travel_listings(title, destination, city, state, visibility_status)")
+        .select("id, listing_id, owner_user_id, sort_order, bucket, storage_path, public_url, moderation_record_id, moderation_status, created_at, listing:travel_listings(title, destination, city, state, visibility_status)")
         .order("created_at", { ascending: false })
         .limit(80);
-      if (statusFilter === "pendentes") q = q.in("moderation_status", ["queued", "processing"]);
+      if (statusFilter === "pendentes") q = q.in("moderation_status", ["queued", "processing", "pending_ai_analysis"]);
       else if (statusFilter !== "todas") q = q.eq("moderation_status", statusFilter);
       const { data, error } = await q;
       if (error) throw error;
@@ -82,13 +86,30 @@ export const AdminTravelImageModeration = () => {
     [items, selectedId],
   );
 
+  // Enquanto a mídia está em quarentena (sem public_url), o único jeito de
+  // pré-visualizá-la é uma signed URL temporária (bucket 'moderacao' é
+  // privado) — obtida via action 'preview' da própria edge que decide.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setPreviewUrl(null);
+    if (!selected) return;
+    const state = resolveTravelMedia(selected);
+    if (state.kind === "ready") return; // já tem public_url — usa ela direto
+    if (!selected.moderation_record_id) return; // linha legada sem vínculo — sem preview possível
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("moderate-image", {
+        body: { action: "preview", record_id: selected.moderation_record_id },
+      });
+      if (!error && data?.ok && data.url) setPreviewUrl(data.url);
+    })();
+  }, [selected]);
+
   const activeUrl = useMemo(() => {
     if (!selected) return null;
-    const path = showOriginal
-      ? selected.original_storage_path
-      : (selected.public_masked_storage_path || selected.original_storage_path);
-    return getTravelMediaUrl(path);
-  }, [selected, showOriginal]);
+    const state = resolveTravelMedia(selected);
+    if (state.kind === "ready") return state.url;
+    return previewUrl;
+  }, [selected, previewUrl]);
 
   const decide = async (action: TravelMediaModerationAction) => {
     if (!selected) return;
@@ -98,17 +119,29 @@ export const AdminTravelImageModeration = () => {
     }
     try {
       setProcessing(true);
-      const { data, error } = await (supabase.rpc as any)("admin_moderate_travel_media", {
-        p_media_id: selected.id,
-        p_action: action,
-        p_reason: reason.trim() || null,
+      // Aprovação de mídia move arquivo de bucket — só a edge (service_role)
+      // tem acesso a Storage. A RPC SQL admin_moderate_travel_media não
+      // aceita mais 'approve' (ver migration 20260723_travel_media_pipeline_definitivo) —
+      // por desenho, para que nunca mais exista "aprovado no banco mas
+      // arquivo continua na quarentena".
+      const { data, error } = await supabase.functions.invoke("moderate-image", {
+        body: {
+          action: action === "approve" ? "approve_travel_media" : "reject_travel_media",
+          media_id: selected.id,
+          reason: reason.trim() || null,
+        },
       });
-      if (error) throw error;
-      const res = data as TravelModerationResult;
-      if (!res?.success) throw new Error(res?.error || "Falha na moderação");
-      toast.success(action === "approve" ? "Imagem aprovada!" : "Imagem rejeitada.");
+      if (error) throw new Error(error.message);
+      if (!data?.ok) throw new Error(data?.error || "Falha na moderação");
+      toast.success(action === "approve" ? "Imagem aprovada e publicada!" : "Imagem rejeitada.");
       setReason("");
       qc.invalidateQueries({ queryKey: ["admin-travel-image-moderation"] });
+      // A imagem aprovada pertence a um anúncio que pode já estar visível no
+      // Painel Viagens e no Mercado — invalida também esses caches para que
+      // ela apareça sem precisar de reload manual (Fase 10 / Teste 3).
+      qc.invalidateQueries({ queryKey: ["viagens-meus-anuncios"] });
+      qc.invalidateQueries({ queryKey: ["public-travel"] });
+      qc.invalidateQueries({ queryKey: ["public-travel-home"] });
     } catch (err: any) {
       toast.error(`Erro na operação: ${err.message}`);
     } finally {
@@ -174,10 +207,12 @@ export const AdminTravelImageModeration = () => {
           {/* Fila */}
           <ScrollArea className="lg:w-80 max-h-[70vh] border border-zinc-800 rounded-2xl bg-zinc-900/40 shadow-inner">
             <div className="p-3 space-y-2">
-              {items.map((item) => (
+              {items.map((item) => {
+                const itemState = resolveTravelMedia(item);
+                return (
                 <button
                   key={item.id}
-                  onClick={() => { setSelectedId(item.id); setShowOriginal(false); setReason(""); }}
+                  onClick={() => { setSelectedId(item.id); setReason(""); }}
                   className={cn(
                     "w-full text-left p-3 rounded-xl transition-all duration-200 border flex gap-3",
                     selected?.id === item.id
@@ -185,13 +220,17 @@ export const AdminTravelImageModeration = () => {
                       : "bg-zinc-950/40 border-transparent hover:border-zinc-800 hover:bg-zinc-900/60",
                   )}
                 >
-                  <div className="w-14 h-14 rounded-lg bg-zinc-900 flex-shrink-0 overflow-hidden border border-zinc-800">
-                    <img
-                      src={getTravelMediaUrl(item.public_masked_storage_path || item.original_storage_path) || ""}
-                      className="w-full h-full object-cover"
-                      onError={travelImgFallback}
-                      alt=""
-                    />
+                  <div className="w-14 h-14 rounded-lg bg-zinc-900 flex-shrink-0 overflow-hidden border border-zinc-800 flex items-center justify-center">
+                    {itemState.kind === "ready" ? (
+                      <img
+                        src={itemState.url}
+                        className="w-full h-full object-cover"
+                        onError={travelImgFallback}
+                        alt=""
+                      />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-zinc-700" />
+                    )}
                   </div>
                   <div className="flex-1 overflow-hidden flex flex-col justify-center gap-1">
                     <p className={cn(
@@ -208,33 +247,14 @@ export const AdminTravelImageModeration = () => {
                     </Badge>
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
 
           {/* Preview + decisão */}
           <div className="flex-1 flex flex-col gap-4">
             <Card className="bg-zinc-950 border-zinc-800 rounded-3xl overflow-hidden relative flex flex-col min-h-[420px]">
-              {selected?.public_masked_storage_path && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-black/80 backdrop-blur-xl p-1.5 rounded-full border border-white/10">
-                  <Button
-                    size="sm"
-                    variant={!showOriginal ? "default" : "ghost"}
-                    onClick={() => setShowOriginal(false)}
-                    className={cn("h-9 rounded-full px-5 text-[11px] font-black uppercase", !showOriginal && "bg-emerald-600")}
-                  >
-                    <ShieldCheck className="w-4 h-4 mr-1.5" /> Mascarada
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={showOriginal ? "default" : "ghost"}
-                    onClick={() => setShowOriginal(true)}
-                    className={cn("h-9 rounded-full px-5 text-[11px] font-black uppercase", showOriginal && "bg-red-600")}
-                  >
-                    <ImageIcon className="w-4 h-4 mr-1.5" /> Original
-                  </Button>
-                </div>
-              )}
               <div className="flex-1 flex items-center justify-center p-10">
                 {activeUrl ? (
                   <img

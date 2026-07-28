@@ -77,8 +77,8 @@ Deno.serve(async (req) => {
   const { data: fila, error: filaErr } = await svc.rpc("ridv_worker_fila", { p_limite: 10 });
   if (filaErr) return json({ ok: false, error: filaErr.message }, 500);
 
-  const itens = (fila || []) as any[];
-  const resultados: any[] = [];
+  const itens = (fila || []) as Record<string, unknown>[];
+  const resultados: Record<string, unknown>[] = [];
   let iaIndisponivel = false;   // 1ª falha de IA (ex.: sem créditos) evita chamadas inúteis no lote
 
   for (const item of itens) {

@@ -47,7 +47,8 @@ async function accountId(
   ownerId: string | null,
   accountType: PayAccountType,
 ): Promise<string> {
-  const { data, error } = await (supabase.rpc as any)(
+  // @ts-expect-error - Type definitions may be missing
+  const { data, error } = await supabase.rpc(
     'pay_get_or_create_account',
     {
       p_owner_type: ownerType,
@@ -77,7 +78,8 @@ async function postTransaction(
   entries: LedgerEntryInput[],
   metadata: Record<string, unknown> = {},
 ): Promise<string> {
-  const { data, error } = await (supabase.rpc as any)('pay_post_transaction', {
+  // @ts-expect-error - Type definitions may be missing
+  const { data, error } = await supabase.rpc('pay_post_transaction', {
     p_scope: scope,
     p_idempotency_key: idempotencyKey,
     p_entries: entries,

@@ -48,133 +48,133 @@ export function useAdminRealtimeOps() {
     const [orders, setOrders] = useState<Record<string, OpsOrder>>({});
     const [isLoading, setIsLoading] = useState(true);
 
-    const initData = async () => {
-        try {
-            // 1. Fetch active professionals presence
-            const { data: prosData } = await supabase
-                .from("professional_presence")
-                .select("user_id, status, last_location, updated_at");
+    useEffect(() => {
+        const initData = async () => {
+            try {
+                // 1. Fetch active professionals presence
+                const { data: prosData } = await supabase
+                    .from("professional_presence")
+                    .select("user_id, status, last_location, updated_at");
 
-            // Fetch names for active pros
-            const userIds = prosData?.map(p => p.user_id).filter(Boolean) || [];
-            const profilesDict: Record<string, string> = {};
-            if (userIds.length > 0) {
-                const { data: profiles } = await supabase
-                    .from("profiles")
-                    .select("id, full_name")
-                    .in("id", userIds);
-                profiles?.forEach(p => {
-                    profilesDict[p.id] = p.full_name || "Desconhecido";
-                });
-            }
+                // Fetch names for active pros
+                const userIds = prosData?.map(p => p.user_id).filter(Boolean) || [];
+                const profilesDict: Record<string, string> = {};
+                if (userIds.length > 0) {
+                    const { data: profiles } = await supabase
+                        .from("profiles")
+                        .select("id, full_name")
+                        .in("id", userIds);
+                    profiles?.forEach(p => {
+                        profilesDict[p.id] = p.full_name || "Desconhecido";
+                    });
+                }
 
-            const initialMotoboys: Record<string, OpsMotoboy> = {};
-            prosData?.forEach(p => {
-                if (!p.user_id) return;
+                const initialMotoboys: Record<string, OpsMotoboy> = {};
+                prosData?.forEach(p => {
+                    if (!p.user_id) return;
 
-                // Parse last_location if it's a point string like "POINT(lng lat)" 
-                // However, without postgis, it might just be stored differently or need custom parsing.
-                // Assuming standard fallback or we'll fetch lat/lng if we add them to the table.
-                let lat = null, lng = null;
-                if (typeof p.last_location === 'string' && p.last_location.startsWith('POINT(')) {
-                    const match = p.last_location.match(/POINT\(([^ ]+) ([^)]+)\)/);
-                    if (match) {
-                        lng = parseFloat(match[1]);
-                        lat = parseFloat(match[2]);
+                    // Parse last_location if it's a point string like "POINT(lng lat)" 
+                    // However, without postgis, it might just be stored differently or need custom parsing.
+                    // Assuming standard fallback or we'll fetch lat/lng if we add them to the table.
+                    let lat = null, lng = null;
+                    if (typeof p.last_location === 'string' && p.last_location.startsWith('POINT(')) {
+                        const match = p.last_location.match(/POINT\(([^ ]+) ([^)]+)\)/);
+                        if (match) {
+                            lng = parseFloat(match[1]);
+                            lat = parseFloat(match[2]);
+                        }
                     }
-                }
 
-                initialMotoboys[p.user_id] = {
-                    id: p.user_id,
-                    name: profilesDict[p.user_id] || "Motoboy Ativo",
-                    status: p.status === 'online' ? 'online' : (p.status as any),
-                    lat,
-                    lng,
-                    updatedAt: p.updated_at
-                };
-            });
-            setMotoboys(initialMotoboys);
-
-            // 2. Fetch active today's orders
-            const now = new Date();
-            const gteDate = new Date();
-            switch (timeWindow) {
-                case '10m': gteDate.setMinutes(now.getMinutes() - 10); break;
-                case '30m': gteDate.setMinutes(now.getMinutes() - 30); break;
-                case '1h': gteDate.setHours(now.getHours() - 1); break;
-                case '24h': gteDate.setHours(now.getHours() - 24); break;
-            }
-
-            const { data: activeOrders } = await supabase
-                .from("service_orders")
-                .select("*")
-                .in("status", ["waiting_motoboy", "accepted", "in_progress", "created_a"])
-                .gte("created_at", gteDate.toISOString());
-
-            const initialOrders: Record<string, OpsOrder> = {};
-            activeOrders?.forEach(o => {
-                initialOrders[o.id] = {
-                    id: o.id,
-                    status: o.status,
-                    merchant_id: o.merchant_id || '',
-                    professional_uid: o.professional_uid,
-                    pickup_lat: Number(o.pickup_lat) || 0,
-                    pickup_lng: Number(o.pickup_lng) || 0,
-                    destination_lat: Number(o.destination_lat) || 0,
-                    destination_lng: Number(o.destination_lng) || 0,
-                    route_polyline: o.route_polyline,
-                    price: (Number(o.price_total_cents) || 0) / 100,
-                    created_at: o.created_at,
-                    city_id: o.city_id,
-                    neighborhood: o.metadata?.store_neighborhood || 'Bairro Desconhecido'
-                };
-
-                // If order is active and has a pro, mark pro as in_delivery
-                if (o.professional_uid && initialMotoboys[o.professional_uid]) {
-                    initialMotoboys[o.professional_uid].status = 'in_delivery';
-                }
-            });
-            setOrders(initialOrders);
-
-            // 3. Update state finally with marked delivery statuses
-            setMotoboys(prev => ({ ...prev, ...initialMotoboys }));
-
-            // 4. Fetch merchants
-            const storeIds = [...new Set(activeOrders?.map(o => o.merchant_id).filter(Boolean))] as string[];
-            if (storeIds.length > 0) {
-                const { data: storesData } = await supabase
-                    .from("merchant_stores")
-                    .select("id, name, lat, lng")
-                    .in("id", storeIds);
-
-                const initialsStores: Record<string, OpsStore> = {};
-                storesData?.forEach(s => {
-                    initialsStores[s.id] = {
-                        id: s.id,
-                        name: s.name,
-                        lat: Number(s.lat) || 0,
-                        lng: Number(s.lng) || 0,
-                        active: true,
-                        walletBalance: 0,
-                        deliveriesToday: 0
+                    initialMotoboys[p.user_id] = {
+                        id: p.user_id,
+                        name: profilesDict[p.user_id] || "Motoboy Ativo",
+                        status: p.status === 'online' ? 'online' : (p.status as unknown),
+                        lat,
+                        lng,
+                        updatedAt: p.updated_at
                     };
                 });
-                setStores(initialsStores);
-            }
-        } catch (e) {
-            console.error("Error loading ops data", e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+                setMotoboys(initialMotoboys);
 
-    useEffect(() => {
+                // 2. Fetch active today's orders
+                const now = new Date();
+                const gteDate = new Date();
+                switch (timeWindow) {
+                    case '10m': gteDate.setMinutes(now.getMinutes() - 10); break;
+                    case '30m': gteDate.setMinutes(now.getMinutes() - 30); break;
+                    case '1h': gteDate.setHours(now.getHours() - 1); break;
+                    case '24h': gteDate.setHours(now.getHours() - 24); break;
+                }
+
+                const { data: activeOrders } = await supabase
+                    .from("service_orders")
+                    .select("*")
+                    .in("status", ["waiting_motoboy", "accepted", "in_progress", "created_a"])
+                    .gte("created_at", gteDate.toISOString());
+
+                const initialOrders: Record<string, OpsOrder> = {};
+                activeOrders?.forEach(o => {
+                    initialOrders[o.id] = {
+                        id: o.id,
+                        status: o.status,
+                        merchant_id: o.merchant_id || '',
+                        professional_uid: o.professional_uid,
+                        pickup_lat: Number(o.pickup_lat) || 0,
+                        pickup_lng: Number(o.pickup_lng) || 0,
+                        destination_lat: Number(o.destination_lat) || 0,
+                        destination_lng: Number(o.destination_lng) || 0,
+                        route_polyline: o.route_polyline,
+                        price: (Number(o.price_total_cents) || 0) / 100,
+                        created_at: o.created_at,
+                        city_id: o.city_id,
+                        neighborhood: o.metadata?.store_neighborhood || 'Bairro Desconhecido'
+                    };
+
+                    // If order is active and has a pro, mark pro as in_delivery
+                    if (o.professional_uid && initialMotoboys[o.professional_uid]) {
+                        initialMotoboys[o.professional_uid].status = 'in_delivery';
+                    }
+                });
+                setOrders(initialOrders);
+
+                // 3. Update state finally with marked delivery statuses
+                setMotoboys(prev => ({ ...prev, ...initialMotoboys }));
+
+                // 4. Fetch merchants
+                const storeIds = [...new Set(activeOrders?.map(o => o.merchant_id).filter(Boolean))] as string[];
+                if (storeIds.length > 0) {
+                    const { data: storesData } = await supabase
+                        .from("merchant_stores")
+                        .select("id, name, lat, lng")
+                        .in("id", storeIds);
+
+                    const initialsStores: Record<string, OpsStore> = {};
+                    storesData?.forEach(s => {
+                        initialsStores[s.id] = {
+                            id: s.id,
+                            name: s.name,
+                            lat: Number(s.lat) || 0,
+                            lng: Number(s.lng) || 0,
+                            active: true,
+                            walletBalance: 0,
+                            deliveriesToday: 0
+                        };
+                    });
+                    setStores(initialsStores);
+                }
+            } catch (e) {
+                console.error("Error loading ops data", e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
         initData();
 
         // Subscriptions
         const channel = supabase.channel('admin-ops-center')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'service_orders' }, payload => {
-                const newRec = payload.new as any;
+                const newRec = payload.new as unknown;
                 if (!newRec || !newRec.id) return;
 
                 setOrders(prev => {
@@ -218,7 +218,7 @@ export function useAdminRealtimeOps() {
                 }
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'professional_presence' }, payload => {
-                const newRec = payload.new as any;
+                const newRec = payload.new as unknown;
                 if (!newRec || !newRec.user_id) return;
 
                 setMotoboys(prev => {

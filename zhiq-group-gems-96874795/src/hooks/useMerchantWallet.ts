@@ -10,7 +10,7 @@ export interface MerchantLedgerEntry {
   reference_type: string | null;
   reference_id: string | null;
   description: string | null;
-  metadata: any | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -38,9 +38,9 @@ export function useMerchantWallet() {
         const { data, error } = await supabase.rpc("get_my_merchant_pay_wallet");
         if (error) throw error;
 
-        const res = (data as any) || {};
+        const res = (data as Record<string, unknown>) || {};
         if (res.success === false) {
-          throw new Error(res.error || "Falha ao carregar carteira");
+          throw new Error(String(res.error) || "Falha ao carregar carteira");
         }
 
         const balanceCents = Number(res.available_cents ?? 0);
@@ -51,7 +51,7 @@ export function useMerchantWallet() {
           balanceReais: balanceCents / 100,
           pendingCents,
           pendingReais: pendingCents / 100,
-          transactions: (res.transactions as any) || [],
+          transactions: (res.transactions as MerchantLedgerEntry[]) || [],
         };
       } catch (err) {
         console.error("USEMERCHANTWALLET FATAL:", err);

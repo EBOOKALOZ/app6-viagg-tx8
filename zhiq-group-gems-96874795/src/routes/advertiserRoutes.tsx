@@ -12,6 +12,7 @@ import {
   MerchantStoreAppearance,
   AdvertiserListingsPage,
   MerchantAuctions,
+  MerchantAuctionIntelligence,
   MerchantArremate,
   MerchantArrematesPanel,
   MerchantConversions,
@@ -124,7 +125,7 @@ export const advertiserRoutes = (
     <Route path="/anunciante/minha-loja"      element={<Suspense fallback={<PageFallback />}><MerchantMyStorePage /></Suspense>} />
     <Route path="/anunciante/aparencia"       element={<Suspense fallback={<PageFallback />}><MerchantStoreAppearance /></Suspense>} />
     <Route path="/anunciante/meus-anuncios"   element={<Suspense fallback={<PageFallback />}><AdvertiserListingsPage /></Suspense>} />
-    <Route path="/anunciante/leiloes"         element={<MerchantAuctions />} />
+    <Route path="/anunciante/leiloes"         element={<MerchantAuctions />} />`n      <Route path="/anunciante/leiloes/inteligencia" element={<Suspense fallback={<PageFallback />}><MerchantAuctionIntelligence /></Suspense>} />
     <Route path="/anunciante/arremates"       element={<MerchantArremate />} />
     <Route path="/anunciante/arremates/gestao" element={<Suspense fallback={<PageFallback />}><MerchantArrematesPanel /></Suspense>} />
     {/* Meus Leilões / Meus Arremates (perfil público) + Aparência */}

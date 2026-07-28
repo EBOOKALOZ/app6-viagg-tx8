@@ -259,7 +259,7 @@ export async function playStation(station: RadioStation): Promise<void> {
   const httpsAlt = isHttp ? "https://" + original.slice("http://".length) : null;
   // Em página https, o navegador barra o http:// de cara → começa pela versão https.
   // Fora disso (localhost/dev), usa o original direto.
-  let url = pageHttps && isHttp && httpsAlt ? httpsAlt : original;
+  const url = pageHttps && isHttp && httpsAlt ? httpsAlt : original;
   lastWasHttp = pageHttps && isHttp;
 
   set({ station, loading: true, error: null, eqActive: false });

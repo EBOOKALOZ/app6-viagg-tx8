@@ -57,7 +57,14 @@ export default function PublicFreightHome() {
           }
         }
       }
-      return rows.map((s) => ({ ...s, thumbnail_url: mediaMap.get(s.id) || null }));
+      const withThumbs = rows.map((s) => ({ ...s, thumbnail_url: mediaMap.get(s.id) || null }));
+      // DIVULGAÇÃO: anúncios PROMOVIDOS (pacotes Bronze→Diamante) aparecem
+      // primeiro. Sort estável client-side — preserva featured/recentes dentro
+      // de cada grupo e não quebra se a coluna ainda não existir no banco.
+      const promoted = (s: any) =>
+        s.is_promoted && (!s.promoted_until || new Date(s.promoted_until).getTime() > Date.now()) ? 1 : 0;
+      withThumbs.sort((a, b) => promoted(b) - promoted(a));
+      return withThumbs;
     },
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
@@ -189,7 +196,7 @@ export default function PublicFreightHome() {
       <InstitutionalSafetyBanner />
 
       {/* ─── 1. HERO PREMIUM (sem botão de anunciar) ─── */}
-      <div className="w-full px-4 lg:px-6 pt-6 bg-[#F5E62B]">
+      <div className="w-full px-4 lg:px-6 pt-6 bg-institutional-yellow">
         <div className="max-w-[1920px] mx-auto flex flex-col items-center text-center gap-2">
           <div className="flex items-center gap-2 justify-center">
             <div className="p-2 bg-blue-600/10 rounded-lg">
@@ -255,7 +262,7 @@ export default function PublicFreightHome() {
       </div>
 
       {/* Widget de triagem (orçamento rápido) — logo abaixo do hero */}
-      <div className="w-full px-4 lg:px-6 pt-4 bg-[#F5E62B]">
+      <div className="w-full px-4 lg:px-6 pt-4 bg-institutional-yellow">
         <div className="max-w-4xl mx-auto">
           <FreightTriageWidget />
         </div>
@@ -292,7 +299,7 @@ export default function PublicFreightHome() {
           <p className="text-zinc-500">Volte em breve — novos transportadores chegam toda semana.</p>
         </div>
       ) : (
-        <div className="w-full py-8 bg-[#F5E62B]">
+        <div className="w-full py-8 bg-institutional-yellow">
           <div className="max-w-[1920px] mx-auto space-y-10">
 
             {/* ─── 2. VITRINES DE DESTAQUE (só na visão "Todos") ─── */}

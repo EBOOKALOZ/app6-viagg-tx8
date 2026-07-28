@@ -15,12 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 import { formatBrazilianPhone } from "@/lib/utils";
 import { moderatedUpload } from "@/lib/moderation/moderatedUpload";
 import { moderatedText } from "@/lib/moderation/moderatedText";
-import { getTravelMediaUrl, resolveTravelUploadBucket } from "@/lib/viagem/travelMedia";
+import { resolveTravelMedia } from "@/lib/viagem/travelMedia";
 
 interface ExistingMedia {
   id: string;
   url: string;
   path: string;
+  /** true quando a foto ainda está retida em revisão (bucket privado 'moderacao') — sem URL pública ainda. */
+  reviewing: boolean;
 }
 
 interface FormData {
@@ -103,7 +105,7 @@ export default function ViagemForm() {
     enabled: isEdit && !!listingId,
     queryFn: async () => {
       const { data } = await (supabase.from("travel_media") as any)
-        .select("id, original_storage_path, sort_order")
+        .select("id, original_storage_path, public_masked_storage_path, bucket, storage_path, public_url, moderation_status, sort_order")
         .eq("listing_id", listingId)
         .order("sort_order");
       return data || [];
@@ -137,11 +139,19 @@ export default function ViagemForm() {
     // Reseta SEMPRE que mediaData mudar (inclusive p/ vazio): sem isso, ao
     // editar um pacote sem fotos logo após outro COM fotos, as imagens do
     // anterior persistiam — mistura de mídia entre anúncios distintos.
-    const mapped: ExistingMedia[] = (mediaData || []).map((m: any) => ({
-      id: m.id,
-      path: m.original_storage_path,
-      url: getTravelMediaUrl(m.original_storage_path) || "",
-    }));
+    // resolveTravelMedia() é a única fonte de URL: 'ready' quando há
+    // public_url aprovada, 'reviewing' quando o arquivo existe mas ainda
+    // está em quarentena — o dono precisa ver que a foto foi recebida e
+    // está em análise, não um <img> quebrado.
+    const mapped: ExistingMedia[] = (mediaData || []).map((m: any) => {
+      const state = resolveTravelMedia(m);
+      return {
+        id: m.id,
+        path: m.original_storage_path,
+        url: state.kind === "ready" ? state.url : "",
+        reviewing: state.kind === "reviewing",
+      };
+    });
     setExistingMedia(mapped);
   }, [mediaData]);
 
@@ -292,9 +302,14 @@ export default function ViagemForm() {
       }
 
       if (savedId && pendingFiles.length > 0) {
-        // Resolve o bucket oficial 1x (travel-public se já existir, senão o
-        // fallback público) — auto-migra para o oficial sem troca de código.
-        const uploadBucket = await resolveTravelUploadBucket();
+        // A edge moderate-image grava a linha em travel_media DIRETAMENTE
+        // (arquitetura definitiva — ver moderate-image/index.ts). O
+        // frontend não faz mais INSERT: isso eliminava a janela em que a
+        // resposta da edge e o INSERT do cliente podiam divergir (aba
+        // fechada entre as duas chamadas, path gravado errado, etc).
+        // sort_order continua a partir do que já existe salvo, para não
+        // colidir com fotos já persistidas.
+        const baseOrder = existingMedia.length;
         for (let idx = 0; idx < pendingFiles.length; idx++) {
           const file = pendingFiles[idx];
           let modRes;
@@ -304,7 +319,7 @@ export default function ViagemForm() {
               mime: file.type || 'image/jpeg',
               listingId: savedId,
               category: 'travel',
-              targetBucket: uploadBucket,
+              sortOrder: baseOrder + idx,
             });
           } catch (modErr: any) {
             toast({ title: "Erro na moderação da foto", description: modErr.message, variant: "destructive" });
@@ -315,20 +330,8 @@ export default function ViagemForm() {
             toast({ title: "Foto bloqueada pelo Viagg-TX8™", description: modRes.reason, variant: "destructive" });
             continue;
           }
-
-          const finalPath = modRes.storagePath || `${user.id}/travel/${savedId}/${Date.now()}_${idx}.jpg`;
-          const finalStatus = modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis';
-
-          const { error: mediaErr } = await (supabase.from("travel_media") as any).insert({
-            listing_id: savedId,
-            owner_user_id: user.id,
-            original_storage_path: finalPath,
-            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
-            moderation_status: finalStatus,
-            sort_order: idx,
-          });
-          if (mediaErr) {
-            toast({ title: "Erro ao salvar foto", description: mediaErr.message, variant: "destructive" });
+          if (!modRes.mediaId) {
+            toast({ title: "Erro ao salvar foto", description: "A edge não retornou o registro de mídia.", variant: "destructive" });
           }
         }
       }
@@ -478,14 +481,19 @@ export default function ViagemForm() {
           const media = existingMedia[idx];
           if (!media || !user) return;
           // faz upload do novo arquivo
+          // "Substituir" ainda cria uma nova análise/upload (a edge não
+          // sabe reaproveitar a linha antiga), mas aqui não podemos deixar
+          // a edge criar OUTRA linha travel_media — precisamos que ESTA
+          // troca atualize a linha existente (media.id) e não duplique.
+          // Por isso este fluxo NÃO passa listingId (evita o INSERT
+          // automático da edge para módulo travel) e faz o UPDATE aqui,
+          // com os mesmos campos completos que a edge grava no INSERT.
           let modRes;
           try {
             modRes = await moderatedUpload(file, {
               fileName: file.name,
               mime: file.type || 'image/jpeg',
-              listingId: listingId,
               category: 'travel',
-              targetBucket: 'travel-public',
             });
           } catch (modErr: any) {
             toast({ title: "Erro na moderação da foto", description: modErr.message, variant: "destructive" });
@@ -497,19 +505,38 @@ export default function ViagemForm() {
             return;
           }
 
-          const finalPath = modRes.storagePath || `${user.id}/travel/${listingId}/${Date.now()}_replace.jpg`;
-          const finalUrl = modRes.publicUrl || getTravelMediaUrl(finalPath) || "";
-
-          // atualiza o registro no banco
-          await (supabase.from("travel_media") as any).update({
-            original_storage_path: finalPath,
-            public_masked_storage_path: modRes.status === 'approved' ? finalPath : null,
-            moderation_status: modRes.status === 'approved' ? 'approved' : 'pending_ai_analysis',
+          const approved = modRes.status === 'approved';
+          const { error: updErr } = await (supabase.from("travel_media") as any).update({
+            original_storage_path: modRes.storagePath,
+            public_masked_storage_path: approved ? modRes.storagePath : null,
+            bucket: approved ? modRes.bucket : null,
+            storage_path: modRes.storagePath,
+            public_url: approved ? modRes.publicUrl : null,
+            moderation_status: approved ? 'approved' : 'pending_ai_analysis',
+            moderation_record_id: modRes.recordId,
+            approved_at: approved ? new Date().toISOString() : null,
+            approved_by: approved ? user.id : null,
           }).eq("id", media.id);
+          if (updErr) {
+            toast({ title: "Erro ao salvar foto", description: updErr.message, variant: "destructive" });
+            return;
+          }
 
-          // atualiza o preview localmente
-          setExistingMedia(prev => prev.map((m, i) => i === idx ? { ...m, url: finalUrl + `?t=${Date.now()}`, path: finalPath } : m));
-          toast({ title: modRes.status === 'approved' ? "Foto substituída e aprovada!" : "Foto enviada para análise!" });
+          // atualiza o preview localmente a partir do resolver único —
+          // nunca monta a URL manualmente aqui.
+          const state = resolveTravelMedia({
+            bucket: approved ? modRes.bucket : null,
+            storage_path: modRes.storagePath,
+            public_url: approved ? modRes.publicUrl : null,
+            moderation_status: approved ? 'approved' : 'pending_ai_analysis',
+          });
+          setExistingMedia(prev => prev.map((m, i) => i === idx ? {
+            ...m,
+            url: state.kind === "ready" ? state.url : "",
+            reviewing: state.kind === "reviewing",
+            path: modRes.storagePath || m.path,
+          } : m));
+          toast({ title: approved ? "Foto substituída e aprovada!" : "Foto enviada para análise!" });
           replaceIndexRef.current = -1;
           e.target.value = "";
         }} />
@@ -519,22 +546,32 @@ export default function ViagemForm() {
             {/* fotos já salvas no banco */}
             {existingMedia.map((media, i) => (
               <div key={media.id} className="relative aspect-square rounded-xl overflow-hidden bg-zinc-100 group">
-                <img 
-                  src={media.url} 
-                  alt="" 
-                  className="w-full h-full object-cover" 
-                  onError={e => {
-                      const img = e.currentTarget as HTMLImageElement;
-                      if (img.dataset.fallbackTried === "1") { img.style.display = "none"; return; }
-                      if (img.src.includes("/travel-public/")) {
-                          const fb = img.src.replace("/travel-public/", "/real-estate-original/").split("?")[0];
-                          img.dataset.fallbackTried = "1";
-                          img.src = fb;
-                      } else {
-                          img.style.display = "none";
-                      }
-                  }}
-                />
+                {media.reviewing ? (
+                  // Foto retida em revisão manual (bucket privado 'moderacao') — ainda
+                  // não existe URL pública. Mostrar isso explicitamente evita que o
+                  // dono pense que o upload falhou ou "sumiu".
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-center px-2 bg-yellow-50">
+                    <Loader2 className="w-5 h-5 text-yellow-500 animate-spin" />
+                    <span className="text-[9px] font-bold text-yellow-700 uppercase leading-tight">Em análise</span>
+                  </div>
+                ) : (
+                  <img
+                    src={media.url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    onError={e => {
+                        const img = e.currentTarget as HTMLImageElement;
+                        if (img.dataset.fallbackTried === "1") { img.style.display = "none"; return; }
+                        if (img.src.includes("/travel-public/")) {
+                            const fb = img.src.replace("/travel-public/", "/real-estate-original/").split("?")[0];
+                            img.dataset.fallbackTried = "1";
+                            img.src = fb;
+                        } else {
+                            img.style.display = "none";
+                        }
+                    }}
+                  />
+                )}
                 {deletingId === media.id && (
                   <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -559,8 +596,10 @@ export default function ViagemForm() {
                     <X className="w-3.5 h-3.5 text-white" />
                   </button>
                 </div>
-                {/* badge "Salvo" */}
-                <span className="absolute bottom-1 left-1 bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none opacity-80">Salvo</span>
+                {/* badge de status: "Salvo" (aprovada) ou "Em análise" (quarentena) */}
+                {!media.reviewing && (
+                  <span className="absolute bottom-1 left-1 bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase leading-none opacity-80">Salvo</span>
+                )}
               </div>
             ))}
 

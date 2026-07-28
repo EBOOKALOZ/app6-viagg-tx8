@@ -42,7 +42,7 @@ export function useRealEstatePackages() {
       
       console.log("[RealEstatePackages] Data received from DB:", data);
 
-      return (data || []).map((p: any) => ({
+      return (data || []).map((p: Record<string, unknown>) => ({
         id: p.id,
         name: p.name || p.slug || "Plano sem nome",
         slug: p.slug || "",

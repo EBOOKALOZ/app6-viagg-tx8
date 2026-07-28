@@ -52,7 +52,11 @@ function usePromotionModuleStats() {
   return useQuery<ModuleStat[]>({
     queryKey: ["admin", "promotion-module-stats"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from("promotion_purchases") as any)
+      const { data, error } = await (supabase.from("promotion_purchases") as unknown as {
+        select: (q: string) => {
+          order: (c: string, o: { ascending: boolean }) => Promise<{ data: unknown[]; error: Error | null }>
+        }
+      })
         .select("id, listing_module, package_name, period_days, amount_brl, status, created_at, starts_at, expires_at")
         .order("created_at", { ascending: false });
 

@@ -220,7 +220,7 @@ export function useRealtimeCalls({
           filter: `professional_uid=eq.${effectiveProfileId}`,
         },
         async (payload) => {
-          const record = payload.new as any;
+          const record = payload.new as Record<string, unknown>;
 
           console.log('[Realtime] 🔔 Delivery OFFER recebida:', record.id, 'para Order:', record.service_order_id);
 
@@ -301,7 +301,7 @@ export function useRealtimeCalls({
           filter: `professional_uid=eq.${effectiveProfileId}`,
         },
         (payload) => {
-          const record = payload.new as any;
+          const record = payload.new as Record<string, unknown>;
           // ★ GUARDA DE IDENTIDADE: só reagir a eventos da MINHA oferta.
           // O filtro do canal pode vazar em reconexões — e como o remove é
           // pelo ID DA ORDEM (compartilhado por todos os motoboys), a
@@ -331,7 +331,7 @@ export function useRealtimeCalls({
           table: 'moto_taxi_corridas',
         },
         (payload) => {
-          const record = payload.new as any;
+          const record = payload.new as Record<string, unknown>;
 
           console.log('[Realtime] 🔔 Ride INSERT recebido:', record.id);
           console.log('[Realtime] - status:', record.status);
@@ -387,7 +387,7 @@ export function useRealtimeCalls({
           table: 'moto_taxi_corridas',
         },
         (payload) => {
-          const record = payload.new as any;
+          const record = payload.new as Record<string, unknown>;
           // Se status mudou de pesquisando, remover da fila
           if (record.status !== 'pesquisando') {
             console.log('[Realtime] ❌ Ride status changed, removing:', record.id);
@@ -408,8 +408,8 @@ export function useRealtimeCalls({
           table: 'motorista_corridas',
         },
         (payload) => {
-          const record = payload.new as any;
-          const oldRecord = payload.old as any;
+          const record = payload.new as Record<string, unknown>;
+          const oldRecord = payload.old as Record<string, unknown>;
           const eventType = payload.eventType;
 
           console.log('[Realtime] 🚗 Corrida CARRO', eventType, 'recebido:', record.id);
@@ -572,7 +572,7 @@ export function useRealtimeCalls({
           }
           
           // Verificar service_type
-          if (serviceTypes && serviceTypes.length > 0 && !serviceTypes.includes(ride.service_type as any)) {
+          if (serviceTypes && serviceTypes.length > 0 && !serviceTypes.includes(ride.service_type as ServiceType)) {
             console.log('[Broadcast] ❌ Corrida filtrada por service_type:', ride.service_type);
             return;
           }
@@ -584,7 +584,7 @@ export function useRealtimeCalls({
             pickup_location: ride.pickup_location,
             destination: ride.destination,
             estimated_value: ride.estimated_value,
-            service_type: ride.service_type as any,
+            service_type: ride.service_type as ServiceType,
             created_at: new Date().toISOString(),
             motoboy_id: null,
             // Incluir coordenadas no objeto de chamada

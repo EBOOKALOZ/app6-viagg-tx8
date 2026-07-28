@@ -193,7 +193,7 @@ export function useDriverCalls({ onCallReceived, onReservaMode }: UseDriverCalls
           isProcessing: false,
           isReserva: false,
           history: acceptedCall 
-            ? [{ ...acceptedCall, _status: 'accepted', _processedAt: new Date().toISOString() } as any, ...prev.history]
+            ? [{ ...acceptedCall, _status: 'accepted', _processedAt: new Date().toISOString() } as IncomingCall, ...prev.history]
             : prev.history,
         };
       });
@@ -225,7 +225,7 @@ export function useDriverCalls({ onCallReceived, onReservaMode }: UseDriverCalls
         isProcessing: false,
         isReserva: false,
         history: [
-          { ...rejectedCall, _status: 'rejected', _processedAt: new Date().toISOString() } as any,
+          { ...rejectedCall, _status: 'rejected', _processedAt: new Date().toISOString() } as IncomingCall,
           ...prev.history,
         ],
       };

@@ -462,7 +462,7 @@ export default function PublicMotoboyRequest() {
       headerChildren={<MarketNavButtons />}
       blueFooter
       blueFooterLabel="🛵 Motoboy"
-      mainClassName="bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-[#F5E62B]"
+      mainClassName="bg-gradient-to-b from-[#FF6A00] via-[#FF8C00] to-institutional-yellow"
     >
       {/* Título da página */}
       <div className="pt-6 pb-4 px-4 text-center relative">

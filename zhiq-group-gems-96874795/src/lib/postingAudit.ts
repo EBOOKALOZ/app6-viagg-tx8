@@ -105,7 +105,8 @@ async function trySilent<T>(fn: () => Promise<T>): Promise<T | null> {
 export async function startAuditEntry(params: StartAuditParams): Promise<string | null> {
   return trySilent(async () => {
     const now = new Date().toISOString();
-    const { data, error } = await (supabase.from("posting_history") as any)
+    // @ts-expect-error - table might not be in DB types
+    const { data, error } = await supabase.from("posting_history")
       .insert({
         operator_user_id:  params.operatorId,
         profile_type:      params.profileType,
@@ -144,7 +145,8 @@ export async function finishAuditEntry(
     const now = new Date().toISOString();
     const status: AuditStatus = params.success ? "sent" : "error";
 
-    const { error } = await (supabase.from("posting_history") as any)
+    // @ts-expect-error - table might not be in DB types
+    const { error } = await supabase.from("posting_history")
       .update({
         final_status:      status,
         posted_at:         now,
@@ -168,7 +170,8 @@ export async function finishAuditEntry(
  */
 export async function addTimelineEvent(params: AddTimelineEventParams): Promise<void> {
   await trySilent(async () => {
-    const { error } = await (supabase.from("posting_timeline_events") as any).insert({
+    // @ts-expect-error - table might not be in DB types
+    const { error } = await supabase.from("posting_timeline_events").insert({
       posting_history_id: params.postingHistoryId ?? null,
       posting_lot_id:     params.postingLotId ?? null,
       event_type:         params.eventType,
@@ -239,7 +242,8 @@ export async function patchAuditProfile(
   groupName?: string,
 ): Promise<void> {
   await trySilent(async () => {
-    const { error } = await (supabase.from("posting_history") as any)
+    // @ts-expect-error - table might not be in DB types
+    const { error } = await supabase.from("posting_history")
       .update({
         profile_type: profileType,
         ...(groupName ? { group_name: groupName } : {}),

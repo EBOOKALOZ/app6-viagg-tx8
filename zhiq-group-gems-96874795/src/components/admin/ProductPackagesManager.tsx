@@ -15,8 +15,28 @@ import { PackageFormDialog } from "@/components/admin/credits/PackageFormDialog"
 import { toast } from "sonner";
 import { cn, formatCurrencyBRL } from "@/lib/utils";
 
+export interface ProductPackage {
+  id: string;
+  name: string;
+  slug?: string;
+  credits_amount: number;
+  credits_base: number;
+  credits_bonus: number;
+  price_brl: number;
+  price_cents: number;
+  description: string;
+  badge_text: string | null;
+  product_type: string;
+  action_label: string;
+  features_json: string[];
+  is_featured: boolean;
+  is_recommended: boolean;
+  is_active: boolean;
+  sort_order: number;
+}
+
 export function ProductPackagesManager() {
-  const [editingPkg, setEditingPkg] = useState<any>(null);
+  const [editingPkg, setEditingPkg] = useState<ProductPackage | null>(null);
   const [showCreatePkg, setShowCreatePkg] = useState<boolean>(false);
 
   const { data: productPackages = [], isLoading: loadingPkgs, error: pkgsError } = useQuery({
@@ -33,8 +53,8 @@ export function ProductPackagesManager() {
         throw error;
       }
       console.log("✅ Pacotes de produtos carregados:", data?.length || 0, data);
-      return (data || []).map((p: any) => ({
-        id: p.id,
+      return (data || []).map((p: Record<string, unknown>) => ({
+        id: p.id as string,
         name: p.name || "Pacote sem nome",
         slug: "",
         credits_amount: (p.credits_base || 0) + (p.credits_bonus || 0),
@@ -58,7 +78,7 @@ export function ProductPackagesManager() {
   const qc = useQueryClient();
 
   const createProductPkg = useMutation({
-    mutationFn: async (input: any) => {
+    mutationFn: async (input: Partial<ProductPackage>) => {
       const base = Number(input.credits_base) || 0;
       const bonus = Number(input.credits_bonus) || 0;
       const credits_amount_val = base + bonus;
@@ -69,7 +89,7 @@ export function ProductPackagesManager() {
         throw new Error('O total de créditos deve ser maior que zero');
       }
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: input.name,
         slug: input.slug || input.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
         product_type: input.product_type || 'pacote',
@@ -98,11 +118,11 @@ export function ProductPackagesManager() {
       qc.invalidateQueries({ queryKey: ["admin-product-packages"] });
       toast.success("Pacote de produto criado!");
     },
-    onError: (err: any) => toast.error(`Falha: ${err.message}`),
+    onError: (err: Error) => toast.error(`Falha: ${err.message}`),
   });
 
   const updateProductPkg = useMutation({
-    mutationFn: async (input: any & { id: string }) => {
+    mutationFn: async (input: Partial<ProductPackage> & { id: string }) => {
       const { id } = input;
       const base = Number(input.credits_base) || 0;
       const bonus = Number(input.credits_bonus) || 0;
@@ -113,7 +133,7 @@ export function ProductPackagesManager() {
         throw new Error('O total de créditos deve ser maior que zero');
       }
 
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         name: input.name,
         slug: input.slug || undefined,
         credits_base: base,
@@ -143,7 +163,7 @@ export function ProductPackagesManager() {
       qc.invalidateQueries({ queryKey: ["admin-product-packages"] });
       toast.success("Pacote atualizado!");
     },
-    onError: (err: any) => toast.error(`Falha: ${err.message}`),
+    onError: (err: Error) => toast.error(`Falha: ${err.message}`),
   });
 
   const deleteProductPkg = useMutation({
@@ -158,7 +178,7 @@ export function ProductPackagesManager() {
       qc.invalidateQueries({ queryKey: ["admin-product-packages"] });
       toast.success("Pacote excluído!");
     },
-    onError: (err: any) => toast.error(`Erro: ${err.message}`),
+    onError: (err: Error) => toast.error(`Erro: ${err.message}`),
   });
 
   const toggleProductPkg = useMutation({
@@ -174,7 +194,7 @@ export function ProductPackagesManager() {
     },
   });
 
-   const handleSavePackage = (data: any) => {
+   const handleSavePackage = (data: Partial<ProductPackage>) => {
      const packageData = {
        name: data.name,
        slug: data.slug || data.name?.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now(),
@@ -235,7 +255,7 @@ export function ProductPackagesManager() {
         <Card className="border-red-200 bg-red-50">
           <CardContent className="py-8 text-center">
             <p className="text-red-600 font-bold text-sm">Erro ao carregar pacotes</p>
-            <p className="text-red-500 text-xs mt-1">{(pkgsError as any)?.message || String(pkgsError)}</p>
+            <p className="text-red-500 text-xs mt-1">{pkgsError instanceof Error ? pkgsError.message : String(pkgsError)}</p>
           </CardContent>
         </Card>
       ) : (
@@ -248,7 +268,7 @@ export function ProductPackagesManager() {
               </CardContent>
             </Card>
           ) : (
-            productPackages.map((pkg: any) => (
+            productPackages.map((pkg: ProductPackage) => (
               <Card key={pkg.id} className={cn(
                 "relative overflow-hidden border-2 transition-all hover:shadow-md",
                 pkg.is_featured ? "border-amber-400/50 shadow-amber-100" : "border-zinc-100"

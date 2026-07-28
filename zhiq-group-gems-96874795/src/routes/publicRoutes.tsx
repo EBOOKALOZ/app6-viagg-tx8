@@ -15,6 +15,7 @@ import LoadingTransition from "@/pages/LoadingTransition";
 import PageFallback from "@/components/PageFallback";
 import CheckoutReturnPage from "@/pages/public/CheckoutReturnPage";
 import { GlobalSearchPage } from "@/pages/public/GlobalSearchPage";
+import { StoreLayout } from "@/components/public/store/StoreLayout";
 import {
   InstitutionalLayout,
   LoadingScreenPremium,
@@ -110,13 +111,22 @@ export const publicRoutes = (
     <Route path="/mercado/meus-anuncios" element={<ProtectedRoute><RealEstateDashboard /></ProtectedRoute>} />
     <Route path="/vender-imovel" element={<Navigate to="/auth" replace />} />
     <Route path="/real-estate/checkout/:listingId" element={<RealEstateCheckoutPage />} />
-    <Route path="/loja/:storeId" element={<StorePublicPage />} />
-    <Route path="/imobiliaria/:storeId" element={<StorePublicPage />} />
-    <Route path="/revenda/:storeId" element={<StorePublicPage />} />
-    <Route path="/prestador/:storeId" element={<StorePublicPage />} />
-    <Route path="/freteiro/:storeId" element={<StorePublicPage />} />
-    <Route path="/agencia/:storeId" element={<StorePublicPage />} />
-    <Route path="/anunciante/:storeId" element={<StorePublicPage />} />
+    {/* ── Rotas de Loja Aninhadas (StoreLayout) ── */}
+    {["loja", "imobiliaria", "revenda", "prestador", "freteiro", "agencia", "anunciante"].map(prefix => (
+      <Route key={prefix} path={`/${prefix}/:storeId`} element={<StoreLayout />}>
+        <Route index element={<StorePublicPage />} />
+        <Route path="produto/:id" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />
+        <Route path="leilao/:id" element={<AuctionPublicPage />} />
+        <Route path="arremate/:id" element={<ArrematePublicPage />} />
+        <Route path="meu-arremate/:id" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeuArremate /></Suspense></ProtectedRoute>} />
+        <Route path="imovel/:id" element={<RealEstateDetailPage />} />
+        <Route path="veiculo/:id" element={<VehicleDetailPage />} />
+        <Route path="servico/:id" element={<ServiceDetailPage />} />
+        <Route path="frete/:id" element={<FreightDetailPage />} />
+        <Route path="viagem/:id" element={<TravelDetailPage />} />
+        <Route path="checkout/produto/:productId" element={<Suspense fallback={<PageFallback />}><ProductCheckoutPage /></Suspense>} />
+      </Route>
+    ))}
     <Route path="/leiloes" element={<AuctionListPage />} />
     <Route path="/meus-lances" element={<ProtectedRoute><Suspense fallback={<PageFallback />}><MeusLances /></Suspense></ProtectedRoute>} />
     <Route path="/leilao/:id" element={<AuctionPublicPage />} />

@@ -106,7 +106,8 @@ export function usePayPlatformSummary() {
   return useQuery({
     queryKey: ["pay-admin-platform-summary"],
     queryFn: async (): Promise<PlatformSummary[]> => {
-      const { data, error } = await (supabase.from("v_pay_admin_platform_summary") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_admin_platform_summary")
         .select("*");
       if (error) { console.error("v_pay_admin_platform_summary error:", error); return []; }
       return data || [];
@@ -119,7 +120,8 @@ export function usePaySalesSummary() {
   return useQuery({
     queryKey: ["pay-admin-sales-summary"],
     queryFn: async (): Promise<SalesSummary | null> => {
-      const { data, error } = await (supabase.from("v_pay_admin_sales_summary") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_admin_sales_summary")
         .select("*")
         .maybeSingle();
       if (error) { console.error("v_pay_admin_sales_summary error:", error); return null; }
@@ -133,7 +135,8 @@ export function usePayMotoboySummary() {
   return useQuery({
     queryKey: ["pay-admin-motoboy-summary"],
     queryFn: async (): Promise<MotoboySummary | null> => {
-      const { data, error } = await (supabase.from("v_pay_admin_motoboy_summary") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_admin_motoboy_summary")
         .select("*")
         .maybeSingle();
       if (error) { console.error("v_pay_admin_motoboy_summary error:", error); return null; }
@@ -147,7 +150,8 @@ export function usePayPayoutSummary() {
   return useQuery({
     queryKey: ["pay-admin-payout-summary"],
     queryFn: async (): Promise<PayoutSummary | null> => {
-      const { data, error } = await (supabase.from("v_pay_admin_payout_summary") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_admin_payout_summary")
         .select("*")
         .maybeSingle();
       if (error) { console.error("v_pay_admin_payout_summary error:", error); return null; }
@@ -161,7 +165,8 @@ export function usePayRecentLedger(limit = 50) {
   return useQuery({
     queryKey: ["pay-admin-recent-ledger", limit],
     queryFn: async (): Promise<RecentLedgerEntry[]> => {
-      const { data, error } = await (supabase.from("v_pay_admin_recent_ledger") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_admin_recent_ledger")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -176,7 +181,8 @@ export function usePayCreditPurchasesPending() {
   return useQuery({
     queryKey: ["pay-audit-credit-purchases-pending"],
     queryFn: async (): Promise<CreditPurchaseEntry[]> => {
-      const { data, error } = await (supabase.from("v_pay_audit_credit_purchases_pending") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_audit_credit_purchases_pending")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) { console.error("v_pay_audit_credit_purchases_pending error:", error); return []; }
@@ -190,7 +196,8 @@ export function usePayCreditPurchasesPaid() {
   return useQuery({
     queryKey: ["pay-audit-credit-purchases-paid"],
     queryFn: async (): Promise<CreditPurchaseEntry[]> => {
-      const { data, error } = await (supabase.from("v_pay_audit_credit_purchases_paid") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_audit_credit_purchases_paid")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) { console.error("v_pay_audit_credit_purchases_paid error:", error); return []; }
@@ -204,7 +211,8 @@ export function usePayMotoboyPayoutsPending() {
   return useQuery({
     queryKey: ["pay-audit-motoboy-payouts-pending"],
     queryFn: async (): Promise<MotoboyPayoutPending[]> => {
-      const { data, error } = await (supabase.from("v_pay_audit_motoboy_payouts_pending") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_audit_motoboy_payouts_pending")
         .select("*")
         .order("requested_at", { ascending: false });
       if (error) { console.error("v_pay_audit_motoboy_payouts_pending error:", error); return []; }
@@ -218,7 +226,8 @@ export function usePayAuditInconsistencies() {
   return useQuery({
     queryKey: ["pay-audit-inconsistencies"],
     queryFn: async (): Promise<AuditInconsistency[]> => {
-      const { data, error } = await (supabase.from("v_pay_audit_possible_inconsistencies") as any)
+      // @ts-expect-error - Type definitions may be missing
+      const { data, error } = await supabase.from("v_pay_audit_possible_inconsistencies")
         .select("*")
         .order("detected_at", { ascending: false });
       if (error) { console.error("v_pay_audit_possible_inconsistencies error:", error); return []; }

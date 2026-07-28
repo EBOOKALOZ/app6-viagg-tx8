@@ -24,7 +24,8 @@ export async function reportClientError(entry: {
     sentThisMinute++;
 
     const { data: auth } = await supabase.auth.getUser();
-    await (supabase.from("client_errors") as any).insert({
+    // @ts-expect-error - unified table schema
+    await supabase.from("client_errors").insert({
       user_id: auth?.user?.id ?? null,
       message: String(entry.message ?? "").slice(0, 500),
       stack: entry.stack ? String(entry.stack).slice(0, 3000) : null,
@@ -42,7 +43,7 @@ export function installGlobalErrorReporter() {
     reportClientError({ message: e.message, stack: e.error?.stack });
   });
   window.addEventListener("unhandledrejection", (e) => {
-    const r: any = e.reason;
+    const r = e.reason as Record<string, unknown> | null;
     reportClientError({
       message: `unhandledrejection: ${r?.message ?? String(r)}`,
       stack: r?.stack,

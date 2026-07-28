@@ -325,20 +325,7 @@ export default function GenericBusinessProfile({ module }: { module: BusinessMod
           </div>
         </div>
 
-        {/* ══ CONTATOS ══ */}
-        <div className="bg-white rounded-3xl border border-zinc-200 shadow-sm p-6 space-y-4">
-          <h2 className="text-xs font-black text-zinc-800 uppercase tracking-widest flex items-center gap-2">
-            <Phone className="w-4 h-4 text-[#FF6A00]" /> Contatos e redes sociais
-          </h2>
-          <Field label="WhatsApp" icon={Phone} value={form.whatsapp} onChange={set("whatsapp")} placeholder="66999990000 (só números)" />
-          <Field label="Instagram" icon={Instagram} value={form.instagram} onChange={set("instagram")} placeholder="@seuperfil" />
-          <Field label="Facebook" icon={Facebook} value={form.facebook} onChange={set("facebook")} placeholder="https://facebook.com/suapagina" />
-          <Field label="Site" icon={Globe} value={form.site} onChange={set("site")} placeholder="https://seusite.com.br" />
-          <Field label="E-mail" icon={Mail} value={form.email} onChange={set("email")} placeholder="contato@empresa.com.br" />
-          <p className="text-[10px] text-zinc-400">
-            Esses contatos aparecem na sua página pública e nos seus anúncios de {module.listingsNoun}.
-          </p>
-        </div>
+
       </div>
 
       {/* ══ ANÚNCIOS DO MÓDULO ══ */}

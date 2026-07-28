@@ -87,7 +87,7 @@ export default function MeusLances() {
   return (
     <MarketLayout
       headerChildren={<MarketNavButtons />}
-      mainClassName="flex flex-col bg-[#F5E62B]"
+      mainClassName="flex flex-col bg-institutional-yellow"
       blueFooter
       blueFooterLabel="🏷️ Meus Lances"
       myAccountPath="/minha-conta"

@@ -25,7 +25,7 @@ export interface ServiceOrder {
     destination_lng: number;
     distance_km?: number | null;
     professional_uid?: string | null;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface DispatchPayload {
@@ -44,7 +44,7 @@ export interface DispatchPayload {
     priority_fee?: number;
     total_price?: number;
     route_polyline?: string | null;
-    [key: string]: any; // Outros campos suportados por service_orders, se houver
+    [key: string]: unknown; // Outros campos suportados por service_orders, se houver
 }
 
 export function useMerchantDispatch() {
@@ -69,9 +69,9 @@ export function useMerchantDispatch() {
             });
             if (error) throw error;
             return data; // returns json: { distance_km, eta_minutes, total_price, ... }
-        } catch (err: any) {
+        } catch (err: Error | unknown) {
             console.error('[previewRouteAndPrice] error:', err);
-            throw new Error(err.message || 'Erro ao calcular rota');
+            throw new Error(err instanceof Error ? err.message : 'Erro ao calcular rota');
         }
     };
 
@@ -111,33 +111,34 @@ export function useMerchantDispatch() {
 
     const refetchOffers = async (orderId: string) => {
         try {
-            const { data, error: fetchErr } = await (supabase
+      // @ts-expect-error - Some schemas might not be fully typed yet
+            const { data, error: fetchErr } = await supabase
                 .from('delivery_offers')
                 .select(`
           id, status, expires_at, motoboy_id, created_at,
           motoboy:profiles!motoboy_id (name)
         `)
                 .eq('delivery_order_id', orderId)
-                .order('created_at', { ascending: false }) as any);
+                .order('created_at', { ascending: false });
 
             if (fetchErr) throw fetchErr;
 
-            const formattedData = (data ?? []).map((row: any) => ({
-                id: row.id,
-                offer_status: row.status,
-                expires_at: row.expires_at,
+            const formattedData = (data ?? []).map((row: Record<string, unknown>) => ({
+                id: row.id as string,
+                offer_status: row.status as string,
+                expires_at: row.expires_at as string,
                 distance_km: null,
                 radius_km: null,
                 round_no: 1,
-                created_at: row.created_at,
-                motoboy_id: row.motoboy_id,
+                created_at: row.created_at as string,
+                motoboy_id: row.motoboy_id as string,
                 motoboy: {
-                    nome_completo: Array.isArray(row.motoboy) ? row.motoboy[0]?.name : row.motoboy?.name
+                    nome_completo: Array.isArray(row.motoboy) ? (row.motoboy[0] as Record<string, unknown>)?.name as string : (row.motoboy as Record<string, unknown>)?.name as string
                 },
             }));
 
             setOffers(formattedData);
-        } catch (err: any) {
+        } catch (err: Error | unknown) {
             console.error('[useMerchantDispatch] get offers error:', err);
         }
     };
@@ -176,7 +177,8 @@ export function useMerchantDispatch() {
 
             console.log('RPC payload', rpcPayload);
 
-            const { data, error } = await supabase.rpc('create_delivery_order', rpcPayload as any);
+            // @ts-expect-error - RPC dynamic call
+            const { data, error } = await supabase.rpc('create_delivery_order', rpcPayload);
 
             if (error) {
                 console.error('create_delivery_order error', error);
@@ -220,7 +222,8 @@ export function useMerchantDispatch() {
             }
 
             // Inicia a maquina inteligente legado/secundaria (v2 dispatch)
-            const { error: rpcErr } = await supabase.rpc('run_dispatch_cycle' as any);
+            // @ts-expect-error - RPC dynamic call
+            const { error: rpcErr } = await supabase.rpc('run_dispatch_cycle');
             if (rpcErr) {
                 console.error('[run_dispatch_cycle] error:', rpcErr);
             } else {
@@ -229,10 +232,11 @@ export function useMerchantDispatch() {
 
             // Fetch immediately once
             await refetchOffers(order.id);
-        } catch (err: any) {
+        } catch (err: Error | unknown) {
             console.error('[createAndDispatchOrder]', err);
-            setError(err.message || 'Erro ao solicitar motoboy');
-            toast.error(err.message || 'Erro ao criar pedido de entrega');
+            const msg = err instanceof Error ? err.message : 'Erro ao solicitar motoboy';
+            setError(msg);
+            toast.error(msg);
             setActiveOrderId(null);
         } finally {
             setLoading(false);
@@ -243,11 +247,12 @@ export function useMerchantDispatch() {
     const forceDispatchCycle = async () => {
         if (!activeOrderId) return;
         try {
-            const { error } = await supabase.rpc('run_dispatch_cycle' as any);
+            // @ts-expect-error - RPC dynamic call
+            const { error } = await supabase.rpc('run_dispatch_cycle');
             if (error) throw error;
             toast.success('Nova varredura por motoboys iniciada!');
             refetchOffers(activeOrderId);
-        } catch (err: any) {
+        } catch (err: Error | unknown) {
             console.error('[forceDispatchCycle]', err);
             toast.error('Não foi possível forçar varredura agora.');
         }

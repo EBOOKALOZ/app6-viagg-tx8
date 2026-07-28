@@ -55,7 +55,7 @@ interface EscrowOperationRow {
   amount_cents: number;
   platform_fee_cents: number;
   professional_amount_cents: number;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
 }
 
 const COLORS_PIE = ["#10b981", "#3b82f6", "#f59e0b", "#8b5cf6", "#ec4899", "#64748b"];
@@ -90,7 +90,8 @@ export function ProfileFinancialDashboard({
     queryKey: ["admin-profile-financial", profileType, professionalId],
     queryFn: async () => {
       // 1. Busca transações financeiras deste perfil ou profissional
-      let queryBuilder = (supabase.from("pay_escrow_holds") as any)
+      // @ts-expect-error - Table not fully typed in Supabase generated types
+      let queryBuilder = supabase.from("pay_escrow_holds")
         .select("id, created_at, released_at, service_type, service_id, status, professional_user_id, amount_cents, platform_fee_cents, professional_amount_cents, metadata");
       
       queryBuilder = queryBuilder.eq("service_type", profileType);
@@ -113,7 +114,8 @@ export function ProfileFinancialDashboard({
       const profMap: Record<string, { name: string; cidade: string; estado: string }> = {};
 
       if (profIds.length > 0) {
-        const { data: profData } = await (supabase.from("profiles") as any)
+        // @ts-expect-error - Profiles table missing specific fields in types
+        const { data: profData } = await supabase.from("profiles")
           .select("id, name, cidade, estado")
           .in("id", profIds);
 
@@ -139,7 +141,8 @@ export function ProfileFinancialDashboard({
 
       if (orderIds.length > 0) {
         try {
-          const { data: ordersData } = await (supabase.from(opTable) as any)
+          // @ts-expect-error - Dynamic table name not indexable in Supabase types
+          const { data: ordersData } = await supabase.from(opTable)
             .select("id, distance_km, estimated_time_minutes, client_name")
             .in("id", orderIds.slice(0, 300));
 
@@ -158,7 +161,8 @@ export function ProfileFinancialDashboard({
       // 4. Também busca contagem de corridas na tabela operacional (concluídas vs canceladas vs em andamento)
       let opStats = { completed: 0, cancelled: 0, inProgress: 0 };
       try {
-        let opQuery = (supabase.from(opTable) as any).select("driver_status");
+        // @ts-expect-error - Dynamic table name not indexable in Supabase types
+        let opQuery = supabase.from(opTable).select("driver_status");
         if (professionalId) {
           opQuery = opQuery.eq("driver_id", professionalId);
         }

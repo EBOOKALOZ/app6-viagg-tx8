@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useAdminRealtimeOps, OpsMotoboy, OpsStore, OpsOrder, TimeWindow } from '@/hooks/useAdminRealtimeOps';
@@ -99,8 +99,9 @@ export function AdminOperationalMap() {
             }
         });
 
+        const currentMarkers = markersRef.current;
         return () => {
-            Object.values(markersRef.current).forEach(m => m.remove());
+            Object.values(currentMarkers).forEach(m => m.remove());
             initialMap.remove();
         };
     }, []);
@@ -112,9 +113,9 @@ export function AdminOperationalMap() {
         const currentIds = new Set<string>();
 
         const statusMap: Record<string, string> = {
-            'online': 'ðŸ DisponÃ­vel',
-            'offline': 'ðŸ”´ Offline',
-            'in_delivery': 'ðŸï¸ Em Entrega'
+            'online': '🟢 Disponível',
+            'offline': '🔴 Offline',
+            'in_delivery': '🛵 Em Entrega'
         };
 
         // 1. Draw Stores (Merchants) - Blue
@@ -233,7 +234,7 @@ export function AdminOperationalMap() {
             }));
             heatmapSource.setData({
                 type: 'FeatureCollection',
-                features: heatmapFeatures as any
+                features: heatmapFeatures as GeoJSON.Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>[]
             });
         }
 
@@ -262,7 +263,7 @@ export function AdminOperationalMap() {
         if (source) {
             source.setData({
                 type: 'FeatureCollection',
-                features: activeRoutes as any
+                features: activeRoutes as GeoJSON.Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>[]
             });
         }
     }, [ordersList]);
@@ -348,17 +349,17 @@ export function AdminOperationalMap() {
             <div className="absolute top-4 left-4 right-4 flex justify-between pointer-events-none z-10">
                 <div className="flex gap-2 pointer-events-auto">
                     <Badge variant="secondary" className="bg-background/80 backdrop-blur shadow h-9 flex items-center px-3 text-sm">
-                        ðŸ“ Blumenau SC
+                        📍 Blumenau SC
                     </Badge>
                     <Select value={timeWindow} onValueChange={(val) => setTimeWindow(val as TimeWindow)}>
                         <SelectTrigger className="w-[140px] bg-background/80 backdrop-blur shadow border-none h-9">
-                            <SelectValue placeholder="PerÃ­odo" />
+                            <SelectValue placeholder="Período" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="10m">Ãšltimos 10 Minutos</SelectItem>
-                            <SelectItem value="30m">Ãšltimos 30 Minutos</SelectItem>
-                            <SelectItem value="1h">Ãšltima 1 Hora</SelectItem>
-                            <SelectItem value="24h">Ãšltimas 24 Horas</SelectItem>
+                            <SelectItem value="10m">Últimos 10 Minutos</SelectItem>
+                            <SelectItem value="30m">Últimos 30 Minutos</SelectItem>
+                            <SelectItem value="1h">Última 1 Hora</SelectItem>
+                            <SelectItem value="24h">Últimas 24 Horas</SelectItem>
                         </SelectContent>
                     </Select>
                     {isLoading && (
@@ -421,12 +422,12 @@ export function AdminOperationalMap() {
                 <Card className="bg-background/80 backdrop-blur-md border border-border/50 shadow-lg flex-1 overflow-hidden flex flex-col">
                     <CardHeader className="pb-2 shrink-0">
                         <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <span className="text-blue-500">ðŸ”¥ Top Bairros de Demanda</span>
+                            <span className="text-blue-500">🔥 Top Bairros de Demanda</span>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                         {neighborhoodStats.length === 0 ? (
-                            <div className="text-xs text-muted-foreground text-center pt-4">Sem dados no perÃ­odo</div>
+                            <div className="text-xs text-muted-foreground text-center pt-4">Sem dados no período</div>
                         ) : (
                             <div className="space-y-3">
                                 {neighborhoodStats.slice(0, 10).map((nb, i) => {
@@ -443,12 +444,12 @@ export function AdminOperationalMap() {
                                             </div>
                                             {isCritical && (
                                                 <span className="text-[10px] text-red-500 font-semibold animate-pulse">
-                                                    âš ï¸ Alerta de DesequilÃ­brio
+                                                    ⚠️ Alerta de Desequilíbrio
                                                 </span>
                                             )}
                                             {nb.waitingCount > 0 && (
                                                 <span className="text-[10px] text-muted-foreground">
-                                                    MÃ©dia espera: {nb.avgWaitMin.toFixed(0)} min
+                                                    Média espera: {nb.avgWaitMin.toFixed(0)} min
                                                 </span>
                                             )}
                                         </div>

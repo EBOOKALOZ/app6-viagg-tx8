@@ -19,21 +19,26 @@ export function useHubBadges(profileType: 'motoboy' | 'mototaxi' | 'driver') {
     staleTime: 30_000,
     queryFn: async () => {
       const [notif, adv, re, ve, grupos] = await Promise.all([
-        (supabase.from('user_notifications') as any)
+        // @ts-expect-error - Types may not have exact schema
+        supabase.from('user_notifications')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user!.id)
           .eq('is_read', false)
           .in('profile_type', [profileType, 'all']),
-        (supabase.from('advertiser_listings') as any)
+        // @ts-expect-error - Types may not have exact schema
+        supabase.from('advertiser_listings')
           .select('id', { count: 'exact', head: true })
           .eq('listing_status', 'active'),
-        (supabase.from('real_estate_listings') as any)
+        // @ts-expect-error - Types may not have exact schema
+        supabase.from('real_estate_listings')
           .select('id', { count: 'exact', head: true })
           .eq('visibility_status', 'published'),
-        (supabase.from('vehicle_listings') as any)
+        // @ts-expect-error - Types may not have exact schema
+        supabase.from('vehicle_listings')
           .select('id', { count: 'exact', head: true })
           .eq('visibility_status', 'published'),
-        (supabase.from('whatsapp_groups') as any)
+        // @ts-expect-error - Types may not have exact schema
+        supabase.from('whatsapp_groups')
           .select('id', { count: 'exact', head: true })
           .eq('owner_user_id', user!.id)
           .eq('is_active', true),

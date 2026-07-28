@@ -843,7 +843,7 @@ export default function AdvertiserLeadsPage() {
             const isUnlocked = lead.status === "unlocked";
 
             return (
-              <Card key={lead.id} className="bg-[#F5E62B] border border-[#E0D020] shadow-lg overflow-hidden flex flex-col relative group">
+              <Card key={lead.id} className="bg-institutional-yellow border border-[#E0D020] shadow-lg overflow-hidden flex flex-col relative group">
                 {!isUnlocked && (
                   <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-orange-500 to-red-500" />
                 )}

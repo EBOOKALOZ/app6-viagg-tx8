@@ -97,7 +97,7 @@ export function useAdminH3Expansion() {
     }, []);
 
     const updateCellStatus = async (id: string, newStatus: H3Status) => {
-        const payload: any = { status: newStatus };
+        const payload: unknown = { status: newStatus };
         if (newStatus === 'ativo') payload.activated_at = new Date().toISOString();
         else payload.activated_at = null;
 

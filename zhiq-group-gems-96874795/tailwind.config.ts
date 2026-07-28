@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -60,6 +61,9 @@ export default {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			},
+  			// Amarelo institucional dos módulos públicos (Leilões etc.).
+  			// Hex canônico #F5E62B — mesmo valor usado nos bg-[#F5E62B] literais.
+  			'institutional-yellow': '#F5E62B',
   			zhiq: {
   				teal: 'hsl(var(--zhiq-teal))',
   				green: 'hsl(var(--zhiq-green))',
@@ -67,6 +71,8 @@ export default {
   				navy: 'hsl(var(--zhiq-navy))',
   				'navy-light': 'hsl(var(--zhiq-navy-light))'
   			},
+			// Canais RGB (245 230 43 = #F5E62B exato); <alpha-value> habilita /NN
+			'institutional-yellow': 'rgb(var(--institutional-yellow) / <alpha-value>)',
 			green: {
 				DEFAULT: '#00a300',
 				50: '#e6f6e6',
@@ -278,5 +284,5 @@ export default {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

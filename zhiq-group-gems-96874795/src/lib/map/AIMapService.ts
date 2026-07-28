@@ -126,7 +126,8 @@ function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: num
 
 export async function getRealDriversNearby(center: LatLng): Promise<DriverMarker[]> {
   try {
-    const { data: profiles, error } = await (supabase.from("profiles") as any)
+    // @ts-expect-error - unified table schema
+    const { data: profiles, error } = await supabase.from("profiles")
       .select("id, name, email, phone, cidade, estado, avatar_url, available_profiles")
       .limit(500);
 
@@ -136,10 +137,11 @@ export async function getRealDriversNearby(center: LatLng): Promise<DriverMarker
     }
 
     // Busca veículos reais cadastrados
-    const { data: vList } = await (supabase.from("driver_vehicles") as any)
+    // @ts-expect-error - unified table schema
+    const { data: vList } = await supabase.from("driver_vehicles")
       .select("driver_id, brand, model, plate, color, active");
 
-    const vehicleMap = new Map<string, any>();
+    const vehicleMap = new Map<string, Record<string, unknown>>();
     for (const v of vList || []) {
       if (v.driver_id && !vehicleMap.has(v.driver_id)) {
         vehicleMap.set(v.driver_id, v);
@@ -147,11 +149,14 @@ export async function getRealDriversNearby(center: LatLng): Promise<DriverMarker
     }
 
     // Busca perfis operacionais (motoboy_profiles, moto_taxi_profiles, driver_profiles)
-    const { data: motoboys } = await (supabase.from("motoboy_profiles") as any)
+    // @ts-expect-error - unified table schema
+    const { data: motoboys } = await supabase.from("motoboy_profiles")
       .select("user_id, latitude_residencia, longitude_residencia, veiculo_modelo, veiculo_placa");
-    const { data: mototaxis } = await (supabase.from("moto_taxi_profiles") as any)
+    // @ts-expect-error - unified table schema
+    const { data: mototaxis } = await supabase.from("moto_taxi_profiles")
       .select("user_id, latitude_residencia, longitude_residencia, veiculo_modelo, veiculo_placa");
-    const { data: drivers } = await (supabase.from("driver_profiles") as any)
+    // @ts-expect-error - unified table schema
+    const { data: drivers } = await supabase.from("driver_profiles")
       .select("user_id, latitude_residencia, longitude_residencia, veiculo_modelo, veiculo_placa");
 
     const coordsMap = new Map<string, { lat: number; lng: number; model?: string; plate?: string }>();

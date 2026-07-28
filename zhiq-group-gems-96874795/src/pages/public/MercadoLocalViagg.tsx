@@ -59,6 +59,7 @@ import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
 import { useIsAdvertiser } from "@/hooks/useIsAdvertiser";
 import { AdvertiserHub } from "@/components/advertiser/AdvertiserHub";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
+import { resolveTravelMediaUrl } from "@/lib/viagem/travelMedia";
 import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafetyBanner";
 // Leilões removidos do Mercado (07-22): MercadoAuctionsSection / MarketAuctionCard
 // só são usados no botão "Leilões" (/leiloes → AuctionListPage).
@@ -806,19 +807,19 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
             const ids = rows.map((s: any) => s.id);
             const { data: mediaRows } = await supabase
                 .from('travel_media' as any)
-                .select('listing_id, original_storage_path, public_masked_storage_path, sort_order')
+                .select('listing_id, bucket, storage_path, public_url, moderation_status, sort_order')
                 .in('listing_id', ids)
                 .order('sort_order', { ascending: true });
 
             const mediaMap = new Map<string, string>();
             for (const row of (mediaRows as any[]) || []) {
                 if (!mediaMap.has(row.listing_id)) {
-                    const p = row.public_masked_storage_path || row.original_storage_path;
-                    if (p) {
-                        mediaMap.set(
-                            row.listing_id,
-                            p.startsWith('http') ? p : supabase.storage.from('real-estate-original').getPublicUrl(p).data.publicUrl
-                        );
+                    // resolveTravelMediaUrl só retorna URL para mídia com
+                    // public_url gravada (aprovação real, arquivo movido para
+                    // bucket público) — nunca monta URL fantasma.
+                    const url = resolveTravelMediaUrl(row);
+                    if (url) {
+                        mediaMap.set(row.listing_id, url);
                     }
                 }
             }
@@ -1232,14 +1233,14 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                 />
             ) : null}
             hideTopMotoboy={false}
-            mainClassName="flex flex-col bg-[#F5E62B]"
+            mainClassName="flex flex-col bg-institutional-yellow"
             hideFooter={isAdvertiser}
             blueFooter={!isAdvertiser}
             blueFooterLabel="🛒 Mercado Local"
             myAccountPath="/minha-conta"
         >
             {isAdvertiser ? (
-                <div className="bg-[#F5E62B] min-h-[70vh]">
+                <div className="bg-institutional-yellow min-h-[70vh]">
                     <AdvertiserHub />
                 </div>
             ) : (
@@ -1252,7 +1253,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             {/* ═══ REAL ESTATE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Imóveis") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
+                <div className="w-full px-4 lg:px-6 py-12 bg-institutional-yellow">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1307,7 +1308,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             {/* ═══ SERVICES SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Serviços") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
+                <div className="w-full px-4 lg:px-6 py-12 bg-institutional-yellow">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1362,7 +1363,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             {/* ═══ FREIGHT SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Fretes") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
+                <div className="w-full px-4 lg:px-6 py-12 bg-institutional-yellow">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1417,7 +1418,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             {/* ═══ TRAVEL SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Viagens") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
+                <div className="w-full px-4 lg:px-6 py-12 bg-institutional-yellow">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1472,7 +1473,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             {/* ═══ AUTOMOTIVE SECTION ═══ */}
             {!productsOnly && (categoryFilter === "all" || categoryFilter === "Automóveis") && (
-                <div className="w-full px-4 lg:px-6 py-12 bg-[#F5E62B]">
+                <div className="w-full px-4 lg:px-6 py-12 bg-institutional-yellow">
                     <div className="max-w-[1920px] mx-auto space-y-10">
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                             <div className="space-y-2">
@@ -1688,7 +1689,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
                 {/* ═══ CATEGORY BAR (Sticky) ═══ */}
                 {activeCategories.length > 0 && (
-                    <div className="sticky top-[112px] sm:top-[120px] lg:top-[140px] z-40 bg-[#F5E62B] py-2 mb-6 -mx-4 px-4 lg:mx-0 lg:px-0 shadow-sm border-b border-yellow-500/20 transition-all duration-300">
+                    <div className="sticky top-[112px] sm:top-[120px] lg:top-[140px] z-40 bg-institutional-yellow py-2 mb-6 -mx-4 px-4 lg:mx-0 lg:px-0 shadow-sm border-b border-yellow-500/20 transition-all duration-300">
                         <div className="w-full relative max-w-[1920px] mx-auto">
                             <button
                                 type="button"

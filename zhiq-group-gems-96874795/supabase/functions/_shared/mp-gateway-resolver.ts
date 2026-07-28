@@ -79,7 +79,7 @@ function fromEnv(environment: "sandbox" | "production"): MpGatewayCreds {
  * `opts.environment` força um ambiente (usado pelo teste de conexão).
  */
 export async function resolveMpGateway(
-  svc: any,
+  svc: unknown,
   opts?: { environment?: "sandbox" | "production" },
 ): Promise<ResolveResult> {
   let environment: "sandbox" | "production" | null = opts?.environment ?? null;
@@ -206,8 +206,9 @@ export async function mpValidateSignatureHeader(
   let dataId = urlDataId ?? null;
   if (!dataId) {
     try {
-      const body = JSON.parse(rawBody) as Record<string, any>;
-      dataId = String(body?.data?.id ?? body?.resource ?? "");
+      const body = JSON.parse(rawBody) as Record<string, unknown>;
+      const bodyData = body?.data as Record<string, unknown> | undefined;
+      dataId = String(bodyData?.id ?? body?.resource ?? "");
     } catch {
       dataId = "";
     }

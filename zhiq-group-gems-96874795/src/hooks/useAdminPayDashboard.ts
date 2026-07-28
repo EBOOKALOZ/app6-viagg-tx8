@@ -60,7 +60,7 @@ export interface PayCreditPurchase {
   service_type: string;
   status: string;
   created_at: string;
-  metadata: any;
+  metadata: unknown;
 }
 
 export interface PayReconEntry {
@@ -82,7 +82,7 @@ export function usePayDashboardStats(periodDays = 30) {
       const periodEnd = new Date().toISOString();
 
       // Try RPC first
-      const { data: rpcData, error: rpcError } = await (supabase.rpc as any)(
+      const { data: rpcData, error: rpcError } = await (supabase.rpc as unknown)(
         "pay_admin_dashboard_stats",
         { p_period_start: periodStart, p_period_end: periodEnd }
       );
@@ -123,19 +123,19 @@ export function usePayDashboardStats(periodDays = 30) {
         .reduce((s, e) => s + Number(e.amount_cents || 0), 0) || 0;
 
       // Escrow held
-      const { data: escrowHeld } = await (supabase.from("pay_escrow_holds") as any)
+      const { data: escrowHeld } = await (supabase.from("pay_escrow_holds") as unknown)
         .select("amount_cents")
         .eq("status", "held");
-      const totalEscrow = escrowHeld?.reduce((s: number, e: any) => s + Number(e.amount_cents || 0), 0) || 0;
+      const totalEscrow = escrowHeld?.reduce((s: number, e: unknown) => s + Number(e.amount_cents || 0), 0) || 0;
 
       // Splits completed
-      const { data: splits } = await (supabase.from("pay_splits") as any)
+      const { data: splits } = await (supabase.from("pay_splits") as unknown)
         .select("professional_amount_cents, platform_fee_cents")
         .eq("status", "completed")
         .gte("created_at", periodStart);
 
-      const totalReleased = splits?.reduce((s: number, e: any) => s + Number(e.professional_amount_cents || 0), 0) || 0;
-      const totalCommission = splits?.reduce((s: number, e: any) => s + Number(e.platform_fee_cents || 0), 0) || 0;
+      const totalReleased = splits?.reduce((s: number, e: unknown) => s + Number(e.professional_amount_cents || 0), 0) || 0;
+      const totalCommission = splits?.reduce((s: number, e: unknown) => s + Number(e.platform_fee_cents || 0), 0) || 0;
 
       // Pending payouts
       const { data: pendingPayouts } = await supabase
@@ -147,12 +147,12 @@ export function usePayDashboardStats(periodDays = 30) {
       const pendingAmount = pendingPayouts?.reduce((s, e) => s + Number(e.amount_cents || 0), 0) || 0;
 
       // Divergences
-      const { count: divCount } = await (supabase.from("pay_reconciliation_log") as any)
+      const { count: divCount } = await (supabase.from("pay_reconciliation_log") as unknown)
         .select("id", { count: "exact", head: true })
         .eq("status", "divergent");
 
       // Errors
-      const { count: errCount } = await (supabase.from("pay_transaction_errors") as any)
+      const { count: errCount } = await (supabase.from("pay_transaction_errors") as unknown)
         .select("id", { count: "exact", head: true })
         .eq("resolved", false);
 
@@ -177,7 +177,7 @@ export function usePayWebhooks(limit = 20) {
   return useQuery({
     queryKey: ["pay-webhooks", limit],
     queryFn: async (): Promise<PayWebhookEntry[]> => {
-      const { data, error } = await (supabase.from("pay_webhook_raw") as any)
+      const { data, error } = await (supabase.from("pay_webhook_raw") as unknown)
         .select("id, source, event_type, processed, process_error, received_at")
         .order("received_at", { ascending: false })
         .limit(limit);
@@ -193,7 +193,7 @@ export function usePayTransactionErrors() {
   return useQuery({
     queryKey: ["pay-transaction-errors"],
     queryFn: async (): Promise<PayTransactionError[]> => {
-      const { data, error } = await (supabase.from("pay_transaction_errors") as any)
+      const { data, error } = await (supabase.from("pay_transaction_errors") as unknown)
         .select("id, transaction_type, error_code, error_message, resolved, created_at")
         .eq("resolved", false)
         .order("created_at", { ascending: false })
@@ -227,7 +227,7 @@ export function usePayEscrowHolds() {
   return useQuery({
     queryKey: ["pay-escrow-holds"],
     queryFn: async (): Promise<PayEscrowEntry[]> => {
-      const { data, error } = await (supabase.from("pay_escrow_holds") as any)
+      const { data, error } = await (supabase.from("pay_escrow_holds") as unknown)
         .select("id, service_type, amount_cents, platform_fee_cents, professional_amount_cents, status, held_at, released_at")
         .order("held_at", { ascending: false })
         .limit(30);
@@ -243,7 +243,7 @@ export function usePayCreditPurchases() {
   return useQuery({
     queryKey: ["pay-credit-purchases"],
     queryFn: async (): Promise<PayCreditPurchase[]> => {
-      const { data, error } = await (supabase.from("pay_escrow_holds") as any)
+      const { data, error } = await (supabase.from("pay_escrow_holds") as unknown)
         .select("id, amount_cents, service_type, status, created_at, metadata")
         .eq("service_type", "credit_purchase")
         .order("created_at", { ascending: false })
@@ -260,7 +260,7 @@ export function usePayReconciliation() {
   return useQuery({
     queryKey: ["pay-reconciliation"],
     queryFn: async (): Promise<PayReconEntry[]> => {
-      const { data, error } = await (supabase.from("pay_reconciliation_log") as any)
+      const { data, error } = await (supabase.from("pay_reconciliation_log") as unknown)
         .select("id, reconciliation_date, bank_balance_cents, ledger_balance_cents, divergence_cents, status, created_at")
         .order("reconciliation_date", { ascending: false })
         .limit(15);

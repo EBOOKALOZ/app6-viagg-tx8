@@ -106,7 +106,7 @@ export function useCompressedImageUpload(bucketName = "marketing-materials") {
           ? null
           : `Comprimido para ${formatFileSize(result.compressedSize)} (alvo: 100 KB)`,
       }));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[useCompressedImageUpload] Compression failed:", err);
       setState((s) => ({ ...s, status: "error", error: err.message || "Erro ao comprimir imagem" }));
     }
@@ -156,7 +156,7 @@ export function useCompressedImageUpload(bucketName = "marketing-materials") {
         }));
 
         return metadata;
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("[useCompressedImageUpload] Upload failed:", err);
         setState((s) => ({ ...s, status: "error", error: err.message || "Erro no upload" }));
         return null;

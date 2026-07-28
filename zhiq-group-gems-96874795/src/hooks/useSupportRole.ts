@@ -13,14 +13,15 @@ export function useSupportRole() {
             if (!user?.id) return null;
 
             const { data, error } = await supabase
-                .from("support_agents" as any)
+                // @ts-expect-error - Type definitions may be missing
+                .from("support_agents")
                 .select("role")
                 .eq("auth_user_id", user.id)
                 .eq("is_active", true)
                 .maybeSingle();
 
             if (error || !data) return null;
-            return (data as any).role as SupportRole;
+            return (data as Record<string, unknown>).role as SupportRole;
         },
         enabled: !!user?.id,
         staleTime: 5 * 60 * 1000,

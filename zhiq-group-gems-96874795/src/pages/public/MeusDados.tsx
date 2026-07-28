@@ -190,7 +190,7 @@ export default function MeusDados() {
   // ── Estado: não autenticado ──────────────────────────────────────────────────
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5E62B] px-4">
+      <div className="flex min-h-screen items-center justify-center bg-institutional-yellow px-4">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}

@@ -53,8 +53,9 @@ export async function runDemandIntelligenceAgent(city: string): Promise<AgentRun
       logs,
       duration_ms: Date.now() - startTime,
     };
-  } catch (err: any) {
-    logs.push(`❌ Error: ${err?.message}`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logs.push(`❌ Error: ${msg}`);
     return {
       agent: "DemandIntelligenceAgent",
       success: false,

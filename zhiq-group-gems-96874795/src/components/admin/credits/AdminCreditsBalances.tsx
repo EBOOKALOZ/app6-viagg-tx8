@@ -4,9 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Users, Search } from "lucide-react";
-import type { AdminCreditBalance, AdminLedgerEntry } from "@/hooks/useAdminCredits";
+import type { AdminCreditBalance, AdminLedgerEntry, AdminCreditsData } from "@/hooks/useAdminCredits";
 
-interface Props { data: any; }
+interface Props { data: AdminCreditsData; }
 
 export function AdminCreditsBalances({ data }: Props) {
   const { balances, ledger } = data;

@@ -35,7 +35,7 @@ export interface ArremateOffer {
 }
 
 // Helper to normalize offer to support both old/new field names
-function normalizeOffer(raw: any): ArremateOffer {
+function normalizeOffer(raw: unknown): ArremateOffer {
   return {
     ...raw,
     // Aliases for components that use old field names
@@ -139,7 +139,7 @@ export function useArremate() {
         p_message: message || null,
       });
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown;
       if (!result.success) throw new Error(result.error);
       return result;
     },
@@ -147,7 +147,7 @@ export function useArremate() {
       toast.success("Oferta enviada com sucesso! 📨");
       queryClient.invalidateQueries({ queryKey: ["arremate-my-offers"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao enviar oferta");
     },
   });
@@ -169,7 +169,7 @@ export function useArremate() {
         p_response_message: message || null,
       });
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown;
       if (!result.success) throw new Error(result.error);
       return result;
     },
@@ -178,7 +178,7 @@ export function useArremate() {
       queryClient.invalidateQueries({ queryKey: ["arremate-received-offers"] });
       queryClient.invalidateQueries({ queryKey: ["auction-my-listings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao responder oferta");
     },
   });

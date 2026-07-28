@@ -40,7 +40,7 @@ const STATUS_BADGE: Record<WithdrawRecord["status"], { label: string; cls: strin
 };
 
 /** Saldo disponível p/ saque (tesouraria platform_main), com refetch. */
-export function usePlatformWithdrawBalance() {
+function usePlatformWithdrawBalance() {
   return useQuery({
     queryKey: ["platform-withdraw-balance"],
     queryFn: getPlatformAvailableBalance,
@@ -93,8 +93,8 @@ export function PlatformWithdrawButton({ className }: { className?: string }) {
       reset();
       queryClient.invalidateQueries({ queryKey: ["platform-withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["platform-withdraw-balance"] });
-    } catch (e: any) {
-      toast.error("Não foi possível registrar o saque", { description: e?.message });
+    } catch (e: unknown) {
+      toast.error("Não foi possível registrar o saque", { description: e instanceof Error ? e.message : "Erro desconhecido" });
       setSubmitting(false);
     }
   };

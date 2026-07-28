@@ -42,14 +42,18 @@ function loadCache(key: string): { data: WeatherRichData; ts: number } | null {
       }
       return { ...parsed, data: { ...parsed.data, updatedAt: new Date(parsed.data.updatedAt) } };
     }
-  } catch { }
+  } catch {
+    // ignorar erro de parsing ou acesso ao storage
+  }
   return null;
 }
 
 function saveCache(key: string, data: WeatherRichData) {
   try {
     localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-  } catch { }
+  } catch {
+    // ignorar erro de escrita
+  }
 }
 
 async function getCoords(): Promise<{ lat: number; lng: number } | null> {
@@ -161,8 +165,8 @@ export function useWeatherRich(lat?: number, lng?: number, city?: string, enable
 
       saveCache(cacheKey, data);
       setWeather(data);
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
         console.log('[useWeatherRich] Fetch aborted');
         return;
       }

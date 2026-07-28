@@ -359,7 +359,7 @@ export default function VenderImovelPage() {
                     <RealEstateAuthCard />
                 </div>
             ) : (
-                <div className="min-h-[80vh] bg-[#F5E62B] py-12 px-4">
+                <div className="min-h-[80vh] bg-institutional-yellow py-12 px-4">
                 <div className="max-w-4xl mx-auto space-y-8">
                     {/* Mini Panel Resumo */}
                     <RealEstateUserPanel />

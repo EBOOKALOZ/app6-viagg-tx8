@@ -134,7 +134,7 @@ export default function DeliveryAcceptedCard({ offer, onProceed }: DeliveryAccep
   return (
     <div className="fixed inset-0 z-[10001] bg-gradient-to-b from-[#FF6B00] via-[#ea580c] to-[#9a3412] overflow-y-auto">
       {/* Background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#F5E62B]/20 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-institutional-yellow/20 rounded-full blur-[150px] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-black/20 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center px-5 py-8 min-h-screen">
