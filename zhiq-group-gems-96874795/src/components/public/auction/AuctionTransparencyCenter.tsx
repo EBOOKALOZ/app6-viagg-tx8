@@ -32,8 +32,8 @@ export function AuctionTransparencyCenter({ listingId }: AuctionTransparencyCent
     queryFn: async () => {
       const { data, error } = await supabase
         .from("auction_bids")
-        .select("id, amount_cents, created_at, bidder_id")
-        .eq("auction_listing_id", listingId)
+        .select("id, amount_cents, created_at, user_id")
+        .eq("listing_id", listingId)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -42,11 +42,11 @@ export function AuctionTransparencyCenter({ listingId }: AuctionTransparencyCent
 
   if (isLoadingListing || !listing) return null;
 
-  // Calculando índices (simulados para Enterprise look and feel baseado em dados reais)
-  const viewsCount = Math.floor(Math.random() * 500) + 120; // Em produção: viria de uma tabela de analytics
-  const uniqueBidders = new Set(bids.map(b => b.bidder_id)).size;
+  // Índices calculados a partir de dados reais — views_count vem da
+  // própria auction_listings (incrementada via RPC increment_auction_view).
+  const viewsCount = listing.views_count ?? 0;
+  const uniqueBidders = new Set(bids.map(b => b.user_id)).size;
   const popularityIndex = Math.min(100, Math.floor((uniqueBidders * 10) + (viewsCount / 10)));
-  const interestIndex = Math.min(100, bids.length * 5);
 
   const statusMap: Record<string, { label: string; color: string }> = {
     active: { label: "Ativo", color: "text-[#00C58E]" },
@@ -114,11 +114,11 @@ export function AuctionTransparencyCenter({ listingId }: AuctionTransparencyCent
           </div>
           <div className="flex justify-between items-center p-3 rounded-xl bg-[#252B33]">
             <span className="text-xs font-bold text-[#8E98A3] uppercase tracking-wider flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" /> Categoria</span>
-            <span className="text-sm font-bold text-white capitalize">{listing.category || "Geral"}</span>
+            <span className="text-sm font-bold text-white capitalize">{listing.category_slug || "Geral"}</span>
           </div>
           <div className="flex justify-between items-center p-3 rounded-xl bg-[#252B33]">
             <span className="text-xs font-bold text-[#8E98A3] uppercase tracking-wider flex items-center gap-1.5"><Package className="w-3.5 h-3.5" /> Condição</span>
-            <span className="text-sm font-bold text-white capitalize">{listing.condition || "Não especificado"}</span>
+            <span className="text-sm font-bold text-white capitalize">{listing.item_condition || "Não especificado"}</span>
           </div>
         </div>
       </div>
@@ -134,7 +134,7 @@ export function AuctionTransparencyCenter({ listingId }: AuctionTransparencyCent
                   <div>
                     <p className="text-sm font-bold text-white">Lance Confirmado</p>
                     <p className="text-xs font-medium text-[#8E98A3]">
-                      Usuário ***{bid.bidder_id.substring(bid.bidder_id.length - 4)}
+                      Usuário ***{bid.user_id.substring(bid.user_id.length - 4)}
                     </p>
                   </div>
                   <div className="text-right">

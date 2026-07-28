@@ -19,7 +19,6 @@ import { AdvertiserSummaryCard } from '@/components/public/advertiser/Advertiser
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { registerResumeHandler } from '@/components/auth/AuthGateProvider';
 import { AuctionGallery, AuctionMediaItem } from '@/components/public/auction/AuctionGallery';
-import { AuctionHistory } from "@/components/public/auction/AuctionHistory";
 import { AuctionQASection } from '@/components/public/auction/AuctionQASection';
 import { AuctionReportModal } from '@/components/public/auction/AuctionReportModal';
 import { AuctionTransparencyCenter } from '@/components/public/auction/AuctionTransparencyCenter';

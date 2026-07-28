@@ -1973,27 +1973,24 @@ export default function MerchantAuctions() {
         onOpenChange={setShowCreateModal}
         isSubmitting={createListing.isPending}
         onSubmit={(data) => {
-          // [TESTE] Verificação de créditos desativada para testes
-          // const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
-          // if ((balance?.available_credits ?? 0) < publishCost) {
-          //   toast.error(
-          //     `Créditos insuficientes! Necessário: ${publishCost}. Saldo: ${balance?.available_credits ?? 0}.`,
-          //     { description: "Recarregue seus créditos para publicar leilões." }
-          //   );
-          //   return;
-          // }
+          const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
+          if ((balance?.available_credits ?? 0) < publishCost) {
+            toast.error(
+              `Créditos insuficientes! Necessário: ${publishCost}. Saldo: ${balance?.available_credits ?? 0}.`,
+              { description: "Recarregue seus créditos para publicar leilões." }
+            );
+            return;
+          }
 
           createListing.mutate(data, {
             onSuccess: async (result) => {
-              // [TESTE] Débito de créditos desativado para testes
-              // const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
-              // await debitCredits({
-              //   amount: publishCost,
-              //   reasonCode: "auction_listing_create",
-              //   description: `Publicação de leilão: ${data.title}`,
-              //   metadata: { listing_id: (result as any)?.listing_id },
-              // });
-              // refetchCredits();
+              await debitCredits({
+                amount: publishCost,
+                reasonCode: "auction_listing_create",
+                description: `Publicação de leilão: ${data.title}`,
+                metadata: { listing_id: (result as any)?.listing_id },
+              });
+              refetchCredits();
               setShowCreateModal(false);
               refetchMyListings();
             }

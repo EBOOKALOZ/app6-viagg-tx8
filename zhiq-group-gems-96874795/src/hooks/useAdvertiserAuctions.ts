@@ -23,6 +23,7 @@ export interface AdvertiserCreateListingInput {
   description?: string;
   product_image_url?: string;
   starting_bid: number;
+  minimum_increment?: number;
   buy_now_price?: number;
   duration_hours: number;
   starts_at?: string;
@@ -74,32 +75,32 @@ export function useAdvertiserAuctions() {
       if (error) throw error;
       
       // Buscar imagens para listings que não têm product_image_url
-      const needsImg = (data || []).filter((l: any) => !l.product_image_url && l.product_id);
+      const needsImg = (data || []).filter((l: unknown) => !l.product_image_url && l.product_id);
 
       if (needsImg.length === 0) return (data || []) as AuctionListing[];
 
       // Batch: buscar de uma vez só
-      const productIds = [...new Set(needsImg.map((l: any) => l.product_id))];
+      const productIds = [...new Set(needsImg.map((l: unknown) => l.product_id))];
 
       const [plRes, alRes] = await Promise.all([
-        supabase.from("product_listings" as any)
+        supabase.from("product_listings" as unknown)
           .select("id, cover_image_url")
           .in("id", productIds),
-        supabase.from("advertiser_listings" as any)
+        supabase.from("advertiser_listings" as unknown)
           .select("id, cover_image_url, advertiser_listing_media(media_url)")
           .in("id", productIds),
       ]);
 
       const imgMap = new Map<string, string>();
 
-      for (const p of (plRes.data || []) as any[]) {
+      for (const p of (plRes.data || []) as unknown[]) {
         if (!p.cover_image_url) continue;
         const url = p.cover_image_url.startsWith("http")
           ? p.cover_image_url
           : supabase.storage.from("marketing-materials").getPublicUrl(p.cover_image_url).data.publicUrl;
         imgMap.set(p.id, url);
       }
-      for (const a of (alRes.data || []) as any[]) {
+      for (const a of (alRes.data || []) as unknown[]) {
         const raw = a.cover_image_url || a.advertiser_listing_media?.[0]?.media_url;
         if (!raw) continue;
         const url = raw.startsWith("http")
@@ -108,7 +109,7 @@ export function useAdvertiserAuctions() {
         imgMap.set(a.id, url);
       }
 
-      return (data || []).map((l: any) => ({
+      return (data || []).map((l: unknown) => ({
         ...l,
         product_image_url: l.product_image_url || (l.product_id ? imgMap.get(l.product_id) || null : null),
       })) as AuctionListing[];
@@ -118,11 +119,11 @@ export function useAdvertiserAuctions() {
 
   // Separar por tipo
   const auctionListings = useMemo(
-    () => myListings.filter((l) => (l as any).listing_type === "auction"),
+    () => myListings.filter((l) => (l as unknown).listing_type === "auction"),
     [myListings]
   );
   const arremateListings = useMemo(
-    () => myListings.filter((l) => (l as any).listing_type === "arremate"),
+    () => myListings.filter((l) => (l as unknown).listing_type === "arremate"),
     [myListings]
   );
 
@@ -141,7 +142,7 @@ export function useAdvertiserAuctions() {
       const storeId = store?.id || null;
 
       const { data, error } = await supabase.rpc(
-        "create_auction_listing" as any,
+        "create_auction_listing" as unknown,
         {
           p_store_id: storeId,
           p_title: input.title,
@@ -150,7 +151,7 @@ export function useAdvertiserAuctions() {
           p_starting_bid: input.starting_bid,
           p_buy_now_price: input.buy_now_price || null,
           p_reserve_price: null,
-          p_minimum_increment: 1,
+          p_minimum_increment: input.minimum_increment || 1,
           p_city: store?.cidade || null,
           p_neighborhood: store?.bairro || null,
           p_duration_hours: input.duration_hours || 24,
@@ -162,7 +163,7 @@ export function useAdvertiserAuctions() {
       );
 
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown;
       if (!result?.success) throw new Error(result?.error || "Erro ao criar listing");
       return result as { success: true; listing_id: string; ends_at: string };
     },
@@ -173,7 +174,7 @@ export function useAdvertiserAuctions() {
       );
       queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao criar listing");
     },
   });
@@ -181,40 +182,77 @@ export function useAdvertiserAuctions() {
   // ── Encerrar listing ──
   const endListing = useMutation({
     mutationFn: async (listingId: string) => {
-      const { data, error } = await supabase.rpc("end_auction_listing" as any, {
+      const { data, error } = await supabase.rpc("end_auction_listing" as unknown, {
         p_listing_id: listingId,
       });
       if (error) throw error;
-      const result = data as any;
+      const result = data as unknown;
       if (!result.success) throw new Error(result.error);
       return result;
     },
     onSuccess: (_result, listingId) => {
       const listing = myListings.find((l) => l.id === listingId);
-      const isArremate = (listing as any)?.listing_type === "arremate";
+      const isArremate = (listing as unknown)?.listing_type === "arremate";
       toast.success(isArremate ? "Arremate encerrado!" : "Leilão encerrado!");
       queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao encerrar");
     },
   });
 
+  // ── Pausar / Republicar (pausa REAL — reversível — via state machine) ──
+  const pauseListing = useMutation({
+    mutationFn: async (listingId: string) => {
+      const { data, error } = await supabase.rpc("auction_set_status" as unknown, {
+        p_listing_id: listingId, p_new_status: "paused",
+      });
+      if (error) throw error;
+      const r = data as unknown;
+      if (!r?.success) throw new Error(r?.error || "Não foi possível pausar");
+      return r;
+    },
+    onSuccess: () => {
+      toast.success("Leilão pausado. Você pode republicar quando quiser.");
+      queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
+    },
+    onError: (err: unknown) => toast.error(err.message || "Erro ao pausar"),
+  });
+
+  const republishListing = useMutation({
+    mutationFn: async (listingId: string) => {
+      const { data, error } = await supabase.rpc("auction_set_status" as unknown, {
+        p_listing_id: listingId, p_new_status: "active",
+      });
+      if (error) throw error;
+      const r = data as unknown;
+      if (!r?.success) throw new Error(r?.error || "Não foi possível republicar");
+      return r;
+    },
+    onSuccess: () => {
+      toast.success("Leilão republicado! 🔁");
+      queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
+    },
+    onError: (err: unknown) => toast.error(err.message || "Erro ao republicar"),
+  });
+
   // ── Atualizar listing ──
   const updateListing = useMutation({
-    mutationFn: async (updates: { id: string; [key: string]: any }) => {
+    mutationFn: async (updates: { id: string; [key: string]: unknown }) => {
       const { id, ...rest } = updates;
-      const { error } = await (supabase.from("auction_listings") as any)
-        .update({ ...rest, updated_at: new Date().toISOString() })
-        .eq("id", id)
-        .eq("owner_user_id", user!.id);
+      const { data, error } = await supabase.rpc("update_auction_listing" as unknown, {
+        p_listing_id: id,
+        p_updates: rest,
+      });
       if (error) throw error;
+      const result = data as unknown;
+      if (!result?.success) throw new Error(result?.error || "Erro ao atualizar listing");
     },
     onSuccess: () => {
       toast.success("Listing atualizado! ✅");
       queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao atualizar");
     },
   });
@@ -222,17 +260,18 @@ export function useAdvertiserAuctions() {
   // ── Excluir listing ──
   const deleteListing = useMutation({
     mutationFn: async (listingId: string) => {
-      const { error } = await (supabase.from("auction_listings") as any)
-        .delete()
-        .eq("id", listingId)
-        .eq("owner_user_id", user!.id);
+      const { data, error } = await supabase.rpc("delete_auction_listing" as unknown, {
+        p_listing_id: listingId,
+      });
       if (error) throw error;
+      const result = data as unknown;
+      if (!result?.success) throw new Error(result?.error || "Erro ao excluir listing");
     },
     onSuccess: () => {
       toast.success("Listing excluído!");
       queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       toast.error(err.message || "Erro ao excluir");
     },
   });
@@ -245,6 +284,8 @@ export function useAdvertiserAuctions() {
     refetchMyListings,
     createListing,
     endListing,
+    pauseListing,
+    republishListing,
     updateListing,
     deleteListing,
   };
