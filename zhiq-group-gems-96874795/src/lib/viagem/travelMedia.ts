@@ -1,134 +1,113 @@
-import { supabase } from "@/integrations/supabase/client";
-
 /**
- * travelMedia — resolução ÚNICA de URL de mídia do módulo Viagens, com
- * AUTO-DETECÇÃO do bucket oficial em runtime.
+ * travelMedia — resolveTravelMedia() é o ÚNICO resolver oficial de mídia
+ * do módulo Viagens (Missão Orion 2026-07-23, arquitetura definitiva).
  *
- * Contexto: o bucket oficial 'travel-public' é criado pela migration
- * 20260723_travel_storage_bucket_oficial.sql. Enquanto ela não roda em
- * produção, o bucket não existe e qualquer upload/URL nele falha (404).
- * Como `getPublicUrl` NUNCA falha (devolve URL mesmo p/ bucket inexistente),
- * a leitura não pode depender de um único bucket.
+ * Contrato: NENHUMA tela pode montar uma URL de travel_media manualmente
+ * (nem via supabase.storage.from(bucket).getPublicUrl(path), nem por
+ * concatenação de string). Toda leitura de mídia de viagem passa por
+ * resolveTravelMedia(row) — que:
+ *   1. confia exclusivamente na coluna `public_url`, gravada no banco no
+ *      momento exato em que a mídia é aprovada (edge moderate-image,
+ *      seja aprovação automática ou manual via approve_travel_media);
+ *   2. retorna null enquanto não houver public_url — nunca "tenta
+ *      adivinhar" um bucket, porque supabase.storage.getPublicUrl() NUNCA
+ *      falha (devolve URL válida-na-forma mesmo para bucket/objeto
+ *      inexistente), o que produzia URLs fantasma 404 silenciosas;
+ *   3. não depende de nome de bucket fixo no código: o bucket é dado por
+ *      `row.bucket`, escrito pelo backend no momento da aprovação.
  *
- * Estratégia definitiva (sem troca manual de constante):
- *  • UPLOAD: resolveTravelUploadBucket() checa 1x (cacheado) se 'travel-public'
- *    existe. Se existe → é o bucket oficial. Se não → cai em 'real-estate-public'
- *    (público, provisionado desde 2026-03). Ao aplicar a migration, o código
- *    passa a usar o oficial sozinho — nada a trocar no código.
- *  • LEITURA: <img onError> percorre a cadeia de buckets candidatos até uma
- *    URL que carregue (cobre mídia antiga e nova, em qualquer bucket).
+ * Por que isto substitui a geração de URL em runtime (getTravelMediaUrl /
+ * a cadeia de buckets candidatos): aquele modelo assumia que qualquer
+ * path aprovado estava sempre em um de N buckets conhecidos, e não tinha
+ * como distinguir "aprovada, deve aparecer" de "em quarentena, o arquivo
+ * está em um bucket privado que a leitura pública nunca alcança" — essa
+ * ambiguidade era a causa raiz do bug de imagens que desaparecem.
  */
 
-/** Bucket oficial do módulo (após a migration de storage). */
-const OFFICIAL_BUCKET = "travel-public";
-/** Bucket público de fallback (existe desde 2026-03). */
-const FALLBACK_BUCKET = "real-estate-public";
-
-/** Cadeia de buckets candidatos, em ordem de tentativa na leitura. */
-const READ_BUCKETS = [
-  "travel-public",
-  "real-estate-public",
-  "real-estate-original",
-] as const;
-
-/**
- * Bucket de LEITURA primário. Mantido como fallback público por padrão para
- * que a primeira renderização use um bucket garantidamente existente; o
- * onError sobe para o oficial quando aplicável.
- */
-const PRIMARY_READ_BUCKET = FALLBACK_BUCKET;
-
-/**
- * Constante de UPLOAD para compat. de imports síncronos. Prefira
- * resolveTravelUploadBucket() (assíncrona, com auto-detecção). Este valor é
- * o destino seguro-por-padrão enquanto o oficial não é confirmado.
- */
-export const TRAVEL_UPLOAD_BUCKET = FALLBACK_BUCKET;
-
-// ── Auto-detecção do bucket oficial (uma verificação, cacheada) ──────────────
-let officialBucketExists: boolean | null = null;
-let officialProbe: Promise<boolean> | null = null;
-
-async function probeOfficialBucket(): Promise<boolean> {
-  try {
-    // getBucket é a checagem mais barata; requer bucket público ou permissão.
-    const { data, error } = await supabase.storage.getBucket(OFFICIAL_BUCKET);
-    if (!error && data) return true;
-    // fallback: listBuckets (alguns projetos restringem getBucket ao service_role)
-    const { data: list } = await supabase.storage.listBuckets();
-    return !!list?.some((b) => b.id === OFFICIAL_BUCKET || b.name === OFFICIAL_BUCKET);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Resolve o bucket oficial de UPLOAD em runtime: 'travel-public' se já existir,
- * senão 'real-estate-public'. Resultado é cacheado por sessão.
- */
-export async function resolveTravelUploadBucket(): Promise<string> {
-  if (officialBucketExists === true) return OFFICIAL_BUCKET;
-  if (officialBucketExists === false) return FALLBACK_BUCKET;
-  if (!officialProbe) officialProbe = probeOfficialBucket();
-  officialBucketExists = await officialProbe;
-  return officialBucketExists ? OFFICIAL_BUCKET : FALLBACK_BUCKET;
-}
-
-// ── Resolução de URL ─────────────────────────────────────────────────────────
-function urlIn(bucket: string, path: string): string {
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-}
-
-/** Extrai o caminho relativo (sem host/bucket) de uma URL pública do storage. */
-function extractObjectPath(url: string): string | null {
-  const marker = "/storage/v1/object/public/";
-  const i = url.indexOf(marker);
-  if (i === -1) return null;
-  const rest = url.slice(i + marker.length).split("?")[0]; // <bucket>/<path...>
-  const slash = rest.indexOf("/");
-  return slash === -1 ? null : rest.slice(slash + 1);
-}
-
-export function getTravelMediaUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  // Se a auto-detecção já confirmou o bucket oficial nesta sessão, resolve
-  // direto nele (evita 1 salto de onError); senão usa o fallback seguro e o
-  // onError percorre a cadeia. Dispara a sondagem em background (não bloqueia).
-  if (officialBucketExists === null && !officialProbe) {
-    officialProbe = probeOfficialBucket().then((v) => (officialBucketExists = v));
-  }
-  const bucket = officialBucketExists === true ? OFFICIAL_BUCKET : PRIMARY_READ_BUCKET;
-  return urlIn(bucket, path);
-}
-
-/**
- * Escolhe o caminho exibível de uma linha de travel_media
- * (mascarada quando existir, original caso contrário) e resolve a URL.
- */
-export function resolveTravelMediaRow(row: {
+export interface TravelMediaRow {
+  bucket?: string | null;
+  storage_path?: string | null;
+  public_url?: string | null;
+  moderation_status?: string | null;
+  sort_order?: number | null;
+  /** Campos legados (pré-migration definitiva) — usados apenas para
+   * detectar mídia órfã pendente de backfill, nunca para montar URL. */
   original_storage_path?: string | null;
   public_masked_storage_path?: string | null;
-}): string | null {
-  const p = row.public_masked_storage_path || row.original_storage_path;
-  return getTravelMediaUrl(p);
+}
+
+export type TravelMediaState =
+  | { kind: "ready"; url: string }
+  | { kind: "reviewing" }
+  | { kind: "empty" };
+
+const APPROVED_STATUSES = new Set(["approved", "approved_clean", "approved_masked", "masked"]);
+
+/**
+ * Resolver único. Retorna:
+ *  - { kind: 'ready', url }   → há public_url gravada; pode renderizar.
+ *  - { kind: 'reviewing' }    → existe arquivo (path legado) mas ainda sem
+ *                               public_url — está em moderação/quarentena.
+ *  - { kind: 'empty' }        → não há mídia nenhuma nesta linha.
+ */
+export function resolveTravelMedia(row: TravelMediaRow | null | undefined): TravelMediaState {
+  if (!row) return { kind: "empty" };
+  if (row.public_url && APPROVED_STATUSES.has(String(row.moderation_status))) {
+    return { kind: "ready", url: row.public_url };
+  }
+  const hasLegacyPath = !!(row.storage_path || row.original_storage_path || row.public_masked_storage_path);
+  if (hasLegacyPath) return { kind: "reviewing" };
+  return { kind: "empty" };
+}
+
+/** Açúcar sintático para os callers que só querem a URL ou null — cobre a
+ * maioria dos cards (thumbnail simples). Para exibir o estado "em análise"
+ * de forma explícita na UI, use resolveTravelMedia() diretamente. */
+export function resolveTravelMediaUrl(row: TravelMediaRow | null | undefined): string | null {
+  const state = resolveTravelMedia(row);
+  return state.kind === "ready" ? state.url : null;
 }
 
 /**
- * Handler de <img onError>: percorre a cadeia de buckets candidatos até uma
- * URL que carregue; esconde a imagem só depois de esgotar todos.
+ * Dado um array de linhas de travel_media (já ordenadas por sort_order),
+ * resolve o estado da CAPA (primeira mídia com qualquer estado não-vazio).
+ * Usado pelos cards de listagem, que mostram só uma thumbnail por anúncio.
+ */
+export function resolveTravelCoverMedia(rows: TravelMediaRow[] | null | undefined): TravelMediaState {
+  if (!rows || rows.length === 0) return { kind: "empty" };
+  for (const row of rows) {
+    const state = resolveTravelMedia(row);
+    if (state.kind !== "empty") return state;
+  }
+  return { kind: "empty" };
+}
+
+/**
+ * URL da CAPA para cards de listagem: primeira mídia APROVADA na ordem de
+ * sort_order, ou null. Diferente de resolveTravelCoverMedia(), pula mídias
+ * em análise — um card nunca deve ficar sem imagem só porque a mídia
+ * sort_order=0 está em moderação e a sort_order=1 já foi aprovada.
+ * (Bug da galeria "Mais Produtos desta Loja": o adaptador usava media[0]
+ * cru, sem ordenar nem filtrar por aprovação.)
+ */
+export function resolveTravelCoverUrl(rows: TravelMediaRow[] | null | undefined): string | null {
+  if (!rows || rows.length === 0) return null;
+  const sorted = [...rows].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  for (const row of sorted) {
+    const state = resolveTravelMedia(row);
+    if (state.kind === "ready") return state.url;
+  }
+  return null;
+}
+
+/**
+ * Handler de <img onError> — mantido por compatibilidade de defesa em
+ * profundidade (ex: CDN/proxy intermitente), mas NÃO faz mais fallback
+ * entre buckets: se public_url (gravada no banco) falhar ao carregar, o
+ * problema é no CDN/objeto, não em "qual bucket tentar" — não há mais
+ * ambiguidade de bucket a percorrer.
  */
 export function travelImgFallback(e: React.SyntheticEvent<HTMLImageElement>) {
   const img = e.currentTarget;
-  const path = extractObjectPath(img.src);
-  if (!path) { img.style.display = "none"; return; }
-
-  const tried = Number(img.dataset.bucketIdx ?? "-1");
-  const currentBucket = READ_BUCKETS.find((b) => img.src.includes(`/${b}/`));
-  const startFrom = currentBucket ? READ_BUCKETS.indexOf(currentBucket) + 1 : 0;
-  const nextIdx = Math.max(tried + 1, startFrom);
-
-  if (nextIdx >= READ_BUCKETS.length) { img.style.display = "none"; return; }
-  img.dataset.bucketIdx = String(nextIdx);
-  img.src = urlIn(READ_BUCKETS[nextIdx], path);
+  img.style.display = "none";
 }

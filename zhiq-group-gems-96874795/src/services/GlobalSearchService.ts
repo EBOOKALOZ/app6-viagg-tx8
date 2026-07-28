@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
+import { resolveTravelCoverUrl } from "@/lib/viagem/travelMedia";
 import { publicAdvertiserPath } from "@/lib/business-modules";
 
 export type SearchCategory = 'mercado' | 'imoveis' | 'veiculos' | 'servicos' | 'viagens' | 'fretes' | 'leiloes';
@@ -310,44 +311,31 @@ export class GlobalSearchService {
   }
 
   static async searchViagens(q: string): Promise<GlobalSearchResult[]> {
+    // travel_listings NÃO tem cover_image_url/thumbnail_url; a capa vem de
+    // travel_media via resolveTravelCoverUrl (resolver oficial do módulo —
+    // só mídia aprovada com public_url gravada, nunca URL montada de path).
     const { data, error } = await (supabase.from('travel_listings') as any)
-      .select('id, title, description, destination, city, state, price_per_person, total_price, entry_price, cover_image_url, thumbnail_url, owner_user_id, travel_media(original_storage_path, public_masked_storage_path)')
+      .select('id, title, description, destination, city, state, price_per_person, total_price, entry_price, owner_user_id, travel_media(bucket, storage_path, public_url, moderation_status, sort_order)')
       .eq('visibility_status', 'published')
       .or(ilikeOr(q))
       .limit(20);
     if (error) { console.warn('[busca:viagens]', error.message); return []; }
-    
-    const items = data || [];
-    const missingIds = items.filter((it: any) => !resolveItemImage(it, 'travel_media')).map((it: any) => it.id);
-    const fallbackMap = new Map<string, any>();
-    if (missingIds.length > 0) {
-      const { data: mediaData } = await (supabase.from('travel_media') as any)
-        .select('listing_id, original_storage_path, public_masked_storage_path, sort_order')
-        .in('listing_id', missingIds)
-        .order('sort_order', { ascending: true });
-      (mediaData || []).forEach((m: any) => {
-        if (!fallbackMap.has(m.listing_id)) fallbackMap.set(m.listing_id, m);
-      });
-    }
 
-    return items.map((item: any) => {
-      if (fallbackMap.has(item.id)) item.travel_media = [fallbackMap.get(item.id)];
-      return {
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        price_label: item.entry_price?.trim()
-          || (item.price_per_person ? `R$ ${Number(item.price_per_person).toLocaleString('pt-BR')}/pessoa` : undefined)
-          || (item.total_price ? `R$ ${Number(item.total_price).toLocaleString('pt-BR')}` : undefined),
-        thumbnail_url: resolveItemImage(item, 'travel_media'),
-        category: 'viagens' as const,
-        categoryLabel: 'Viagens',
-        location: item.destination || item.city || '',
-        routePath: item.owner_user_id
-          ? publicAdvertiserPath('viagem', item.owner_user_id, item.id)
-          : `/viagens/${item.id}`,
-      };
-    });
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description || '',
+      price_label: item.entry_price?.trim()
+        || (item.price_per_person ? `R$ ${Number(item.price_per_person).toLocaleString('pt-BR')}/pessoa` : undefined)
+        || (item.total_price ? `R$ ${Number(item.total_price).toLocaleString('pt-BR')}` : undefined),
+      thumbnail_url: resolveTravelCoverUrl(item.travel_media),
+      category: 'viagens' as const,
+      categoryLabel: 'Viagens',
+      location: item.destination || item.city || '',
+      routePath: item.owner_user_id
+        ? publicAdvertiserPath('viagem', item.owner_user_id, item.id)
+        : `/viagens/${item.id}`,
+    }));
   }
 
   static async searchFretes(q: string): Promise<GlobalSearchResult[]> {

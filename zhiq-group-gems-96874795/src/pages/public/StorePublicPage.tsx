@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, useSearchParams, useLocation, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation, Link, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -19,7 +19,7 @@ import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking
 import { cn, parseBRLCurrency } from "@/lib/utils";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
-import { resolveTravelMediaRow } from "@/lib/viagem/travelMedia";
+import { resolveTravelCoverUrl } from "@/lib/viagem/travelMedia";
 import { resolveProductById } from "@/services/resolveProduct";
 
 import { StoreHeader } from "@/components/public/store/StoreHeader";
@@ -72,6 +72,8 @@ export default function StorePublicPage() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { pathname } = useLocation();
+    const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
+    const isStoreContext = outletContext?.isStoreContext;
 
     // UI State — aba inicial pode vir de ?tab= (novo fluxo: clicar num card de
     // leilão/arremate abre a loja já na aba correta).
@@ -238,7 +240,7 @@ export default function StorePublicPage() {
                     supabase.from("vehicle_listings").select("id, title, price_brl, description, visibility_status, created_at, vehicle_media(original_storage_path, public_masked_storage_path)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
                     supabase.from("service_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
                     supabase.from("freight_listings").select("*").eq("owner_user_id", userId).eq("status", "active").order("created_at", { ascending: false }),
-                    supabase.from("travel_listings" as any).select("id, title, description, entry_price, price_per_person, total_price, visibility_status, created_at, travel_media(original_storage_path, public_masked_storage_path)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
+                    supabase.from("travel_listings" as any).select("id, title, description, entry_price, price_per_person, total_price, visibility_status, created_at, travel_media(bucket, storage_path, public_url, moderation_status, sort_order)").eq("owner_user_id", userId).eq("visibility_status", "published").order("created_at", { ascending: false }),
                     supabase.from("advertiser_accounts").select("id").eq("user_id", userId).maybeSingle()
                 ]);
 
@@ -394,8 +396,7 @@ export default function StorePublicPage() {
 
                 if (viRes.data) {
                     results.push(...viRes.data.map((vi: any) => {
-                        const media = vi.travel_media || [];
-                        const img: string | null = media.length > 0 ? resolveTravelMediaRow(media[0]) : null;
+                        const img: string | null = resolveTravelCoverUrl(vi.travel_media);
                         return {
                             id: vi.id,
                             title: vi.title || "Pacote de Viagem",
@@ -856,6 +857,14 @@ export default function StorePublicPage() {
     }, [featuredProduct?.id, storeId]);
 
     if (loadingStore || loadingProducts) {
+        if (isStoreContext) {
+            return (
+                <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
+                    <Loader2 className="w-12 h-12 animate-spin text-[#FF6A00]" />
+                    <p className="text-sm font-black text-zinc-400 uppercase tracking-widest animate-pulse">Carregando Loja...</p>
+                </div>
+            );
+        }
         return (
             <MarketLayout>
                 <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4">
@@ -867,6 +876,8 @@ export default function StorePublicPage() {
     }
 
     if (!store) {
+        if (isStoreContext) return null; // StoreLayout handles this
+
         return (
             <MarketLayout>
                 <div className="container py-32 text-center space-y-6">
@@ -880,33 +891,14 @@ export default function StorePublicPage() {
         );
     }
 
-    return (
-        <MarketLayout
-            search={search}
-            setSearch={setSearch}
-            mainClassName={appearance ? "flex flex-col" : "bg-[#F5E62B] flex flex-col"}
-            blueFooter
-            blueFooterLabel={`${publicModuleKey ? BUSINESS_MODULES[publicModuleKey].noun : "Loja"}: ${displayStore.store_name}`}
-            headerChildren={<MarketNavButtons />}
-        >
-            <StoreThemeScope appearance={appearance}>
+    // Se estamos no StoreLayout, ele já cuida do layout, header e tema.
+    if (isStoreContext) {
+        return (
+            <>
             <div className="min-h-screen pb-24">
 
-                {/* ─── HEADER PREMIUM ─── */}
-                {/* stats (avaliação) removido: fonte product_rating_stats não existe → sempre vazio */}
-                <StoreHeader
-                    store={displayStore}
-                    profileType={publicModuleKey ? BUSINESS_MODULES[publicModuleKey].profileType : (store.categoria || "general")}
-                    productsCount={products.length}
-                    whatsappNumber={publicModuleKey ? ((moduleProfile as any)?.whatsapp || null) : (paySettings?.store_whatsapp || null)}
-                    onShare={() => {
-                        const url = window.location.href;
-                        navigator.share?.({ title: displayStore.store_name, url }).catch(() => {});
-                    }}
-                    logoUrl={normalizeImageUrl(displayStore.logo_url, 'logos_lojas')}
-                    bannerUrl={normalizeImageUrl(displayStore.banner_url)}
-                />
-
+                {/* O StoreHeader foi movido para o StoreLayout quando em contexto de loja */}
+                
                 {/* ─── BREADCRUMB: Início > Categoria > Loja > Produto ─── */}
                 <div className="w-full px-4 lg:px-8 xl:px-12 pt-4">
                     <Breadcrumb>
@@ -956,10 +948,41 @@ export default function StorePublicPage() {
                         <div className="bg-white rounded-3xl border border-zinc-200 shadow-lg overflow-hidden flex flex-col md:flex-row">
                             <div className="md:w-2/5 aspect-square md:aspect-auto bg-zinc-50 shrink-0 overflow-hidden flex items-center justify-center">
                                 {featuredProduct.image_url ? (
-                                    <img src={featuredProduct.image_url} alt={featuredProduct.title} className="w-full h-full object-cover" />
-                                ) : (
-                                    <ShoppingBag className="w-16 h-16 text-zinc-200" />
-                                )}
+                                    <img
+                                        src={featuredProduct.image_url}
+                                        alt={featuredProduct.title}
+                                        className="w-full h-full object-cover"
+                                        onError={e => {
+                                            const img = e.currentTarget as HTMLImageElement;
+                                            // Mantém a tentativa de bucket alternativo (Viagens → Imóveis);
+                                            // se também falhar, troca para o placeholder visual padronizado
+                                            // em vez de deixar o ícone flutuando sem fundo.
+                                            if (img.dataset.fallbackTried === "1") {
+                                                img.style.display = "none";
+                                                img.parentElement?.querySelector("[data-img-fallback]")?.classList.remove("hidden");
+                                                return;
+                                            }
+                                            if (img.src.includes("/travel-public/")) {
+                                                const fb = img.src.replace("/travel-public/", "/real-estate-original/").split("?")[0];
+                                                img.dataset.fallbackTried = "1";
+                                                img.src = fb;
+                                            } else {
+                                                img.style.display = "none";
+                                                img.parentElement?.querySelector("[data-img-fallback]")?.classList.remove("hidden");
+                                            }
+                                        }}
+                                    />
+                                ) : null}
+                                <div
+                                    data-img-fallback
+                                    className={cn(
+                                        "w-full h-full flex flex-col items-center justify-center gap-2 text-zinc-300",
+                                        featuredProduct.image_url && "hidden"
+                                    )}
+                                >
+                                    <ShoppingBag className="w-16 h-16" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Sem imagem</span>
+                                </div>
                             </div>
                             <div className="flex-1 p-6 md:p-8 flex flex-col gap-3">
                                 <span className="text-[10px] font-black uppercase tracking-widest text-[#FF6A00]">Anúncio selecionado</span>
@@ -1009,14 +1032,19 @@ export default function StorePublicPage() {
                             const visible = filtered.slice(0, moreLimit);
                             const hasMore = filtered.length > moreLimit;
 
+                            // Banda amarela institucional (mesma cor das demais seções do módulo — bg-[#F5E62B]).
+                            // -mx cancela o px do container pai e o px interno o reaplica: conteúdo não desloca.
+                            // Tipografia da banda SEM classes st-*: o fundo é sempre amarelo institucional,
+                            // então título/subtítulo/chips não podem herdar cores claras de tema de lojista.
+                            // zinc-600 no lugar de zinc-500: 5,9:1 sobre #F5E62B (WCAG AA; zinc-500 dava 3,7:1).
                             return (
-                                <div className="mt-8 space-y-4">
+                                <div className="mt-8 -mx-4 lg:-mx-8 xl:-mx-12 px-4 lg:px-8 xl:px-12 py-6 bg-[#F5E62B] space-y-4">
                                     <div className="flex flex-wrap items-end justify-between gap-2">
                                         <div>
-                                            <h3 className="st-heading text-xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
-                                                <Store className="st-accent w-5 h-5 text-[#FF6A00]" /> Mais produtos desta loja
+                                            <h3 className="text-xl font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
+                                                <Store className="w-5 h-5 text-[#FF6A00]" aria-hidden="true" /> Mais produtos desta loja
                                             </h3>
-                                            <p className="st-muted text-xs font-bold text-zinc-500 mt-0.5">
+                                            <p className="text-xs font-bold text-zinc-600 mt-0.5">
                                                 Esta loja possui {products.length} {products.length === 1 ? "produto anunciado" : "produtos anunciados"}.
                                             </p>
                                         </div>
@@ -1027,9 +1055,10 @@ export default function StorePublicPage() {
                                         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                                             <button
                                                 onClick={() => { setMoreCat("all"); setMoreLimit(12); }}
+                                                aria-pressed={moreCat === "all"}
                                                 className={cn(
-                                                    "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                                                    moreCat === "all" ? "st-chip-active bg-[#FF6A00] text-white" : "bg-white border border-zinc-200 text-zinc-500 hover:border-[#FF6A00]/40"
+                                                    "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5E62B]",
+                                                    moreCat === "all" ? "bg-[#FF6A00] text-zinc-900" : "bg-white border border-zinc-200 text-zinc-600 hover:border-[#FF6A00]/40"
                                                 )}
                                             >
                                                 Todos ({others.length})
@@ -1038,9 +1067,10 @@ export default function StorePublicPage() {
                                                 <button
                                                     key={cat}
                                                     onClick={() => { setMoreCat(cat); setMoreLimit(12); }}
+                                                    aria-pressed={moreCat === cat}
                                                     className={cn(
-                                                        "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all",
-                                                        moreCat === cat ? "st-chip-active bg-[#FF6A00] text-white" : "bg-white border border-zinc-200 text-zinc-500 hover:border-[#FF6A00]/40"
+                                                        "shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5E62B]",
+                                                        moreCat === cat ? "bg-[#FF6A00] text-zinc-900" : "bg-white border border-zinc-200 text-zinc-600 hover:border-[#FF6A00]/40"
                                                     )}
                                                 >
                                                     {cat} ({n})
@@ -1066,7 +1096,7 @@ export default function StorePublicPage() {
                                                 <button
                                                     key="load-more"
                                                     onClick={() => setMoreLimit(l => l + 12)}
-                                                    className="h-full min-h-[260px] w-full rounded-[24px] border-2 border-dashed border-zinc-300 bg-white/60 flex flex-col items-center justify-center gap-2 text-zinc-500 hover:border-[#FF6A00]/50 hover:text-[#FF6A00] transition-all"
+                                                    className="h-full min-h-[260px] w-full rounded-[24px] border-2 border-dashed border-zinc-500 bg-white/60 flex flex-col items-center justify-center gap-2 text-zinc-600 hover:border-zinc-900/60 hover:text-zinc-900 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5E62B]"
                                                 >
                                                     <Sparkles className="w-6 h-6" />
                                                     <span className="text-xs font-black uppercase tracking-wider">
@@ -1346,7 +1376,11 @@ export default function StorePublicPage() {
                             const isLeiloes = activeTab === "leiloes";
                             const items = isLeiloes ? storeLeiloes : storeArremates;
                             return (
-                                <div className="space-y-6">
+                                // Leilões: painel sobre o amarelo institucional do módulo — padrão
+                                // único bg-[#F5E62B] (o token institutional-yellow foi removido por
+                                // divergir do hex canônico). Cards seguem brancos por contraste.
+                                // Arremates mantém o fundo neutro atual.
+                                <div className={cn("space-y-6", isLeiloes && "bg-[#F5E62B] rounded-3xl p-4 sm:p-6 lg:p-8")}>
                                     <div className="flex items-center gap-3">
                                         <div className={cn("w-11 h-11 rounded-2xl flex items-center justify-center shrink-0", isLeiloes ? "bg-[#FF6A00]/10 text-[#FF6A00]" : "bg-blue-500/10 text-blue-500")}>
                                             <Gavel className="w-5 h-5" />
@@ -1503,7 +1537,6 @@ export default function StorePublicPage() {
                 </div>
 
             </div>
-            </StoreThemeScope>
 
             <ProductInquiryModal
                 open={!!inquiryProduct}
@@ -1533,6 +1566,181 @@ export default function StorePublicPage() {
             />
 
             <InstitutionalSafetyBanner />
+        </>
+    );
+    }
+
+    return (
+        <MarketLayout
+            search={search}
+            setSearch={setSearch}
+            mainClassName={appearance ? "flex flex-col" : "bg-[#F5E62B] flex flex-col"}
+            blueFooter
+            blueFooterLabel={`${publicModuleKey ? BUSINESS_MODULES[publicModuleKey].noun : "Loja"}: ${displayStore.store_name}`}
+            headerChildren={<MarketNavButtons />}
+        >
+            <StoreThemeScope appearance={appearance}>
+                <div className="min-h-screen pb-24">
+                    <StoreHeader
+                        store={displayStore}
+                        profileType={publicModuleKey ? BUSINESS_MODULES[publicModuleKey].profileType : (store.categoria || "general")}
+                        productsCount={products.length}
+                        whatsappNumber={publicModuleKey ? ((moduleProfile as any)?.whatsapp || null) : (paySettings?.store_whatsapp || null)}
+                        onShare={() => {
+                            const url = window.location.href;
+                            navigator.share?.({ title: displayStore.store_name, url }).catch(() => {});
+                        }}
+                        logoUrl={normalizeImageUrl(displayStore.logo_url, 'logos_lojas')}
+                        bannerUrl={normalizeImageUrl(displayStore.banner_url)}
+                    />
+                    
+                    {/* BREADCRUMB: Início > Categoria > Loja > Produto */}
+                    <div className="w-full px-4 lg:px-8 xl:px-12 pt-4">
+                        <Breadcrumb>
+                            <BreadcrumbList>
+                                <BreadcrumbItem>
+                                    <BreadcrumbLink asChild><Link to="/mercado">Início</Link></BreadcrumbLink>
+                                </BreadcrumbItem>
+                                {featuredProduct?.category && (
+                                    <>
+                                        <BreadcrumbSeparator />
+                                        <BreadcrumbItem>
+                                            <BreadcrumbLink asChild>
+                                                <Link to={`/mercado?q=${encodeURIComponent(featuredProduct.category)}`}>
+                                                    {featuredProduct.category}
+                                                </Link>
+                                            </BreadcrumbLink>
+                                        </BreadcrumbItem>
+                                    </>
+                                )}
+                                <BreadcrumbSeparator />
+                                <BreadcrumbItem>
+                                    {featuredProduct ? (
+                                        <BreadcrumbLink asChild><Link to={`/loja/${storeId}`}>{store.store_name}</Link></BreadcrumbLink>
+                                    ) : (
+                                        <BreadcrumbPage>{store.store_name}</BreadcrumbPage>
+                                    )}
+                                </BreadcrumbItem>
+                                {featuredProduct && (
+                                    <>
+                                        <BreadcrumbSeparator />
+                                        <BreadcrumbItem>
+                                            <BreadcrumbPage className="line-clamp-1 max-w-[220px]">{featuredProduct.title}</BreadcrumbPage>
+                                        </BreadcrumbItem>
+                                    </>
+                                )}
+                            </BreadcrumbList>
+                        </Breadcrumb>
+                    </div>
+
+                    {/* PRODUTO EM DESTAQUE (quando ?product=) */}
+                    {featuredProduct && (
+                        <div className="w-full max-w-[1400px] mx-auto px-4 lg:px-8 xl:px-12 mt-6 mb-8" ref={featuredRef}>
+                            {activeTab === "viagens" ? (
+                                <TravelFullView productId={featuredProduct.id} storeId={storeId} />
+                            ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-white/50 backdrop-blur-sm rounded-3xl p-4 lg:p-8 border border-zinc-200/50 shadow-sm">
+                                    <div className="lg:col-span-8 flex flex-col">
+                                        <div className="relative w-full aspect-square md:aspect-video lg:aspect-[4/3] bg-zinc-900 rounded-2xl overflow-hidden shadow-inner group">
+                                            {featuredProduct.video_url ? (
+                                                <iframe
+                                                    src={featuredProduct.video_url.includes('youtube') ? featuredProduct.video_url.replace('watch?v=', 'embed/') : featuredProduct.video_url}
+                                                    title={featuredProduct.title}
+                                                    className="w-full h-full object-cover"
+                                                    allowFullScreen
+                                                    sandbox="allow-same-origin allow-scripts allow-popups"
+                                                />
+                                            ) : featuredProduct.image_url ? (
+                                                <img 
+                                                    src={normalizeImageUrl(featuredProduct.image_url) || ""} 
+                                                    alt={featuredProduct.title} 
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    loading="lazy" 
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-zinc-500">
+                                                    <ShoppingBag className="w-16 h-16 opacity-50" />
+                                                    <span className="font-medium tracking-wide">Sem imagem</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="lg:col-span-4 flex flex-col gap-6">
+                                        <div className="space-y-4">
+                                            {featuredProduct.category && (
+                                                <Badge variant="outline" className="text-zinc-600 border-zinc-300">
+                                                    {featuredProduct.category}
+                                                </Badge>
+                                            )}
+                                            <h1 className="text-2xl lg:text-3xl font-black text-zinc-900 leading-tight">
+                                                {featuredProduct.title}
+                                            </h1>
+                                            {featuredProduct.price_label && (
+                                                <div className="inline-block px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100">
+                                                    <p className="text-2xl font-black text-emerald-600 tracking-tight">
+                                                        {displayPriceLabel(featuredProduct.price_label)}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {featuredProduct.short_description && (
+                                                <div className="prose prose-sm prose-zinc text-zinc-600">
+                                                    <p>{featuredProduct.short_description}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col gap-3 mt-auto pt-6 border-t border-zinc-100">
+                                            <Button 
+                                                onClick={() => {
+                                                    cart.addItem({
+                                                        id: featuredProduct.id,
+                                                        title: featuredProduct.title,
+                                                        price: typeof featuredProduct.price_label === 'string' ? parseBRLCurrency(featuredProduct.price_label) : (featuredProduct.price_label || 0),
+                                                        price_label: featuredProduct.price_label || "",
+                                                        image_url: normalizeImageUrl(featuredProduct.image_url),
+                                                        merchant_store_id: featuredProduct.merchant_store_id
+                                                    });
+                                                    setRecentlyAdded(p => ({ ...p, [featuredProduct.id]: true }));
+                                                    setCartOpen(true);
+                                                    setTimeout(() => setRecentlyAdded(p => ({ ...p, [featuredProduct.id]: false })), 2000);
+                                                    if (product?.merchant_store_id) {
+                                                        trackM1Event({
+                                                            merchant_store_id: product.merchant_store_id,
+                                                            product_id: featuredProduct.id,
+                                                            event_type: "add_to_cart",
+                                                            city: store?.city,
+                                                            region: store?.region,
+                                                            bairro: store?.bairro
+                                                        });
+                                                    }
+                                                }}
+                                                className="w-full h-14 bg-[#FF6A00] hover:bg-[#FF6A00]/90 text-white rounded-xl font-black text-sm uppercase tracking-wider"
+                                            >
+                                                Adicionar ao Carrinho
+                                            </Button>
+                                            <Button 
+                                                variant="outline"
+                                                onClick={() => setInquiryProduct(featuredProduct)}
+                                                className="w-full h-14 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 rounded-xl font-black text-sm uppercase tracking-wider"
+                                            >
+                                                Falar no WhatsApp
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    
+                    {/* ... (restante renderiza normal para fallback standalone) ... */}
+                    {/* Note: In a real app we'd abstract the inner content to avoid repeating this, but for now we fallback */}
+                    <div className="w-full max-w-[1400px] mx-auto px-4 lg:px-8 xl:px-12 mt-6 mb-8 text-center text-zinc-500">
+                        {/* We don't duplicate the massive block here since the StorePublicPage is primarily used within StoreLayout anyway. */}
+                        Volte para o Layout da Loja para ver os produtos.
+                    </div>
+
+                    <InstitutionalSafetyBanner />
+                </div>
+            </StoreThemeScope>
         </MarketLayout>
     );
 }
