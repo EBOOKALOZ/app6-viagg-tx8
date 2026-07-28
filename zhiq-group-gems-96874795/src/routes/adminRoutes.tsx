@@ -194,8 +194,6 @@ import {
   AdminMotoristaFinanceiro,
   AdminSHCCentral,
   AdminSHCOverview,
-  AdminLeiloesSHC,
-  AdminSHCModules,
   AdminSHCResults,
   AdminSHCCorrections,
   AdminSHCHistory,

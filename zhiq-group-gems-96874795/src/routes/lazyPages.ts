@@ -413,7 +413,6 @@ export const AdminOrionAudio = lazy(() => import("@/pages/admin/AdminOrionAudio"
 export const AdminMultimidia = lazy(() => import("@/pages/admin/AdminMultimidia"));
 export const AdminSHCCentral = lazy(() => import("@/pages/admin/shc/AdminSHCCentral"));
 export const AdminSHCOverview = lazy(() => import("@/pages/admin/shc/AdminSHC_Overview"));
-export const AdminSHCModules = lazy(() => import("@/pages/admin/shc/AdminSHC_Modules"));
 export const AdminSHCResults = lazy(() => import("@/pages/admin/shc/AdminSHC_Results"));
 export const AdminSHCCorrections = lazy(() => import("@/pages/admin/shc/AdminSHC_Corrections"));
 export const AdminSHCHistory = lazy(() => import("@/pages/admin/shc/AdminSHC_History"));
@@ -421,4 +420,3 @@ export const AdminSHCAudit = lazy(() => import("@/pages/admin/shc/AdminSHC_Audit
 export const AdminSHCCertification = lazy(() => import("@/pages/admin/shc/AdminSHC_Certification"));
 export const AdminSHCCertificationTab = lazy(() => import("@/pages/admin/shc/AdminSHC_CertificationTab"));
 export const AdminSHCEvolution = lazy(() => import("@/pages/admin/shc/AdminSHC_Evolution"));
-export const AdminLeiloesSHC = lazy(() => import("@/pages/admin/AdminLeiloesSHC"));
