@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useSHCRealtime } from "@/hooks/useSHCRealtime";
 import { runModuleAudit } from "@/services/shc/executor";
+import { getModuleEvidence } from "@/services/shc/evidence";
 import type { SHCDecision } from "@/types/shc";
 
 const DECISION_META: Record<SHCDecision, { label: string; className: string }> = {
@@ -47,7 +48,7 @@ export default function AdminSHC_Audit() {
     if (!moduleId || executing) return;
     setExecuting(true);
     try {
-      const result = await runModuleAudit(moduleId);
+      const result = await runModuleAudit(moduleId, getModuleEvidence(moduleId));
       if (!result.ok) {
         toast.error(result.error || "Falha ao executar a homologação server-side.");
         return;

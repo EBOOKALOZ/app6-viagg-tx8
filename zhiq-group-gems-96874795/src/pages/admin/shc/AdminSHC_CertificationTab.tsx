@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useSHCRealtime } from "@/hooks/useSHCRealtime";
 import { runModuleAudit } from "@/services/shc/executor";
+import { getModuleEvidence } from "@/services/shc/evidence";
 
 function formatMs(ms: number | null | undefined): string {
   if (ms == null) return "—";
@@ -31,7 +32,7 @@ export default function AdminSHC_CertificationTab() {
     if (!moduleId || executing) return;
     setExecuting(true);
     try {
-      const result = await runModuleAudit(moduleId);
+      const result = await runModuleAudit(moduleId, getModuleEvidence(moduleId));
       if (!result.ok) {
         toast.error(result.error || "Falha ao executar a homologação server-side.");
         return;
