@@ -6,6 +6,7 @@
  * Separada do módulo de Leilão.
  */
 import { useState, useMemo, useEffect } from "react";
+import { toast } from "sonner";
 import { useArremate, type ArremateOffer } from "@/hooks/useArremate";
 import { useAdvertiserAuctions, type AuctionListing } from "@/hooks/useAdvertiserAuctions";
 import { useMerchantCredits } from "@/hooks/useMerchantCredits";
@@ -805,10 +806,8 @@ export default function MerchantArremate() {
         </div>
       </div>
 
-      {/* ═══ CREDIT RULES INFO ═══ */}
+      {/* ═══ REGRAS FINANCEIRAS INFO ═══ */}
       {(() => {
-        const publishCost   = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
-        const endCost       = usageRules?.find(r => r.feature_code === 'auction_listing_end')?.credits_cost ?? 5;
         const contactCost   = usageRules?.find(r => r.feature_code === 'offer_accept_contact_unlock')?.credits_cost ?? 2;
         const intentionCost = usageRules?.find(r => r.feature_code === 'purchase_intention_received')?.credits_cost ?? 5;
         const acceptCost    = contactCost + intentionCost;
@@ -820,19 +819,19 @@ export default function MerchantArremate() {
                   <Coins className="h-5 w-5 text-[#FF6A00]" />
                 </div>
                 <div>
-                  <span className="text-[11px] font-black text-[#FFFFFF] uppercase tracking-wider block">Regras de Créditos</span>
-                  <p className="text-[10px] font-bold text-[#8E98A3]">Investimento para conversão direta</p>
+                  <span className="text-[11px] font-black text-[#FFFFFF] uppercase tracking-wider block">Regras Financeiras</span>
+                  <p className="text-[10px] font-bold text-[#8E98A3]">Taxas debitadas da Carteira Financeira</p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Criar Arremate</span>
-                  <span className="text-sm font-black text-[#FF6A00]">{publishCost} CRÉDITOS</span>
+                  <span className="text-sm font-black text-[#FF6A00]">3% DO VALOR</span>
                 </div>
                 <div className="w-px h-8 bg-[#323A45]" />
                 <div className="flex flex-col">
-                  <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Encerrar Arremate</span>
-                  <span className="text-sm font-black text-amber-400">{endCost} CRÉDITOS</span>
+                  <span className="text-[10px] font-black text-[#8E98A3] uppercase tracking-tighter">Encerrar c/ Vencedor</span>
+                  <span className="text-sm font-black text-amber-400">1,5% DO VALOR FINAL</span>
                 </div>
                 <div className="w-px h-8 bg-[#323A45]" />
                 <div className="flex flex-col">
@@ -980,23 +979,11 @@ export default function MerchantArremate() {
                         }`}
                         onClick={async () => {
                           if (isActive && !isExpired) {
-                            const endCost = usageRules?.find(r => r.feature_code === 'auction_listing_end')?.credits_cost ?? 5;
-                            if ((balance?.available_credits ?? 0) < endCost) {
-                              const { toast } = require("sonner");
-                              toast.error(`Créditos insuficientes! Necessário: ${endCost}. Saldo: ${balance?.available_credits ?? 0}.`);
-                              return;
-                            }
+                            // Comissão de encerramento (1,5% do valor final, só quando há
+                            // vencedor) e o bloqueio pós-lance são aplicados atomicamente
+                            // dentro do RPC end_auction_listing — nada a validar aqui.
                             endAuction.mutate(listing.id, {
-                              onSuccess: async () => {
-                                await debitCredits({
-                                  amount: endCost,
-                                  reasonCode: "auction_listing_end",
-                                  description: `Encerramento de arremate: ${listing.title}`,
-                                  metadata: { listing_id: listing.id },
-                                });
-                                refetchCredits();
-                                refetchMyListings();
-                              },
+                              onSuccess: () => refetchMyListings(),
                             });
                           } else {
                             updateListing.mutate(
@@ -1278,11 +1265,9 @@ export default function MerchantArremate() {
                   const startDate = configForm.start_date ? new Date(configForm.start_date) : new Date();
                   const endDate = configForm.end_date ? new Date(configForm.end_date) : new Date(Date.now() + 24 * 60 * 60 * 1000);
                   const durationHours = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / 3600000));
-                  // Publicar é GRÁTIS (modelo oficial): gate de crédito para publicar
-                  // arremate desativado — espelha MerchantAuctions. Créditos só no
-                  // desbloqueio de contato do comprador, não para anunciar.
-                  // const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
-                  // if ((balance?.available_credits ?? 0) < publishCost) { ... }
+                  // Taxa de publicação (3% do valor do anúncio, debitada da Carteira
+                  // Financeira) é calculada e cobrada atomicamente dentro do RPC
+                  // create_auction_listing — nada a validar/debitar aqui no frontend.
                   createListing.mutate({
                     title: configProduct.name,
                     description: configProduct.description || undefined,
@@ -1295,18 +1280,10 @@ export default function MerchantArremate() {
                     fulfillment_type: "both",
                     product_id: configProduct.id,
                   }, {
-                    onSuccess: async () => {
-                      await debitCredits({
-                        amount: publishCost,
-                        reasonCode: "auction_listing_create",
-                        description: `Publicação de arremate: ${configProduct.name}`,
-                      });
-                      refetchCredits();
+                    onSuccess: () => {
                       setShowConfigModal(false);
                       setConfigProduct(null);
                       refetchMyListings();
-                      const { toast } = require("sonner");
-                      toast.success("Arremate publicado com sucesso!");
                     },
                   });
                 }}

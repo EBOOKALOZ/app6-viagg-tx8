@@ -164,13 +164,15 @@ export function useAdvertiserAuctions() {
 
       if (error) throw error;
       const result = data as unknown;
-      if (!result?.success) throw new Error(result?.error || "Erro ao criar listing");
-      return result as { success: true; listing_id: string; ends_at: string };
+      if (!result?.success) throw new Error(result?.message || result?.error || "Erro ao criar listing");
+      return result as { success: true; listing_id: string; ends_at: string; publish_fee_charged?: number; wallet_balance_after?: number };
     },
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
       const isArremate = variables.listing_type === "arremate";
+      const fee = (result as { publish_fee_charged?: number }).publish_fee_charged;
+      const feeText = typeof fee === "number" ? ` Taxa de publicação (3%): R$ ${fee.toFixed(2)}.` : "";
       toast.success(
-        isArremate ? "Arremate criado com sucesso! 🎉" : "Leilão criado com sucesso! 🎉"
+        (isArremate ? "Arremate criado com sucesso! 🎉" : "Leilão criado com sucesso! 🎉") + feeText
       );
       queryClient.invalidateQueries({ queryKey: ["advertiser-auction-listings"] });
     },
@@ -187,7 +189,7 @@ export function useAdvertiserAuctions() {
       });
       if (error) throw error;
       const result = data as unknown;
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) throw new Error(result.message || result.error);
       return result;
     },
     onSuccess: (_result, listingId) => {
@@ -209,7 +211,7 @@ export function useAdvertiserAuctions() {
       });
       if (error) throw error;
       const r = data as unknown;
-      if (!r?.success) throw new Error(r?.error || "Não foi possível pausar");
+      if (!r?.success) throw new Error(r?.message || r?.error || "Não foi possível pausar");
       return r;
     },
     onSuccess: () => {
@@ -226,7 +228,7 @@ export function useAdvertiserAuctions() {
       });
       if (error) throw error;
       const r = data as unknown;
-      if (!r?.success) throw new Error(r?.error || "Não foi possível republicar");
+      if (!r?.success) throw new Error(r?.message || r?.error || "Não foi possível republicar");
       return r;
     },
     onSuccess: () => {
@@ -246,7 +248,7 @@ export function useAdvertiserAuctions() {
       });
       if (error) throw error;
       const result = data as unknown;
-      if (!result?.success) throw new Error(result?.error || "Erro ao atualizar listing");
+      if (!result?.success) throw new Error(result?.message || result?.error || "Erro ao atualizar listing");
     },
     onSuccess: () => {
       toast.success("Listing atualizado! ✅");
@@ -265,7 +267,7 @@ export function useAdvertiserAuctions() {
       });
       if (error) throw error;
       const result = data as unknown;
-      if (!result?.success) throw new Error(result?.error || "Erro ao excluir listing");
+      if (!result?.success) throw new Error(result?.message || result?.error || "Erro ao excluir listing");
     },
     onSuccess: () => {
       toast.success("Listing excluído!");

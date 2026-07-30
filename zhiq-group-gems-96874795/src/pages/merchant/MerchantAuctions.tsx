@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAdvertiserAuctions, type AuctionListing, type AdvertiserCreateListingInput as CreateListingInput } from "@/hooks/useAdvertiserAuctions";
 import { useArremate, type ArremateOffer } from "@/hooks/useArremate";
-import { useMerchantCredits } from "@/hooks/useMerchantCredits";
 import { useCompressedImageUpload } from "@/hooks/useCompressedImageUpload";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -1415,7 +1414,6 @@ export default function MerchantAuctions() {
   const navigate = useNavigate();
   const { myListings, loadingMyListings, createListing, refetchMyListings, endListing: endAuction, pauseListing, republishListing, updateListing, deleteListing } = useAdvertiserAuctions();
   const { receivedOffers, refetchOffers, loadingOffers } = useArremate();
-  const { usageRules, balance, debitCredits, refetch: refetchCredits } = useMerchantCredits();
    const [showCreateModal, setShowCreateModal] = useState(false);
    const [editingListing, setEditingListing] = useState<AuctionListing | null>(null);
    const [refreshing, setRefreshing] = useState(false);
@@ -1973,24 +1971,11 @@ export default function MerchantAuctions() {
         onOpenChange={setShowCreateModal}
         isSubmitting={createListing.isPending}
         onSubmit={(data) => {
-          const publishCost = usageRules?.find(r => r.feature_code === 'auction_listing_create')?.credits_cost ?? 7;
-          if ((balance?.available_credits ?? 0) < publishCost) {
-            toast.error(
-              `Créditos insuficientes! Necessário: ${publishCost}. Saldo: ${balance?.available_credits ?? 0}.`,
-              { description: "Recarregue seus créditos para publicar leilões." }
-            );
-            return;
-          }
-
+          // Cobrança (3% do valor do anúncio, debitado da Carteira Financeira) é
+          // calculada e validada atomicamente dentro do RPC create_auction_listing —
+          // o frontend não decide mais saldo/preço, só exibe o resultado do backend.
           createListing.mutate(data, {
-            onSuccess: async (result) => {
-              await debitCredits({
-                amount: publishCost,
-                reasonCode: "auction_listing_create",
-                description: `Publicação de leilão: ${data.title}`,
-                metadata: { listing_id: (result as any)?.listing_id },
-              });
-              refetchCredits();
+            onSuccess: () => {
               setShowCreateModal(false);
               refetchMyListings();
             }
