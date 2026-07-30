@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
     Search,
@@ -862,7 +863,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
 
             if (error) {
                 console.error('[MercadoLocalViagg] vehicle_listings query error:', error);
-                return [];
+                throw error;
             }
 
             const rows = (data as any[]) || [];
@@ -898,7 +899,14 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
         },
         refetchInterval: 10000,
         refetchOnWindowFocus: true,
+        retry: 1,
     });
+
+    useEffect(() => {
+        if (vehicleQueryError) {
+            toast.error("Não foi possível carregar os veículos no momento. Tente novamente em alguns instantes.");
+        }
+    }, [vehicleQueryError]);
 
     const vehicleListings = useMemo(() => {
         return rawVehicleListings.filter(p => {

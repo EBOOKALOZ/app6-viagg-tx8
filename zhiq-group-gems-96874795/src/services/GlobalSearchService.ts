@@ -238,7 +238,7 @@ export class GlobalSearchService {
       .eq('visibility_status', 'published')
       .or(ilikeOr(q))
       .limit(20);
-    if (error) { console.warn('[busca:veiculos]', error.message); return []; }
+    if (error) { console.warn('[busca:veiculos]', error.message); throw error; }
     
     const items = data || [];
     const missingIds = items.filter((it: any) => !resolveItemImage(it, 'vehicle_media')).map((it: any) => it.id);

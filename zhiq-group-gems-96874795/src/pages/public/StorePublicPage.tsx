@@ -244,6 +244,10 @@ export default function StorePublicPage() {
                     supabase.from("advertiser_accounts").select("id").eq("user_id", userId).maybeSingle()
                 ]);
 
+                if (vRes.error) {
+                    console.error("[StorePublicPage] vehicle_listings query error:", vRes.error);
+                }
+
                 let advRes: any = { data: null };
                 if (advAccRes.data?.id) {
                     // Tenta com join — se falhar (FK no PostgREST), faz query simples sem join
@@ -485,11 +489,14 @@ export default function StorePublicPage() {
                 } as StoreProduct & { _kind: string; _ownerStoreId: string | null });
             });
 
-            const { data: vehicles } = await (supabase.from("vehicle_listings") as any)
+            const { data: vehicles, error: vehiclesError } = await (supabase.from("vehicle_listings") as any)
                 .select("id, title, price_brl, description, created_at, owner_user_id, vehicle_media(original_storage_path, public_masked_storage_path)")
                 .eq("visibility_status", "published")
                 .order("created_at", { ascending: false })
                 .limit(12);
+            if (vehiclesError) {
+                console.error("[StorePublicPage] vehicle_listings query error:", vehiclesError);
+            }
             (vehicles || []).forEach((v: any) => {
                 let img: string | null = null;
                 if (v.vehicle_media?.length > 0) {
