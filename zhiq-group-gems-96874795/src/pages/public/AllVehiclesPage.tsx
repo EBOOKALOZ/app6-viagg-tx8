@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
@@ -39,7 +40,7 @@ export default function AllVehiclesPage() {
   const [sortOption, setSortOption] = useState("default"); // default, year, brand, price
 
   // Fetch vehicle listings (same as in MercadoLocalViagg)
-  const { data: rawVehicleListings = [], isLoading: vehiclesLoading } = useQuery<any[]>({
+  const { data: rawVehicleListings = [], isLoading: vehiclesLoading, isError: vehiclesError } = useQuery<any[]>({
     queryKey: ["public-vehicles"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -48,7 +49,7 @@ export default function AllVehiclesPage() {
         .order("created_at", { ascending: false });
       if (error) {
         console.error("[AllVehiclesPage] vehicle_listings query error:", error);
-        return [];
+        throw error;
       }
       const rows = (data as any[]) || [];
       if (rows.length === 0) return [];
@@ -77,7 +78,14 @@ export default function AllVehiclesPage() {
     },
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
+
+  useEffect(() => {
+    if (vehiclesError) {
+      toast.error("Não foi possível carregar os veículos no momento. Tente novamente em alguns instantes.");
+    }
+  }, [vehiclesError]);
 
   // Derive filtered list
   const vehicleListings = useMemo(() => {
@@ -282,6 +290,12 @@ export default function AllVehiclesPage() {
           {vehiclesLoading ? (
             <div className="flex items-center gap-2 py-16 justify-center text-[#8E98A3]">
               <Loader2 className="w-6 h-6 animate-spin" /> Carregando veículos...
+            </div>
+          ) : vehiclesError ? (
+            <div className="text-center py-20 space-y-4 px-4">
+              <div className="text-6xl">⚠️</div>
+              <h2 className="text-2xl font-black text-white">Não foi possível carregar os veículos</h2>
+              <p className="text-[#B8C2CC]">Tente novamente em alguns instantes.</p>
             </div>
           ) : sortedVehicles.length === 0 ? (
             <div className="text-center py-20 space-y-4 px-4">

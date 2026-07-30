@@ -6,8 +6,10 @@
  * o custo de desbloqueio é por anúncio). Lista os veículos da conta com
  * miniatura, status e atalho de edição.
  */
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
@@ -30,16 +32,20 @@ export default function AdvertiserVeiculosPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { data: veiculos = [], isLoading } = useQuery({
+  const { data: veiculos = [], isLoading, isError } = useQuery({
     queryKey: ["veiculos-painel-lista", user?.id],
     enabled: !!user?.id,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const { data } = await (supabase.from("vehicle_listings") as any)
+      const { data, error } = await (supabase.from("vehicle_listings") as any)
         .select("id, title, vehicle_type, brand, model, year, visibility_status, price_brl, city, state, view_count, created_at")
         .eq("owner_user_id", user!.id)
         .order("created_at", { ascending: false });
+      if (error) {
+        console.error("[AdvertiserVeiculosPage] vehicle_listings query error:", error);
+        throw error;
+      }
       const list = data || [];
       return Promise.all(list.map(async (v: any) => {
         const { data: media } = await (supabase.from("vehicle_media") as any)
@@ -54,6 +60,12 @@ export default function AdvertiserVeiculosPage() {
       }));
     },
   });
+
+  useEffect(() => {
+    if (isError) {
+      toast.error("Não foi possível carregar seus veículos no momento. Tente novamente em alguns instantes.");
+    }
+  }, [isError]);
 
   // Saldo de créditos PRÓPRIO de veículos (vehicle_credit_balances por owner_user_id).
   // NÃO usa a carteira do anunciante/marketplace (que é compartilhada com a loja).
@@ -150,6 +162,11 @@ export default function AdvertiserVeiculosPage() {
         {isLoading ? (
           <div className="flex items-center gap-2 py-10 px-4 text-zinc-400">
             <Loader2 className="w-5 h-5 animate-spin" /> Carregando seus veículos...
+          </div>
+        ) : isError ? (
+          <div className="p-8 text-center space-y-1">
+            <p className="text-sm font-semibold text-red-500">Não foi possível carregar seus veículos.</p>
+            <p className="text-xs text-zinc-400">Tente novamente em alguns instantes.</p>
           </div>
         ) : veiculos.length === 0 ? (
           <div className="p-8 text-center space-y-3">

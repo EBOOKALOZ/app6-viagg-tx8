@@ -60,10 +60,14 @@ export default function AdvertiserVeiculosListingsPage() {
     queryKey: ["veiculos-meus-anuncios", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from("vehicle_listings") as any)
+      const { data, error } = await (supabase.from("vehicle_listings") as any)
         .select("id, title, vehicle_type, brand, model, year, visibility_status, price_brl, city, state, created_at")
         .eq("owner_user_id", user!.id)
         .order("created_at", { ascending: false });
+      if (error) {
+        console.error("[AdvertiserVeiculosListingsPage] vehicle_listings query error:", error);
+        throw error;
+      }
       const list = data || [];
       return Promise.all(list.map(async (v: any) => {
         const { data: media } = await (supabase.from("vehicle_media") as any)
@@ -83,8 +87,9 @@ export default function AdvertiserVeiculosListingsPage() {
   const toggleStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const isActive = ["published","active"].includes(status);
-      await (supabase.from("vehicle_listings") as any)
+      const { error } = await (supabase.from("vehicle_listings") as any)
         .update({ visibility_status: isActive ? "paused" : "published" }).eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["veiculos-meus-anuncios", user?.id] }); toast.success("Status atualizado."); },
     onError: () => toast.error("Erro ao atualizar status."),
@@ -92,7 +97,8 @@ export default function AdvertiserVeiculosListingsPage() {
 
   const deleteListing = useMutation({
     mutationFn: async (id: string) => {
-      await (supabase.from("vehicle_listings") as any).delete().eq("id", id);
+      const { error } = await (supabase.from("vehicle_listings") as any).delete().eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["veiculos-meus-anuncios", user?.id] }); toast.success("Veículo excluído."); },
     onError: () => toast.error("Erro ao excluir."),
