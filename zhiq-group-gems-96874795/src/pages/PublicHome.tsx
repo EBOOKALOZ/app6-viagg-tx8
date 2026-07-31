@@ -9,6 +9,7 @@ import { DollarCard } from "@/components/landing/DollarCard";
 import { ProfileVideoModal } from "@/components/landing/ProfileVideoModal";
 import { TrustSection } from "@/components/landing/TrustSection";
 import { PublicFooter } from "@/components/PublicFooter";
+import { ComplianceBadge } from "@/components/compliance/ComplianceBadge";
 import {
   Dialog,
   DialogContent,
@@ -240,6 +241,9 @@ export default function PublicHome() {
         <div className="relative z-10 py-4 px-4">
           <div className="container max-w-4xl mx-auto">
             <InstitutionalBlock />
+            <div className="mt-3 flex justify-center">
+              <ComplianceBadge variant="dark" size="sm" />
+            </div>
           </div>
         </div>
       </div>

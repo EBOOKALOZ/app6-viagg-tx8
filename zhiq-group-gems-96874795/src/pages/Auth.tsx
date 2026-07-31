@@ -22,6 +22,7 @@ import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { ComplianceBadge } from "@/components/compliance/ComplianceBadge";
 
 const emailSchema = z.string().email("Email inválido");
 const COOLDOWN_KEY = "viagg_auth_cooldown_until";
@@ -523,6 +524,10 @@ export default function Auth() {
                 <Star className={cn("w-5 h-5", isAdvertiserMode ? "text-[#EA580C]" : "text-yellow-500")} />
                 <span className={cn("text-[10px] font-black uppercase tracking-[0.2em]", isAdvertiserMode ? "text-[#3B1F14]" : "text-white")}>Padrão Elite</span>
             </div>
+          </div>
+
+          <div className="mt-3 flex justify-center opacity-60 hover:opacity-100 transition-opacity">
+            <ComplianceBadge variant="dark" size="sm" />
           </div>
         </div>
       </div>

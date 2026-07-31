@@ -67,6 +67,7 @@ export const Rates = lazy(() => import("@/pages/Rates"));
 export const ReferFriends = lazy(() => import("@/pages/ReferFriends"));
 export const LegalPage = lazy(() => import("@/pages/LegalPage"));
 export const AceitePage = lazy(() => import("@/pages/AceitePage"));
+export const ComplianceCenter = lazy(() => import("@/pages/public/ComplianceCenter"));
 
 /* ── Merchant ── */
 export const MerchantPanel = lazy(() => import("@/pages/MerchantPanel"));
@@ -240,6 +241,7 @@ export const AdminMerchantInvoices = lazy(() => import("@/pages/admin/AdminMerch
 export const AdminIncentives = lazy(() => import("@/pages/admin/AdminIncentives"));
 export const AdminGroupFinder = lazy(() => import("@/pages/admin/AdminGroupFinder"));
 export const AdminLegalDocuments = lazy(() => import("@/pages/admin/AdminLegalDocuments"));
+export const AdminCompliance = lazy(() => import("@/pages/admin/AdminCompliance"));
 export const AdminFooterContents = lazy(() => import("@/pages/admin/AdminFooterContents"));
 export const AdminGroupSettings = lazy(() => import("@/pages/admin/AdminGroupSettings"));
 export const AdminPosting = lazy(() => import("@/pages/admin/AdminPosting"));

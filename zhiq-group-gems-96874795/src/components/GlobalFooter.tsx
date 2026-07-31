@@ -4,12 +4,16 @@
  * FONTE ÚNICA DE VERDADE do rodapé. Todo o sistema deve reutilizar EXCLUSIVAMENTE
  * este componente — nada de rodapé copiado/inline em páginas ou layouts.
  *
- * Visual aprovado (imagem oficial):
+ * Visual aprovado — redesign premium (ORION-522):
  *   ┌─────────────────────────────────────────────┐
- *   │      [logo]  Viagg-TX8™ · Mercado Local      │
+ *   │ ▔▔▔▔▔▔▔▔▔▔▔▔▔ borda dourada 2-3px ▔▔▔▔▔▔▔▔▔▔ │
+ *   │      [logo]  Viagg-TX8™ · 🛒 Mercado Local   │
  *   │        © 2026 Desenvolvido por VIAGG-TX8      │
+ *   │     [card] 🛡 Software Registrado no INPI     │
  *   └─────────────────────────────────────────────┘
- *   Barra azul (#68c7f2), logo à esquerda do nome, linha inferior com copyright.
+ *   Fundo preto grafite (#111111) com leve gradiente, borda superior dourada
+ *   (#F5C542), textos brancos, ícone do Mercado Local em dourado, card do
+ *   registro INPI com fundo levemente mais claro + brilho/sombra sutis.
  *
  * Comportamento:
  *  - Sticky footer: os layouts usam `min-h-screen flex flex-col` + `<main class="flex-1">`,
@@ -25,6 +29,7 @@
  *  Basta ligar a prop no futuro; o núcleo (logo + nome + copyright) permanece.
  */
 import { Link } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface GlobalFooterLink {
@@ -59,7 +64,7 @@ function currentYear(): number {
 }
 
 export function GlobalFooter({
-  label = "Mercado Local",
+  label = "🛒 Mercado Local",
   compact = false,
   links,
   version,
@@ -71,14 +76,15 @@ export function GlobalFooter({
     <footer
       className={cn(
         // mt-auto = sticky footer quando o layout é flex-col min-h-screen
-        "mt-auto w-full border-t border-white/10 bg-[#68c7f2] text-center text-zinc-900",
-        compact ? "py-1.5 text-xs" : "py-3 text-xs sm:text-sm",
-        "relative z-10 space-y-0.5",
+        "mt-auto w-full border-t-2 sm:border-t-[3px] border-[#F5C542] text-center text-white",
+        "bg-[#111111] bg-gradient-to-b from-[#161616] to-[#0B0B0B]",
+        compact ? "py-2.5 text-xs" : "py-4 sm:py-5 text-xs sm:text-sm",
+        "relative z-10 space-y-1.5",
         className
       )}
     >
       {/* Marca: logo + nome + módulo */}
-      <p className="flex items-center justify-center gap-1.5 font-medium">
+      <p className="flex items-center justify-center gap-2 font-medium">
         <img
           src="/logo.png"
           alt="Viagg-TX8"
@@ -86,9 +92,9 @@ export function GlobalFooter({
           loading="lazy"
           decoding="async"
         />
-        <span className="font-black">Viagg-TX8™</span>
-        <span aria-hidden className="text-zinc-900/50">·</span>
-        <span>{label}</span>
+        <span className="font-semibold text-white">Viagg-TX8™</span>
+        <span aria-hidden className="text-[#F5C542]/60">·</span>
+        <span className="text-white/90">{label}</span>
       </p>
 
       {/* Links institucionais (expansão futura — só renderiza se houver) */}
@@ -97,29 +103,35 @@ export function GlobalFooter({
           {links.map((l, i) => (
             <span key={l.to} className="flex items-center gap-3">
               {l.external ? (
-                <a href={l.to} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                <a href={l.to} target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-[#F5C542] hover:underline">
                   {l.label}
                 </a>
               ) : (
-                <Link to={l.to} className="hover:underline">
+                <Link to={l.to} className="text-white/80 hover:text-[#F5C542] hover:underline">
                   {l.label}
                 </Link>
               )}
-              {i < links.length - 1 && <span aria-hidden className="text-zinc-900/30">•</span>}
+              {i < links.length - 1 && <span aria-hidden className="text-white/20">•</span>}
             </span>
           ))}
         </nav>
       )}
 
       {/* Copyright — sempre presente */}
-      <p className="text-[10px] text-zinc-900/70">
+      <p className="text-[10px] text-zinc-400">
         © {year} Desenvolvido por VIAGG-TX8
       </p>
 
       {/* Versão da plataforma (expansão futura — só renderiza se houver) */}
       {version && (
-        <p className="text-[9px] tracking-wider text-zinc-900/50">{version}</p>
+        <p className="text-[9px] tracking-wider text-zinc-500">{version}</p>
       )}
+
+      {/* Bloco institucional — Registro INPI (ORION-520 · texto ORION-521 · visual premium ORION-522) */}
+      <p className="mx-auto mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/[0.06] px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wide text-white shadow-[0_0_16px_rgba(245,197,66,0.08)] ring-1 ring-white/10">
+        <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 flex-shrink-0" />
+        🛡 Software Registrado no INPI • Registro BR512026003461-2
+      </p>
     </footer>
   );
 }

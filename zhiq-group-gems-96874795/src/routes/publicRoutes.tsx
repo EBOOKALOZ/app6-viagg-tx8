@@ -51,6 +51,7 @@ import {
   MinhasOfertas,
   Rates,
   LegalPage,
+  ComplianceCenter,
   ProductCheckoutPage,
   CheckoutCartaoPage,
   MyDigitalLibrary,
@@ -194,5 +195,9 @@ export const publicRoutes = (
       <Route path="/terms" element={<LegalPage />} />
       <Route path="/privacidade" element={<LegalPage />} />
     </Route>
+
+    {/* ── Centro de Conformidade (ORION-520) ── */}
+    <Route path="/conformidade" element={<Suspense fallback={<PageFallback />}><ComplianceCenter /></Suspense>} />
+    <Route path="/certificacoes" element={<Navigate to="/conformidade" replace />} />
   </>
 );

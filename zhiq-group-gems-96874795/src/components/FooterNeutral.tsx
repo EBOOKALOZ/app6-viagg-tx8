@@ -11,7 +11,7 @@ interface FooterNeutralProps {
   label?: string;
 }
 
-export function FooterNeutral({ compact = false, label = "Mercado Local" }: FooterNeutralProps) {
+export function FooterNeutral({ compact = false, label = "🛒 Mercado Local" }: FooterNeutralProps) {
   return <GlobalFooter label={label} compact={compact} />;
 }
 

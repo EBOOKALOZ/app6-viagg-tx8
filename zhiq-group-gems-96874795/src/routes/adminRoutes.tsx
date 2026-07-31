@@ -40,6 +40,7 @@ import {
   AdminIncentives,
   AdminGroupFinder,
   AdminLegalDocuments,
+  AdminCompliance,
   AdminFooterContents,
   AdminGroupSettings,
   AdminPosting,
@@ -241,6 +242,7 @@ export const adminRoutes = (
       <Route path="/admin/group-finder" element={<AdminGroupFinder />} />
       <Route path="/admin/group-settings" element={<AdminGroupSettings />} />
       <Route path="/admin/legal-documents" element={<AdminLegalDocuments />} />
+      <Route path="/admin/compliance" element={<AdminCompliance />} />
       <Route path="/admin/footer-contents" element={<AdminFooterContents />} />
       <Route path="/admin/support" element={<AdminSupportTicketsPage />} />
       <Route path="/admin/support/ticket/:id" element={<AdminTicketDetailPage />} />

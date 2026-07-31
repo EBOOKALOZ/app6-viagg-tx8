@@ -307,6 +307,7 @@ const menuSections: MenuSection[] = [
     title: "Institucional",
     emoji: "🔷",
     items: [
+      { title: "Compliance", url: "/admin/compliance", icon: ShieldCheck, badge: "NOVO" },
       { title: "Documentos Legais", url: "/admin/legal-documents", icon: Scale },
       { title: "Rodapés", url: "/admin/footer-contents", icon: FileText },
       { title: "Tickets (Suporte)", url: "/admin/support", icon: Headphones },

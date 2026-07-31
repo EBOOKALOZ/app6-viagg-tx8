@@ -6,6 +6,7 @@ import { PrivacyContent } from '@/components/terms/PrivacyContent';
 import { TermsContent } from '@/components/terms/TermsContent';
 import { LgpdContent } from '@/components/terms/LgpdContent';
 import { InstitutionalBlock } from '@/components/legal/InstitutionalBlock';
+import { SoftwareRegisteredSection } from '@/components/legal/SoftwareRegisteredSection';
 import { MotoboyPageTemplate } from '@/components/motoboy/MotoboyPageTemplate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -156,6 +157,8 @@ export default function LegalPage() {
           <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-white/60">
             <p>Se tiver dúvidas sobre este conteúdo, entre em contato com nosso suporte.</p>
           </div>
+
+          {type?.toLowerCase() === 'about' && <SoftwareRegisteredSection />}
 
           <InstitutionalBlock />
         </>
