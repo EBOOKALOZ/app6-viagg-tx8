@@ -6,6 +6,7 @@ import { Play, ArrowRight } from "lucide-react";
 import { InstitutionalBlock } from "@/components/legal/InstitutionalBlock";
 import { WeatherCard } from "@/components/landing/WeatherCard";
 import { DollarCard } from "@/components/landing/DollarCard";
+import { RealtimeExchangeCard } from "@/components/dashboard/RealtimeExchangeCard";
 import { ProfileVideoModal } from "@/components/landing/ProfileVideoModal";
 import { TrustSection } from "@/components/landing/TrustSection";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -111,10 +112,11 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* Info cards — weather + USD/BRL */}
+      {/* Info cards — weather + tempo real (cotações) + USD/BRL */}
       <section className="py-8 px-4 bg-black">
-        <div className="container max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="container max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <WeatherCard />
+          <RealtimeExchangeCard />
           <DollarCard />
         </div>
       </section>

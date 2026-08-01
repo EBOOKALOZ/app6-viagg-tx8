@@ -99,13 +99,13 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
     <div className="relative flex-1 min-w-0" ref={wrapperRef}>
       <form
         onSubmit={handleSubmit}
-        className="relative flex w-full items-center h-[48px] bg-white rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#68C7F2]/60 focus-within:border-[#68C7F2] focus-within:ring-2 focus-within:ring-[#68C7F2]/80 focus-within:shadow-[0_2px_16px_rgba(104,199,242,0.3)] focus-within:scale-[1.008] transition-all duration-200 ease-out overflow-hidden"
+        className="relative flex w-full items-center h-[32px] sm:h-[48px] bg-white rounded-[16px] sm:rounded-[24px] shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-[#68C7F2]/60 focus-within:border-[#68C7F2] focus-within:ring-2 focus-within:ring-[#68C7F2]/80 focus-within:shadow-[0_2px_16px_rgba(104,199,242,0.3)] focus-within:scale-[1.008] transition-all duration-200 ease-out overflow-hidden"
       >
-        <div className="relative flex-1 h-full flex items-center pl-5 pr-3">
+        <div className="relative flex-1 h-full flex items-center pl-4 sm:pl-5 pr-2 sm:pr-3">
           {/* Placeholder inteligente animado (fade + transform) */}
           {query.length === 0 && (
             <span
-              className={`absolute left-5 text-gray-400 text-[15px] font-medium pointer-events-none select-none transition-all duration-200 ${
+              className={`absolute left-4 sm:left-5 text-gray-400 text-[13px] sm:text-[15px] font-medium pointer-events-none select-none transition-all duration-200 ${
                 fadePlaceholder ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1.5"
               }`}
             >
@@ -118,15 +118,15 @@ export function GlobalSearchBar({ initialValue = "" }: GlobalSearchBarProps) {
             onChange={e => setQuery(e.target.value)}
             onFocus={() => setIsFocused(true)}
             aria-label="Campo de pesquisa global da VIAGG-TX8"
-            className="w-full h-full border-0 bg-transparent text-gray-800 text-[15px] font-medium outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none px-0"
+            className="w-full h-full border-0 bg-transparent text-gray-800 text-[13px] sm:text-[15px] font-medium outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none px-0"
           />
         </div>
         <button 
           type="submit"
           aria-label="Buscar"
-          className="h-[38px] px-5 mr-1.5 my-1 bg-[#FF6A00] hover:bg-[#e65c00] hover:brightness-110 hover:shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF6A00] outline-none transition-all duration-150 rounded-[20px] flex items-center justify-center gap-2 shrink-0 shadow-sm text-white font-black text-sm cursor-pointer"
+          className="h-[24px] sm:h-[38px] px-3 sm:px-5 mr-1 sm:mr-1.5 my-1 bg-[#FF6A00] hover:bg-[#e65c00] hover:brightness-110 hover:shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF6A00] outline-none transition-all duration-150 rounded-[12px] sm:rounded-[20px] flex items-center justify-center gap-1 sm:gap-2 shrink-0 shadow-sm text-white font-black text-[11px] sm:text-sm cursor-pointer"
         >
-          <Search className="h-4 w-4 text-white shrink-0 transition-transform duration-150 group-hover:scale-110" />
+          <Search className="h-3 sm:h-4 w-3 sm:w-4 text-white shrink-0 transition-transform duration-150 group-hover:scale-110" />
           <span className="hidden sm:inline">Buscar</span>
         </button>
       </form>
