@@ -1255,6 +1255,57 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                 <>
 <InstitutionalSafetyBanner />
 
+            {/* ═══ ORION-510 — Linha de Destaque: Ofertas do Dia · Viagg-TX8 MedPrev · Leilões Ativos ═══ */}
+            <div className="w-full px-4 lg:px-6 pt-5 pb-1">
+                <div className="max-w-[1920px] mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <button
+                        type="button"
+                        onClick={() => { setListingTypeFilter("all"); scrollToProducts(); }}
+                        className="group flex items-center gap-3 rounded-2xl p-4 sm:p-5 text-left bg-gradient-to-br from-orange-500 to-amber-500 shadow-[0_4px_18px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 hover:shadow-[0_8px_26px_rgba(0,0,0,0.18)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    >
+                        <span className="text-3xl leading-none shrink-0">🔥</span>
+                        <span className="min-w-0">
+                            <span className="block text-white font-black text-sm sm:text-base tracking-tight truncate">Ofertas do Dia</span>
+                            <span className="block text-white/85 text-xs font-semibold truncate">Os melhores preços de hoje</span>
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/medprev")}
+                        aria-label="Viagg-TX8 MedPrev — Convênios e Doações"
+                        className="group relative flex items-center gap-3 rounded-2xl p-4 sm:p-5 text-left bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-800 shadow-[0_4px_18px_rgba(0,0,0,0.14)] border-2 border-emerald-400/70 ring-1 ring-emerald-300/40 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(16,185,129,0.35)] active:scale-[0.98] transition-all duration-200 cursor-pointer sm:order-none order-first"
+                    >
+                        <span className="flex items-center justify-center shrink-0 h-14 w-14 sm:h-[72px] sm:w-[72px] rounded-2xl overflow-hidden bg-white/10 ring-1 ring-white/30">
+                            <img src="/images/viagg-tx8-logo.jpg" alt="" className="h-full w-full object-cover" />
+                        </span>
+                        <span className="min-w-0 self-center flex-1">
+                            <span className="block leading-tight">
+                                <span className="block text-white font-black text-sm sm:text-lg tracking-tight truncate">Viagg-TX8</span>
+                                <span className="block text-emerald-300 font-black text-sm sm:text-lg tracking-tight truncate">MedPrev</span>
+                            </span>
+                            <span className="block text-white/90 text-xs sm:text-sm font-bold truncate mt-1">Convênios &amp; Doações</span>
+                            <span className="block text-white/70 text-[11px] font-semibold truncate">Clique para conhecer</span>
+                        </span>
+                        <span className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-emerald-700 shadow-md group-hover:translate-x-0.5 transition-transform">
+                            <ArrowRight className="h-4 w-4" />
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate("/leiloes")}
+                        className="group flex items-center gap-3 rounded-2xl p-4 sm:p-5 text-left bg-gradient-to-br from-slate-800 to-slate-950 shadow-[0_4px_18px_rgba(0,0,0,0.16)] hover:-translate-y-0.5 hover:shadow-[0_8px_26px_rgba(0,0,0,0.24)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    >
+                        <span className="text-3xl leading-none shrink-0">🔨</span>
+                        <span className="min-w-0">
+                            <span className="block text-white font-black text-sm sm:text-base tracking-tight truncate">Leilões Ativos</span>
+                            <span className="block text-white/80 text-xs font-semibold truncate">Dê seu lance agora</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
             {/* Leilões removidos do Mercado — agora só no botão "Leilões" (/leiloes). */}
 
             {/* (CTA de anunciante movido para o FINAL da página — padrão marketplace) */}

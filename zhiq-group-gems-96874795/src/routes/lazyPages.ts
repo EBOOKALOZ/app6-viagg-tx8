@@ -97,6 +97,7 @@ export const MerchantConversions = lazy(() => import("@/pages/merchant/MerchantC
 export const ProductLandingPage = lazy(() => import("@/pages/public/ProductLandingPage"));
 export const ProductRedirectPage = lazy(() => import("@/pages/public/ProductRedirectPage"));
 export const MercadoLocalViagg = lazy(() => import("@/pages/public/MercadoLocalViagg"));
+export const MedPrevPage = lazy(() => import("@/pages/public/MedPrevPage"));
 export const ProductPublicPage = lazy(() => import("@/pages/public/ProductPublicPage"));
 export const ProductCheckoutPage = lazy(() => import("@/pages/public/ProductCheckoutPage"));
 export const CheckoutCartaoPage = lazy(() => import("@/pages/public/CheckoutCartaoPage"));

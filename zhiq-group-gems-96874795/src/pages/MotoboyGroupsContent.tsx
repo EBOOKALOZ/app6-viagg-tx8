@@ -6,6 +6,7 @@ import { useMotoboyCommission } from '@/hooks/useMotoboyCommission';
 import { supabase } from '@/integrations/supabase/client';
 import { deriveVisualStatus } from '@/lib/groupStatusUtils';
 import { geocodeAddress } from '@/lib/map/GeoLocationService';
+import { MIN_GROUP_MEMBERS, buildMinMembersError, parseGroupValidationError } from '@/lib/groupRules';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,8 +94,8 @@ const getDaysInactive = (lastPostedDate: string | null): number => {
 const getDetailedRejectionReason = (group: ProfileGroup) => {
   let reason = "";
 
-  if (group.members_count <= 90) {
-    reason = "Rejeitado: O grupo possui menos de 91 membros. ";
+  if (group.members_count < MIN_GROUP_MEMBERS) {
+    reason = `Rejeitado: O grupo possui menos de ${MIN_GROUP_MEMBERS} membros. `;
   } else if (!group.radar_scores) {
     return null;
   } else {
@@ -208,7 +209,7 @@ export default function MotoboyGroupsContent() {
           tipo: g.neighborhood || 'Geral',
           member_count: g.members_count || 0,
           last_post_subject: null,
-          min_members_valid: (g.members_count || 0) >= 90,
+          min_members_valid: (g.members_count || 0) >= MIN_GROUP_MEMBERS,
         };
       });
 
@@ -288,13 +289,11 @@ export default function MotoboyGroupsContent() {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
-    // REGRA CENTRAL DO RADAR IA (91+ membros) — validação espelho do banco:
-    // o trigger recusa QUALQUER aprovação com ≤90, venha de onde vier.
+    // REGRA CENTRAL (60+ membros) — validação espelho do banco: o trigger
+    // recusa QUALQUER aprovação abaixo do piso, venha de onde vier.
     const membros = parseInt(newGroupMembros, 10);
-    if (!Number.isFinite(membros) || membros <= 90) {
-      setLinkDuplicateError(
-        `Grupo reprovado pelo RADAR IA. Quantidade mínima exigida: 91 membros (informado: ${Number.isFinite(membros) ? membros : 0}).`,
-      );
+    if (!Number.isFinite(membros) || membros < MIN_GROUP_MEMBERS) {
+      setLinkDuplicateError(buildMinMembersError(Number.isFinite(membros) ? membros : 0));
       return;
     }
     setIsSubmitting(true);
@@ -339,6 +338,9 @@ export default function MotoboyGroupsContent() {
           // ATENÇÃO: a tabela NÃO tem coluna user_id — o dono é owner_user_id.
           // (Enviar user_id fazia o banco recusar o insert inteiro.)
           owner_user_id: user.id,
+          // Motoboy e Moto-Táxi compartilham esta mesma tela/tabela — sem
+          // profile_kind não dá para distinguir o dono do cadastro depois.
+          profile_kind: activeProfile === 'mototaxi' ? 'mototaxi' : 'motoboy',
           group_link: newGroupLink.trim(),
           city_name: newGroupCidade,
           group_name: newGroupCidade, // use city as default name
@@ -354,17 +356,12 @@ export default function MotoboyGroupsContent() {
         .select('id')
         .single();
 
-      // Trata violação de UNIQUE (código 23505) — defesa contra corrida concorrente
-      // que passou pela checagem JS acima.
-      if (error?.code === '23505' || /duplicate key|unique/i.test(error?.message || '')) {
-        setLinkDuplicateError('Este grupo já está ativo com outro profissional. Ele só fica disponível se o profissional atual sair (desativar o grupo).');
-        setIsSubmitting(false);
-        return;
-      }
-      // Regras do banco (raio 100 km / exclusividade / mínimo de membros)
-      // chegam como RAISE: mostra a mensagem REAL, nunca um erro genérico.
-      if (error && /fora da sua área|já está ativo|90 membros|mínimo/i.test(error.message || '')) {
-        setLinkDuplicateError(error.message);
+      // Regras do banco (UNIQUE de exclusividade, raio 100 km, mínimo de
+      // membros) chegam como erro do trigger/índice: mostra a mensagem
+      // REAL, nunca um erro genérico.
+      const knownError = parseGroupValidationError(error);
+      if (knownError) {
+        setLinkDuplicateError(knownError);
         setIsSubmitting(false);
         return;
       }
@@ -452,14 +449,14 @@ export default function MotoboyGroupsContent() {
                       alt="Viagg-TX8"
                       className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/40 bg-white shadow-sm"
                     />
-                    <span>Aprovação Apenas Acima de 90 Membros</span>
+                    <span>Aprovação Apenas Acima de {MIN_GROUP_MEMBERS} Membros</span>
                   </div>
                   <p className="text-xs leading-relaxed text-white">
-                    O <strong>Viagg-TX8</strong> audita automaticamente a contagem real de membros e a atividade do grupo. <strong>Grupos com 90 membros ou menos não serão aprovados</strong> para o desconto na comissão.
+                    O <strong>Viagg-TX8</strong> audita automaticamente a contagem real de membros e a atividade do grupo. <strong>Grupos com menos de {MIN_GROUP_MEMBERS} membros não serão aprovados</strong> para o desconto na comissão.
                   </p>
                 </div>
                 <div>
-                  <Label>Nº de membros do grupo * (mínimo 91)</Label>
+                  <Label>Nº de membros do grupo * (mínimo {MIN_GROUP_MEMBERS})</Label>
                   <Input
                     inputMode="numeric"
                     value={newGroupMembros}

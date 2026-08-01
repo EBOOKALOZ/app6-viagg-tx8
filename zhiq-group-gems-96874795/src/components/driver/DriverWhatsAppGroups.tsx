@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { toast } from 'sonner';
 import { MessageSquare, Info, Plus, Trash2, Loader2, ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { brazilianStates } from '@/lib/brazilianStates';
+import { MIN_GROUP_MEMBERS, buildMinMembersError, parseGroupValidationError } from '@/lib/groupRules';
 
 interface WhatsAppGroup {
   id: string;
@@ -21,6 +22,9 @@ interface WhatsAppGroup {
   tipo: string;
   status: string;
   created_at: string;
+  members_count: number | null;
+  validation_status: string | null;
+  invalid_reason: string | null;
 }
 
 const GROUP_TYPES = ['Mobilidade', 'Comunidade', 'Comércio', 'Serviços', 'Geral'];
@@ -30,6 +34,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secon
   ativo: { label: 'Ativo', variant: 'default', description: 'Participação confirmada' },
   inativo: { label: 'Inativo', variant: 'outline', description: 'Grupo desativado' },
   rejeitado: { label: 'Rejeitado', variant: 'destructive', description: 'Participação não confirmada' },
+  aguardando_qualificacao: { label: 'Aguardando qualificação', variant: 'secondary', description: `Precisa de no mínimo ${MIN_GROUP_MEMBERS} membros para contar na comissão` },
 };
 
 // Commission rates based on active groups
@@ -59,6 +64,7 @@ export default function DriverWhatsAppGroups() {
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [tipo, setTipo] = useState('Geral');
+  const [membros, setMembros] = useState('');
   const [confirmaParticipacao, setConfirmaParticipacao] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
@@ -127,16 +133,29 @@ export default function DriverWhatsAppGroups() {
       return;
     }
 
+    const membrosNum = parseInt(membros, 10);
+    if (!Number.isFinite(membrosNum) || membrosNum < MIN_GROUP_MEMBERS) {
+      toast.error(buildMinMembersError(Number.isFinite(membrosNum) ? membrosNum : 0));
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.rpc('try_create_driver_whatsapp_group' as any, {
+      const { data, error } = await supabase.rpc('try_create_driver_whatsapp_group_v2' as any, {
         p_link: link.trim(),
         p_cidade: cidade.trim(),
         p_estado: estado,
         p_tipo: tipo,
+        p_members_count: membrosNum,
         p_user_id: user.id,
       });
 
+      const knownError = parseGroupValidationError(error);
+      if (knownError) {
+        toast.error(knownError);
+        setIsSaving(false);
+        return;
+      }
       if (error) throw error;
 
       const result = Array.isArray(data) ? data[0] : data;
@@ -148,6 +167,7 @@ export default function DriverWhatsAppGroups() {
         setCidade('');
         setEstado('');
         setTipo('Geral');
+        setMembros('');
         setConfirmaParticipacao(false);
         setShowForm(false);
         loadGroups();
@@ -222,7 +242,7 @@ export default function DriverWhatsAppGroups() {
                     </p>
                   </div>
                   <p className="text-muted-foreground text-xs mt-2">
-                    Apenas grupos com status "Ativo" contam para benefícios. Grupos em análise, inativos ou rejeitados não entram no cálculo.
+                    Apenas grupos com status "Ativo" e no mínimo {MIN_GROUP_MEMBERS} membros contam para benefícios. Grupos em análise, aguardando qualificação, inativos ou rejeitados não entram no cálculo.
                   </p>
                 </div>
               </PopoverContent>
@@ -251,9 +271,12 @@ export default function DriverWhatsAppGroups() {
             {groups.length > 0 && (
               <div className="space-y-3">
                 {groups.map((group) => {
-                  const statusInfo = STATUS_LABELS[group.status] || STATUS_LABELS.em_analise;
+                  const displayStatus = group.validation_status === 'aguardando_qualificacao'
+                    ? 'aguardando_qualificacao'
+                    : group.status;
+                  const statusInfo = STATUS_LABELS[displayStatus] || STATUS_LABELS.em_analise;
                   const canRemove = group.status !== 'inativo';
-                  
+
                   return (
                     <div
                       key={group.id}
@@ -269,9 +292,14 @@ export default function DriverWhatsAppGroups() {
                           <Badge variant="outline" className="text-xs">
                             {group.tipo}
                           </Badge>
+                          {group.members_count != null && (
+                            <Badge variant="outline" className="text-xs">
+                              {group.members_count} membros
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1" title={statusInfo.description}>
-                          {statusInfo.description}
+                          {group.invalid_reason || statusInfo.description}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           {group.cidade}, {group.estado}
@@ -357,6 +385,17 @@ export default function DriverWhatsAppGroups() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="membros">Nº de membros do grupo * (mínimo {MIN_GROUP_MEMBERS})</Label>
+                  <Input
+                    id="membros"
+                    inputMode="numeric"
+                    placeholder="Ex: 80"
+                    value={membros}
+                    onChange={(e) => setMembros(e.target.value.replace(/\D/g, ''))}
+                  />
                 </div>
 
                 {/* Confirmação de participação obrigatória */}

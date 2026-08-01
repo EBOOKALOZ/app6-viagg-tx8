@@ -36,6 +36,7 @@ import {
   ProductLandingPage,
   ProductRedirectPage,
   MercadoLocalViagg,
+  MedPrevPage,
   RealEstateCheckoutPage,
   StorePublicPage,
   AuctionListPage,
@@ -108,6 +109,8 @@ export const publicRoutes = (
     <Route path="/produto/:id" element={<Suspense fallback={<PageFallback />}><ProductLandingPage /></Suspense>} />
     <Route path="/p/:slug" element={<ProductRedirectPage />} />
     <Route path="/mercado" element={<MercadoLocalViagg />} />
+    {/* ORION-510 — Viagg-TX8 MedPrev (Convênios & Doações), landing provisória */}
+    <Route path="/medprev" element={<Suspense fallback={<PageFallback />}><MedPrevPage /></Suspense>} />
     <Route path="/mercado/quero-vender" element={<Navigate to="/auth" replace />} />
     <Route path="/mercado/meus-anuncios" element={<ProtectedRoute><RealEstateDashboard /></ProtectedRoute>} />
     <Route path="/vender-imovel" element={<Navigate to="/auth" replace />} />

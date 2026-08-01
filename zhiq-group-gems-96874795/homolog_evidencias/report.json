@@ -1,0 +1,81 @@
+{
+  "listagem_desktop": {
+    "loadMs": 27411,
+    "cardCount": 5,
+    "hasOficial": true,
+    "hasVerificado": true,
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ]
+  },
+  "detail_links_found": 0,
+  "detalhe": {
+    "error": "Nenhum link de detalhe encontrado (a[href*=/veiculo])"
+  },
+  "filtro_marca": {
+    "clicked": "Honda",
+    "textSample": "☁️\n25°C\n•\nAripuanã\n⚡\nPromoções\nMercado Local Viagg-TX8™\nPromoções perto de você...\nBuscar\nCesta — 0 itens\nCORRIDAS\nMERCADO\nIMÓVEIS\nVEÍCULOS\nSERVIÇOS\nFRETES & MUDANÇAS\nVIAGENS & TURISMO\n🏷️ LEILÕES\nENTRAR\nSOM\nFAVORITOS\nNOTIFICAÇÕES\nCOMPARTILHAR\n▲\nRecolher\n\nPARA REVENDAS E PROPRIETÁRIOS\n\n🚗 Anuncie seu veículo aqui!\n\nAlcance compradores na sua região. Cadastro rápido e gratuito.\n\nAnunciar meu veículo →\nREVENDAS & PROPRIETÁRIOS\nVEÍCULOS & AUTOMÓVEIS\n\nCarros, motos, caminhões e mais — negocie direto com o dono.\n\n🚗\nTodos\n5\n🚗\nKawasaki\n1\n🚗\nFiat\n1\n🚗\nIntermarine\n1\n🚗\nHonda\n1\n🚗\nVolkswagen\n1\nVENDA\nVERIFICADO\nVX\nOFICIAL VIAGG-TX8\nMoto Biz 100\n\nPREÇO\n\nR$ 6.500,00\n\nMOTO\nAripuana, MT\n2021\nManual\nTENHO INTERESSE\nMarketplace Oficial Viagg-TX8™\n\nViagg-TX8™\n·\n🚗 Veículos\n\n© 2026 Desenvolvido por VIAGG-T"
+  },
+  "listagem_mobile": {
+    "hasCards": true,
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Failed to load resource: the server responded with a status of 401 ()"
+    ]
+  },
+  "network_log": [
+    {
+      "tag": "listagem-desktop",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=*&order=created_at.desc",
+      "status": 200
+    },
+    {
+      "tag": "listagem-desktop",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=listing_id%2Coriginal_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=in.%2815f287ab-b7f6-45de-8abb-6ad22e402847%2C19f9f494-7148-421a-8311-dcfabab26e3e%2C690fd565-968a-4a39-a4ae-9ad76c0c3cf6%2C986f8672-f643-4f3c-be6d-c5f4cb01fa8a%2C8553038a-c0da-4eac-b51f-a95733f3a717%29&order=sort_order.asc",
+      "status": 200
+    },
+    {
+      "tag": "listagem-desktop",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=*&order=created_at.desc",
+      "status": 200
+    },
+    {
+      "tag": "listagem-desktop",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=listing_id%2Coriginal_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=in.%2815f287ab-b7f6-45de-8abb-6ad22e402847%2C19f9f494-7148-421a-8311-dcfabab26e3e%2C690fd565-968a-4a39-a4ae-9ad76c0c3cf6%2C986f8672-f643-4f3c-be6d-c5f4cb01fa8a%2C8553038a-c0da-4eac-b51f-a95733f3a717%29&order=sort_order.asc",
+      "status": 200
+    },
+    {
+      "tag": "detalhe",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=*&order=created_at.desc",
+      "status": 200
+    },
+    {
+      "tag": "detalhe",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=listing_id%2Coriginal_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=in.%2815f287ab-b7f6-45de-8abb-6ad22e402847%2C19f9f494-7148-421a-8311-dcfabab26e3e%2C690fd565-968a-4a39-a4ae-9ad76c0c3cf6%2C986f8672-f643-4f3c-be6d-c5f4cb01fa8a%2C8553038a-c0da-4eac-b51f-a95733f3a717%29&order=sort_order.asc",
+      "status": 200
+    },
+    {
+      "tag": "detalhe",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=*&order=created_at.desc",
+      "status": 200
+    },
+    {
+      "tag": "detalhe",
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=listing_id%2Coriginal_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=in.%2815f287ab-b7f6-45de-8abb-6ad22e402847%2C19f9f494-7148-421a-8311-dcfabab26e3e%2C690fd565-968a-4a39-a4ae-9ad76c0c3cf6%2C986f8672-f643-4f3c-be6d-c5f4cb01fa8a%2C8553038a-c0da-4eac-b51f-a95733f3a717%29&order=sort_order.asc",
+      "status": 200
+    }
+  ]
+}

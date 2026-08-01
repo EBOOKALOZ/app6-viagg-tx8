@@ -1,0 +1,61 @@
+{
+  "all_images": [
+    {
+      "src": "http://localhost:8081/images/viagg-tx8-logo.jpg",
+      "alt": "Viagg-TX8",
+      "complete": true,
+      "naturalWidth": 1024,
+      "naturalHeight": 1024,
+      "visible": true
+    },
+    {
+      "src": "http://localhost:8081/images/viagg-tx8-logo.jpg",
+      "alt": "Viagg-TX8",
+      "complete": true,
+      "naturalWidth": 1024,
+      "naturalHeight": 1024,
+      "visible": false
+    },
+    {
+      "src": "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/logos_lojas/logos/12921e5d-4632-49b7-82fe-de937f383553/logo-1782344028847.jpg",
+      "alt": "Logo",
+      "complete": true,
+      "naturalWidth": 401,
+      "naturalHeight": 409,
+      "visible": true
+    },
+    {
+      "src": "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/real-estate-original/12921e5d-4632-49b7-82fe-de937f383553/986f8672-f643-4f3c-be6d-c5f4cb01fa8a/1781788989198-biz.jpeg?t=1785543114184",
+      "alt": "Moto Biz 100",
+      "complete": true,
+      "naturalWidth": 447,
+      "naturalHeight": 447,
+      "visible": true
+    },
+    {
+      "src": "http://localhost:8081/viagg-logo.png",
+      "alt": "Viagg-TX8",
+      "complete": true,
+      "naturalWidth": 1024,
+      "naturalHeight": 1024,
+      "visible": true
+    },
+    {
+      "src": "http://localhost:8081/logo.png",
+      "alt": "Viagg-TX8",
+      "complete": true,
+      "naturalWidth": 1024,
+      "naturalHeight": 1024,
+      "visible": true
+    },
+    {
+      "src": "http://localhost:8081/src/assets/logo.png",
+      "alt": "Viagg-TX8",
+      "complete": true,
+      "naturalWidth": 1024,
+      "naturalHeight": 1024,
+      "visible": true
+    }
+  ],
+  "featured_area_html": "NOT_FOUND"
+}

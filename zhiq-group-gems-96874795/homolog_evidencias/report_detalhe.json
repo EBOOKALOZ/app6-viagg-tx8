@@ -1,0 +1,75 @@
+{
+  "cursor_pointer_elements": 32,
+  "target_card_found": 1,
+  "url_after_click": "http://localhost:8081/revenda/12921e5d-4632-49b7-82fe-de937f383553?tab=veiculos&product=986f8672-f643-4f3c-be6d-c5f4cb01fa8a",
+  "detalhe": {
+    "hasOficial": false,
+    "hasVerificado": false,
+    "hasShare": true,
+    "hasFavorito": true,
+    "hasProductHighlighted": true,
+    "textSample": "☁️\n25°C\nAripuanã\n20%\n3\n🤖\nDica IA\nO clima está favorável para compras e entregas na sua região.\nMercado Local Viagg-TX8™\nBuscar produtos...\nBuscar\nCesta — 0 itens\nCORRIDAS\nMERCADO\nIMÓVEIS\nVEÍCULOS\nSERVIÇOS\nFRETES & MUDANÇAS\nVIAGENS & TURISMO\n🏷️ LEILÕES\nENTRAR\nSOM\nFAVORITOS\nNOTIFICAÇÕES\nCOMPARTILHAR\n▼\nExpandir\nREVENDA / CONCESSIONÁRIA VERIFICADA\nARIPUANÃ, MT\nCampo Aberto Agropecuária\n\nProdutos agriculas do campo a cidade\n\nvila morena, Aripuanã/MT\n\n0\n\nVEÍCULOS\n\n1\n\nSEGUIDORES\n\nPROCEDÊNCIA & SEGURANÇA\nNEGOCIAÇÃO DIRETA\nSEGUIR\nInício\nVeículos\nCampo Aberto Agropecuária\nMoto Biz 100\nANÚNCIO SELECIONADO\nMoto Biz 100\n\nMoto Biz em ótimo estado de conservação, ideal para quem busca economia e praticidade no dia a dia. Possui motor confiável e baixo consumo de combustível, proporcionando excelente custo-benefício. Design moderno e confortável, com fácil pilotagem para uso urbano e trajetos curtos ou longos. Conta com compartimento sob o banco para guardar capacete e objetos pessoais com segurança. Documentação em dia, manutenção acessível e mecânica reconhecida pela durabilidade. Excelente opção para trabalho, entregas, estudos ou deslocamentos diários com agilidade e economia.\n\nR$ 6.500,00\nVER VEÍCULO COMPLETO\nTENHO INTERESSE\nPÁGINA PRINCIPAL\nTODOS OS PRODUTOS\nLEILÕES\nARREMATES\nPROMOÇÕES\n\nNENHUM PRODUTO ENCONTRADO.\n\nA PLATAFORMA APRESENTA O PRODUTO\nA negociação acontece diretamente entre comprador e vendedor.\n\nViagg-TX8™\n·\nRevenda: Campo Aberto Agropecuária\n\n© 2026 Desenvolvido por VIAGG-TX8\n\n🛡 SOFTWARE REGISTRADO NO INPI • REGISTRO BR512026003461-2\n\nVIAGG-TX8 CENTRO MULTIMÍDIA\n\nÁUDIO · RÁDIO · TV · AO VIVO · v2.0\n\n3%\nEQ\nRádio\nTV\nLives\nFavoritos\nHistórico\nAuto · Padrão do sistema\nTocando\nVIAGG-TX8 AI SOUND\nSOUND EXPERIENCE\nEqualizador\n5 BANDAS\n10 BANDAS\nON\n0\nGraves\n0\nMéd. Grave\n"
+  },
+  "all_401_urls": [
+    "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/motoboy_profiles?select=cidade%2Cestado&cidade=ilike.%25aripuan%25&limit=1",
+    "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/motoboy_profiles?select=cidade%2Cestado&cidade=not.is.null&cidade=neq.&cidade=neq.Cidade&cidade=neq.Santa+Maria+de+Ipire&limit=1",
+    "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/profiles?select=*&id=eq.12921e5d-4632-49b7-82fe-de937f383553",
+    "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/profiles?select=id&id=eq.12921e5d-4632-49b7-82fe-de937f383553",
+    "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/rpc/deduct_store_product_view_credit"
+  ],
+  "vehicle_network_log": [
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=*&order=created_at.desc",
+      "status": 200
+    },
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=listing_id%2Coriginal_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=in.%2815f287ab-b7f6-45de-8abb-6ad22e402847%2C19f9f494-7148-421a-8311-dcfabab26e3e%2C690fd565-968a-4a39-a4ae-9ad76c0c3cf6%2C986f8672-f643-4f3c-be6d-c5f4cb01fa8a%2C8553038a-c0da-4eac-b51f-a95733f3a717%29&order=sort_order.asc",
+      "status": 200
+    },
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=*&order=created_at.desc",
+      "status": 200
+    },
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=listing_id%2Coriginal_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=in.%2815f287ab-b7f6-45de-8abb-6ad22e402847%2C19f9f494-7148-421a-8311-dcfabab26e3e%2C690fd565-968a-4a39-a4ae-9ad76c0c3cf6%2C986f8672-f643-4f3c-be6d-c5f4cb01fa8a%2C8553038a-c0da-4eac-b51f-a95733f3a717%29&order=sort_order.asc",
+      "status": 200
+    },
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=id%2Ctitle%2Cbrand%2Cmodel%2Cdescription%2Cprice_brl%2Ccondition%2Cowner_user_id&id=eq.986f8672-f643-4f3c-be6d-c5f4cb01fa8a",
+      "status": 200
+    },
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_media?select=original_storage_path%2Cpublic_masked_storage_path%2Csort_order&listing_id=eq.986f8672-f643-4f3c-be6d-c5f4cb01fa8a&order=sort_order.asc&limit=12",
+      "status": 200
+    },
+    {
+      "url": "https://broifhfqmnzqoongtokm.supabase.co/rest/v1/vehicle_listings?select=id%2Ctitle%2Cprice_brl%2Cdescription%2Ccreated_at%2Cowner_user_id%2Cvehicle_media%28original_storage_path%2Cpublic_masked_storage_path%29&visibility_status=eq.published&order=created_at.desc&limit=12",
+      "status": 200
+    }
+  ],
+  "console_errors": [
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 409 ()",
+    "Failed to load resource: the server responded with a status of 400 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 401 ()",
+    "Failed to load resource: the server responded with a status of 406 ()",
+    "Failed to load resource: the server responded with a status of 406 ()"
+  ]
+}
