@@ -32,6 +32,7 @@ import { motoboyRoutes } from "@/routes/motoboyRoutes";
 import { driverRoutes } from "@/routes/driverRoutes";
 import { adminRoutes } from "@/routes/adminRoutes";
 import { advertiserRoutes } from "@/routes/advertiserRoutes";
+import { convenioAdminRoutes } from "@/routes/convenioAdminRoutes";
 
 /* ================================
    Query Client
@@ -98,6 +99,11 @@ export default function App() {
                     {/* ── Anunciante — ErrorBoundary isolado ── */}
                     <Route element={<ErrorBoundary><Outlet /></ErrorBoundary>}>
                       {advertiserRoutes}
+                    </Route>
+
+                    {/* ── Comando Convênio (Doações & Convênios) — ErrorBoundary isolado ── */}
+                    <Route element={<ErrorBoundary><Outlet /></ErrorBoundary>}>
+                      {convenioAdminRoutes}
                     </Route>
 
                     {/* ── Raiz mostra o Mercado Local (página principal) ── */}

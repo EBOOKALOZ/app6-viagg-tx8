@@ -31,7 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Heart, Bell, ChevronDown, LogIn, LogOut, Share2 } from "lucide-react";
+import { Heart, Bell, ChevronDown, LogIn, LogOut, Share2, ShoppingCart } from "lucide-react";
 
 // Menu da Conta Única do Consumidor. Itens sem rota dedicada → /conta (hub).
 const ACCOUNT_MENU: { emoji: string; label: string; to: string }[] = [
@@ -69,7 +69,12 @@ export const pillWhite =
   "cursor-pointer bg-white text-slate-950 border sm:border-2 border-[#68C7F2] " +
   "shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:scale-[1.03] active:scale-95";
 
-export function PremiumQuickAccessBar() {
+interface PremiumQuickAccessBarProps {
+  onCartOpen?: () => void;
+  cartItemCount?: number;
+}
+
+export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0 }: PremiumQuickAccessBarProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, avatarUrl, displayName: authName, signOut } = useAuth();
@@ -221,6 +226,23 @@ export function PremiumQuickAccessBar() {
         <Bell className="h-3 w-3 text-[#075985]" />
         <span className="hidden sm:inline">Notificações</span>
       </button>
+
+      {/* 🛒 Cesta */}
+      {onCartOpen && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onCartOpen(); }}
+          aria-label="Abrir Cesta / Carrinho"
+          className={cn(pillBase, pillWhite, "relative")}
+        >
+          <ShoppingCart className="h-3 w-3 text-[#FF6A00]" />
+          <span className="hidden sm:inline">Cesta</span>
+          {cartItemCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF6A00] px-0.5 text-[8px] font-black text-white shadow-sm border border-white">
+              {cartItemCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* 🔗 Compartilhar */}
       <button

@@ -197,6 +197,10 @@ export function MarketLayout({
                         headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0 pb-0" : "max-h-[300px] opacity-100 translate-y-0 pt-2 pb-1"
                     )}>
                         <div className="flex items-stretch gap-2">
+                            {/* Logo mobile — antes do clima */}
+                            <div className="flex shrink-0 cursor-pointer items-center hover:scale-105 transition-transform" onClick={() => navigate("/mercado")}>
+                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-xl object-cover shadow-sm border border-black/10" />
+                            </div>
                             {/* Card de clima (estreitado pela coluna de botões) — após apresentar, cede o lugar ao player da rádio */}
                             <div className="min-w-0 flex-1">
                                 <HeroClimaRadio />
@@ -266,33 +270,8 @@ export function MarketLayout({
 
                     {/* Mobile search row - SEMPRE VISÍVEL NO ESTADO RECOLHIDO */}
                     {showSearch && (
-                        <div className="lg:hidden pt-0.5 pb-1 flex items-center gap-2.5">
-                            {/* Logo à esquerda da pesquisa */}
-                            <div className="flex h-[46px] w-[46px] shrink-0 cursor-pointer items-center justify-center hover:scale-105 transition-transform" onClick={() => navigate("/mercado")}>
-                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[46px] w-[46px] rounded-xl object-cover shadow-sm border border-black/10" />
-                            </div>
-                            
+                        <div className="lg:hidden pt-0.5 pb-1">
                             <GlobalSearchBar initialValue={effSearch} />
-
-                            {/* Cesta à direita da pesquisa */}
-                            <div className="ml-auto flex items-center gap-2">
-                                <div className="bg-[#1A1F24] rounded-full px-1 border border-[#323A45] shadow-sm">
-                                    <NotificationCenter />
-                                </div>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setCartOpen(true); }}
-                                    aria-label="Abrir Cesta / Carrinho"
-                                    className="relative flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
-                                    title="Cesta / Carrinho"
-                                >
-                                    <ShoppingCart className="h-5 w-5 text-black transition-transform group-hover:scale-110" />
-                                    {globalCart.totalItems > 0 && (
-                                        <span className="absolute -top-1.5 -right-1.5 flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-[#FF6A00] px-1 text-[10px] font-black text-white shadow-md animate-in zoom-in-50 fade-in duration-300">
-                                            {globalCart.totalItems}
-                                        </span>
-                                    )}
-                                </button>
-                            </div>
                         </div>
                     )}
 
@@ -311,30 +290,30 @@ export function MarketLayout({
                     logo à direita do seletor de conta/loja (botão branco "Som" — UI-02). */}
                 <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
                     <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-1 w-full">
-                        <PremiumQuickAccessBar />
+                        <PremiumQuickAccessBar onCartOpen={() => setCartOpen(true)} cartItemCount={globalCart.totalItems} />
                     </div>
                 </div>
 
                 {/* ═══ SETA CENTRAL DE CONTROLE RETRÁTIL (▼ / ▲) ═══ */}
                 {!lockHeaderExpanded && (
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-7 z-50 flex items-center justify-center pointer-events-auto">
+                <div className="absolute left-1/2 -translate-x-1/2 -bottom-4 z-50 flex items-center justify-center pointer-events-auto">
                     <button
                         type="button"
                         onClick={handleToggleHeader}
                         aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
                         aria-expanded={!headerCollapsed}
                         className={cn(
-                            "flex items-center gap-1 sm:gap-1.5 px-3.5 sm:px-4.5 py-1 rounded-b-xl sm:rounded-b-2xl font-black text-[11px] sm:text-xs shadow-[0_4px_12px_rgba(0,0,0,0.18)] border border-t-0 border-black/15 transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-black/40 hover:scale-105 active:scale-95 cursor-pointer select-none",
+                            "flex items-center gap-1 px-3 py-0.5 rounded-full font-bold text-[10px] shadow-md border transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-black/30 hover:scale-105 active:scale-95 cursor-pointer select-none backdrop-blur-sm",
                             !headerCollapsed
-                                ? "bg-[#EF4444] text-white hover:bg-[#DC2626]"
-                                : "bg-[#22C55E] text-white hover:bg-[#16A34A] shadow-[0_4px_14px_rgba(34,197,94,0.4)]"
+                                ? "bg-white/90 text-red-600 border-red-200 hover:bg-red-50"
+                                : "bg-white/90 text-emerald-600 border-emerald-200 hover:bg-emerald-50 shadow-[0_2px_8px_rgba(34,197,94,0.25)]"
                         )}
                         title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
                     >
-                        <span className="text-[10px] sm:text-xs transition-transform duration-300">
-                            {headerCollapsed ? "▼" : "▲"}
-                        </span>
-                        <span className="tracking-tight font-black">
+                        <svg className={cn("w-3 h-3 transition-transform duration-300", headerCollapsed ? "rotate-0" : "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                        <span className="tracking-tight">
                             {headerCollapsed ? "Expandir" : "Recolher"}
                         </span>
                     </button>

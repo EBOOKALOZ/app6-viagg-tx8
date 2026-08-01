@@ -11,6 +11,16 @@
 -- grava o valor real no insert. Esta migration troca o literal fixo
 -- pela coluna de verdade, sem mudar mais nada nas duas funções.
 --
+-- CORREÇÃO (aplicada em produção): a primeira tentativa desta
+-- migration falhou com 42P13 "cannot change return type of existing
+-- function" — radar_list_groups() já tinha sido evoluída em produção
+-- (fora do escopo desta auditoria) com 6 colunas extras não previstas
+-- no arquivo original (analyzed_at, status_aprovacao, link_status,
+-- link_verified_at, real_name, photo_url), usadas por
+-- AdminGruposAprovados.tsx. Esta versão preserva TODAS as colunas
+-- vivas e só troca 'motoboy'::text por g.profile_kind — não remove
+-- nada que o painel admin já consome.
+--
 -- Idempotente.
 -- ============================================================
 
@@ -21,7 +31,9 @@ RETURNS TABLE (
   invalid_reason text, created_at timestamptz, last_posted_at timestamptz,
   owner_user_id uuid, owner_name text, profile_kind text,
   score int, classification text, commercial_potential int,
-  recommendation text, ai_explanation text, factors jsonb
+  recommendation text, ai_explanation text, factors jsonb,
+  analyzed_at timestamptz, status_aprovacao text,
+  link_status text, link_verified_at timestamptz, real_name text, photo_url text
 ) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT g.id, g.group_name, g.group_link, g.city_name, g.state_code,
          g.neighborhood, g.members_count, g.is_active, g.validation_status,
@@ -30,7 +42,16 @@ RETURNS TABLE (
          g.profile_kind,
          COALESCE(s.score, 0), COALESCE(s.classification, '—'),
          COALESCE(s.commercial_potential, 0),
-         COALESCE(s.recommendation, 'sem_analise'), s.ai_explanation, s.factors
+         COALESCE(s.recommendation, 'sem_analise'), s.ai_explanation, s.factors,
+         s.analyzed_at,
+         CASE
+           WHEN g.validation_status = 'approved' AND g.is_active AND g.valid_for_commission
+             THEN 'aprovado'
+           WHEN g.validation_status = 'pending' THEN 'pendente'
+           WHEN NOT g.is_active AND g.validation_status NOT IN ('rejected') THEN 'inativo'
+           ELSE 'reprovado'
+         END AS status_aprovacao,
+         g.link_status, g.link_verified_at, g.real_name, g.photo_url
     FROM public.whatsapp_groups g
     LEFT JOIN public.radar_group_scores s ON s.group_id = g.id
     LEFT JOIN public.profiles p ON p.id = g.owner_user_id
