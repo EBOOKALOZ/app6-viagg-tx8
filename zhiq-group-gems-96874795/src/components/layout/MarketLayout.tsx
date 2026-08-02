@@ -187,7 +187,7 @@ export function MarketLayout({
         <div className={cn("min-h-screen flex flex-col", !mainClassName && "bg-institutional-yellow")}>
             {/* ═══ TOP BAR (STICKY HEADER WITH RETRACTABLE TRANSITIONS) ═══ */}
             <div className={cn(
-                "sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
+                "relative sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
                 isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-institutional-yellow"
             )}>
                 <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
@@ -289,36 +289,34 @@ export function MarketLayout({
                     O portal de áudio (#global-audio-portal-trustbar) vive dentro do componente,
                     logo à direita do seletor de conta/loja (botão branco "Som" — UI-02). */}
                 <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
-                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-1 w-full">
-                        <PremiumQuickAccessBar onCartOpen={() => setCartOpen(true)} cartItemCount={globalCart.totalItems} />
+                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-1 w-full flex items-center gap-1.5">
+                        <div className="flex-1 min-w-0">
+                            <PremiumQuickAccessBar onCartOpen={() => setCartOpen(true)} cartItemCount={globalCart.totalItems} />
+                        </div>
+
+                        {/* ═══ CONTROLE RETRÁTIL (▼ / ▲) — DENTRO DA FAIXA LARANJA ═══ */}
+                        {!lockHeaderExpanded && (
+                            <button
+                                type="button"
+                                onClick={handleToggleHeader}
+                                aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+                                aria-expanded={!headerCollapsed}
+                                className={cn(
+                                    "flex shrink-0 items-center gap-1 px-3 py-1 rounded-full font-bold text-[10px] leading-none shadow-md border transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-white/60 hover:scale-105 active:scale-95 cursor-pointer select-none",
+                                    "bg-white/90 text-slate-950 border-white/60 hover:bg-white"
+                                )}
+                                title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+                            >
+                                <svg className={cn("w-3 h-3 transition-transform duration-300", headerCollapsed ? "rotate-0" : "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                                <span className="tracking-tight hidden sm:inline">
+                                    {headerCollapsed ? "Expandir" : "Recolher"}
+                                </span>
+                            </button>
+                        )}
                     </div>
                 </div>
-
-                {/* ═══ SETA CENTRAL DE CONTROLE RETRÁTIL (▼ / ▲) ═══ */}
-                {!lockHeaderExpanded && (
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-4 z-50 flex items-center justify-center pointer-events-auto">
-                    <button
-                        type="button"
-                        onClick={handleToggleHeader}
-                        aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-                        aria-expanded={!headerCollapsed}
-                        className={cn(
-                            "flex items-center gap-1 px-3 py-0.5 rounded-full font-bold text-[10px] shadow-md border transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-black/30 hover:scale-105 active:scale-95 cursor-pointer select-none backdrop-blur-sm",
-                            !headerCollapsed
-                                ? "bg-white/90 text-red-600 border-red-200 hover:bg-red-50"
-                                : "bg-white/90 text-emerald-600 border-emerald-200 hover:bg-emerald-50 shadow-[0_2px_8px_rgba(34,197,94,0.25)]"
-                        )}
-                        title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-                    >
-                        <svg className={cn("w-3 h-3 transition-transform duration-300", headerCollapsed ? "rotate-0" : "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                        <span className="tracking-tight">
-                            {headerCollapsed ? "Expandir" : "Recolher"}
-                        </span>
-                    </button>
-                </div>
-                )}
             </div>
 
 

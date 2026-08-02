@@ -79,27 +79,19 @@ export function getCachedSnapshot(): ExchangeRatesSnapshot | null {
 type AssetFetcher = () => Promise<AssetQuote>;
 
 async function fetchUsdBrl(): Promise<AssetQuote> {
-  const res = await fetch(`${EXCHANGE_RATE_FUN_BASE_URL}/latest?base=USD`);
-  if (!res.ok) throw new Error(`ExchangeRate.fun respondeu ${res.status}`);
+  const res = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL");
+  if (!res.ok) throw new Error(`AwesomeAPI respondeu ${res.status}`);
 
   const data = await res.json();
-  const brl = data?.rates?.BRL;
-  if (typeof brl !== "number") throw new Error("Campo rates.BRL ausente na resposta");
-
-  // A API retorna `timestamp` (epoch em segundos) e, em alguns casos, `date`
-  // (YYYY-MM-DD). Preferimos o timestamp por ser preciso até o segundo.
-  const quotedAt = typeof data?.timestamp === "number"
-    ? new Date(data.timestamp * 1000).toISOString()
-    : data?.date
-      ? new Date(data.date).toISOString()
-      : new Date().toISOString();
+  const quote = data?.USDBRL;
+  if (!quote || typeof parseFloat(quote.bid) !== "number") throw new Error("Cotação de USD ausente na resposta");
 
   return {
     code: "USD",
-    name: "Dólar Americano",
-    value: brl,
-    quotedAt,
-    source: "ExchangeRate.fun",
+    name: quote.name || "Dólar Americano",
+    value: parseFloat(quote.bid),
+    quotedAt: quote.create_date || new Date().toISOString(),
+    source: "AwesomeAPI",
   };
 }
 
