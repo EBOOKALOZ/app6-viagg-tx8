@@ -6,8 +6,8 @@
 import { Link } from "react-router-dom";
 import { ShieldCheck, Stethoscope, FlaskConical, Pill, Hospital, Landmark, BadgeCheck, ChevronRight } from "lucide-react";
 import { GestorPageHeader } from "@/components/convenio/GestorPageHeader";
-import { GestorPlaceholderNotice } from "@/components/convenio/GestorPlaceholderNotice";
-import { SIMULATED_ENTITIES_BY_CATEGORY } from "@/lib/convenio/simulatedData";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useConvenioEntityCounts } from "@/hooks/convenio/useConvenioEntities";
 
 const CATEGORIES = [
   { key: "clinica", label: "Clínicas", icon: Stethoscope, path: "/convenio-admin/credenciamento/clinicas" },
@@ -19,6 +19,8 @@ const CATEGORIES = [
 ] as const;
 
 export default function GestorCredenciamentoHubPage() {
+  const countsQuery = useConvenioEntityCounts();
+
   return (
     <div>
       <GestorPageHeader
@@ -26,11 +28,10 @@ export default function GestorCredenciamentoHubPage() {
         title="Credenciamento"
         subtitle="Gerenciamento de clínicas, laboratórios, hospitais, farmácias, instituições e parceiros"
       />
-      <GestorPlaceholderNotice />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CATEGORIES.map(({ key, label, icon: Icon, path }) => {
-          const count = SIMULATED_ENTITIES_BY_CATEGORY[key]?.length ?? 0;
+          const count = countsQuery.data?.[key] ?? 0;
           return (
             <Link
               key={key}
@@ -43,7 +44,11 @@ export default function GestorCredenciamentoHubPage() {
                 </div>
                 <div>
                   <p className="font-black text-white">{label}</p>
-                  <p className="text-xs text-white/40">{count} cadastrado(s)</p>
+                  {countsQuery.isLoading ? (
+                    <Skeleton className="mt-1 h-3 w-20" />
+                  ) : (
+                    <p className="text-xs text-white/40">{count} cadastrado(s)</p>
+                  )}
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-white/30 group-hover:text-white/60" />

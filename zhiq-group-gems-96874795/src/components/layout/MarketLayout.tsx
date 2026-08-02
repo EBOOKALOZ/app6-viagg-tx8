@@ -62,6 +62,16 @@ interface MarketLayoutProps {
     hideTopMotoboy?: boolean;
     /** Mantém o cabeçalho SEMPRE expandido (clima/rádio + navegação visíveis), sem retrair no scroll. */
     lockHeaderExpanded?: boolean;
+    /** Título customizado no header desktop (substitui "Mercado Local Viagg-TX8™"). */
+    headerTitle?: React.ReactNode;
+    /** Barra de acesso rápido minimalista: exibe apenas Login + Som. */
+    minimalQuickAccess?: boolean;
+    /** Esconde o conteúdo do cabeçalho (clima, logo, busca, navegação), preservando a barra de acesso rápido. */
+    hideHeaderContent?: boolean;
+    /** Classe CSS customizada para a barra de acesso rápido (substitui o gradiente laranja). */
+    quickAccessBarClass?: string;
+    /** Label/logo exibido à esquerda na barra de acesso rápido. */
+    quickAccessBarLabel?: React.ReactNode;
 }
 
 export function MarketLayout({
@@ -81,7 +91,12 @@ export function MarketLayout({
     blueFooterLabel = "Mercado Local",
     myAccountPath,
     hideTopMotoboy = false,
-    lockHeaderExpanded = false
+    lockHeaderExpanded = false,
+    headerTitle,
+    minimalQuickAccess = false,
+    hideHeaderContent = false,
+    quickAccessBarClass,
+    quickAccessBarLabel,
 }: MarketLayoutProps) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -97,7 +112,7 @@ export function MarketLayout({
 
 
     const handleVendedorClick = () => {
-        navigate("/auth");
+        navigate(`/auth?redirect=${encodeURIComponent(location.pathname)}`);
     };
 
     const handleSair = async () => {
@@ -190,7 +205,7 @@ export function MarketLayout({
                 "relative sticky top-0 z-50 transition-all duration-300 ease-in-out border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)]",
                 isCorridasRoute ? "bg-gradient-to-r from-[#FF6A00] to-[#FF8C00]" : "bg-institutional-yellow"
             )}>
-                <div className="max-w-[1920px] mx-auto px-4 lg:px-6 pb-2">
+                <div className={cn("max-w-[1920px] mx-auto px-4 lg:px-6 pb-2", hideHeaderContent && "hidden")}>
                     {/* ── MOBILE HEADER (< lg): card do clima alinhado à linha logo/cesta (RETRÁTIL) ── */}
                     <div className={cn(
                         "lg:hidden transition-all duration-300 ease-in-out overflow-hidden",
@@ -229,7 +244,7 @@ export function MarketLayout({
                         <div className="flex items-center gap-3 cursor-pointer shrink-0 py-2 hover:opacity-95 transition-all duration-200" onClick={() => navigate("/mercado")}>
                             <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-12 w-12 rounded-xl object-contain shadow-sm border border-black/10" />
                             <span className="text-xl font-black text-slate-950 tracking-tight whitespace-nowrap">
-                                Mercado Local <span className="text-[#075985]">Viagg-TX8™</span>
+                                {headerTitle ?? (<>Mercado Local <span className="text-[#075985]">Viagg-TX8™</span></>)}
                             </span>
                         </div>
 
@@ -288,10 +303,21 @@ export function MarketLayout({
                     👤 Minha Conta · 🔊 Som · Favoritos · Notificações · Compartilhar.
                     O portal de áudio (#global-audio-portal-trustbar) vive dentro do componente,
                     logo à direita do seletor de conta/loja (botão branco "Som" — UI-02). */}
-                <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
-                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-1 w-full flex items-center gap-1.5">
-                        <div className="flex-1 min-w-0">
-                            <PremiumQuickAccessBar onCartOpen={() => setCartOpen(true)} cartItemCount={globalCart.totalItems} />
+                <div className={cn(
+                    "w-full border-t border-black/10 shadow-md",
+                    quickAccessBarClass || "bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00]"
+                )}>
+                    <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                        {quickAccessBarLabel && (
+                            <div className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate("/mercado")}>
+                                <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 shrink-0 rounded-lg object-contain border border-white/20 shadow-sm" />
+                                <span className="text-lg font-black text-white tracking-tight">
+                                    {quickAccessBarLabel}
+                                </span>
+                            </div>
+                        )}
+                        <div className="shrink-0 flex justify-end w-full sm:w-auto ml-auto">
+                            <PremiumQuickAccessBar onCartOpen={() => setCartOpen(true)} cartItemCount={globalCart.totalItems} minimal={minimalQuickAccess} />
                         </div>
 
                         {/* ═══ CONTROLE RETRÁTIL (▼ / ▲) — DENTRO DA FAIXA LARANJA ═══ */}

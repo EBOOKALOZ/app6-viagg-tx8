@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Volume2, VolumeX, Volume1, Radio } from 'lucide-react';
+import { RealtimeVisualizer } from '@/components/orion/RealtimeVisualizer';
 import { cn } from '@/lib/utils';
 import { pillBase, pillWhite } from '@/components/layout/PremiumQuickAccessBar';
 import { OrionAudioCenter } from '@/components/orion/OrionAudioCenter';
@@ -9,7 +10,7 @@ import { RadioMiniPlayer } from '@/components/orion/RadioMiniPlayer';
 import {
   AudioSettings, loadAudioSettings, saveAudioSettings, ensureOrionGraph,
 } from '@/lib/orionAudioEngine';
-import { hasPendingRadioSession, resumeRadioAfterReload } from '@/lib/radioPlayer';
+import { hasPendingRadioSession, resumeRadioAfterReload, subscribeRadio, getRadioState } from '@/lib/radioPlayer';
 import { isVideoActive } from '@/lib/multimedia/mediaCenter';
 import { initAudioManager } from '@/lib/audioManager';
 
@@ -96,6 +97,7 @@ function getOrCreateAudio(volume: number): HTMLAudioElement {
 }
 
 export function GlobalAudioPlayer() {
+  const radio = useSyncExternalStore(subscribeRadio, getRadioState);
   const [settings, setSettings] = useState<AudioSettings>(loadAudioSettings);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -440,18 +442,30 @@ export function GlobalAudioPlayer() {
         aria-expanded={isPanelOpen}
       >
         {isMarketPortal ? (
-          <>
-            <Radio
-              className={cn(
-                'h-3 w-3',
-                isMutedState ? 'text-[#EF4444]' : 'text-[#10B981]',
-                !isMutedState && isPlaying && 'animate-pulse'
-              )}
-            />
-            <span className="hidden sm:inline">Som</span>
-          </>
+          radio.playing ? (
+             <div className="flex items-center gap-1.5 -ml-1">
+               <RealtimeVisualizer mini />
+             </div>
+          ) : (
+            <>
+              <Radio
+                className={cn(
+                  'h-3 w-3',
+                  isMutedState ? 'text-[#EF4444]' : 'text-[#10B981]',
+                  !isMutedState && isPlaying && 'animate-pulse'
+                )}
+              />
+              <span className="hidden sm:inline">Som</span>
+            </>
+          )
         ) : (
-          <VolumeIcon className={cn(portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
+          radio.playing ? (
+             <div className="scale-75 origin-center">
+               <RealtimeVisualizer mini />
+             </div>
+          ) : (
+            <VolumeIcon className={cn(portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
+          )
         )}
       </button>
     </div>

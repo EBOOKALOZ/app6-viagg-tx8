@@ -1,4 +1,4 @@
-import { Car, Bike, Store, Truck, Zap, Building2, CarFront, Briefcase, Plane, Tag } from 'lucide-react';
+import { Car, Bike, Store, Truck, Zap, Building2, CarFront, Briefcase, Plane, Tag, HeartHandshake } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
 export interface ProfileTypeConfig {
@@ -97,6 +97,14 @@ export const PROFILE_TYPES: Record<string, ProfileTypeConfig> = {
     description: 'Crie leilões dos seus produtos e receba lances em tempo real',
     icon: Tag,
     route: '/anunciante/leiloes',
+    requiresVehicle: false,
+  },
+  convenios: {
+    id: 'convenios',
+    label: 'Módulo Convênios & Doações',
+    description: 'Cadastre sua instituição e participe de convênios, campanhas solidárias e programas de doações com total transparência.',
+    icon: HeartHandshake,
+    route: '/medprev',
     requiresVehicle: false,
   },
 } as const;

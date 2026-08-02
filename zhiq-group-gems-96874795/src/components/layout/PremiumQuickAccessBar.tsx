@@ -72,9 +72,11 @@ export const pillWhite =
 interface PremiumQuickAccessBarProps {
   onCartOpen?: () => void;
   cartItemCount?: number;
+  /** Modo minimalista: exibe apenas Login + Som. */
+  minimal?: boolean;
 }
 
-export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0 }: PremiumQuickAccessBarProps) {
+export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0, minimal = false }: PremiumQuickAccessBarProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, avatarUrl, displayName: authName, signOut } = useAuth();
@@ -111,7 +113,10 @@ export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0 }: Premium
     <div
       role="navigation"
       aria-label="Acesso rápido — Minha Conta"
-      className="flex flex-wrap items-center justify-between gap-1 sm:gap-1.5 w-full"
+      className={cn(
+        "flex items-center gap-1.5 sm:gap-2 w-full",
+        minimal ? "justify-end flex-nowrap" : "flex-wrap justify-between"
+      )}
     >
       {/* 👤 Minha Conta — entrada da Conta Única do Consumidor */}
       {user ? (
@@ -184,7 +189,7 @@ export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0 }: Premium
         </DropdownMenu>
       ) : (
         <button
-          onClick={() => navigate("/auth")}
+          onClick={() => navigate(`/auth?redirect=${encodeURIComponent(pathname)}`)}
           aria-label="Entrar ou criar conta"
           className={cn(
             pillBase,
@@ -207,52 +212,57 @@ export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0 }: Premium
         onClick={(e) => e.stopPropagation()}
       />
 
-      {/* ❤️ Favoritos */}
-      <button
-        onClick={() => navigate("/conta")}
-        aria-label="Favoritos"
-        className={cn(pillBase, pillWhite)}
-      >
-        <Heart className="h-3 w-3 text-[#FF6A00]" />
-        <span className="hidden sm:inline">Favoritos</span>
-      </button>
+      {/* ── Itens extras (ocultos no modo minimal) ── */}
+      {!minimal && (
+        <>
+          {/* ❤️ Favoritos */}
+          <button
+            onClick={() => navigate("/conta")}
+            aria-label="Favoritos"
+            className={cn(pillBase, pillWhite)}
+          >
+            <Heart className="h-3 w-3 text-[#FF6A00]" />
+            <span className="hidden sm:inline">Favoritos</span>
+          </button>
 
-      {/* 🔔 Notificações */}
-      <button
-        onClick={() => navigate("/conta")}
-        aria-label="Notificações"
-        className={cn(pillBase, pillWhite)}
-      >
-        <Bell className="h-3 w-3 text-[#075985]" />
-        <span className="hidden sm:inline">Notificações</span>
-      </button>
+          {/* 🔔 Notificações */}
+          <button
+            onClick={() => navigate("/conta")}
+            aria-label="Notificações"
+            className={cn(pillBase, pillWhite)}
+          >
+            <Bell className="h-3 w-3 text-[#075985]" />
+            <span className="hidden sm:inline">Notificações</span>
+          </button>
 
-      {/* 🛒 Cesta */}
-      {onCartOpen && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onCartOpen(); }}
-          aria-label="Abrir Cesta / Carrinho"
-          className={cn(pillBase, pillWhite, "relative")}
-        >
-          <ShoppingCart className="h-3 w-3 text-[#FF6A00]" />
-          <span className="hidden sm:inline">Cesta</span>
-          {cartItemCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF6A00] px-0.5 text-[8px] font-black text-white shadow-sm border border-white">
-              {cartItemCount}
-            </span>
+          {/* 🛒 Cesta */}
+          {onCartOpen && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCartOpen(); }}
+              aria-label="Abrir Cesta / Carrinho"
+              className={cn(pillBase, pillWhite, "relative")}
+            >
+              <ShoppingCart className="h-3 w-3 text-[#FF6A00]" />
+              <span className="hidden sm:inline">Cesta</span>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#FF6A00] px-0.5 text-[8px] font-black text-white shadow-sm border border-white">
+                  {cartItemCount}
+                </span>
+              )}
+            </button>
           )}
-        </button>
-      )}
 
-      {/* 🔗 Compartilhar */}
-      <button
-        onClick={compartilhar}
-        aria-label="Compartilhar"
-        className={cn(pillBase, pillWhite)}
-      >
-        <Share2 className="h-3 w-3 text-[#16A34A]" />
-        <span className="hidden sm:inline">Compartilhar</span>
-      </button>
+          {/* 🔗 Compartilhar */}
+          <button
+            onClick={compartilhar}
+            aria-label="Compartilhar"
+            className={cn(pillBase, pillWhite)}
+          >
+            <Share2 className="h-3 w-3 text-[#16A34A]" />
+            <span className="hidden sm:inline">Compartilhar</span>
+          </button>
+        </>
+      )}
 
       {/* ROLLBACK UI-02 — antigo botão "Rádio" (branco, ícone de transmissão),
           que só abria o Audio Center na aba Rádio. Foi fundido com o botão

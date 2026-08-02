@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Stethoscope, FlaskConical, Pill, Hospital,
   Landmark, Handshake, BadgeCheck, Megaphone, HeartHandshake, FileSpreadsheet,
-  BarChart3, ShieldCheck, MessageSquare, Settings,
+  BarChart3, ShieldCheck, MessageSquare, Settings, Inbox, UserCog,
 } from "lucide-react";
 
 export interface GestorNavItem {
@@ -17,6 +17,7 @@ export interface GestorNavItem {
 export const GESTOR_NAV_ITEMS: GestorNavItem[] = [
   { label: "Dashboard",            path: "/convenio-admin",                      icon: LayoutDashboard },
   { label: "Convênios",            path: "/convenio-admin/convenios",            icon: Handshake },
+  { label: "Leads de Parceiros",   path: "/convenio-admin/leads-parceiros",      icon: Inbox },
   { label: "Clínicas",             path: "/convenio-admin/credenciamento/clinicas",     icon: Stethoscope },
   { label: "Laboratórios",         path: "/convenio-admin/credenciamento/laboratorios", icon: FlaskConical },
   { label: "Farmácias",            path: "/convenio-admin/credenciamento/farmacias",    icon: Pill },
@@ -30,5 +31,6 @@ export const GESTOR_NAV_ITEMS: GestorNavItem[] = [
   { label: "Relatórios",           path: "/convenio-admin/relatorios",           icon: BarChart3 },
   { label: "Auditoria",            path: "/convenio-admin/auditoria",            icon: ShieldCheck },
   { label: "Mensagens",            path: "/convenio-admin/mensagens",            icon: MessageSquare },
+  { label: "Gestão de Acesso",     path: "/convenio-admin/acesso",               icon: UserCog },
   { label: "Configurações",        path: "/convenio-admin/configuracoes",        icon: Settings },
 ];

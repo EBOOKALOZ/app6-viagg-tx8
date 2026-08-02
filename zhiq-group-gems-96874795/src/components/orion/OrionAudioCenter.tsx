@@ -507,7 +507,7 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
     : DEVICE_META[settings.deviceProfile].label;
 
   // ── CENTRO MULTIMÍDIA (ORION-MEDIA-01): abas EQ · Rádio · TV · Lives · ♥ · ⏱ ──
-  const [aba, setAba] = useState<'eq' | 'radio' | 'tv' | 'live' | 'favs' | 'hist'>('eq');
+  const [aba, setAba] = useState<'eq' | 'radio' | 'tv' | 'live' | 'favs' | 'hist'>('radio');
   // canal de vídeo selecionado (compartilhado entre TV/Lives/Favoritos/Histórico)
   const [mediaSel, setMediaSel] = useState<MediaChannel | null>(null);
   // favoritos/histórico → abrir um canal troca para a aba dele (TV ou Lives)
@@ -547,8 +547,6 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
         {([
           ['eq', 'EQ', SlidersHorizontal, 'from-[#FF6A00] to-[#FF9A00]', 'rgba(255,106,0,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
           ['radio', 'Rádio', Radio, 'from-emerald-500 to-green-500', 'rgba(16,185,129,0.85)', 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'],
-          ['tv', 'TV', Tv, 'from-sky-500 to-cyan-500', 'rgba(14,165,233,0.8)', 'bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'],
-          ['live', 'Lives', Clapperboard, 'from-red-500 to-rose-500', 'rgba(244,63,94,0.8)', 'bg-red-500/10 text-red-300 hover:bg-red-500/20'],
           ['favs', 'Favoritos', Heart, 'from-pink-500 to-rose-400', 'rgba(236,72,153,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
           ['hist', 'Histórico', HistoryIcon, 'from-violet-500 to-purple-500', 'rgba(139,92,246,0.8)', 'bg-white/5 text-zinc-400 hover:bg-white/10'],
         ] as const).map(([k, label, I, grad, glow, inactive]) => (

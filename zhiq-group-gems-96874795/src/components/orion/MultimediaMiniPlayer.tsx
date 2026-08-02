@@ -170,7 +170,13 @@ export function MultimediaMiniPlayer({ channel, watchSignal = 0 }: MiniPlayerPro
   }, [watchSignal, watch]);
 
   const faved = channel ? isMediaFavorite(channel.id) : false;
-  const cover = channel?.cover_url || channel?.logo_url || null;
+
+  const [radioSt, setRadioSt] = useState<{ playing: boolean; name: string; favicon: string | null }>(() => {
+    const st = getRadioState();
+    return { playing: st.playing, name: st.station?.name || "", favicon: st.station?.favicon || null };
+  });
+
+  const cover = channel?.cover_url || channel?.logo_url || (radioSt.playing ? radioSt.favicon : null) || null;
   const loaded = !!embed && embed.type !== 'error';
 
   // FIX SHC-02: vídeo carregado ↔ flag global — o GlobalAudioPlayer consulta a
@@ -184,6 +190,11 @@ export function MultimediaMiniPlayer({ channel, watchSignal = 0 }: MiniPlayerPro
   // descarregado na hora (registra view_end). Sem isto, rádio + vídeo tocavam
   // juntos. O caminho inverso (Assistir pausa a rádio) já era coberto em watch().
   useEffect(() => subscribeRadio((st) => {
+    setRadioSt({
+      playing: st.playing,
+      name: st.station?.name || "",
+      favicon: st.station?.favicon || null
+    });
     if (st.playing) {
       stopView(channelRef.current);
       setEmbed(null);
@@ -240,28 +251,73 @@ export function MultimediaMiniPlayer({ channel, watchSignal = 0 }: MiniPlayerPro
             ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
             <img
-              src={channel?.logo_url || viaggLogo}
+              src={channel?.logo_url || (radioSt.playing && radioSt.favicon ? radioSt.favicon : viaggLogo)}
               alt=""
               onError={(e) => { (e.currentTarget as HTMLImageElement).src = viaggLogo; }}
               className="relative h-12 w-12 rounded-xl object-contain ring-1 ring-emerald-400/40 bg-black/40 p-1"
             />
             <p className="relative max-w-[90%] truncate text-[12px] font-black text-white">
-              {channel?.name || 'Centro Multimídia Viagg-TX8'}
+              {channel?.name || (radioSt.playing && radioSt.name ? radioSt.name : 'Centro Multimídia Viagg-TX8')}
             </p>
             {/* visualizador de áudio animado */}
-            <div className="relative flex h-6 items-end gap-[3px]" aria-hidden="true">
-              {EQ_BARS.map((delay, i) => (
-                <span
-                  key={i}
-                  className="w-[4px] rounded-sm bg-gradient-to-t from-emerald-500 to-green-300 origin-bottom"
-                  style={{ height: '100%', animation: `vggEqBar ${900 + (i % 4) * 180}ms ease-in-out ${delay}ms infinite` }}
-                />
-              ))}
-            </div>
+            {radioSt.playing ? (
+              <div className="relative flex items-end gap-[2px] rounded-md bg-[#050c05] p-1.5 ring-1 ring-emerald-500/20" aria-hidden="true">
+                {Array.from({ length: 28 }).map((_, col) => {
+                  const delay = (col * 47) % 600;
+                  const dur = 400 + (col % 3) * 150;
+                  const animType = (col % 3) + 1; // vggMatrix1, vggMatrix2, vggMatrix3
+                  return (
+                    <div key={col} className="relative flex flex-col-reverse gap-[2px] h-[34px] w-[5px]">
+                      {/* Fundo apagado */}
+                      <div className="absolute inset-0 flex flex-col-reverse gap-[2px]">
+                        {Array.from({ length: 8 }).map((_, row) => {
+                          let bg = "bg-emerald-500";
+                          if (row >= 4 && row <= 5) bg = "bg-yellow-400";
+                          else if (row >= 6) bg = "bg-red-500";
+                          return <span key={row} className={`h-[3px] w-full rounded-sm ${bg} opacity-15`} />
+                        })}
+                      </div>
+                      
+                      {/* Camada acesa com altura animada (máscara) */}
+                      <div 
+                        className="absolute bottom-0 left-0 right-0 overflow-hidden flex flex-col-reverse justify-start origin-bottom"
+                        style={{ animation: `vggMatrix${animType} ${dur}ms steps(8, end) ${delay}ms infinite alternate` }}
+                      >
+                        <div className="flex flex-col-reverse gap-[2px] h-[34px] w-[5px]">
+                          {Array.from({ length: 8 }).map((_, row) => {
+                            let bg = "bg-emerald-500";
+                            if (row >= 4 && row <= 5) bg = "bg-yellow-400";
+                            else if (row >= 6) bg = "bg-red-500";
+                            return <span key={row} className={`h-[3px] shrink-0 w-full rounded-sm ${bg} opacity-100 shadow-[0_0_3px_currentColor]`} />
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <style>{`
+                  @keyframes vggMatrix1 { 0% { height: 0%; } 25% { height: 50%; } 50% { height: 25%; } 75% { height: 75%; } 100% { height: 100%; } }
+                  @keyframes vggMatrix2 { 0% { height: 12%; } 30% { height: 62%; } 60% { height: 37%; } 80% { height: 100%; } 100% { height: 50%; } }
+                  @keyframes vggMatrix3 { 0% { height: 25%; } 40% { height: 87%; } 70% { height: 50%; } 90% { height: 75%; } 100% { height: 12%; } }
+                `}</style>
+              </div>
+            ) : (
+              <div className="relative flex h-6 items-end gap-[3px]" aria-hidden="true">
+                {EQ_BARS.map((delay, i) => (
+                  <span
+                    key={i}
+                    className="w-[4px] rounded-sm bg-gradient-to-t from-emerald-500 to-green-300 origin-bottom"
+                    style={{ height: '100%', animation: `vggEqBar ${900 + (i % 4) * 180}ms ease-in-out ${delay}ms infinite` }}
+                  />
+                ))}
+              </div>
+            )}
             {channel?.url ? (
               <span className="relative mt-1 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 px-3.5 py-1.5 text-[11px] font-black text-white shadow-[0_0_16px_-4px_rgba(16,185,129,0.9)] transition-transform group-hover:scale-105 group-active:scale-95">
                 <Play className="h-3.5 w-3.5" /> Assistir
               </span>
+            ) : radioSt.playing ? (
+              <span className="relative text-[10px] font-bold text-emerald-400/90">Tocando rádio agora...</span>
             ) : (
               <span className="relative text-[10px] font-bold text-white/50">Escolha um canal na lista abaixo</span>
             )}

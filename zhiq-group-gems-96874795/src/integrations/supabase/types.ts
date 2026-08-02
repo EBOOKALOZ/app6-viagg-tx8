@@ -39,6 +39,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_group_links: {
+        Row: {
+          created_at: string
+          id: string
+          link_normalized: string
+          owner_user_id: string
+          source_id: string
+          source_table: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link_normalized: string
+          owner_user_id: string
+          source_id: string
+          source_table: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link_normalized?: string
+          owner_user_id?: string
+          source_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       admin_market_events: {
         Row: {
           category_id: string | null
@@ -1375,7 +1402,22 @@ export type Database = {
           source?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "auction_bids_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "auction_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_bids_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "auction_performance_analytics"
+            referencedColumns: ["listing_id"]
+          },
+        ]
       }
       auction_categories: {
         Row: {
@@ -1676,6 +1718,63 @@ export type Database = {
           },
           {
             foreignKeyName: "auction_images_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "auction_performance_analytics"
+            referencedColumns: ["listing_id"]
+          },
+        ]
+      }
+      auction_listing_audit_log: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          field_name: string
+          id: number
+          ip_address: string | null
+          listing_id: string
+          new_value: string | null
+          old_value: string | null
+          source: string
+          transaction_id: number
+          user_agent: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          field_name: string
+          id?: never
+          ip_address?: string | null
+          listing_id: string
+          new_value?: string | null
+          old_value?: string | null
+          source?: string
+          transaction_id?: number
+          user_agent?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          field_name?: string
+          id?: never
+          ip_address?: string | null
+          listing_id?: string
+          new_value?: string | null
+          old_value?: string | null
+          source?: string
+          transaction_id?: number
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_listing_audit_log_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "auction_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_listing_audit_log_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "auction_performance_analytics"
@@ -2801,6 +2900,391 @@ export type Database = {
           },
         ]
       }
+      carrier_corridor_stops: {
+        Row: {
+          city: string
+          corridor_id: string
+          id: string
+          lat: number | null
+          lng: number | null
+          sequence_order: number
+          state: string | null
+        }
+        Insert: {
+          city: string
+          corridor_id: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          sequence_order: number
+          state?: string | null
+        }
+        Update: {
+          city?: string
+          corridor_id?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          sequence_order?: number
+          state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carrier_corridor_stops_corridor_id_fkey"
+            columns: ["corridor_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_logistics_corridors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carrier_coverage_areas: {
+        Row: {
+          carrier_id: string
+          city: string | null
+          coverage_type: string
+          created_at: string
+          id: string
+          is_active: boolean
+          lat: number | null
+          lng: number | null
+          radius_km: number | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          carrier_id: string
+          city?: string | null
+          coverage_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lat?: number | null
+          lng?: number | null
+          radius_km?: number | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carrier_id?: string
+          city?: string | null
+          coverage_type?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          lat?: number | null
+          lng?: number | null
+          radius_km?: number | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carrier_coverage_areas_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carrier_documents: {
+        Row: {
+          carrier_id: string
+          created_at: string
+          document_category: string | null
+          document_number: string | null
+          document_type: string
+          expires_at: string | null
+          id: string
+          owner_user_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          carrier_id: string
+          created_at?: string
+          document_category?: string | null
+          document_number?: string | null
+          document_type: string
+          expires_at?: string | null
+          id?: string
+          owner_user_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          carrier_id?: string
+          created_at?: string
+          document_category?: string | null
+          document_number?: string | null
+          document_type?: string
+          expires_at?: string | null
+          id?: string
+          owner_user_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carrier_documents_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carrier_logistics_corridors: {
+        Row: {
+          carrier_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          carrier_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          carrier_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carrier_logistics_corridors_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carrier_profile_history: {
+        Row: {
+          carrier_id: string
+          changed_by: string | null
+          created_at: string
+          event_type: string
+          from_value: string | null
+          id: string
+          reason: string | null
+          to_value: string | null
+        }
+        Insert: {
+          carrier_id: string
+          changed_by?: string | null
+          created_at?: string
+          event_type: string
+          from_value?: string | null
+          id?: string
+          reason?: string | null
+          to_value?: string | null
+        }
+        Update: {
+          carrier_id?: string
+          changed_by?: string | null
+          created_at?: string
+          event_type?: string
+          from_value?: string | null
+          id?: string
+          reason?: string | null
+          to_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carrier_profile_history_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carrier_profiles: {
+        Row: {
+          acceptance_index: number | null
+          approval_reason: string | null
+          approval_status: string
+          availability_score: number
+          availability_status: string
+          avg_response_minutes: number | null
+          bio: string | null
+          carrier_type: string
+          compliance_score: number
+          coverage_area_km2: number
+          coverage_cities_count: number
+          coverage_states_count: number
+          created_at: string
+          documental_score: number
+          facebook: string | null
+          id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          instagram: string | null
+          is_synthetic: boolean
+          linkedin: string | null
+          maintenance_score: number
+          nome_fantasia: string | null
+          operational_score: number
+          person_type: string
+          punctuality_index: number | null
+          razao_social: string | null
+          reputation_score: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          risk_score: number | null
+          scores_updated_at: string | null
+          serves_international: boolean
+          serves_national: boolean
+          service_cep: string | null
+          service_city: string | null
+          service_country: string
+          service_lat: number | null
+          service_lng: number | null
+          service_neighborhood: string | null
+          service_radius_km: number | null
+          service_region: string | null
+          service_state: string | null
+          site: string | null
+          total_cancellations: number
+          total_completed: number
+          total_freights: number
+          total_moves: number
+          updated_at: string
+          user_id: string
+          utilization_score: number
+        }
+        Insert: {
+          acceptance_index?: number | null
+          approval_reason?: string | null
+          approval_status?: string
+          availability_score?: number
+          availability_status?: string
+          avg_response_minutes?: number | null
+          bio?: string | null
+          carrier_type?: string
+          compliance_score?: number
+          coverage_area_km2?: number
+          coverage_cities_count?: number
+          coverage_states_count?: number
+          created_at?: string
+          documental_score?: number
+          facebook?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          instagram?: string | null
+          is_synthetic?: boolean
+          linkedin?: string | null
+          maintenance_score?: number
+          nome_fantasia?: string | null
+          operational_score?: number
+          person_type?: string
+          punctuality_index?: number | null
+          razao_social?: string | null
+          reputation_score?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_score?: number | null
+          scores_updated_at?: string | null
+          serves_international?: boolean
+          serves_national?: boolean
+          service_cep?: string | null
+          service_city?: string | null
+          service_country?: string
+          service_lat?: number | null
+          service_lng?: number | null
+          service_neighborhood?: string | null
+          service_radius_km?: number | null
+          service_region?: string | null
+          service_state?: string | null
+          site?: string | null
+          total_cancellations?: number
+          total_completed?: number
+          total_freights?: number
+          total_moves?: number
+          updated_at?: string
+          user_id: string
+          utilization_score?: number
+        }
+        Update: {
+          acceptance_index?: number | null
+          approval_reason?: string | null
+          approval_status?: string
+          availability_score?: number
+          availability_status?: string
+          avg_response_minutes?: number | null
+          bio?: string | null
+          carrier_type?: string
+          compliance_score?: number
+          coverage_area_km2?: number
+          coverage_cities_count?: number
+          coverage_states_count?: number
+          created_at?: string
+          documental_score?: number
+          facebook?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          instagram?: string | null
+          is_synthetic?: boolean
+          linkedin?: string | null
+          maintenance_score?: number
+          nome_fantasia?: string | null
+          operational_score?: number
+          person_type?: string
+          punctuality_index?: number | null
+          razao_social?: string | null
+          reputation_score?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          risk_score?: number | null
+          scores_updated_at?: string | null
+          serves_international?: boolean
+          serves_national?: boolean
+          service_cep?: string | null
+          service_city?: string | null
+          service_country?: string
+          service_lat?: number | null
+          service_lng?: number | null
+          service_neighborhood?: string | null
+          service_radius_km?: number | null
+          service_region?: string | null
+          service_state?: string | null
+          site?: string | null
+          total_cancellations?: number
+          total_completed?: number
+          total_freights?: number
+          total_moves?: number
+          updated_at?: string
+          user_id?: string
+          utilization_score?: number
+        }
+        Relationships: []
+      }
       cart_add_click_events: {
         Row: {
           created_at: string
@@ -3350,6 +3834,442 @@ export type Database = {
           label?: string | null
           listing_module?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      convenio_accountability: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          created_by: string | null
+          document_url: string | null
+          id: string
+          published_at: string | null
+          reference_month: string | null
+          status: string
+          summary: string | null
+          title: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          id?: string
+          published_at?: string | null
+          reference_month?: string | null
+          status?: string
+          summary?: string | null
+          title: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_url?: string | null
+          id?: string
+          published_at?: string | null
+          reference_month?: string | null
+          status?: string
+          summary?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convenio_accountability_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "convenio_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convenio_agreement_history: {
+        Row: {
+          agreement_id: string
+          changed_at: string
+          changed_by: string | null
+          from_status: string | null
+          id: string
+          notes: string | null
+          to_status: string
+        }
+        Insert: {
+          agreement_id: string
+          changed_at?: string
+          changed_by?: string | null
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          to_status: string
+        }
+        Update: {
+          agreement_id?: string
+          changed_at?: string
+          changed_by?: string | null
+          from_status?: string | null
+          id?: string
+          notes?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convenio_agreement_history_agreement_id_fkey"
+            columns: ["agreement_id"]
+            isOneToOne: false
+            referencedRelation: "convenio_agreements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convenio_agreements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string | null
+          entity_id: string | null
+          id: string
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          entity_id?: string | null
+          id?: string
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          entity_id?: string | null
+          id?: string
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convenio_agreements_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "convenio_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convenio_ai_notes: {
+        Row: {
+          content: string
+          context_id: string | null
+          context_table: string
+          created_at: string
+          id: string
+          note_type: string
+        }
+        Insert: {
+          content: string
+          context_id?: string | null
+          context_table: string
+          created_at?: string
+          id?: string
+          note_type: string
+        }
+        Update: {
+          content?: string
+          context_id?: string | null
+          context_table?: string
+          created_at?: string
+          id?: string
+          note_type?: string
+        }
+        Relationships: []
+      }
+      convenio_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_table: string | null
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_table?: string | null
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_table?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      convenio_campaigns: {
+        Row: {
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string | null
+          goal_amount: number | null
+          id: string
+          raised_amount: number
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          goal_amount?: number | null
+          id?: string
+          raised_amount?: number
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          goal_amount?: number | null
+          id?: string
+          raised_amount?: number
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      convenio_donations: {
+        Row: {
+          amount: number
+          campaign_id: string | null
+          created_at: string
+          donor_name: string | null
+          donor_user_id: string | null
+          id: string
+          is_anonymous: boolean
+          source: string
+          status: string
+        }
+        Insert: {
+          amount?: number
+          campaign_id?: string | null
+          created_at?: string
+          donor_name?: string | null
+          donor_user_id?: string | null
+          id?: string
+          is_anonymous?: boolean
+          source?: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string | null
+          created_at?: string
+          donor_name?: string | null
+          donor_user_id?: string | null
+          id?: string
+          is_anonymous?: boolean
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convenio_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "convenio_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convenio_entities: {
+        Row: {
+          address_city: string | null
+          address_line: string | null
+          address_state: string | null
+          address_zip: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          document_number: string | null
+          documentation_status: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          responsible_name: string | null
+          responsible_role: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address_city?: string | null
+          address_line?: string | null
+          address_state?: string | null
+          address_zip?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          document_number?: string | null
+          documentation_status?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address_city?: string | null
+          address_line?: string | null
+          address_state?: string | null
+          address_zip?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          document_number?: string | null
+          documentation_status?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          responsible_name?: string | null
+          responsible_role?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      convenio_financial_records: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          is_simulated: boolean
+          record_type: string
+          reference_id: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_simulated?: boolean
+          record_type: string
+          reference_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_simulated?: boolean
+          record_type?: string
+          reference_id?: string | null
+        }
+        Relationships: []
+      }
+      convenio_messages: {
+        Row: {
+          body: string
+          created_at: string
+          entity_id: string | null
+          id: string
+          is_read: boolean
+          sender_id: string | null
+          subject: string | null
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean
+          sender_id?: string | null
+          subject?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean
+          sender_id?: string | null
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convenio_messages_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "convenio_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convenio_settings: {
+        Row: {
+          desconto_social_ativo: boolean
+          desconto_social_pct: number
+          id: boolean
+          repasses_ativos: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          desconto_social_ativo?: boolean
+          desconto_social_pct?: number
+          id?: boolean
+          repasses_ativos?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          desconto_social_ativo?: boolean
+          desconto_social_pct?: number
+          id?: boolean
+          repasses_ativos?: boolean
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -5015,37 +5935,64 @@ export type Database = {
       }
       driver_whatsapp_groups: {
         Row: {
+          admin_phone: string | null
           cidade: string
           created_at: string
           estado: string
+          group_hash: string | null
+          group_whatsapp_id: string | null
           id: string
+          invalid_reason: string | null
+          is_active: boolean
+          last_checked_at: string | null
           link: string
+          members_count: number | null
           status: string
           tipo: string
           updated_at: string
           user_id: string
+          valid_for_commission: boolean
+          validation_status: string
         }
         Insert: {
+          admin_phone?: string | null
           cidade: string
           created_at?: string
           estado: string
+          group_hash?: string | null
+          group_whatsapp_id?: string | null
           id?: string
+          invalid_reason?: string | null
+          is_active?: boolean
+          last_checked_at?: string | null
           link: string
+          members_count?: number | null
           status?: string
           tipo?: string
           updated_at?: string
           user_id: string
+          valid_for_commission?: boolean
+          validation_status?: string
         }
         Update: {
+          admin_phone?: string | null
           cidade?: string
           created_at?: string
           estado?: string
+          group_hash?: string | null
+          group_whatsapp_id?: string | null
           id?: string
+          invalid_reason?: string | null
+          is_active?: boolean
+          last_checked_at?: string | null
           link?: string
+          members_count?: number | null
           status?: string
           tipo?: string
           updated_at?: string
           user_id?: string
+          valid_for_commission?: boolean
+          validation_status?: string
         }
         Relationships: []
       }
@@ -5544,6 +6491,54 @@ export type Database = {
           },
         ]
       }
+      fleet_admin_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          listing_id: string
+          new_value: string | null
+          performed_by: string
+          previous_value: string | null
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          listing_id: string
+          new_value?: string | null
+          performed_by: string
+          previous_value?: string | null
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          listing_id?: string
+          new_value?: string | null
+          performed_by?: string
+          previous_value?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_admin_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fleet_admin_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       footer_contents: {
         Row: {
           content: string | null
@@ -5574,6 +6569,42 @@ export type Database = {
           is_active?: boolean | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      freight_commission_settings: {
+        Row: {
+          enabled: boolean
+          id: number
+          max_brl: number | null
+          min_brl: number | null
+          per_category: Json
+          per_km: number | null
+          percent: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          id: number
+          max_brl?: number | null
+          min_brl?: number | null
+          per_category?: Json
+          per_km?: number | null
+          percent?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          id?: number
+          max_brl?: number | null
+          min_brl?: number | null
+          per_category?: Json
+          per_km?: number | null
+          percent?: number
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -5691,10 +6722,71 @@ export type Database = {
         }
         Relationships: []
       }
+      freight_fleet_vehicles: {
+        Row: {
+          accepted_cargo: Json
+          axles: number | null
+          brand: string | null
+          created_at: string
+          height_m: number | null
+          id: string
+          is_active: boolean
+          length_m: number | null
+          max_volume_m3: number | null
+          max_weight_kg: number | null
+          model: string | null
+          owner_user_id: string
+          plate: string | null
+          updated_at: string
+          vehicle_type: string | null
+          width_m: number | null
+          year: number | null
+        }
+        Insert: {
+          accepted_cargo?: Json
+          axles?: number | null
+          brand?: string | null
+          created_at?: string
+          height_m?: number | null
+          id?: string
+          is_active?: boolean
+          length_m?: number | null
+          max_volume_m3?: number | null
+          max_weight_kg?: number | null
+          model?: string | null
+          owner_user_id: string
+          plate?: string | null
+          updated_at?: string
+          vehicle_type?: string | null
+          width_m?: number | null
+          year?: number | null
+        }
+        Update: {
+          accepted_cargo?: Json
+          axles?: number | null
+          brand?: string | null
+          created_at?: string
+          height_m?: number | null
+          id?: string
+          is_active?: boolean
+          length_m?: number | null
+          max_volume_m3?: number | null
+          max_weight_kg?: number | null
+          model?: string | null
+          owner_user_id?: string
+          plate?: string | null
+          updated_at?: string
+          vehicle_type?: string | null
+          width_m?: number | null
+          year?: number | null
+        }
+        Relationships: []
+      }
       freight_listing_click_log: {
         Row: {
           charged: boolean
           created_at: string
+          event_type: string
           fingerprint: string | null
           id: string
           listing_id: string
@@ -5702,6 +6794,7 @@ export type Database = {
         Insert: {
           charged?: boolean
           created_at?: string
+          event_type?: string
           fingerprint?: string | null
           id?: string
           listing_id: string
@@ -5709,6 +6802,7 @@ export type Database = {
         Update: {
           charged?: boolean
           created_at?: string
+          event_type?: string
           fingerprint?: string | null
           id?: string
           listing_id?: string
@@ -5789,6 +6883,7 @@ export type Database = {
           ai_provider: string | null
           ai_status: string | null
           ai_verdict: string | null
+          carrier_profile_id: string | null
           city: string
           contact_unlock_cost: number
           coverage_routes: string | null
@@ -5813,6 +6908,7 @@ export type Database = {
           title: string
           total_price: number | null
           updated_at: string
+          vehicle_id: string | null
           vehicle_type: string
           visibility_status: Database["public"]["Enums"]["real_estate_listing_status"]
         }
@@ -5823,6 +6919,7 @@ export type Database = {
           ai_provider?: string | null
           ai_status?: string | null
           ai_verdict?: string | null
+          carrier_profile_id?: string | null
           city: string
           contact_unlock_cost?: number
           coverage_routes?: string | null
@@ -5847,6 +6944,7 @@ export type Database = {
           title: string
           total_price?: number | null
           updated_at?: string
+          vehicle_id?: string | null
           vehicle_type?: string
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
         }
@@ -5857,6 +6955,7 @@ export type Database = {
           ai_provider?: string | null
           ai_status?: string | null
           ai_verdict?: string | null
+          carrier_profile_id?: string | null
           city?: string
           contact_unlock_cost?: number
           coverage_routes?: string | null
@@ -5881,10 +6980,33 @@ export type Database = {
           title?: string
           total_price?: number | null
           updated_at?: string
+          vehicle_id?: string | null
           vehicle_type?: string
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "freight_listings_carrier_profile_id_fkey"
+            columns: ["carrier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freight_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freight_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       freight_media: {
         Row: {
@@ -5936,6 +7058,398 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "public_freight_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freight_quote_proposals: {
+        Row: {
+          created_at: string
+          delivery_eta: string | null
+          has_insurance: boolean
+          id: string
+          notes: string | null
+          pickup_eta: string | null
+          price_brl: number
+          request_id: string
+          services: Json
+          status: string
+          transporter_user_id: string
+          updated_at: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_eta?: string | null
+          has_insurance?: boolean
+          id?: string
+          notes?: string | null
+          pickup_eta?: string | null
+          price_brl: number
+          request_id: string
+          services?: Json
+          status?: string
+          transporter_user_id: string
+          updated_at?: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_eta?: string | null
+          has_insurance?: boolean
+          id?: string
+          notes?: string | null
+          pickup_eta?: string | null
+          price_brl?: number
+          request_id?: string
+          services?: Json
+          status?: string
+          transporter_user_id?: string
+          updated_at?: string
+          vehicle_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freight_quote_proposals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "freight_quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freight_quote_reactions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          request_id: string
+          transporter_user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          request_id: string
+          transporter_user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          request_id?: string
+          transporter_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freight_quote_reactions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "freight_quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freight_quote_requests: {
+        Row: {
+          accepted_proposal_id: string | null
+          allowed_vehicle_types: Json
+          cargo_type: string | null
+          cargo_value_brl: number | null
+          category: string | null
+          characteristics: Json
+          client_user_id: string
+          created_at: string
+          desired_date: string | null
+          desired_time: string | null
+          dest_address: string | null
+          dest_cep: string | null
+          dest_city: string | null
+          dest_lat: number | null
+          dest_lng: number | null
+          dest_state: string | null
+          expires_at: string
+          height_cm: number | null
+          id: string
+          length_cm: number | null
+          notes: string | null
+          origin_address: string | null
+          origin_cep: string | null
+          origin_city: string | null
+          origin_lat: number | null
+          origin_lng: number | null
+          origin_state: string | null
+          orion_analysis: Json | null
+          photos: Json
+          route_distance_km: number | null
+          schedule_flexible: boolean
+          status: string
+          suggested_price_brl: number | null
+          updated_at: string
+          urgency: string | null
+          volumes: number | null
+          waypoints: Json | null
+          weight_kg: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          accepted_proposal_id?: string | null
+          allowed_vehicle_types?: Json
+          cargo_type?: string | null
+          cargo_value_brl?: number | null
+          category?: string | null
+          characteristics?: Json
+          client_user_id: string
+          created_at?: string
+          desired_date?: string | null
+          desired_time?: string | null
+          dest_address?: string | null
+          dest_cep?: string | null
+          dest_city?: string | null
+          dest_lat?: number | null
+          dest_lng?: number | null
+          dest_state?: string | null
+          expires_at?: string
+          height_cm?: number | null
+          id?: string
+          length_cm?: number | null
+          notes?: string | null
+          origin_address?: string | null
+          origin_cep?: string | null
+          origin_city?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          origin_state?: string | null
+          orion_analysis?: Json | null
+          photos?: Json
+          route_distance_km?: number | null
+          schedule_flexible?: boolean
+          status?: string
+          suggested_price_brl?: number | null
+          updated_at?: string
+          urgency?: string | null
+          volumes?: number | null
+          waypoints?: Json | null
+          weight_kg?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          accepted_proposal_id?: string | null
+          allowed_vehicle_types?: Json
+          cargo_type?: string | null
+          cargo_value_brl?: number | null
+          category?: string | null
+          characteristics?: Json
+          client_user_id?: string
+          created_at?: string
+          desired_date?: string | null
+          desired_time?: string | null
+          dest_address?: string | null
+          dest_cep?: string | null
+          dest_city?: string | null
+          dest_lat?: number | null
+          dest_lng?: number | null
+          dest_state?: string | null
+          expires_at?: string
+          height_cm?: number | null
+          id?: string
+          length_cm?: number | null
+          notes?: string | null
+          origin_address?: string | null
+          origin_cep?: string | null
+          origin_city?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          origin_state?: string | null
+          orion_analysis?: Json | null
+          photos?: Json
+          route_distance_km?: number | null
+          schedule_flexible?: boolean
+          status?: string
+          suggested_price_brl?: number | null
+          updated_at?: string
+          urgency?: string | null
+          volumes?: number | null
+          waypoints?: Json | null
+          weight_kg?: number | null
+          width_cm?: number | null
+        }
+        Relationships: []
+      }
+      freight_quote_unlocks: {
+        Row: {
+          commission_brl: number
+          created_at: string
+          id: string
+          request_id: string
+          transporter_user_id: string
+        }
+        Insert: {
+          commission_brl?: number
+          created_at?: string
+          id?: string
+          request_id: string
+          transporter_user_id: string
+        }
+        Update: {
+          commission_brl?: number
+          created_at?: string
+          id?: string
+          request_id?: string
+          transporter_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freight_quote_unlocks_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "freight_quote_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freight_routes: {
+        Row: {
+          availability_mode: string
+          capacity_kg_left: number | null
+          capacity_m3_left: number | null
+          capacity_today_kg: number | null
+          created_at: string
+          days_available: Json
+          dest_city: string | null
+          dest_lat: number | null
+          dest_lng: number | null
+          dest_state: string | null
+          distance_km: number | null
+          frequency: string | null
+          id: string
+          is_active: boolean
+          origin_city: string | null
+          origin_lat: number | null
+          origin_lng: number | null
+          origin_state: string | null
+          owner_user_id: string
+          radius_km: number | null
+          specific_dates: Json | null
+          suggested_price_brl: number | null
+          times: string | null
+          updated_at: string
+          vehicle_id: string | null
+          waypoints: Json | null
+        }
+        Insert: {
+          availability_mode?: string
+          capacity_kg_left?: number | null
+          capacity_m3_left?: number | null
+          capacity_today_kg?: number | null
+          created_at?: string
+          days_available?: Json
+          dest_city?: string | null
+          dest_lat?: number | null
+          dest_lng?: number | null
+          dest_state?: string | null
+          distance_km?: number | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean
+          origin_city?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          origin_state?: string | null
+          owner_user_id: string
+          radius_km?: number | null
+          specific_dates?: Json | null
+          suggested_price_brl?: number | null
+          times?: string | null
+          updated_at?: string
+          vehicle_id?: string | null
+          waypoints?: Json | null
+        }
+        Update: {
+          availability_mode?: string
+          capacity_kg_left?: number | null
+          capacity_m3_left?: number | null
+          capacity_today_kg?: number | null
+          created_at?: string
+          days_available?: Json
+          dest_city?: string | null
+          dest_lat?: number | null
+          dest_lng?: number | null
+          dest_state?: string | null
+          distance_km?: number | null
+          frequency?: string | null
+          id?: string
+          is_active?: boolean
+          origin_city?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          origin_state?: string | null
+          owner_user_id?: string
+          radius_km?: number | null
+          specific_dates?: Json | null
+          suggested_price_brl?: number | null
+          times?: string | null
+          updated_at?: string
+          vehicle_id?: string | null
+          waypoints?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freight_routes_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "freight_fleet_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freight_routes_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "freight_fleet_vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      freight_service_commissions: {
+        Row: {
+          base_brl: number
+          commission_brl: number
+          created_at: string
+          id: string
+          pct_applied: number
+          proposal_id: string | null
+          request_id: string
+          status: string
+          transporter_user_id: string
+        }
+        Insert: {
+          base_brl: number
+          commission_brl: number
+          created_at?: string
+          id?: string
+          pct_applied: number
+          proposal_id?: string | null
+          request_id: string
+          status?: string
+          transporter_user_id: string
+        }
+        Update: {
+          base_brl?: number
+          commission_brl?: number
+          created_at?: string
+          id?: string
+          pct_applied?: number
+          proposal_id?: string | null
+          request_id?: string
+          status?: string
+          transporter_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freight_service_commissions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "freight_quote_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -6292,6 +7806,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      group_validation_audit_log: {
+        Row: {
+          created_at: string
+          id: string
+          members_count_at_check: number | null
+          owner_user_id: string | null
+          reason: string | null
+          source_id: string
+          source_table: string
+          triggered_by: string
+          validation_result: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          members_count_at_check?: number | null
+          owner_user_id?: string | null
+          reason?: string | null
+          source_id: string
+          source_table: string
+          triggered_by: string
+          validation_result: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          members_count_at_check?: number | null
+          owner_user_id?: string | null
+          reason?: string | null
+          source_id?: string
+          source_table?: string
+          triggered_by?: string
+          validation_result?: string
+        }
+        Relationships: []
       }
       grupos_whatsapp: {
         Row: {
@@ -7003,6 +8553,45 @@ export type Database = {
         }
         Relationships: []
       }
+      media_center_settings: {
+        Row: {
+          id: boolean
+          tv_allow_live: boolean
+          tv_allow_lyric: boolean
+          tv_auto_quality: boolean
+          tv_autoplay: boolean
+          tv_enabled: boolean
+          tv_max_resolution: string
+          tv_official_only: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          tv_allow_live?: boolean
+          tv_allow_lyric?: boolean
+          tv_auto_quality?: boolean
+          tv_autoplay?: boolean
+          tv_enabled?: boolean
+          tv_max_resolution?: string
+          tv_official_only?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          tv_allow_live?: boolean
+          tv_allow_lyric?: boolean
+          tv_auto_quality?: boolean
+          tv_autoplay?: boolean
+          tv_enabled?: boolean
+          tv_max_resolution?: string
+          tv_official_only?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       media_channels: {
         Row: {
           category: string | null
@@ -7148,6 +8737,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      media_track_videos: {
+        Row: {
+          album: string | null
+          alternatives: Json
+          artist: string | null
+          created_at: string
+          duration_seconds: number | null
+          hits: number
+          id: string
+          isrc: string | null
+          provider: string
+          source: string
+          thumbnail_url: string | null
+          title: string
+          track_key: string
+          updated_at: string
+          video_id: string | null
+          video_type: string
+        }
+        Insert: {
+          album?: string | null
+          alternatives?: Json
+          artist?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          hits?: number
+          id?: string
+          isrc?: string | null
+          provider?: string
+          source?: string
+          thumbnail_url?: string | null
+          title: string
+          track_key: string
+          updated_at?: string
+          video_id?: string | null
+          video_type: string
+        }
+        Update: {
+          album?: string | null
+          alternatives?: Json
+          artist?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          hits?: number
+          id?: string
+          isrc?: string | null
+          provider?: string
+          source?: string
+          thumbnail_url?: string | null
+          title?: string
+          track_key?: string
+          updated_at?: string
+          video_id?: string | null
+          video_type?: string
+        }
+        Relationships: []
       }
       merchant_credit_balances: {
         Row: {
@@ -21203,6 +22849,59 @@ export type Database = {
         }
         Relationships: []
       }
+      orion_score_calculations: {
+        Row: {
+          algorithm_version: string
+          calculated_at: string
+          carrier_id: string
+          documental_score: number
+          factors: Json
+          financial_score: number
+          id: string
+          maintenance_score: number
+          operational_score: number
+          overall_score: number
+          reliability_score: number
+          weights: Json
+        }
+        Insert: {
+          algorithm_version: string
+          calculated_at?: string
+          carrier_id: string
+          documental_score: number
+          factors: Json
+          financial_score: number
+          id?: string
+          maintenance_score: number
+          operational_score: number
+          overall_score: number
+          reliability_score: number
+          weights: Json
+        }
+        Update: {
+          algorithm_version?: string
+          calculated_at?: string
+          carrier_id?: string
+          documental_score?: number
+          factors?: Json
+          financial_score?: number
+          id?: string
+          maintenance_score?: number
+          operational_score?: number
+          overall_score?: number
+          reliability_score?: number
+          weights?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orion_score_calculations_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orion_search_queries: {
         Row: {
           cidade: string
@@ -29387,6 +31086,7 @@ export type Database = {
           ai_provider: string | null
           ai_status: string | null
           ai_verdict: string | null
+          carrier_profile_id: string | null
           city: string
           contact_unlock_cost: number
           created_at: string
@@ -29407,6 +31107,7 @@ export type Database = {
           title: string
           total_price: number | null
           updated_at: string
+          vehicle_id: string | null
           visibility_status: Database["public"]["Enums"]["real_estate_listing_status"]
         }
         Insert: {
@@ -29416,6 +31117,7 @@ export type Database = {
           ai_provider?: string | null
           ai_status?: string | null
           ai_verdict?: string | null
+          carrier_profile_id?: string | null
           city: string
           contact_unlock_cost?: number
           created_at?: string
@@ -29436,6 +31138,7 @@ export type Database = {
           title: string
           total_price?: number | null
           updated_at?: string
+          vehicle_id?: string | null
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
         }
         Update: {
@@ -29445,6 +31148,7 @@ export type Database = {
           ai_provider?: string | null
           ai_status?: string | null
           ai_verdict?: string | null
+          carrier_profile_id?: string | null
           city?: string
           contact_unlock_cost?: number
           created_at?: string
@@ -29465,9 +31169,32 @@ export type Database = {
           title?: string
           total_price?: number | null
           updated_at?: string
+          vehicle_id?: string | null
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_listings_carrier_profile_id_fkey"
+            columns: ["carrier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_media: {
         Row: {
@@ -31589,6 +33316,7 @@ export type Database = {
           ai_status: string | null
           ai_verdict: string | null
           available_spots: number | null
+          carrier_profile_id: string | null
           category: string
           city: string | null
           contact_unlock_cost: number
@@ -31637,6 +33365,7 @@ export type Database = {
           total_price: number | null
           trip_type: string | null
           updated_at: string
+          vehicle_id: string | null
           video_url: string | null
           visibility_status: Database["public"]["Enums"]["real_estate_listing_status"]
           youtube_url: string | null
@@ -31647,6 +33376,7 @@ export type Database = {
           ai_status?: string | null
           ai_verdict?: string | null
           available_spots?: number | null
+          carrier_profile_id?: string | null
           category?: string
           city?: string | null
           contact_unlock_cost?: number
@@ -31695,6 +33425,7 @@ export type Database = {
           total_price?: number | null
           trip_type?: string | null
           updated_at?: string
+          vehicle_id?: string | null
           video_url?: string | null
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
           youtube_url?: string | null
@@ -31705,6 +33436,7 @@ export type Database = {
           ai_status?: string | null
           ai_verdict?: string | null
           available_spots?: number | null
+          carrier_profile_id?: string | null
           category?: string
           city?: string | null
           contact_unlock_cost?: number
@@ -31753,11 +33485,34 @@ export type Database = {
           total_price?: number | null
           trip_type?: string | null
           updated_at?: string
+          vehicle_id?: string | null
           video_url?: string | null
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
           youtube_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "travel_listings_carrier_profile_id_fkey"
+            columns: ["carrier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_listings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       travel_media: {
         Row: {
@@ -31984,6 +33739,66 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_availability: {
+        Row: {
+          available_days: Json
+          available_from: string | null
+          available_to: string | null
+          blocked_dates: Json
+          created_at: string
+          id: string
+          listing_id: string
+          max_daily_capacity_kg: number | null
+          max_load_kg: number | null
+          updated_at: string
+          vacation_end: string | null
+          vacation_start: string | null
+        }
+        Insert: {
+          available_days?: Json
+          available_from?: string | null
+          available_to?: string | null
+          blocked_dates?: Json
+          created_at?: string
+          id?: string
+          listing_id: string
+          max_daily_capacity_kg?: number | null
+          max_load_kg?: number | null
+          updated_at?: string
+          vacation_end?: string | null
+          vacation_start?: string | null
+        }
+        Update: {
+          available_days?: Json
+          available_from?: string | null
+          available_to?: string | null
+          blocked_dates?: Json
+          created_at?: string
+          id?: string
+          listing_id?: string
+          max_daily_capacity_kg?: number | null
+          max_load_kg?: number | null
+          updated_at?: string
+          vacation_end?: string | null
+          vacation_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_availability_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_availability_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicle_credit_balances: {
         Row: {
           available_credits: number
@@ -32098,6 +33913,120 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_documents: {
+        Row: {
+          created_at: string
+          document_type: string
+          expires_at: string | null
+          id: string
+          is_synthetic: boolean
+          listing_id: string
+          owner_user_id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_type: string
+          expires_at?: string | null
+          id?: string
+          is_synthetic?: boolean
+          listing_id: string
+          owner_user_id: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_type?: string
+          expires_at?: string | null
+          id?: string
+          is_synthetic?: boolean
+          listing_id?: string
+          owner_user_id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_documents_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_documents_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_expenses: {
+        Row: {
+          amount_brl: number
+          category: string
+          created_at: string
+          expense_date: string
+          id: string
+          is_synthetic: boolean
+          listing_id: string
+          notes: string | null
+          owner_user_id: string
+        }
+        Insert: {
+          amount_brl: number
+          category: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          is_synthetic?: boolean
+          listing_id: string
+          notes?: string | null
+          owner_user_id: string
+        }
+        Update: {
+          amount_brl?: number
+          category?: string
+          created_at?: string
+          expense_date?: string
+          id?: string
+          is_synthetic?: boolean
+          listing_id?: string
+          notes?: string | null
+          owner_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_expenses_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_expenses_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicle_listing_click_log: {
         Row: {
           charged: boolean
@@ -32192,7 +34121,10 @@ export type Database = {
           ai_status: string | null
           ai_verdict: string | null
           auction_listing_id: string | null
+          axle_count: number | null
+          body_type: string | null
           brand: string
+          cargo_capacity_kg: number | null
           city: string
           color: string | null
           condition: Database["public"]["Enums"]["vehicle_condition_enum"]
@@ -32202,19 +34134,31 @@ export type Database = {
           fuel_type:
             | Database["public"]["Enums"]["vehicle_fuel_type_enum"]
             | null
+          gross_weight_kg: number | null
+          height_m: number | null
           id: string
+          implements: Json
           is_promoted: boolean
+          is_synthetic: boolean
           kilometers: number | null
+          length_m: number | null
           listing_mode: string | null
           model: string
           moderation_reason: string | null
           moderation_status: string
           neighborhood: string | null
+          net_weight_kg: number | null
+          operational_status: string
           owner_user_id: string
+          plate: string | null
           plate_end: string | null
           price_brl: number | null
           public_address_label: string | null
           published_at: string | null
+          renavam: string | null
+          reputation_avg: number | null
+          reputation_confidence: string
+          reputation_reviews_count: number
           reviewed_at: string | null
           reviewed_by: string | null
           slug: string | null
@@ -32227,6 +34171,7 @@ export type Database = {
           vehicle_type: Database["public"]["Enums"]["vehicle_type_enum"]
           view_count: number | null
           visibility_status: Database["public"]["Enums"]["real_estate_listing_status"]
+          width_m: number | null
           year: number
         }
         Insert: {
@@ -32235,7 +34180,10 @@ export type Database = {
           ai_status?: string | null
           ai_verdict?: string | null
           auction_listing_id?: string | null
+          axle_count?: number | null
+          body_type?: string | null
           brand: string
+          cargo_capacity_kg?: number | null
           city: string
           color?: string | null
           condition?: Database["public"]["Enums"]["vehicle_condition_enum"]
@@ -32245,19 +34193,31 @@ export type Database = {
           fuel_type?:
             | Database["public"]["Enums"]["vehicle_fuel_type_enum"]
             | null
+          gross_weight_kg?: number | null
+          height_m?: number | null
           id?: string
+          implements?: Json
           is_promoted?: boolean
+          is_synthetic?: boolean
           kilometers?: number | null
+          length_m?: number | null
           listing_mode?: string | null
           model: string
           moderation_reason?: string | null
           moderation_status?: string
           neighborhood?: string | null
+          net_weight_kg?: number | null
+          operational_status?: string
           owner_user_id: string
+          plate?: string | null
           plate_end?: string | null
           price_brl?: number | null
           public_address_label?: string | null
           published_at?: string | null
+          renavam?: string | null
+          reputation_avg?: number | null
+          reputation_confidence?: string
+          reputation_reviews_count?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
           slug?: string | null
@@ -32270,6 +34230,7 @@ export type Database = {
           vehicle_type?: Database["public"]["Enums"]["vehicle_type_enum"]
           view_count?: number | null
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
+          width_m?: number | null
           year: number
         }
         Update: {
@@ -32278,7 +34239,10 @@ export type Database = {
           ai_status?: string | null
           ai_verdict?: string | null
           auction_listing_id?: string | null
+          axle_count?: number | null
+          body_type?: string | null
           brand?: string
+          cargo_capacity_kg?: number | null
           city?: string
           color?: string | null
           condition?: Database["public"]["Enums"]["vehicle_condition_enum"]
@@ -32288,19 +34252,31 @@ export type Database = {
           fuel_type?:
             | Database["public"]["Enums"]["vehicle_fuel_type_enum"]
             | null
+          gross_weight_kg?: number | null
+          height_m?: number | null
           id?: string
+          implements?: Json
           is_promoted?: boolean
+          is_synthetic?: boolean
           kilometers?: number | null
+          length_m?: number | null
           listing_mode?: string | null
           model?: string
           moderation_reason?: string | null
           moderation_status?: string
           neighborhood?: string | null
+          net_weight_kg?: number | null
+          operational_status?: string
           owner_user_id?: string
+          plate?: string | null
           plate_end?: string | null
           price_brl?: number | null
           public_address_label?: string | null
           published_at?: string | null
+          renavam?: string | null
+          reputation_avg?: number | null
+          reputation_confidence?: string
+          reputation_reviews_count?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
           slug?: string | null
@@ -32313,6 +34289,7 @@ export type Database = {
           vehicle_type?: Database["public"]["Enums"]["vehicle_type_enum"]
           view_count?: number | null
           visibility_status?: Database["public"]["Enums"]["real_estate_listing_status"]
+          width_m?: number | null
           year?: number
         }
         Relationships: [
@@ -32329,6 +34306,138 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "auction_performance_analytics"
             referencedColumns: ["listing_id"]
+          },
+        ]
+      }
+      vehicle_maintenance_plans: {
+        Row: {
+          created_at: string
+          id: string
+          interval_days: number | null
+          interval_km: number | null
+          is_active: boolean
+          listing_id: string
+          maintenance_type: string
+          next_due_date: string | null
+          next_due_km: number | null
+          owner_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interval_days?: number | null
+          interval_km?: number | null
+          is_active?: boolean
+          listing_id: string
+          maintenance_type: string
+          next_due_date?: string | null
+          next_due_km?: number | null
+          owner_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interval_days?: number | null
+          interval_km?: number | null
+          is_active?: boolean
+          listing_id?: string
+          maintenance_type?: string
+          next_due_date?: string | null
+          next_due_km?: number | null
+          owner_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_plans_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_plans_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_maintenance_records: {
+        Row: {
+          category: string
+          cost_brl: number | null
+          created_at: string
+          hour_meter: number | null
+          id: string
+          is_synthetic: boolean
+          listing_id: string
+          maintenance_type: string
+          notes: string | null
+          odometer_km: number | null
+          owner_user_id: string
+          performed_at: string
+          provider_name: string | null
+          receipt_storage_path: string | null
+          responsible_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          cost_brl?: number | null
+          created_at?: string
+          hour_meter?: number | null
+          id?: string
+          is_synthetic?: boolean
+          listing_id: string
+          maintenance_type: string
+          notes?: string | null
+          odometer_km?: number | null
+          owner_user_id: string
+          performed_at?: string
+          provider_name?: string | null
+          receipt_storage_path?: string | null
+          responsible_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cost_brl?: number | null
+          created_at?: string
+          hour_meter?: number | null
+          id?: string
+          is_synthetic?: boolean
+          listing_id?: string
+          maintenance_type?: string
+          notes?: string | null
+          odometer_km?: number | null
+          owner_user_id?: string
+          performed_at?: string
+          provider_name?: string | null
+          receipt_storage_path?: string | null
+          responsible_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_maintenance_records_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_maintenance_records_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -32379,6 +34488,377 @@ export type Database = {
           },
           {
             foreignKeyName: "vehicle_media_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_operational_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          listing_id: string
+          reason: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          listing_id: string
+          reason?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          listing_id?: string
+          reason?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_operational_status_history_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_operational_status_history_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_operations: {
+        Row: {
+          carrier_profile_id: string | null
+          client_email: string | null
+          client_phone: string | null
+          cost_brl: number | null
+          created_at: string
+          dest_city: string | null
+          dest_state: string | null
+          driver_id: string | null
+          driver_name: string | null
+          ended_at: string | null
+          fuel_consumed_liters: number | null
+          id: string
+          is_self_reported: boolean
+          is_synthetic: boolean
+          listing_id: string
+          notes: string | null
+          odometer_end_km: number | null
+          odometer_start_km: number | null
+          operation_type: string
+          origin_city: string | null
+          origin_state: string | null
+          owner_user_id: string
+          revenue_brl: number | null
+          review_token: string | null
+          review_token_expires_at: string | null
+          review_token_used: boolean
+          source_listing_id: string | null
+          source_listing_type: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          carrier_profile_id?: string | null
+          client_email?: string | null
+          client_phone?: string | null
+          cost_brl?: number | null
+          created_at?: string
+          dest_city?: string | null
+          dest_state?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
+          ended_at?: string | null
+          fuel_consumed_liters?: number | null
+          id?: string
+          is_self_reported?: boolean
+          is_synthetic?: boolean
+          listing_id: string
+          notes?: string | null
+          odometer_end_km?: number | null
+          odometer_start_km?: number | null
+          operation_type: string
+          origin_city?: string | null
+          origin_state?: string | null
+          owner_user_id: string
+          revenue_brl?: number | null
+          review_token?: string | null
+          review_token_expires_at?: string | null
+          review_token_used?: boolean
+          source_listing_id?: string | null
+          source_listing_type?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          carrier_profile_id?: string | null
+          client_email?: string | null
+          client_phone?: string | null
+          cost_brl?: number | null
+          created_at?: string
+          dest_city?: string | null
+          dest_state?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
+          ended_at?: string | null
+          fuel_consumed_liters?: number | null
+          id?: string
+          is_self_reported?: boolean
+          is_synthetic?: boolean
+          listing_id?: string
+          notes?: string | null
+          odometer_end_km?: number | null
+          odometer_start_km?: number | null
+          operation_type?: string
+          origin_city?: string | null
+          origin_state?: string | null
+          owner_user_id?: string
+          revenue_brl?: number | null
+          review_token?: string | null
+          review_token_expires_at?: string | null
+          review_token_used?: boolean
+          source_listing_id?: string | null
+          source_listing_type?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_operations_carrier_profile_id_fkey"
+            columns: ["carrier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "carrier_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_operations_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "vehicle_operations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_operations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_review_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hint: string | null
+          operation_id: string | null
+          outcome: string
+          review_token: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          operation_id?: string | null
+          outcome: string
+          review_token?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hint?: string | null
+          operation_id?: string | null
+          outcome?: string
+          review_token?: string | null
+        }
+        Relationships: []
+      }
+      vehicle_review_reports: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          reported_by: string
+          review_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          reported_by: string
+          review_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          reported_by?: string
+          review_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_reviews: {
+        Row: {
+          comment: string | null
+          communication: number
+          courtesy: number
+          created_at: string
+          documentation: number
+          id: string
+          is_synthetic: boolean
+          listing_id: string
+          operation_id: string
+          overall_quality: number
+          owner_user_id: string
+          punctuality: number
+          reviewer_contact: string | null
+          safety: number
+          service_fulfillment: number
+          status: string
+          vehicle_condition: number
+        }
+        Insert: {
+          comment?: string | null
+          communication: number
+          courtesy: number
+          created_at?: string
+          documentation: number
+          id?: string
+          is_synthetic?: boolean
+          listing_id: string
+          operation_id: string
+          overall_quality: number
+          owner_user_id: string
+          punctuality: number
+          reviewer_contact?: string | null
+          safety: number
+          service_fulfillment: number
+          status?: string
+          vehicle_condition: number
+        }
+        Update: {
+          comment?: string | null
+          communication?: number
+          courtesy?: number
+          created_at?: string
+          documentation?: number
+          id?: string
+          is_synthetic?: boolean
+          listing_id?: string
+          operation_id?: string
+          overall_quality?: number
+          owner_user_id?: string
+          punctuality?: number
+          reviewer_contact?: string | null
+          safety?: number
+          service_fulfillment?: number
+          status?: string
+          vehicle_condition?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_reviews_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_reviews_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_reviews_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: true
+            referencedRelation: "vehicle_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          listing_id: string
+          reason: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          listing_id: string
+          reason?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          listing_id?: string
+          reason?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_status_history_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_vehicle_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_status_history_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "vehicle_listings"
@@ -32558,12 +35038,15 @@ export type Database = {
       }
       whatsapp_groups: {
         Row: {
+          admin_phone: string | null
           city_id: string | null
           city_name: string | null
           created_at: string
           group_code: string | null
+          group_hash: string | null
           group_link: string
           group_name: string
+          group_whatsapp_id: string | null
           id: string
           invalid_reason: string | null
           is_active: boolean
@@ -32581,6 +35064,7 @@ export type Database = {
           notes: string | null
           owner_user_id: string
           photo_url: string | null
+          profile_kind: string
           real_name: string | null
           region_id: string | null
           state_code: string | null
@@ -32590,12 +35074,15 @@ export type Database = {
           validation_status: string
         }
         Insert: {
+          admin_phone?: string | null
           city_id?: string | null
           city_name?: string | null
           created_at?: string
           group_code?: string | null
+          group_hash?: string | null
           group_link: string
           group_name: string
+          group_whatsapp_id?: string | null
           id?: string
           invalid_reason?: string | null
           is_active?: boolean
@@ -32613,6 +35100,7 @@ export type Database = {
           notes?: string | null
           owner_user_id: string
           photo_url?: string | null
+          profile_kind?: string
           real_name?: string | null
           region_id?: string | null
           state_code?: string | null
@@ -32622,12 +35110,15 @@ export type Database = {
           validation_status?: string
         }
         Update: {
+          admin_phone?: string | null
           city_id?: string | null
           city_name?: string | null
           created_at?: string
           group_code?: string | null
+          group_hash?: string | null
           group_link?: string
           group_name?: string
+          group_whatsapp_id?: string | null
           id?: string
           invalid_reason?: string | null
           is_active?: boolean
@@ -32645,6 +35136,7 @@ export type Database = {
           notes?: string | null
           owner_user_id?: string
           photo_url?: string | null
+          profile_kind?: string
           real_name?: string | null
           region_id?: string | null
           state_code?: string | null
@@ -33081,6 +35573,23 @@ export type Database = {
         }
         Relationships: []
       }
+      convenio_dashboard_stats: {
+        Row: {
+          campanhas_ativas: number | null
+          convenios_ativos: number | null
+          convenios_encerrados: number | null
+          convenios_suspensos: number | null
+          convenios_total: number | null
+          entidades_total: number | null
+          instituicoes_total: number | null
+          prestacoes_concluidas: number | null
+          prestacoes_pendentes: number | null
+          total_arrecadado: number | null
+          total_destinado: number | null
+          total_meta_ativas: number | null
+        }
+        Relationships: []
+      }
       delivery_orders_pricing_view: {
         Row: {
           courier_base_amount: number | null
@@ -33120,6 +35629,90 @@ export type Database = {
           per_km_amount?: number | null
           platform_gross_margin_amount?: number | null
           pricing_code?: string | null
+        }
+        Relationships: []
+      }
+      freight_fleet_public: {
+        Row: {
+          accepted_cargo: Json | null
+          axles: number | null
+          brand: string | null
+          id: string | null
+          is_active: boolean | null
+          max_volume_m3: number | null
+          max_weight_kg: number | null
+          model: string | null
+          owner_user_id: string | null
+          vehicle_type: string | null
+          year: number | null
+        }
+        Insert: {
+          accepted_cargo?: Json | null
+          axles?: number | null
+          brand?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          max_volume_m3?: number | null
+          max_weight_kg?: number | null
+          model?: string | null
+          owner_user_id?: string | null
+          vehicle_type?: string | null
+          year?: number | null
+        }
+        Update: {
+          accepted_cargo?: Json | null
+          axles?: number | null
+          brand?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          max_volume_m3?: number | null
+          max_weight_kg?: number | null
+          model?: string | null
+          owner_user_id?: string | null
+          vehicle_type?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      freight_routes_public: {
+        Row: {
+          days_available: Json | null
+          dest_city: string | null
+          dest_state: string | null
+          distance_km: number | null
+          frequency: string | null
+          id: string | null
+          is_active: boolean | null
+          origin_city: string | null
+          origin_state: string | null
+          owner_user_id: string | null
+          suggested_price_brl: number | null
+        }
+        Insert: {
+          days_available?: Json | null
+          dest_city?: string | null
+          dest_state?: string | null
+          distance_km?: number | null
+          frequency?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          origin_city?: string | null
+          origin_state?: string | null
+          owner_user_id?: string | null
+          suggested_price_brl?: number | null
+        }
+        Update: {
+          days_available?: Json | null
+          dest_city?: string | null
+          dest_state?: string | null
+          distance_km?: number | null
+          frequency?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          origin_city?: string | null
+          origin_state?: string | null
+          owner_user_id?: string | null
+          suggested_price_brl?: number | null
         }
         Relationships: []
       }
@@ -35071,7 +37664,10 @@ export type Database = {
           ai_status: string | null
           ai_verdict: string | null
           auction_listing_id: string | null
+          axle_count: number | null
+          body_type: string | null
           brand: string | null
+          cargo_capacity_kg: number | null
           city: string | null
           color: string | null
           condition:
@@ -35083,14 +37679,20 @@ export type Database = {
           fuel_type:
             | Database["public"]["Enums"]["vehicle_fuel_type_enum"]
             | null
+          gross_weight_kg: number | null
+          height_m: number | null
           id: string | null
+          implements: Json | null
           is_promoted: boolean | null
+          is_synthetic: boolean | null
           kilometers: number | null
+          length_m: number | null
           listing_mode: string | null
           model: string | null
           moderation_reason: string | null
           moderation_status: string | null
           neighborhood: string | null
+          net_weight_kg: number | null
           owner_user_id: string | null
           plate_end: string | null
           price_brl: number | null
@@ -35110,6 +37712,7 @@ export type Database = {
           visibility_status:
             | Database["public"]["Enums"]["real_estate_listing_status"]
             | null
+          width_m: number | null
           year: number | null
         }
         Insert: {
@@ -35118,7 +37721,10 @@ export type Database = {
           ai_status?: string | null
           ai_verdict?: string | null
           auction_listing_id?: string | null
+          axle_count?: number | null
+          body_type?: string | null
           brand?: string | null
+          cargo_capacity_kg?: number | null
           city?: string | null
           color?: string | null
           condition?:
@@ -35130,14 +37736,20 @@ export type Database = {
           fuel_type?:
             | Database["public"]["Enums"]["vehicle_fuel_type_enum"]
             | null
+          gross_weight_kg?: number | null
+          height_m?: number | null
           id?: string | null
+          implements?: Json | null
           is_promoted?: boolean | null
+          is_synthetic?: boolean | null
           kilometers?: number | null
+          length_m?: number | null
           listing_mode?: string | null
           model?: string | null
           moderation_reason?: string | null
           moderation_status?: string | null
           neighborhood?: string | null
+          net_weight_kg?: number | null
           owner_user_id?: string | null
           plate_end?: string | null
           price_brl?: number | null
@@ -35157,6 +37769,7 @@ export type Database = {
           visibility_status?:
             | Database["public"]["Enums"]["real_estate_listing_status"]
             | null
+          width_m?: number | null
           year?: number | null
         }
         Update: {
@@ -35165,7 +37778,10 @@ export type Database = {
           ai_status?: string | null
           ai_verdict?: string | null
           auction_listing_id?: string | null
+          axle_count?: number | null
+          body_type?: string | null
           brand?: string | null
+          cargo_capacity_kg?: number | null
           city?: string | null
           color?: string | null
           condition?:
@@ -35177,14 +37793,20 @@ export type Database = {
           fuel_type?:
             | Database["public"]["Enums"]["vehicle_fuel_type_enum"]
             | null
+          gross_weight_kg?: number | null
+          height_m?: number | null
           id?: string | null
+          implements?: Json | null
           is_promoted?: boolean | null
+          is_synthetic?: boolean | null
           kilometers?: number | null
+          length_m?: number | null
           listing_mode?: string | null
           model?: string | null
           moderation_reason?: string | null
           moderation_status?: string | null
           neighborhood?: string | null
+          net_weight_kg?: number | null
           owner_user_id?: string | null
           plate_end?: string | null
           price_brl?: number | null
@@ -35204,6 +37826,7 @@ export type Database = {
           visibility_status?:
             | Database["public"]["Enums"]["real_estate_listing_status"]
             | null
+          width_m?: number | null
           year?: number | null
         }
         Relationships: [
@@ -36888,6 +39511,22 @@ export type Database = {
         Returns: undefined
       }
       _arremate_party: { Args: { p_listing: string }; Returns: string }
+      _auction_audit_field: {
+        Args: {
+          p_actor: string
+          p_field: string
+          p_ip: string
+          p_listing_id: string
+          p_new: string
+          p_old: string
+          p_ua: string
+        }
+        Returns: boolean
+      }
+      _auction_has_valid_bids: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
       _audio_norm: { Args: { t: string }; Returns: string }
       _automation_forbidden: { Args: { p_acao: string }; Returns: boolean }
       _automation_run: {
@@ -37009,6 +39648,18 @@ export type Database = {
       accept_delivery_order: {
         Args: { p_motoboy_id: string; p_order_id: string }
         Returns: undefined
+      }
+      accept_freight_opportunity: {
+        Args: { p_price: number; p_request_id: string }
+        Returns: Json
+      }
+      accept_freight_opportunity_unlock: {
+        Args: { p_price: number; p_request_id: string }
+        Returns: Json
+      }
+      accept_freight_quote_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: Json
       }
       accept_offer_with_credits: {
         Args: { p_offer_id: string; p_store_id: string }
@@ -37163,6 +39814,14 @@ export type Database = {
             }
             Returns: undefined
           }
+      admin_approve_carrier_profile: {
+        Args: { p_carrier_id: string; p_note?: string }
+        Returns: Json
+      }
+      admin_approve_vehicle_listing: {
+        Args: { p_listing_id: string; p_note?: string }
+        Returns: Json
+      }
       admin_assert_access: { Args: never; Returns: undefined }
       admin_auction_action: {
         Args: { p_action: string; p_listing_id: string; p_note?: string }
@@ -37170,6 +39829,11 @@ export type Database = {
       }
       admin_auction_overview: { Args: never; Returns: Json }
       admin_auditoria_categorias: { Args: never; Returns: Json }
+      admin_block_vehicle: {
+        Args: { p_listing_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_carrier_approval_queue: { Args: never; Returns: Json }
       admin_commission_finance: {
         Args: { p_days?: number }
         Returns: {
@@ -37377,13 +40041,54 @@ export type Database = {
         Args: { p_action: string; p_media_id: string; p_reason?: string }
         Returns: Json
       }
+      admin_moderate_vehicle_review: {
+        Args: { p_decision: string; p_report_id: string }
+        Returns: Json
+      }
       admin_pct_change: {
         Args: { p_current: number; p_previous: number }
         Returns: number
       }
+      admin_reactivate_vehicle: {
+        Args: { p_listing_id: string; p_reason?: string }
+        Returns: Json
+      }
+      admin_reject_carrier_profile: {
+        Args: { p_carrier_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_reject_vehicle_listing: {
+        Args: { p_listing_id: string; p_reason: string }
+        Returns: Json
+      }
       admin_relation_has_column: {
         Args: { p_column: string; p_relation: string }
         Returns: boolean
+      }
+      admin_request_vehicle_documents: {
+        Args: { p_listing_id: string; p_note: string }
+        Returns: Json
+      }
+      admin_review_attempt_audit: {
+        Args: { p_min_failures?: number }
+        Returns: Json
+      }
+      admin_review_carrier_document: {
+        Args: { p_document_id: string; p_reason?: string; p_status: string }
+        Returns: Json
+      }
+      admin_review_vehicle_document: {
+        Args: { p_document_id: string; p_reason?: string; p_status: string }
+        Returns: Json
+      }
+      admin_search_fleet: { Args: { p_filters?: Json }; Returns: Json }
+      admin_set_carrier_status: {
+        Args: { p_carrier_id: string; p_reason?: string; p_status: string }
+        Returns: Json
+      }
+      admin_set_freight_commission: {
+        Args: { p_settings: Json }
+        Returns: Json
       }
       admin_start_campaign_dispatch: {
         Args: { p_dispatch_id: string; p_notes?: string }
@@ -37413,6 +40118,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_suspend_vehicle: {
+        Args: { p_listing_id: string; p_reason: string }
+        Returns: Json
+      }
       admin_text_expr: {
         Args: { p_column_name: string; p_fallback?: string }
         Returns: string
@@ -37423,6 +40132,19 @@ export type Database = {
       }
       admin_toggle_credit_product: {
         Args: { p_id: string; p_is_active: boolean }
+        Returns: Json
+      }
+      admin_transfer_group: {
+        Args: {
+          p_group_id: string
+          p_notes?: string
+          p_source_table: string
+          p_to_user_id: string
+        }
+        Returns: Json
+      }
+      admin_unblock_vehicle: {
+        Args: { p_listing_id: string; p_reason?: string }
         Returns: Json
       }
       admin_update_credit_product: {
@@ -37447,6 +40169,8 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_vehicle_approval_queue: { Args: never; Returns: Json }
+      admin_vehicle_timeline: { Args: { p_listing_id: string }; Returns: Json }
       admin_wallet_credit: {
         Args: {
           p_amount_cents: number
@@ -38096,10 +40820,19 @@ export type Database = {
       }
       auction_ranking: { Args: never; Returns: Json }
       auction_security_selftest: { Args: never; Returns: Json }
-      auction_set_status: {
-        Args: { p_listing_id: string; p_new_status: string }
-        Returns: Json
-      }
+      auction_set_status:
+        | {
+            Args: { p_listing_id: string; p_new_status: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_confirm_with_bids?: boolean
+              p_listing_id: string
+              p_new_status: string
+            }
+            Returns: Json
+          }
       auction_statistics: { Args: never; Returns: Json }
       audio_build_search_text: {
         Args: {
@@ -38497,6 +41230,10 @@ export type Database = {
         Returns: Json
       }
       brand_statistics_rollup: { Args: never; Returns: undefined }
+      build_freight_quote_contact: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       calc_geo_bucket: {
         Args: { p_lat: number; p_lng: number; p_precision?: number }
         Returns: string
@@ -38538,6 +41275,10 @@ export type Database = {
           p_total: number
         }
         Returns: undefined
+      }
+      calculate_orion_carrier_score: {
+        Args: { p_carrier_id: string }
+        Returns: Json
       }
       calculate_postador3_delivery_price: {
         Args: { p_distance_km: number }
@@ -38740,6 +41481,10 @@ export type Database = {
       }
       cancel_ride_search: {
         Args: { p_order_id: string; p_service?: string }
+        Returns: Json
+      }
+      cancel_vehicle_operation: {
+        Args: { p_operation_id: string; p_reason: string }
         Returns: Json
       }
       change_whatsapp_group_status: {
@@ -38984,6 +41729,10 @@ export type Database = {
         Args: { p_groups: number }
         Returns: number
       }
+      compare_orion_score_calculations: {
+        Args: { p_calculation_id_a: string; p_calculation_id_b: string }
+        Returns: Json
+      }
       compare_prediction: { Args: never; Returns: Json }
       complete_advertiser_onboarding: {
         Args: { p_full_name: string; p_whatsapp: string }
@@ -39040,6 +41789,10 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_vehicle_operation: {
+        Args: { p_operation_id: string; p_payload: Json }
+        Returns: Json
+      }
       compliance_dashboard: { Args: never; Returns: Json }
       compliance_emit: {
         Args: { p_dados: Json; p_tipo: string }
@@ -39053,6 +41806,10 @@ export type Database = {
       compliance_scores: { Args: never; Returns: Json }
       compliance_selftest: { Args: never; Returns: Json }
       compliance_summary: { Args: never; Returns: Json }
+      compute_freight_commission: {
+        Args: { p_category: string; p_price: number }
+        Returns: number
+      }
       confirm_advertiser_credit_purchase: {
         Args: {
           p_provider_name?: string
@@ -39264,6 +42021,28 @@ export type Database = {
       contact_unlock_quote: {
         Args: { p_buyer_key?: string; p_listing_id: string; p_module: string }
         Returns: Json
+      }
+      convenio_grant_role: {
+        Args: { p_email: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
+      convenio_list_gestores: {
+        Args: never
+        Returns: {
+          assigned_at: string
+          email: string
+          user_id: string
+        }[]
+      }
+      convenio_revoke_role: {
+        Args: { p_email: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
       }
       conversion_ai: { Args: never; Returns: Json }
       conversion_attribution: { Args: { p_modelo?: string }; Returns: Json }
@@ -39564,6 +42343,7 @@ export type Database = {
             }
             Returns: number
           }
+      create_freight_quote_request: { Args: { p_payload: Json }; Returns: Json }
       create_h3_cell_if_not_exists: {
         Args: { p_city_id: string; p_h3: string }
         Returns: undefined
@@ -40111,6 +42891,10 @@ export type Database = {
         Returns: Json
       }
       delete_auction_listing: { Args: { p_listing_id: string }; Returns: Json }
+      delete_carrier_corridor: { Args: { p_id: string }; Returns: Json }
+      delete_carrier_coverage_area: { Args: { p_id: string }; Returns: Json }
+      delete_fleet_vehicle: { Args: { p_id: string }; Returns: Json }
+      delete_freight_route: { Args: { p_id: string }; Returns: Json }
       detect_fraud: { Args: { p_id: string; p_tipo: string }; Returns: Json }
       detect_local_opportunities: { Args: never; Returns: undefined }
       detect_merchant_credit_entry_type_credit: { Args: never; Returns: string }
@@ -40705,6 +43489,7 @@ export type Database = {
       expire_offers: { Args: never; Returns: undefined }
       expire_pending_offers: { Args: never; Returns: number }
       expire_ride_payments: { Args: never; Returns: number }
+      explain_orion_score: { Args: { p_calculation_id: string }; Returns: Json }
       export_background: {
         Args: { p_formato?: string; p_project: number }
         Returns: Json
@@ -40873,6 +43658,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fleet_admin_dashboard: { Args: never; Returns: Json }
+      fleet_analytics_dashboard: { Args: never; Returns: Json }
+      fleet_executive_dashboard: { Args: never; Returns: Json }
+      fleet_financial_summary: { Args: never; Returns: Json }
       fn_m1_is_store_owner: {
         Args: { p_store_id: string; p_user_id: string }
         Returns: boolean
@@ -40930,6 +43719,10 @@ export type Database = {
       fraud_scan: { Args: { p_trace?: string }; Returns: Json }
       fraud_statistics_rollup: { Args: never; Returns: undefined }
       fraud_summary: { Args: never; Returns: Json }
+      freight_track_event: {
+        Args: { p_event: string; p_fingerprint?: string; p_listing_id: string }
+        Returns: Json
+      }
       generate_background: {
         Args: { p_brand_id?: number; p_categoria: string; p_segmento?: string }
         Returns: Json
@@ -41154,6 +43947,17 @@ export type Database = {
           motoboy_vehicle: string
         }[]
       }
+      get_driver_incentives: {
+        Args: { _user_id: string }
+        Returns: {
+          active_groups_count: number
+          available_free_rides: number
+          groups_to_next_ride: number
+          profile_level: string
+          total_free_rides: number
+          used_free_rides: number
+        }[]
+      }
       get_event_metrics: { Args: never; Returns: Json }
       get_extrato: {
         Args: { p_limit?: number; p_offset?: number; p_profile_type?: string }
@@ -41179,6 +43983,11 @@ export type Database = {
           status: string
         }[]
       }
+      get_freight_quote_contact: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
+      get_freight_quote_metrics: { Args: never; Returns: Json }
       get_global_cart_data: { Args: { p_session_token: string }; Returns: Json }
       get_motoboy_commission_rate: {
         Args: { _user_id: string }
@@ -41214,6 +44023,10 @@ export type Database = {
         Returns: string
       }
       get_order_pickup_code: { Args: { p_order_id: string }; Returns: Json }
+      get_own_vehicle_listing_full: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
       get_pay_motoboy_balance: {
         Args: { p_motoboy_profile_id: string }
         Returns: {
@@ -41312,6 +44125,17 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_regional_ranking: {
+        Args: { _cidade?: string; _estado: string; _limit?: number }
+        Returns: {
+          active_groups: number
+          cidade: string
+          estado: string
+          rank_position: number
+          user_id: string
+          user_name: string
+        }[]
       }
       get_secure_download_url: { Args: { p_item_id: string }; Returns: Json }
       get_server_timestamp: { Args: never; Returns: string }
@@ -41691,8 +44515,17 @@ export type Database = {
         Returns: boolean
       }
       is_financial_admin: { Args: { p_user_id?: string }; Returns: boolean }
+      is_gestor_convenio: { Args: never; Returns: boolean }
       is_owner_of_store: { Args: { p_store_id: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
+      issue_vehicle_review_token: {
+        Args: {
+          p_client_email: string
+          p_client_phone: string
+          p_operation_id: string
+        }
+        Returns: Json
+      }
       janela_config_set: {
         Args: {
           p_estimativa: number
@@ -41781,6 +44614,14 @@ export type Database = {
         Args: { p_id: number; p_nota?: string; p_status: string }
         Returns: Json
       }
+      link_vehicle_to_listing: {
+        Args: {
+          p_listing_id: string
+          p_listing_type: string
+          p_vehicle_id: string
+        }
+        Returns: Json
+      }
       log_auction_fraud: {
         Args: {
           p_alert_type: string
@@ -41815,6 +44656,14 @@ export type Database = {
           p_region_id?: string
         }
         Returns: undefined
+      }
+      log_vehicle_expense: {
+        Args: { p_listing_id: string; p_payload: Json }
+        Returns: Json
+      }
+      log_vehicle_maintenance: {
+        Args: { p_listing_id: string; p_payload: Json }
+        Returns: Json
       }
       logistics_coverage: { Args: never; Returns: Json }
       logistics_dashboard: { Args: never; Returns: Json }
@@ -42358,6 +45207,7 @@ export type Database = {
       market_territory: { Args: never; Returns: Json }
       market_trends: { Args: never; Returns: Json }
       media_admin_stats: { Args: { p_days?: number }; Returns: Json }
+      media_radio_tv_stats: { Args: { p_days?: number }; Returns: Json }
       merchant_debit_credits: {
         Args: {
           p_amount: number
@@ -42384,6 +45234,7 @@ export type Database = {
         }
         Returns: Json
       }
+      min_group_members: { Args: never; Returns: number }
       mkt_campaigns: { Args: never; Returns: Json }
       mkt_dashboard: { Args: never; Returns: Json }
       mkt_emit: { Args: { p_dados: Json; p_tipo: string }; Returns: undefined }
@@ -42812,6 +45663,14 @@ export type Database = {
       }
       orion_campaign_selftest: { Args: never; Returns: Json }
       orion_campaign_tick: { Args: never; Returns: undefined }
+      orion_carrier_recommendations: {
+        Args: { p_carrier_id: string }
+        Returns: Json
+      }
+      orion_carrier_score_inputs: {
+        Args: { p_carrier_id: string }
+        Returns: Json
+      }
       orion_clay_selftest: { Args: never; Returns: Json }
       orion_compliance_tick: { Args: never; Returns: undefined }
       orion_conversion_selftest: { Args: never; Returns: Json }
@@ -43131,6 +45990,10 @@ export type Database = {
       orion_ridv_selftest: { Args: never; Returns: Json }
       orion_sales_selftest: { Args: never; Returns: Json }
       orion_sales_tick: { Args: never; Returns: undefined }
+      orion_score_history: {
+        Args: { p_carrier_id: string; p_limit?: number }
+        Returns: Json
+      }
       orion_score_profissionais: {
         Args: never
         Returns: {
@@ -43778,6 +46641,10 @@ export type Database = {
       predict_selftest: { Args: never; Returns: Json }
       predict_summary: { Args: never; Returns: Json }
       prediction_engine: { Args: never; Returns: Json }
+      preview_freight_commission: {
+        Args: { p_category: string; p_price: number }
+        Returns: Json
+      }
       pricing_alerts: { Args: never; Returns: Json }
       pricing_analysis: { Args: { p_dimensao?: string }; Returns: Json }
       pricing_anomalies: { Args: never; Returns: Json }
@@ -44033,6 +46900,10 @@ export type Database = {
           score_medio: number
         }[]
       }
+      radar_reavaliar_grupos: {
+        Args: { p_source_table?: string }
+        Returns: number
+      }
       radar_reprocess_all: { Args: never; Returns: number }
       radar_score_groups: { Args: { p_group_id?: string }; Returns: number }
       radar_territory: {
@@ -44055,6 +46926,10 @@ export type Database = {
           p_reputation_score: number
         }
         Returns: number
+      }
+      react_freight_quote: {
+        Args: { p_action: string; p_request_id: string }
+        Returns: Json
       }
       recalc_user_commission: {
         Args: { p_user_id: string }
@@ -44095,6 +46970,10 @@ export type Database = {
         Args: { p_queue_id: string }
         Returns: undefined
       }
+      refresh_carrier_coverage_stats: {
+        Args: { p_carrier_id: string }
+        Returns: undefined
+      }
       refresh_user_whatsapp_groups_validity: {
         Args: { p_owner_user_id: string }
         Returns: undefined
@@ -44115,6 +46994,16 @@ export type Database = {
           p_visitor_phone?: string
         }
         Returns: Json
+      }
+      register_freight_commission: {
+        Args: {
+          p_category: string
+          p_price: number
+          p_proposal_id: string
+          p_request_id: string
+          p_transporter: string
+        }
+        Returns: undefined
       }
       register_lot_click: { Args: { p_token: string }; Returns: Json }
       register_motoboy_presence: {
@@ -44213,6 +47102,16 @@ export type Database = {
           p_visitor_phone?: string
         }
         Returns: Json
+      }
+      registry_check_and_lock_link: {
+        Args: {
+          p_is_active: boolean
+          p_link: string
+          p_owner_user_id: string
+          p_source_id: string
+          p_source_table: string
+        }
+        Returns: undefined
       }
       reject_advertiser_media: {
         Args: {
@@ -44333,6 +47232,14 @@ export type Database = {
       rep_verifications_api: { Args: { p_user_id?: string }; Returns: Json }
       replace_background: {
         Args: { p_project: number; p_scene: number }
+        Returns: Json
+      }
+      report_vehicle_review: {
+        Args: { p_reason: string; p_review_id: string }
+        Returns: Json
+      }
+      reprocess_orion_carrier_score: {
+        Args: { p_carrier_id: string }
         Returns: Json
       }
       request_pay_motoboy_payout: {
@@ -44987,6 +47894,10 @@ export type Database = {
         }
       }
       set_store_appearance: { Args: { p_appearance: Json }; Returns: Json }
+      set_vehicle_operational_status: {
+        Args: { p_listing_id: string; p_reason?: string; p_status: string }
+        Returns: Json
+      }
       settle_delivery: {
         Args: {
           p_delivery_order_id: string
@@ -45654,6 +48565,14 @@ export type Database = {
         Returns: Json
       }
       start_delivery_order: { Args: { p_order_id: string }; Returns: Json }
+      start_vehicle_operation: {
+        Args: { p_listing_id: string; p_payload: Json }
+        Returns: Json
+      }
+      start_vehicle_operation_from_listing: {
+        Args: { p_listing_type: string; p_source_listing_id: string }
+        Returns: Json
+      }
       strategy_action_plan: { Args: never; Returns: Json }
       strategy_dashboard: { Args: never; Returns: Json }
       strategy_dashboard_v11: { Args: never; Returns: Json }
@@ -45684,6 +48603,23 @@ export type Database = {
             }
             Returns: Json
           }
+      submit_discount_request: {
+        Args: {
+          p_customer_email?: string
+          p_customer_name: string
+          p_customer_phone: string
+          p_message?: string
+          p_product_id: string
+          p_product_price?: string
+          p_requested_price: number
+          p_store_id: string
+        }
+        Returns: Json
+      }
+      submit_freight_quote_proposal: {
+        Args: { p_payload: Json; p_request_id: string }
+        Returns: Json
+      }
       submit_marketplace_order:
         | {
             Args: {
@@ -45754,6 +48690,10 @@ export type Database = {
             }
             Returns: string
           }
+      submit_vehicle_review: {
+        Args: { p_payload: Json; p_review_token: string }
+        Returns: Json
+      }
       support_alerts: { Args: never; Returns: Json }
       support_dashboard: { Args: never; Returns: Json }
       support_emit: {
@@ -45839,6 +48779,10 @@ export type Database = {
         Args: { p_enabled: boolean; p_key: string }
         Returns: Json
       }
+      toggle_store_follow: {
+        Args: { p_store_key: string; p_visitor_anon_id?: string }
+        Returns: Json
+      }
       tpl_emit: { Args: { p_dados: Json; p_tipo: string }; Returns: undefined }
       tpl_guard: { Args: never; Returns: undefined }
       track_admin_profit_event: {
@@ -45859,6 +48803,23 @@ export type Database = {
         Args: { p_category_id: string; p_metadata?: Json }
         Returns: string
       }
+      track_m1_event: {
+        Args: {
+          p_bairro?: string
+          p_campaign_id?: string
+          p_city?: string
+          p_event_type: string
+          p_merchant_store_id: string
+          p_metadata?: Json
+          p_product_id?: string
+          p_region?: string
+          p_sale_value_cents?: number
+          p_session_id: string
+          p_source_id?: string
+          p_source_type?: string
+        }
+        Returns: undefined
+      }
       track_market_search: {
         Args: { p_category_id?: string; p_metadata?: Json; p_query: string }
         Returns: string
@@ -45868,6 +48829,16 @@ export type Database = {
         Returns: {
           product_id: string
         }[]
+      }
+      track_product_interest: {
+        Args: {
+          p_city?: string
+          p_event_type: string
+          p_neighborhood?: string
+          p_product_id: string
+          p_source?: string
+        }
+        Returns: undefined
       }
       track_product_visit: {
         Args: { p_metadata?: Json; p_product_id: string; p_store_id?: string }
@@ -45955,6 +48926,20 @@ export type Database = {
         }
         Returns: {
           created: boolean
+        }[]
+      }
+      try_create_driver_whatsapp_group_v2: {
+        Args: {
+          p_cidade: string
+          p_estado: string
+          p_link: string
+          p_members_count: number
+          p_tipo: string
+          p_user_id: string
+        }
+        Returns: {
+          created: boolean
+          group_id: string
         }[]
       }
       try_create_merchant_whatsapp_group: {
@@ -46054,7 +49039,15 @@ export type Database = {
         Returns: undefined
       }
       update_auction_listing: {
-        Args: { p_listing_id: string; p_updates: Json }
+        Args: {
+          p_expected_updated_at?: string
+          p_listing_id: string
+          p_updates: Json
+        }
+        Returns: Json
+      }
+      update_freight_quote_status: {
+        Args: { p_request_id: string; p_status: string }
         Returns: Json
       }
       update_motoboy_operational_profile: {
@@ -46078,7 +49071,7 @@ export type Database = {
           p_platform_commission_pct: number
           p_price_per_km: number
         }
-        Returns: undefined
+        Returns: Json
       }
       update_slot_networks: {
         Args: { p_networks: string[]; p_slot_id: string }
@@ -46145,6 +49138,14 @@ export type Database = {
         Args: { p_module: string; p_patch: Json }
         Returns: Json
       }
+      upsert_carrier_corridor: {
+        Args: { p_id: string; p_name: string; p_stops: Json }
+        Returns: Json
+      }
+      upsert_carrier_coverage_area: {
+        Args: { p_id: string; p_payload: Json }
+        Returns: Json
+      }
       upsert_consumer_light_account: {
         Args: {
           p_accepts_email: boolean
@@ -46181,6 +49182,14 @@ export type Database = {
           p_name: string
           p_targeting?: Json
         }
+        Returns: Json
+      }
+      upsert_fleet_vehicle: {
+        Args: { p_id: string; p_payload: Json }
+        Returns: Json
+      }
+      upsert_freight_route: {
+        Args: { p_id: string; p_payload: Json }
         Returns: Json
       }
       upsert_merchant_store_safe: {
@@ -46288,6 +49297,14 @@ export type Database = {
         }
         Returns: Json
       }
+      upsert_vehicle_availability: {
+        Args: { p_listing_id: string; p_payload: Json }
+        Returns: Json
+      }
+      upsert_vehicle_maintenance_plan: {
+        Args: { p_listing_id: string; p_payload: Json }
+        Returns: Json
+      }
       validate_delivery_code: {
         Args: { _code: string; _order_id: string }
         Returns: boolean
@@ -46299,6 +49316,30 @@ export type Database = {
       validate_pickup_code:
         | { Args: { _code: string; _order_id: string }; Returns: boolean }
         | { Args: { p_code: string; p_order_id: string }; Returns: Json }
+      vehicle_document_expiry_alerts: {
+        Args: { p_listing_id?: string }
+        Returns: Json
+      }
+      vehicle_financial_dashboard: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
+      vehicle_financial_history: {
+        Args: { p_listing_id: string; p_months?: number }
+        Returns: Json
+      }
+      vehicle_maintenance_alerts: {
+        Args: { p_listing_id?: string }
+        Returns: Json
+      }
+      vehicle_maintenance_summary: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
+      vehicle_operation_history: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
       verificar_pode_postar: {
         Args: {
           p_grupo_id: string

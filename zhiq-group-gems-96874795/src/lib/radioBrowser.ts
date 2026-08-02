@@ -135,19 +135,53 @@ export async function smartSearchStations(raw: string, limit = 60): Promise<Radi
   if (!clean) return [];
   const stripped = clean.replace(NOISE, " ").replace(/\s+/g, " ").trim();
   const tokens = stripped.split(" ").filter((t) => t.length >= 2);
-  const longest = [...tokens].sort((a, b) => b.length - a.length)[0] || "";
-  const tries = Array.from(new Set([clean, stripped, longest].filter((s) => s && s.length >= 2)));
+  
+  const promises: Promise<RadioStation[]>[] = [];
+  const safeSearch = (p: any) => searchStations({ ...p, limit, order: "clickcount", reverse: true }).catch(() => []);
 
+  // Estratégia 1: Busca exata pelo termo inteiro no Nome
+  promises.push(safeSearch({ name: clean }));
+  
+  // Estratégia 2: Busca exata pelo termo inteiro como Estado/Cidade
+  promises.push(safeSearch({ state: clean }));
+
+  // Estratégia 3: O usuário digitou com vírgula (ex: "Guaiba, Porto Alegre")
+  const commaParts = clean.split(",").map(p => p.trim()).filter(Boolean);
+  if (commaParts.length >= 2) {
+    promises.push(safeSearch({ name: commaParts[0], state: commaParts.slice(1).join(" ") }));
+  } else if (tokens.length >= 2) {
+    // Estratégia 4: Assumir que o usuário digitou "Nome Cidade" sem vírgula
+    // Ex: "Guaiba Porto Alegre" -> name="Guaiba", state="Porto Alegre"
+    const first = tokens[0];
+    const rest = tokens.slice(1).join(" ");
+    promises.push(safeSearch({ name: first, state: rest }));
+    
+    // Tenta também o inverso (ex: "Porto Alegre Guaiba")
+    const last = tokens[tokens.length - 1];
+    const initial = tokens.slice(0, -1).join(" ");
+    promises.push(safeSearch({ name: last, state: initial }));
+  }
+
+  // Estratégia 5: Fallback com nome limpo (sem palavras como "radio", "fm")
+  if (stripped && stripped !== clean) {
+    promises.push(safeSearch({ name: stripped }));
+  }
+
+  // Aguarda todas as buscas em paralelo (muito mais rápido e abrangente)
+  const results = await Promise.all(promises);
+  
   const seen = new Set<string>();
   const out: RadioStation[] = [];
-  for (const name of tries) {
-    if (out.length >= 8) break; // já achou o suficiente com a estratégia anterior
-    let r: RadioStation[] = [];
-    try { r = await searchStations({ name, limit, order: "clickcount", reverse: true }); } catch { r = []; }
-    for (const s of r) {
-      if (!seen.has(s.stationuuid)) { seen.add(s.stationuuid); out.push(s); }
+  
+  for (const list of results) {
+    for (const s of list) {
+      if (!seen.has(s.stationuuid)) {
+        seen.add(s.stationuuid);
+        out.push(s);
+      }
     }
   }
+
   return out.slice(0, limit);
 }
 

@@ -428,6 +428,7 @@ export const AdminSHCEvolution = lazy(() => import("@/pages/admin/shc/AdminSHC_E
 export const GestorLoginPage = lazy(() => import("@/pages/convenio/GestorLoginPage"));
 export const GestorDashboardPage = lazy(() => import("@/pages/convenio/admin/GestorDashboardPage"));
 export const GestorConveniosPage = lazy(() => import("@/pages/convenio/admin/GestorConveniosPage"));
+export const GestorLeadsParceirosPage = lazy(() => import("@/pages/convenio/admin/GestorLeadsParceirosPage"));
 export const GestorCredenciamentoHubPage = lazy(() => import("@/pages/convenio/admin/GestorCredenciamentoHubPage"));
 export const GestorClinicasPage = lazy(() => import("@/pages/convenio/admin/credenciamento/GestorClinicasPage"));
 export const GestorLaboratoriosPage = lazy(() => import("@/pages/convenio/admin/credenciamento/GestorLaboratoriosPage"));
@@ -441,4 +442,5 @@ export const GestorPrestacaoContasPage = lazy(() => import("@/pages/convenio/adm
 export const GestorRelatoriosPage = lazy(() => import("@/pages/convenio/admin/GestorRelatoriosPage"));
 export const GestorAuditoriaPage = lazy(() => import("@/pages/convenio/admin/GestorAuditoriaPage"));
 export const GestorMensagensPage = lazy(() => import("@/pages/convenio/admin/GestorMensagensPage"));
+export const GestorAcessoPage = lazy(() => import("@/pages/convenio/admin/GestorAcessoPage"));
 export const GestorConfiguracoesPage = lazy(() => import("@/pages/convenio/admin/GestorConfiguracoesPage"));

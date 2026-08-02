@@ -128,6 +128,67 @@ async function main() {
     if (![200, 400, 401, 403, 404].includes(r.status)) throw new Error(`status ${r.status}`);
   });
 
+  console.log("### 4c. Comando Convênio — RLS de administração restrita ao Gestor");
+  // Tabelas administrativas (sem policy pública de leitura): anon deve ser negado.
+  const CONVENIO_ADMIN_TABLES = [
+    "convenio_entities", "convenio_agreements", "convenio_agreement_history",
+    "convenio_financial_records", "convenio_audit_log", "convenio_messages",
+    "convenio_ai_notes", "convenio_settings",
+  ];
+  for (const t of CONVENIO_ADMIN_TABLES)
+    await check(`anon SELECT ${t} negado`, async () =>
+      expectStatus(await rest(`${t}?select=*&limit=1`), [401, 403], t));
+
+  // Tabelas com policy pública de transparência (MedPrev): anon deve conseguir ler,
+  // mas só o subconjunto liberado pela policy (status confirmada/ativa/publicada).
+  await check("anon SELECT convenio_campaigns (ativa/encerrada) permitido", async () =>
+    expectStatus(await rest("convenio_campaigns?select=id,status&limit=1"), [200], "convenio_campaigns"));
+  await check("anon NÃO lê convenio_campaigns em rascunho/planejada", async () => {
+    const r = await rest("convenio_campaigns?select=id,status&status=eq.planejada&limit=1");
+    if (r.status !== 200) return;
+    const body = await r.json();
+    if (Array.isArray(body) && body.length > 0) throw new Error("campanha planejada vazou para anon!");
+  });
+  await check("anon SELECT convenio_donations (confirmada) permitido", async () =>
+    expectStatus(await rest("convenio_donations?select=id,status&limit=1"), [200], "convenio_donations"));
+  await check("anon NÃO lê convenio_donations registrada/estornada", async () => {
+    const r = await rest("convenio_donations?select=id,status&status=eq.registrada&limit=1");
+    if (r.status !== 200) return;
+    const body = await r.json();
+    if (Array.isArray(body) && body.length > 0) throw new Error("doação não-confirmada vazou para anon!");
+  });
+  await check("anon SELECT convenio_accountability (publicada) permitido", async () =>
+    expectStatus(await rest("convenio_accountability?select=id,status&limit=1"), [200], "convenio_accountability"));
+  await check("anon NÃO lê convenio_accountability em rascunho", async () => {
+    const r = await rest("convenio_accountability?select=id,status&status=eq.rascunho&limit=1");
+    if (r.status !== 200) return;
+    const body = await r.json();
+    if (Array.isArray(body) && body.length > 0) throw new Error("rascunho de prestação de contas vazou para anon!");
+  });
+
+  // View de dashboard é security_invoker — sem RLS de gestor, anon não deve ler.
+  await check("anon SELECT convenio_dashboard_stats negado", async () =>
+    expectStatus(await rest("convenio_dashboard_stats?select=*&limit=1"), [401, 403], "convenio_dashboard_stats"));
+
+  // RPCs de gestão de acesso são SECURITY DEFINER com gate is_gestor_convenio()
+  // interno — anon deve ser barrado mesmo conseguindo *chamar* a função.
+  await check("anon RPC convenio_grant_role bloqueada", async () => {
+    const r = await rpc("convenio_grant_role", { p_email: "anon-test@example.com" });
+    if (![401, 403, 404].includes(r.status)) {
+      const body = await r.json().catch(() => null);
+      if (r.status === 200 && body && !body.user_id) return; // sem efeito não é falha
+      throw new Error(`status ${r.status} (executável!)`);
+    }
+  });
+  await check("anon RPC convenio_list_gestores bloqueada", async () => {
+    const r = await rpc("convenio_list_gestores", {});
+    if (![401, 403, 404].includes(r.status)) {
+      const body = await r.json().catch(() => null);
+      if (r.status === 200 && Array.isArray(body) && body.length === 0) return;
+      throw new Error(`status ${r.status} (executável!)`);
+    }
+  });
+
   // ── Testes autenticados (só com credenciais no ambiente) ──
   if (process.env.TEST_EMAIL && process.env.TEST_PASSWORD) {
     console.log("### 5. Fluxo autenticado preservado + isolamento");

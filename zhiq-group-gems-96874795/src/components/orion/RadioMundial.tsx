@@ -6,7 +6,8 @@
  * é um overlay; a navegação continua por baixo). Estações reais via
  * radio-browser.info; toca pelo radioPlayer (singleton, sobrevive à navegação).
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { RealtimeVisualizer } from "./RealtimeVisualizer";
 import {
   Search, MapPin, Heart, Play, Pause, Loader2, Square, Volume2,
   Sparkles, Music2, History as HistoryIcon, Flame, Navigation,
@@ -82,7 +83,10 @@ function dedupMerge(...lists: RadioStation[][]): RadioStation[] {
 }
 
 // ── Busca UNIFICADA: a mesma barra aceita nome/cidade/frequência OU link ─────
-const isUrl = (s: string) => /^https?:\/\/\S+/i.test(s.trim());
+const isUrl = (s: string) => {
+  const t = s.trim();
+  return /^https?:\/\/\S+/i.test(t) || /^www\.\S+/i.test(t) || /\.(com|br|net|org|fm|am|tv)(\/|$)/i.test(t);
+};
 // link parece ser o STREAM (áudio) e não o site da emissora?
 const looksLikeStream = (url: string) =>
   /\.(mp3|aac|aacp|m3u8?|pls|ogg|opus)([?;#]|$)/i.test(url)
@@ -91,7 +95,9 @@ const looksLikeStream = (url: string) =>
 // "https://www.navegantesfm.com.br/" → "navegantes fm" (termo de busca pelo domínio)
 function hostToTerm(url: string): string {
   try {
-    const base = new URL(url).hostname.replace(/^www\./i, "").split(".")[0] || "";
+    let u = url.trim();
+    if (!/^https?:\/\//i.test(u)) u = "http://" + u;
+    const base = new URL(u).hostname.replace(/^www\./i, "").split(".")[0] || "";
     return base.replace(/[-_]+/g, " ").replace(/(fm|am)$/i, " $1").replace(/\s+/g, " ").trim();
   } catch { return ""; }
 }
@@ -357,15 +363,21 @@ export function RadioMundial() {
           <Icon src={radio.station.favicon} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12px] font-bold text-white">{radio.station.name?.trim() || "Rádio"}</p>
-            <p className="truncate text-[9px] text-white/50">{radio.loading ? "Conectando…" : radio.error ? "Stream indisponível" : radio.playing ? (radio.eqActive ? "▶ Ao vivo · 🎚 EQ ativo" : "▶ Ao vivo · sem EQ") : "Pausado"}</p>
+            <p className="truncate text-[9px] text-white/50">{radio.loading ? "Conectando…" : radio.error ? "Stream indisponível" : radio.playing ? (radio.eqActive ? "▶ Ao vivo · 🎚 EQ ativo" : "▶ Ao vivo") : "Pausado"}</p>
           </div>
+          
+          {/* Visualizador Matrix Compacto (Web Audio API / Analyser) */}
+          {radio.playing && (
+            <RealtimeVisualizer />
+          )}
+
           {(() => {
             const faved = isFavorite(radio.station.stationuuid);
             return (
               <button
                 onClick={() => fav(radio.station!)}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors active:scale-95",
+                  "flex shrink-0 h-8 w-8 items-center justify-center rounded-lg transition-colors active:scale-95",
                   faved ? "bg-rose-500/20 text-rose-400" : "bg-white/5 text-white/60 hover:text-rose-300"
                 )}
                 title={faved ? "Remover das favoritas" : "Salvar nas favoritas"}
@@ -380,7 +392,7 @@ export function RadioMundial() {
             onClick={togglePlay}
             title={radio.playing ? "Pausar" : "Tocar"}
             aria-label={radio.playing ? "Pausar" : "Tocar"}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white transition-transform active:scale-95"
+            className="flex shrink-0 h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF6A00] to-[#FF9A00] text-white transition-transform active:scale-95"
           >
             {radio.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : radio.playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </button>
@@ -388,7 +400,7 @@ export function RadioMundial() {
             onClick={stopRadio}
             title="Parar e desligar a rádio"
             aria-label="Parar rádio"
-            className="flex h-8 items-center gap-1 rounded-lg bg-red-500/15 px-2 text-red-300 transition-colors hover:bg-red-500/25 active:scale-95"
+            className="flex shrink-0 h-8 items-center gap-1 rounded-lg bg-red-500/15 px-2 text-red-300 transition-colors hover:bg-red-500/25 active:scale-95"
           >
             <Square className="h-3.5 w-3.5 fill-current" />
             <span className="text-[10px] font-bold">Parar</span>
@@ -409,7 +421,7 @@ export function RadioMundial() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Nome, cidade, frequência ou link da rádio…"
+            placeholder="Nome, cidade ou link do site da rádio…"
             aria-label="Pesquisar rádio"
             className="w-full rounded-xl border border-emerald-500/30 bg-white/[0.07] py-2.5 pl-9 pr-2 text-[13px] font-medium text-white outline-none transition-all placeholder:text-white/40 focus:border-emerald-400/70 focus:bg-white/[0.1] focus:shadow-[0_0_16px_-6px_rgba(16,185,129,0.7)]"
           />

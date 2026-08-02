@@ -182,7 +182,14 @@ function ensureEqGraph(): boolean {
     eqGain = audioCtx.createGain();
     eqGain.gain.value = state.volume;
     node.connect(eqGain);
-    eqGain.connect(audioCtx.destination);
+    
+    // AnalyserNode para o visualizador Matrix
+    let eqAnalyser = audioCtx.createAnalyser();
+    eqAnalyser.fftSize = 64;
+    eqGain.connect(eqAnalyser);
+    eqAnalyser.connect(audioCtx.destination);
+    (window as any).__viagg_radio_analyser__ = eqAnalyser;
+    
     eqEl = el;
     eqBuilt = true;
     // Autoplay policy pode deixar o ctx 'suspended' → som NENHUM apesar do estado

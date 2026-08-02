@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Viagg-Tx8">
+  <defs>
+    <linearGradient id="viaggBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f3d2e"/>
+      <stop offset="100%" stop-color="#08251c"/>
+    </linearGradient>
+    <linearGradient id="viaggGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6d67a"/>
+      <stop offset="50%" stop-color="#d4a930"/>
+      <stop offset="100%" stop-color="#f6d67a"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="192" height="192" rx="44" fill="url(#viaggBg)"/>
+  <rect x="4" y="4" width="192" height="192" rx="44" fill="none" stroke="url(#viaggGold)" stroke-width="4"/>
+
+  <g transform="translate(100,78)">
+    <path
+      d="M -38 0
+         C -38 -15 -20 -15 -12 -4
+         C -6 4 6 4 12 -4
+         C 20 -15 38 -15 38 0
+         C 38 15 20 15 12 4
+         C 6 -4 -6 -4 -12 4
+         C -20 15 -38 15 -38 0 Z"
+      fill="none"
+      stroke="url(#viaggGold)"
+      stroke-width="9"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="0" cy="0" r="7" fill="url(#viaggGold)"/>
+  </g>
+
+  <text x="100" y="152" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="30" fill="url(#viaggGold)">Viagg-Tx8</text>
+</svg>

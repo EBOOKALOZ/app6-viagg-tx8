@@ -12,6 +12,7 @@ import {
   GestorLoginPage,
   GestorDashboardPage,
   GestorConveniosPage,
+  GestorLeadsParceirosPage,
   GestorCredenciamentoHubPage,
   GestorClinicasPage,
   GestorLaboratoriosPage,
@@ -25,6 +26,7 @@ import {
   GestorRelatoriosPage,
   GestorAuditoriaPage,
   GestorMensagensPage,
+  GestorAcessoPage,
   GestorConfiguracoesPage,
 } from "./lazyPages";
 
@@ -45,6 +47,7 @@ export const convenioAdminRoutes = (
     >
       <Route path="/convenio-admin" element={<Suspense fallback={<PageFallback />}><GestorDashboardPage /></Suspense>} />
       <Route path="/convenio-admin/convenios" element={<Suspense fallback={<PageFallback />}><GestorConveniosPage /></Suspense>} />
+      <Route path="/convenio-admin/leads-parceiros" element={<Suspense fallback={<PageFallback />}><GestorLeadsParceirosPage /></Suspense>} />
       <Route path="/convenio-admin/credenciamento" element={<Suspense fallback={<PageFallback />}><GestorCredenciamentoHubPage /></Suspense>} />
       <Route path="/convenio-admin/credenciamento/clinicas" element={<Suspense fallback={<PageFallback />}><GestorClinicasPage /></Suspense>} />
       <Route path="/convenio-admin/credenciamento/laboratorios" element={<Suspense fallback={<PageFallback />}><GestorLaboratoriosPage /></Suspense>} />
@@ -58,6 +61,7 @@ export const convenioAdminRoutes = (
       <Route path="/convenio-admin/relatorios" element={<Suspense fallback={<PageFallback />}><GestorRelatoriosPage /></Suspense>} />
       <Route path="/convenio-admin/auditoria" element={<Suspense fallback={<PageFallback />}><GestorAuditoriaPage /></Suspense>} />
       <Route path="/convenio-admin/mensagens" element={<Suspense fallback={<PageFallback />}><GestorMensagensPage /></Suspense>} />
+      <Route path="/convenio-admin/acesso" element={<Suspense fallback={<PageFallback />}><GestorAcessoPage /></Suspense>} />
       <Route path="/convenio-admin/configuracoes" element={<Suspense fallback={<PageFallback />}><GestorConfiguracoesPage /></Suspense>} />
     </Route>
   </>

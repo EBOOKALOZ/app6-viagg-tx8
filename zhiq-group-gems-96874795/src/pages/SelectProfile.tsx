@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Loader2, CarFront, Car, Briefcase, Truck, Plane, Camera, Trash2 } from "lucide-react";
+import { LogOut, Loader2, CarFront, Car, Briefcase, Truck, Plane, Camera, Trash2, HeartHandshake } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { FooterNeutral } from "@/components/FooterNeutral";
 import { PROFILE_TYPES, getProfileRoute } from "@/lib/profileTypes";
@@ -29,7 +29,10 @@ const ONBOARDING_ROUTES: Record<string, string> = {
    CONSTANTS
 ================================ */
 
+import conveniosHero from "@/assets/convenios-hero.jpg";
+
 const PROFILE_HERO_IMAGES: Record<string, string> = {
+  convenios: conveniosHero,
   merchant: new URL("@/assets/comerciante-hero.png", import.meta.url).href,
   motoboy: new URL("@/assets/motoboy-hero.png", import.meta.url).href,
   mototaxi: "https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/public/platform-assets/moto-taxi.png",
@@ -48,6 +51,7 @@ const PROFILE_DESCRIPTIONS: Record<string, string> = {
   freteiro: "Transporte de cargas pesadas, mudanças, móveis e mercadorias",
   viagem: "Anuncie pacotes de viagem e receba contatos de viajantes interessados",
   leiloes: "Crie leilões dos seus produtos e receba lances em tempo real",
+  convenios: "Cadastre sua instituição e participe de convênios, campanhas solidárias e programas de doações com total transparência.",
 };
 
 // Mosaico de 6 imagens (misturadas) usado como fundo do card de Imóveis.
@@ -120,7 +124,7 @@ const DRIVER_MOSAIC = [
 ];
 
 // Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, Fretes, Viagens e Comprador.
-const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem", "leiloes"];
+const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem", "leiloes", "convenios"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================
@@ -397,6 +401,13 @@ export default function SelectProfile() {
       return;
     }
 
+    // Convênios: vai para o Módulo Convênios & Doações.
+    if (selected === "convenios") {
+      navigationTarget.current = "/medprev";
+      setTimeout(() => { setBackendReady(true); }, 1200);
+      return;
+    }
+
     try {
       await requestAudioAndNotificationPermissions();
 
@@ -507,7 +518,8 @@ export default function SelectProfile() {
               const isFretes = profile.id === "freteiro";
               const isViagem = profile.id === "viagem";
               const isDriver = profile.id === "driver";
-              const isHighlighted = isMotoboy || isMotoTaxi || isMerchant || isImoveis || isVeiculos || isServicos || isFretes || isViagem || isDriver;
+              const isConvenios = profile.id === "convenios";
+              const isHighlighted = isMotoboy || isMotoTaxi || isMerchant || isImoveis || isVeiculos || isServicos || isFretes || isViagem || isDriver || isConvenios;
 
               return (
                 <div
@@ -543,6 +555,8 @@ export default function SelectProfile() {
                                       ? "ring-sky-400 shadow-[0_0_24px_rgba(14,165,233,0.5)]"
                                       : isDriver
                                       ? "ring-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.5)]"
+                                      : isConvenios
+                                      ? "ring-blue-600 shadow-[0_0_24px_rgba(37,99,235,0.5)]"
                                       : "ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.35)]",
                       )
                       : cn(
@@ -556,11 +570,14 @@ export default function SelectProfile() {
                         isFretes && "hover:ring-indigo-400/50 hover:shadow-[0_0_12px_rgba(99,102,241,0.2)]",
                         isViagem && "hover:ring-sky-400/50 hover:shadow-[0_0_12px_rgba(14,165,233,0.2)]",
                         isDriver && "hover:ring-amber-400/50 hover:shadow-[0_0_12px_rgba(245,158,11,0.2)]",
+                        isConvenios && "hover:ring-blue-500/50 hover:shadow-[0_0_12px_rgba(59,130,246,0.2)]",
                       )),
                   )}
                 >
                   {/* Background layer */}
-                  {isMotoboy && isSel ? (
+                  {isConvenios ? (
+                    <div className="absolute inset-0 bg-white transition-colors duration-300" />
+                  ) : isMotoboy && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700" />
                   ) : isMotoTaxi && isSel ? (
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700" />
@@ -776,9 +793,15 @@ export default function SelectProfile() {
                       <Badge className="bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg">Em breve</Badge>
                     </div>
                   )}
+                  
+                  {isConvenios && (
+                    <div className="absolute top-3 left-3 z-20">
+                      <Badge className="bg-emerald-500 hover:bg-emerald-400 text-white border-0 shadow-md px-2 py-0.5 text-[10px] font-bold tracking-wider">CONVÊNIOS</Badge>
+                    </div>
+                  )}
 
                   {/* Botões: adicionar/trocar a própria foto e excluir (volta a imagem padrão) */}
-                  {!isComingSoon && (
+                  {!isComingSoon && !isConvenios && (
                     <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5">
                       <button
                         type="button"
@@ -808,10 +831,13 @@ export default function SelectProfile() {
 
                   {/* Text content */}
                   <div className={cn(
-                    "absolute inset-x-0 bottom-0 p-5 text-[#FDF6E3] text-center transition-opacity duration-300",
+                    "absolute inset-x-0 bottom-0 p-5 text-center transition-opacity duration-300",
+                    "text-[#FDF6E3]",
                     isSel ? "opacity-0 pointer-events-none" : "opacity-100"
                   )}>
-                    <h3 className="font-extrabold text-xl tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">{profile.label}</h3>
+                    <h3 className={cn(
+                      "font-extrabold text-xl tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]"
+                    )}>{profile.label}</h3>
                     <p className={cn(
                       "text-sm leading-snug mt-1 min-h-[2.5rem] drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]",
                       isHighlighted && isSel ? "text-[#FDF6E3]/90" : "text-[#FDF6E3]/80",
