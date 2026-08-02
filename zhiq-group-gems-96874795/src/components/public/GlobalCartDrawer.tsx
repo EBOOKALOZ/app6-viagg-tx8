@@ -22,9 +22,10 @@ import { useVisitorProfile } from "@/hooks/useVisitorProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { HomeHeroWeather } from "@/components/public/HomeHeroWeather";
+import { HeroClimaRadio } from "@/components/public/HeroClimaRadio";
 import { GlobalSearchBar } from "@/components/public/GlobalSearchBar";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
+import { PremiumQuickAccessBar } from "@/components/layout/PremiumQuickAccessBar";
 
 interface Props {
   open: boolean;
@@ -151,26 +152,26 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-black/10 bg-institutional-yellow px-5 py-4 space-y-3 shrink-0">
+            <div className="border-t border-black/10 bg-institutional-yellow px-4 py-2 space-y-1.5 shrink-0">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-900">
+                <span className="text-xs font-bold text-slate-900">
                   Total ({totalItems} {totalItems === 1 ? "item" : "itens"} de {totalStores} {totalStores === 1 ? "loja" : "lojas"})
                 </span>
-                <span className="text-xl font-black text-slate-950">
+                <span className="text-base font-black text-slate-950">
                   R$ {totalSubtotal.toFixed(2).replace(".", ",")}
                 </span>
               </div>
               <button onClick={() => setStep("signup")}
-                className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
-                <Send className="h-5 w-5" />
+                className="w-full py-2.5 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
+                <Send className="h-4 w-4" />
                 Finalizar Pedido
               </button>
               <button onClick={() => { onOpenChange(false); navigate("/mercado"); }}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm shadow transition-all flex items-center justify-center gap-2">
-                <ShoppingBag className="h-4 w-4" />
+                className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs shadow transition-all flex items-center justify-center gap-1.5">
+                <ShoppingBag className="h-3.5 w-3.5" />
                 Continuar Pedido
               </button>
-              <p className="text-[10px] text-slate-900/80 font-medium text-center">
+              <p className="text-[9px] text-slate-900/60 font-medium text-center">
                 Pagamento e condições tratados diretamente com cada loja.
               </p>
             </div>
@@ -415,7 +416,8 @@ function StoreCard({ group, onQuantityChange, onRemove }: {
                   R$ {(item.item_subtotal || 0).toFixed(2).replace(".", ",")}
                 </span>
                 <button onClick={() => onRemove(item)}
-                  className="text-gray-300 hover:text-red-500 transition-colors">
+                  className="w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-md transition-colors ml-2"
+                  title="Remover item da cesta">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -436,85 +438,114 @@ function StoreCard({ group, onQuantityChange, onRemove }: {
 }
 
 // ─── Drawer Intelligent Retractable Header Component ─────────────────
+// RÉPLICA EXATA do cabeçalho MarketLayout (/mercado).
+// Única diferença: o botão da Cesta vira um botão Fechar (X).
 function DrawerIntelligentHeader({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
+  const handleToggleHeader = () => {
+    if (headerCollapsed) {
+      setHeaderCollapsed(false);
+    } else {
+      setHeaderCollapsed(true);
+    }
+  };
+
   return (
-    <div className="bg-institutional-yellow border-b border-black/10 shadow-sm shrink-0 relative">
-      {/* Hero Card de Clima + IA RIDV (RETRÁTIL) */}
-      <div className={cn(
-        "transition-all duration-300 ease-in-out overflow-hidden px-3 pt-2",
-        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0" : "max-h-[300px] opacity-100 translate-y-0"
-      )}>
-        <HomeHeroWeather compact />
-      </div>
-
-      {/* Row: Logo + Busca + Fechar/Cesta (SEMPRE VISÍVEL NO ESTADO RECOLHIDO) */}
-      <div className="px-3 py-2 flex items-center gap-2">
-        <div 
-          className="flex h-[42px] w-[42px] shrink-0 cursor-pointer items-center justify-center hover:scale-105 transition-transform" 
-          onClick={() => { onClose(); navigate("/mercado"); }}
-        >
-          <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[42px] w-[42px] rounded-xl object-cover shadow-sm border border-black/10" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <GlobalSearchBar initialValue="" />
-        </div>
-
-        <button
-          onClick={onClose}
-          aria-label="Fechar Cesta"
-          className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
-          title="Fechar Cesta / Carrinho"
-        >
-          <X className="h-5 w-5 text-black" />
-        </button>
-      </div>
-
-      {/* Navegação principal — Categorias (RETRÁTIL) */}
-      <div className={cn(
-        "transition-all duration-300 ease-in-out overflow-hidden px-2 pb-1",
-        headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pb-0" : "max-h-[250px] opacity-100 translate-y-0"
-      )}>
-        <MarketNavButtons />
-      </div>
-
-      {/* ═══ TRUST CHIPS BAR (FAIXA LARANJA DE BOTÕES FIXOS - SEMPRE VISÍVEL) ═══ */}
-      <div className="w-full bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00] border-t border-black/10 shadow-md">
-        <div className="relative px-3 py-2 flex items-center justify-center w-full min-h-[44px]">
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-            <div className="flex items-center justify-center gap-1 px-2.5 h-7 sm:h-8 rounded-[16px] bg-white border sm:border-2 border-[#68C7F2] text-[9px] sm:text-[10px] font-black text-slate-950 uppercase tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] select-none cursor-default shrink-0">
-              <span className="text-xs">🛵</span>
-              <span>Entrega Local</span>
+    <div className="bg-institutional-yellow border-b border-black/5 shadow-[0_4px_24px_rgba(0,0,0,0.06)] shrink-0 relative">
+      <div className="px-4 pb-2">
+        {/* ── MOBILE HEADER (< lg): Logo + HeroClimaRadio (RETRÁTIL) ── */}
+        <div className={cn(
+          "transition-all duration-300 ease-in-out overflow-hidden",
+          headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none pt-0 pb-0" : "max-h-[300px] opacity-100 translate-y-0 pt-2 pb-1"
+        )}>
+          <div className="flex items-stretch gap-2">
+            {/* Logo mobile — antes do clima */}
+            <div className="flex shrink-0 cursor-pointer items-center hover:scale-105 transition-transform" onClick={() => { onClose(); navigate("/mercado"); }}>
+              <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 rounded-xl object-cover shadow-sm border border-black/10" />
             </div>
-
-            <div className="flex items-center justify-center gap-1 px-2.5 h-7 sm:h-8 rounded-[16px] bg-white border sm:border-2 border-[#68C7F2] text-[9px] sm:text-[10px] font-black text-slate-950 uppercase tracking-tight whitespace-nowrap shadow-[0_2px_8px_rgba(0,0,0,0.06)] select-none cursor-default shrink-0">
-              <span className="text-xs">🛡️</span>
-              <span>Verificados</span>
+            {/* Card de clima + rádio */}
+            <div className="min-w-0 flex-1">
+              <HeroClimaRadio />
+            </div>
+            {/* Botão Fechar (X) — coluna lateral */}
+            <div className="flex shrink-0 flex-col items-center justify-center gap-1.5">
+              <button
+                onClick={onClose}
+                aria-label="Fechar Cesta"
+                className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
+                title="Fechar Cesta / Carrinho"
+              >
+                <X className="h-5 w-5 text-black" />
+              </button>
             </div>
           </div>
+        </div>
 
-          <div
-            id="global-audio-portal-trustbar-drawer"
-            className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center shrink-0 z-10"
-            onClick={(e) => e.stopPropagation()}
-          />
+        {/* Mobile search row — SEMPRE VISÍVEL NO ESTADO RECOLHIDO */}
+        <div className="pt-0.5 pb-1 flex items-center gap-2">
+          {/* Logo mini — só aparece quando recolhido */}
+          {headerCollapsed && (
+            <div
+              className="flex h-[42px] w-[42px] shrink-0 cursor-pointer items-center justify-center hover:scale-105 transition-transform"
+              onClick={() => { onClose(); navigate("/mercado"); }}
+            >
+              <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="block h-[42px] w-[42px] rounded-xl object-cover shadow-sm border border-black/10" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <GlobalSearchBar initialValue="" />
+          </div>
+          {/* Botão Fechar — só aparece quando recolhido (o de cima some) */}
+          {headerCollapsed && (
+            <button
+              onClick={onClose}
+              aria-label="Fechar Cesta"
+              className="relative flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[18px] bg-white text-black border-2 border-[#68C7F2] shadow-[0_4px_16px_rgba(104,199,242,0.28)] transition-all duration-200 ease-out hover:shadow-[0_6px_24px_rgba(104,199,242,0.48)] hover:scale-[1.04] active:scale-95 outline-none cursor-pointer select-none"
+              title="Fechar Cesta / Carrinho"
+            >
+              <X className="h-5 w-5 text-black" />
+            </button>
+          )}
+        </div>
+
+        {/* Navegação principal — GLOBAL (RETRÁTIL) */}
+        <div className={cn(
+          "transition-all duration-300 ease-in-out overflow-hidden",
+          headerCollapsed ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none" : "max-h-[250px] opacity-100 translate-y-0"
+        )}>
+          <MarketNavButtons />
         </div>
       </div>
 
-      {/* ═══ SETA CENTRAL DE CONTROLE RETRÁTIL (▼ / ▲) ═══ */}
-      <div className="absolute left-1/2 -translate-x-1/2 -bottom-5 z-50 flex items-center justify-center pointer-events-auto">
-        <button
-          type="button"
-          onClick={() => setHeaderCollapsed(!headerCollapsed)}
-          aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-          className="flex items-center gap-1 px-3 py-0.5 rounded-b-xl font-black text-[11px] shadow-[0_4px_12px_rgba(0,0,0,0.18)] border border-t-0 border-black/15 transition-all duration-200 ease-out outline-none bg-[#EF4444] text-white hover:bg-[#DC2626]"
-          title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
-        >
-          {headerCollapsed ? "▼ Expandir" : "▲ Recolher"}
-        </button>
+      {/* ═══ BARRA PREMIUM DE ACESSO RÁPIDO (FAIXA LARANJA · FIXA / SEMPRE VISÍVEL) ═══ */}
+      <div className="w-full border-t border-black/10 shadow-md bg-gradient-to-r from-[#FF6A00] via-[#FF7A00] to-[#FF8C00]">
+        <div className="px-4 py-2 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="shrink-0 flex justify-center sm:justify-end w-full sm:w-auto ml-auto">
+            <PremiumQuickAccessBar minimal />
+          </div>
+
+          {/* ═══ CONTROLE RETRÁTIL (▼ / ▲) — DENTRO DA FAIXA LARANJA ═══ */}
+          <button
+            type="button"
+            onClick={handleToggleHeader}
+            aria-label={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+            aria-expanded={!headerCollapsed}
+            className={cn(
+              "flex shrink-0 items-center gap-1 px-3 py-1 rounded-full font-bold text-[10px] leading-none shadow-md border transition-all duration-200 ease-out outline-none focus-visible:ring-2 focus-visible:ring-white/60 hover:scale-105 active:scale-95 cursor-pointer select-none",
+              "bg-white/90 text-slate-950 border-white/60 hover:bg-white"
+            )}
+            title={headerCollapsed ? "Expandir cabeçalho" : "Recolher cabeçalho"}
+          >
+            <svg className={cn("w-3 h-3 transition-transform duration-300", headerCollapsed ? "rotate-0" : "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span className="tracking-tight">
+              {headerCollapsed ? "Expandir" : "Recolher"}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

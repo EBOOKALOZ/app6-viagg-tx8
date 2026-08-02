@@ -187,8 +187,10 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                                 product.cta_label?.toLowerCase() === "ver mais" ||
                                 product.cta_label === "Ver Imóvel" || product.cta_label === "Conhecer" ||
                                 product.cta_label === "Ver Veículo" ||
+                                product.cta_label === "Ver Pacote" ||
                                 cat.includes("imóvei") || cat.includes("imovei") ||
-                                cat.includes("veícul") || cat.includes("veicul");
+                                cat.includes("veícul") || cat.includes("veicul") ||
+                                cat.includes("viage") || cat.includes("pacote");
                             if (isViewOnly) {
                                 onClick(product);
                             } else {

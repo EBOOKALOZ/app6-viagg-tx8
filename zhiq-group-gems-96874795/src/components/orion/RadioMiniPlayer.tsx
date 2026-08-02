@@ -52,13 +52,7 @@ function MiniBar({ onOpenCenter, docked }: { onOpenCenter: () => void; docked?: 
       'flex items-center gap-2 rounded-2xl border border-emerald-400/40 bg-[#0a1f16]/95 px-3 py-2 ring-1 ring-white/15 backdrop-blur-xl',
       docked ? 'w-full shadow-md' : 'shadow-[0_0_30px_6px_rgba(34,197,94,0.25)]'
     )}>
-      {/* logo da emissora (fallback: logo do app) */}
-      <img
-        src={logoOk && radio.station.favicon ? radio.station.favicon : viaggLogo}
-        onError={() => setLogoOk(false)}
-        alt=""
-        className="h-9 w-9 shrink-0 rounded-lg bg-white/5 object-cover ring-1 ring-emerald-400/30"
-      />
+      {/* Logo removido a pedido do usuário */}
 
       {/* nome + status — clicar abre o Audio Center (aba Rádio) */}
       <button onClick={onOpenCenter} className="min-w-0 flex-1 text-left" title="Voltar para a Rádio">
@@ -144,12 +138,7 @@ function MiniPill({ onExpand }: { onExpand: () => void }) {
       title="Abrir player da rádio"
       className="group flex items-center gap-2 rounded-full border border-emerald-400/40 bg-[#0a1f16]/95 py-1.5 pl-1.5 pr-2.5 shadow-[0_0_24px_4px_rgba(34,197,94,0.28)] ring-1 ring-white/15 backdrop-blur-xl transition-all hover:pr-3 active:scale-95"
     >
-      <img
-        src={logoOk && radio.station.favicon ? radio.station.favicon : viaggLogo}
-        onError={() => setLogoOk(false)}
-        alt=""
-        className="h-7 w-7 shrink-0 rounded-full bg-white/5 object-cover ring-1 ring-emerald-400/30"
-      />
+      {/* Logo removido a pedido do usuário */}
       {/* status pulsante ao vivo */}
       {radio.playing && (
         <span className="relative flex h-2 w-2 shrink-0">
