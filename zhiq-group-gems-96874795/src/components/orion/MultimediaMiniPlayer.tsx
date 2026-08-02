@@ -261,7 +261,7 @@ export function MultimediaMiniPlayer({ channel, watchSignal = 0 }: MiniPlayerPro
             </p>
             {/* visualizador de áudio animado */}
             {radioSt.playing ? (
-              <div className="relative flex items-end gap-[2px] rounded-md bg-[#050c05] p-1.5 ring-1 ring-emerald-500/20" aria-hidden="true">
+              <div className="relative flex items-end gap-[2px]" aria-hidden="true">
                 {Array.from({ length: 28 }).map((_, col) => {
                   const delay = (col * 47) % 600;
                   const dur = 400 + (col % 3) * 150;

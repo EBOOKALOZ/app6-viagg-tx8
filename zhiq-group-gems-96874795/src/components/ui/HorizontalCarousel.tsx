@@ -61,7 +61,7 @@ export function HorizontalCarousel({
   };
 
   return (
-    <div className={cn("relative flex flex-col gap-0 group/carousel", className)}>
+    <div className={cn("relative flex flex-col gap-0 group/carousel bg-[#F5E62B] p-4 md:p-6 rounded-2xl", className)}>
       <div
         ref={ref}
         className={cn(
