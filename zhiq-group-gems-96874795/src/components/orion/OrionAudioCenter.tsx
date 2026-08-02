@@ -531,12 +531,30 @@ export function OrionAudioCenter({ settings, setSettings, isPlaying, isOpen, onT
   return (
     <div className="space-y-4">
       {/* ═══ CABEÇALHO ═══ */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <ViaggLogo pulseRef={logoRef} />
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-black text-white tracking-[0.1em] leading-tight">VIAGG-TX8 <span className="text-emerald-300">CENTRO</span> MULTIMÍDIA</p>
           <p className="text-[9px] text-zinc-400 font-bold tracking-wider">ÁUDIO · RÁDIO · TV · AO VIVO · v2.0</p>
         </div>
+        
+        {/* Controle da Música Tema */}
+        <button
+          onClick={() => {
+            const ev = new Event(isPlaying ? 'viagg:stop-bg-music' : 'viagg:play-bg-music');
+            window.dispatchEvent(ev);
+          }}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest shrink-0 transition-colors",
+            isPlaying 
+              ? "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+              : "bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20"
+          )}
+        >
+          {isPlaying ? <span className="w-2 h-2 rounded bg-red-400" /> : <Play className="w-2.5 h-2.5 fill-current" />}
+          Tema
+        </button>
+
         <span className="text-xs font-black text-green-300 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full shadow-inner shrink-0">
           {volumePercent}%
         </span>

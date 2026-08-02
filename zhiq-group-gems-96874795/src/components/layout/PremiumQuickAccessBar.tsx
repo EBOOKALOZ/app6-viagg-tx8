@@ -115,7 +115,7 @@ export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0, minimal =
       aria-label="Acesso rápido — Minha Conta"
       className={cn(
         "flex items-center gap-1.5 sm:gap-2 w-full",
-        minimal ? "justify-end flex-nowrap" : "flex-wrap justify-between"
+        minimal ? "justify-center sm:justify-end flex-nowrap" : "flex-wrap justify-between"
       )}
     >
       {/* 👤 Minha Conta — entrada da Conta Única do Consumidor */}
@@ -225,15 +225,6 @@ export function PremiumQuickAccessBar({ onCartOpen, cartItemCount = 0, minimal =
             <span className="hidden sm:inline">Favoritos</span>
           </button>
 
-          {/* 🔔 Notificações */}
-          <button
-            onClick={() => navigate("/conta")}
-            aria-label="Notificações"
-            className={cn(pillBase, pillWhite)}
-          >
-            <Bell className="h-3 w-3 text-[#075985]" />
-            <span className="hidden sm:inline">Notificações</span>
-          </button>
 
           {/* 🛒 Cesta */}
           {onCartOpen && (

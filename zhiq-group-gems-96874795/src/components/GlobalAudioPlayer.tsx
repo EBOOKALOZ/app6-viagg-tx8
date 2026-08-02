@@ -228,7 +228,14 @@ export function GlobalAudioPlayer() {
     window.addEventListener('viagg:open-radio', handleOpenRadio);
     // ao tocar uma rádio, pausa a música de fundo do app (evita 2 áudios)
     const handleStopBg = () => { forceStopGlobalAudio(); setIsPlaying(false); };
+    const handlePlayBg = () => {
+      const audio = getAudio();
+      if (!audio || !audio.paused) return;
+      startMusic();
+    };
+    
     window.addEventListener('viagg:stop-bg-music', handleStopBg);
+    window.addEventListener('viagg:play-bg-music', handlePlayBg);
 
     return () => {
       audioRef.current?.removeEventListener('play', handlePlay);
@@ -238,6 +245,7 @@ export function GlobalAudioPlayer() {
       window.removeEventListener('stop-all-motoboy-audio', handleDeliveryStop);
       window.removeEventListener('viagg:open-radio', handleOpenRadio);
       window.removeEventListener('viagg:stop-bg-music', handleStopBg);
+      window.removeEventListener('viagg:play-bg-music', handlePlayBg);
       if (fadeRef.current) clearInterval(fadeRef.current);
       // Pausa no desmonte (StrictMode/HMR), mas NÃO reseta hasInteracted
       const audio = getAudio();
@@ -442,30 +450,13 @@ export function GlobalAudioPlayer() {
         aria-expanded={isPanelOpen}
       >
         {isMarketPortal ? (
-          radio.playing ? (
-             <div className="flex items-center gap-1.5 -ml-1">
-               <RealtimeVisualizer mini />
-             </div>
-          ) : (
-            <>
-              <Radio
-                className={cn(
-                  'h-3 w-3',
-                  isMutedState ? 'text-[#EF4444]' : 'text-[#10B981]',
-                  !isMutedState && isPlaying && 'animate-pulse'
-                )}
-              />
-              <span className="hidden sm:inline">Som</span>
-            </>
-          )
+          <div className="flex items-center justify-center scale-[0.6] sm:scale-75 origin-center -mx-2">
+             <RealtimeVisualizer mini />
+          </div>
         ) : (
-          radio.playing ? (
-             <div className="scale-75 origin-center">
-               <RealtimeVisualizer mini />
-             </div>
-          ) : (
-            <VolumeIcon className={cn(portalTarget ? 'w-5 h-5 text-white' : 'w-4 h-4 text-white', !isMutedState && isPlaying && 'animate-pulse')} />
-          )
+          <div className="scale-75 origin-center">
+             <RealtimeVisualizer mini />
+          </div>
         )}
       </button>
     </div>

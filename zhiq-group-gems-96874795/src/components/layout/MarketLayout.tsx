@@ -309,14 +309,14 @@ export function MarketLayout({
                 )}>
                     <div className="max-w-[1920px] mx-auto px-4 lg:px-6 py-2 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         {quickAccessBarLabel && (
-                            <div className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate("/mercado")}>
+                            <div className="flex items-center justify-center sm:justify-start gap-2.5 w-full sm:w-auto cursor-pointer hover:opacity-90 transition-opacity" onClick={() => navigate("/mercado")}>
                                 <img src="/images/viagg-tx8-logo.jpg" alt="Viagg-TX8" className="h-10 w-10 shrink-0 rounded-lg object-contain border border-white/20 shadow-sm" />
                                 <span className="text-lg font-black text-white tracking-tight">
                                     {quickAccessBarLabel}
                                 </span>
                             </div>
                         )}
-                        <div className="shrink-0 flex justify-end w-full sm:w-auto ml-auto">
+                        <div className="shrink-0 flex justify-center sm:justify-end w-full sm:w-auto ml-auto">
                             <PremiumQuickAccessBar onCartOpen={() => setCartOpen(true)} cartItemCount={globalCart.totalItems} minimal={minimalQuickAccess} />
                         </div>
 
