@@ -82,9 +82,13 @@ export function useAdvertiserSummary(advertiserId?: string | null, profileType?:
                         .maybeSingle();
 
                     // advertiser_accounts também não tem profile_id — a chave é user_id.
+                    // Colunas não-PII apenas: para anon (card público) o SELECT
+                    // de email/whatsapp/full_name é revogado (P0-5). O card não
+                    // usa PII — as colunas de identidade (company_name etc.) não
+                    // existem nesta tabela e já caíam em fallback de profiles.
                     const { data: advAcc } = await supabase
                         .from("advertiser_accounts")
-                        .select("*")
+                        .select("id, user_id, account_status, status")
                         .eq("user_id", effectiveId)
                         .maybeSingle();
 
