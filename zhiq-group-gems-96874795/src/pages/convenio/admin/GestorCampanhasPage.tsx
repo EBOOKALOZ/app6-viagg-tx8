@@ -1,7 +1,9 @@
 /**
  * /convenio-admin/campanhas — Comando Convênio Fase 1.
- * CRUD real de campanhas de doação. Sem processamento financeiro nesta fase
- * (raised_amount é atualizado manualmente pelo Gestor até haver gateway ativo).
+ * CRUD real de campanhas de doação. Sem processamento financeiro nesta fase.
+ * raised_amount NÃO é editável: o trigger trg_convenio_sync_campaign_raised
+ * mantém o valor como a soma das doações confirmadas da campanha.
+ * Status segue a máquina de estados (planejada → ativa → pausada/encerrada).
  */
 import { useState } from "react";
 import { Megaphone, Plus } from "lucide-react";
@@ -11,17 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useConvenioCampaigns, useCreateConvenioCampaign, useUpdateConvenioCampaign } from "@/hooks/convenio/useConvenioCampaigns";
+import { useChangeConvenioCampaignStatus, useConvenioCampaigns, useCreateConvenioCampaign } from "@/hooks/convenio/useConvenioCampaigns";
+import { allowedNextStatuses } from "@/lib/convenio/statusTransitions";
 import type { ConvenioCampaignStatus } from "@/services/convenio/types";
-
-const STATUS_OPTIONS: ConvenioCampaignStatus[] = ["planejada", "ativa", "pausada", "encerrada"];
 
 function CreateCampaignDialog() {
   const [open, setOpen] = useState(false);
@@ -82,7 +83,7 @@ function CreateCampaignDialog() {
 
 export default function GestorCampanhasPage() {
   const campaignsQuery = useConvenioCampaigns();
-  const updateMutation = useUpdateConvenioCampaign();
+  const changeStatusMutation = useChangeConvenioCampaignStatus();
 
   return (
     <div>
@@ -93,12 +94,12 @@ export default function GestorCampanhasPage() {
         action={<CreateCampaignDialog />}
       />
 
-      {campaignsQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
+      <GestorQueryState
+        isLoading={campaignsQuery.isLoading}
+        isError={campaignsQuery.isError}
+        error={campaignsQuery.error}
+        onRetry={() => campaignsQuery.refetch()}
+      >
         <GestorEntityTable
           getRowKey={(row) => row.id}
           rows={campaignsQuery.data ?? []}
@@ -107,23 +108,33 @@ export default function GestorCampanhasPage() {
             { header: "Campanha", render: (r) => <span className="font-bold text-white">{r.title}</span> },
             {
               header: "Status",
-              render: (r) => (
-                <Select
-                  value={r.status}
-                  onValueChange={(status) => updateMutation.mutate({ id: r.id, patch: { status } })}
-                >
-                  <SelectTrigger className="h-7 w-32 border-none bg-transparent p-0">
-                    <GestorStatusBadge status={r.status} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ),
+              render: (r) => {
+                const next = allowedNextStatuses("campaign", r.status) as ConvenioCampaignStatus[];
+                if (next.length === 0) return <GestorStatusBadge status={r.status} />;
+                return (
+                  <Select
+                    value={r.status}
+                    onValueChange={(status) =>
+                      changeStatusMutation.mutate({
+                        id: r.id,
+                        from: r.status as ConvenioCampaignStatus,
+                        to: status as ConvenioCampaignStatus,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-7 w-32 border-none bg-transparent p-0">
+                      <GestorStatusBadge status={r.status} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {next.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              },
             },
             { header: "Meta", render: (r) => `R$ ${Number(r.goal_amount ?? 0).toLocaleString("pt-BR")}` },
             { header: "Arrecadado", render: (r) => `R$ ${Number(r.raised_amount).toLocaleString("pt-BR")}` },
@@ -145,7 +156,7 @@ export default function GestorCampanhasPage() {
             },
           ]}
         />
-      )}
+      </GestorQueryState>
     </div>
   );
 }

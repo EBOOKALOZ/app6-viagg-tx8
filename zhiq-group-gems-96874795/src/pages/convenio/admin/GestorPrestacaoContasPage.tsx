@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -100,12 +100,12 @@ export default function GestorPrestacaoContasPage() {
         action={<CreateAccountabilityDialog />}
       />
 
-      {accountabilityQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
+      <GestorQueryState
+        isLoading={accountabilityQuery.isLoading}
+        isError={accountabilityQuery.isError}
+        error={accountabilityQuery.error}
+        onRetry={() => accountabilityQuery.refetch()}
+      >
         <GestorEntityTable
           getRowKey={(row) => row.id}
           rows={accountabilityQuery.data ?? []}
@@ -141,7 +141,9 @@ export default function GestorPrestacaoContasPage() {
                       Publicar
                     </Button>
                   )}
-                  {r.status !== "arquivada" && (
+                  {/* Máquina de estados: só relatório publicado pode ser arquivado
+                      (rascunho → arquivada é transição inválida, bloqueada também no banco) */}
+                  {r.status === "publicada" && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -157,7 +159,7 @@ export default function GestorPrestacaoContasPage() {
             },
           ]}
         />
-      )}
+      </GestorQueryState>
     </div>
   );
 }

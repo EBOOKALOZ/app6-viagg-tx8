@@ -5,7 +5,7 @@ interface GestorStatCardProps {
   label: string;
   value: string;
   hint?: string;
-  accent?: "emerald" | "cyan" | "amber" | "violet";
+  accent?: "emerald" | "cyan" | "amber" | "violet" | "red";
 }
 
 const ACCENT_CLASSES: Record<NonNullable<GestorStatCardProps["accent"]>, string> = {
@@ -13,6 +13,7 @@ const ACCENT_CLASSES: Record<NonNullable<GestorStatCardProps["accent"]>, string>
   cyan: "text-cyan-400 bg-cyan-500/10",
   amber: "text-amber-400 bg-amber-500/10",
   violet: "text-violet-400 bg-violet-500/10",
+  red: "text-red-400 bg-red-500/10",
 };
 
 export function GestorStatCard({ icon: Icon, label, value, hint, accent = "emerald" }: GestorStatCardProps) {

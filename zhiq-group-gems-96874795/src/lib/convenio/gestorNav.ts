@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Stethoscope, FlaskConical, Pill, Hospital,
   Landmark, Handshake, BadgeCheck, Megaphone, HeartHandshake, FileSpreadsheet,
-  BarChart3, ShieldCheck, MessageSquare, Settings, Inbox, UserCog,
+  BarChart3, ShieldCheck, MessageSquare, Settings, Inbox, UserCog, Building2,
 } from "lucide-react";
 
 export interface GestorNavItem {
@@ -18,6 +18,7 @@ export const GESTOR_NAV_ITEMS: GestorNavItem[] = [
   { label: "Dashboard",            path: "/convenio-admin",                      icon: LayoutDashboard },
   { label: "Convênios",            path: "/convenio-admin/convenios",            icon: Handshake },
   { label: "Leads de Parceiros",   path: "/convenio-admin/leads-parceiros",      icon: Inbox },
+  { label: "Indicações",           path: "/convenio-admin/indicacoes",           icon: Building2 },
   { label: "Clínicas",             path: "/convenio-admin/credenciamento/clinicas",     icon: Stethoscope },
   { label: "Laboratórios",         path: "/convenio-admin/credenciamento/laboratorios", icon: FlaskConical },
   { label: "Farmácias",            path: "/convenio-admin/credenciamento/farmacias",    icon: Pill },

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -101,12 +102,19 @@ export default function GestorMensagensPage() {
         action={<SendMessageDialog />}
       />
 
-      {messagesQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      ) : (messagesQuery.data ?? []).length === 0 ? (
+      <GestorQueryState
+        isLoading={messagesQuery.isLoading}
+        isError={messagesQuery.isError}
+        error={messagesQuery.error}
+        onRetry={() => messagesQuery.refetch()}
+        skeleton={
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        }
+      >
+      {(messagesQuery.data ?? []).length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
           <MessageSquare className="mx-auto mb-3 h-8 w-8 text-white/20" />
           <p className="text-sm text-white/40">Nenhuma mensagem ainda.</p>
@@ -130,6 +138,7 @@ export default function GestorMensagensPage() {
           ))}
         </div>
       )}
+      </GestorQueryState>
     </div>
   );
 }

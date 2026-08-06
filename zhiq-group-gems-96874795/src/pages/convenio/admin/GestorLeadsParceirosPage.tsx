@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { Inbox, Search, MessageCircle, Loader2 } from "lucide-react";
 import { GestorPageHeader } from "@/components/convenio/GestorPageHeader";
 import { GestorStatusBadge } from "@/components/convenio/GestorEntityTable";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,7 +51,7 @@ function whatsappLink(whatsapp: string): string {
 }
 
 export default function GestorLeadsParceirosPage() {
-  const { data: leads = [], isLoading } = usePartnerLeads();
+  const leadsQuery = usePartnerLeads();
   const updateMutation = useUpdatePartnerLead();
 
   const [search, setSearch] = useState("");
@@ -58,6 +59,7 @@ export default function GestorLeadsParceirosPage() {
   const [selectedLead, setSelectedLead] = useState<PartnerLead | null>(null);
   const [observacoes, setObservacoes] = useState("");
 
+  const leads = useMemo(() => leadsQuery.data ?? [], [leadsQuery.data]);
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       if (statusFilter !== "all" && lead.status !== statusFilter) return false;
@@ -118,11 +120,18 @@ export default function GestorLeadsParceirosPage() {
         </Select>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="h-6 w-6 animate-spin text-white/30" />
-        </div>
-      ) : filteredLeads.length === 0 ? (
+      <GestorQueryState
+        isLoading={leadsQuery.isLoading}
+        isError={leadsQuery.isError}
+        error={leadsQuery.error}
+        onRetry={() => leadsQuery.refetch()}
+        skeleton={
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-white/30" />
+          </div>
+        }
+      >
+      {filteredLeads.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
           <p className="text-sm text-white/40">Nenhum lead encontrado.</p>
         </div>
@@ -175,6 +184,7 @@ export default function GestorLeadsParceirosPage() {
           </table>
         </div>
       )}
+      </GestorQueryState>
 
       <Dialog open={!!selectedLead} onOpenChange={(v) => !v && setSelectedLead(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-zinc-950 border-white/10 text-white">

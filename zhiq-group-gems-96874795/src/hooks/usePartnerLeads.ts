@@ -6,32 +6,20 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { ConvenioPartnerLead, ConvenioPartnerLeadUpdate } from "@/services/convenio/types";
 
 export type PartnerLeadStatus = "novo" | "em_analise" | "contatado" | "aprovado" | "recusado";
 
-export interface PartnerLead {
-  id: string;
-  nome: string;
-  instituicao: string | null;
-  tipo_parceiro: string;
-  cidade: string;
-  estado: string;
-  whatsapp: string;
-  email: string | null;
-  mensagem: string | null;
-  status: PartnerLeadStatus;
-  observacoes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type PartnerLead = ConvenioPartnerLead & { status: PartnerLeadStatus };
 
-const QUERY_KEY = ["convenio-partner-leads"];
+const QUERY_KEY = ["convenio", "partner-leads"];
 
 export function usePartnerLeads() {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => {
-      const { data, error } = await (supabase.from("convenio_partner_leads") as any)
+      const { data, error } = await supabase
+        .from("convenio_partner_leads")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -48,7 +36,7 @@ export function useUpdatePartnerLead() {
       id, status, observacoes,
     }: { id: string; status?: PartnerLeadStatus; observacoes?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      const updates: ConvenioPartnerLeadUpdate = { updated_at: new Date().toISOString() };
       if (status) updates.status = status;
       if (observacoes !== undefined) updates.observacoes = observacoes;
       if (status) {
@@ -56,7 +44,8 @@ export function useUpdatePartnerLead() {
         updates.reviewed_at = new Date().toISOString();
       }
 
-      const { error } = await (supabase.from("convenio_partner_leads") as any)
+      const { error } = await supabase
+        .from("convenio_partner_leads")
         .update(updates)
         .eq("id", id);
       if (error) throw error;

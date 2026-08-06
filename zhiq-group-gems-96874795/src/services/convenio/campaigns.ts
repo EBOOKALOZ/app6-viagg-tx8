@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { ConvenioCampaign, ConvenioCampaignInsert, ConvenioCampaignUpdate } from "./types";
+import { assertStatusTransition } from "@/lib/convenio/statusTransitions";
+import type { ConvenioCampaign, ConvenioCampaignInsert, ConvenioCampaignStatus, ConvenioCampaignUpdate } from "./types";
 
 export async function listCampaigns(): Promise<ConvenioCampaign[]> {
   const { data, error } = await supabase
@@ -35,4 +36,18 @@ export async function updateCampaign(id: string, patch: ConvenioCampaignUpdate):
     .single();
   if (error) throw error;
   return data;
+}
+
+/**
+ * Muda o status respeitando a máquina de estados (planejada → ativa →
+ * pausada/encerrada). Validação aqui gera erro amigável; o trigger
+ * trg_convenio_status_transition no banco é a autoridade final.
+ */
+export async function changeCampaignStatus(
+  id: string,
+  from: ConvenioCampaignStatus,
+  to: ConvenioCampaignStatus
+): Promise<ConvenioCampaign> {
+  assertStatusTransition("campaign", from, to);
+  return updateCampaign(id, { status: to });
 }

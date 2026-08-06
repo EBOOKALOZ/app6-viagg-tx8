@@ -14,11 +14,11 @@ export function useGestorConvenioRole() {
   const { user } = useAuth();
 
   const { data: isGestor, isLoading } = useQuery({
-    queryKey: ["gestor-convenio-role", user?.id],
+    queryKey: ["convenio", "gestor-role", user?.id],
     queryFn: async (): Promise<boolean> => {
       if (!user?.id) return false;
 
-      const { data, error } = await supabase.rpc("is_gestor_convenio" as never);
+      const { data, error } = await supabase.rpc("is_gestor_convenio");
       if (error) return false;
       return data === true;
     },

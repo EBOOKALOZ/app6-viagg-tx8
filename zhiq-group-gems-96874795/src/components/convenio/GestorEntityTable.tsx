@@ -33,6 +33,12 @@ const STATUS_BADGE_CLASSES: Record<string, string> = {
   reprovada: "bg-red-500/10 text-red-300 ring-red-500/30",
   arquivada: "bg-white/10 text-white/40 ring-white/15",
   estornada: "bg-red-500/10 text-red-300 ring-red-500/30",
+  novo: "bg-cyan-500/10 text-cyan-300 ring-cyan-500/30",
+  contatado: "bg-violet-500/10 text-violet-300 ring-violet-500/30",
+  documentacao_pendente: "bg-amber-500/10 text-amber-300 ring-amber-500/30",
+  aprovado: "bg-emerald-500/10 text-emerald-300 ring-emerald-500/30",
+  recusado: "bg-red-500/10 text-red-300 ring-red-500/30",
+  convertido_convenio: "bg-violet-500/10 text-violet-300 ring-violet-500/30",
 };
 
 export function GestorStatusBadge({ status, label }: { status: string; label?: string }) {

@@ -58,7 +58,8 @@ export function useChangeConvenioAgreementStatus() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: ConvenioAgreementStatus }) => changeAgreementStatus(id, status),
+    mutationFn: ({ id, from, to }: { id: string; from: ConvenioAgreementStatus; to: ConvenioAgreementStatus }) =>
+      changeAgreementStatus(id, from, to),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: KEY });
       queryClient.invalidateQueries({ queryKey: ["convenio", "agreement-history", variables.id] });

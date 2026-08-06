@@ -11,7 +11,7 @@ import { GestorEntityTable } from "@/components/convenio/GestorEntityTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -83,12 +83,12 @@ export default function GestorAcessoPage() {
         action={<GrantAccessDialog />}
       />
 
-      {gestoresQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
+      <GestorQueryState
+        isLoading={gestoresQuery.isLoading}
+        isError={gestoresQuery.isError}
+        error={gestoresQuery.error}
+        onRetry={() => gestoresQuery.refetch()}
+      >
         <GestorEntityTable
           getRowKey={(row) => row.user_id}
           rows={gestoresQuery.data ?? []}
@@ -112,7 +112,7 @@ export default function GestorAcessoPage() {
             },
           ]}
         />
-      )}
+      </GestorQueryState>
     </div>
   );
 }

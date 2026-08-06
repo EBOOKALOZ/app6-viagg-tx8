@@ -3,9 +3,14 @@
  * Modal de captação de leads interessados no programa de convênios,
  * acionado pelo CTA da página pública /medprev. Grava em
  * convenio_partner_leads (RLS: insert público, leitura restrita ao Gestor).
+ * Validação com zod + react-hook-form (tempo real, onBlur/onChange).
  */
 import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import type { ConvenioPartnerLeadInsert } from "@/services/convenio/types";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { HeartHandshake, Loader2, CheckCircle, X } from "lucide-react";
+import { Loader2, CheckCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface PartnerLeadModalProps {
@@ -52,16 +57,29 @@ function formatWhatsapp(value: string): string {
   return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
 }
 
-function isValidWhatsapp(value: string): boolean {
-  const nums = value.replace(/\D/g, "");
-  return nums.length >= 10 && nums.length <= 11;
-}
+const leadSchema = z.object({
+  nome: z.string().trim().min(2, "Informe seu nome completo").max(150, "Máximo de 150 caracteres"),
+  instituicao: z.string().trim().max(150, "Máximo de 150 caracteres"),
+  tipoParceiro: z.string().min(1, "Selecione o tipo de parceiro"),
+  cidade: z.string().trim().min(2, "Informe a cidade").max(100, "Máximo de 100 caracteres"),
+  estado: z.string().length(2, "Selecione o estado"),
+  whatsapp: z.string().refine((v) => {
+    const nums = v.replace(/\D/g, "");
+    return nums.length >= 10 && nums.length <= 11;
+  }, "Informe um WhatsApp válido com DDD"),
+  email: z
+    .string()
+    .trim()
+    .refine((v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), "E-mail inválido"),
+  mensagem: z.string().trim().max(1000, "Máximo de 1000 caracteres"),
+  consentimento: z
+    .boolean()
+    .refine((v) => v === true, { message: "É necessário autorizar o contato" }),
+});
 
-function isValidEmail(value: string): boolean {
-  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
-}
+type LeadFormValues = z.infer<typeof leadSchema>;
 
-const initialState = {
+const DEFAULT_VALUES: LeadFormValues = {
   nome: "",
   instituicao: "",
   tipoParceiro: "",
@@ -74,19 +92,35 @@ const initialState = {
 };
 
 export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
-  const [form, setForm] = useState(initialState);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const lastSubmitAt = useRef<number>(0);
 
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<LeadFormValues>({
+    resolver: zodResolver(leadSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    defaultValues: DEFAULT_VALUES,
+  });
+
+  const tipoParceiro = watch("tipoParceiro");
+  const estado = watch("estado");
+  const whatsapp = watch("whatsapp");
+  const consentimento = watch("consentimento");
+
   useEffect(() => {
     if (!open) {
-      setForm(initialState);
-      setTouched({});
+      reset(DEFAULT_VALUES);
       setSubmitted(false);
     }
-  }, [open]);
+  }, [open, reset]);
 
   useEffect(() => {
     if (!submitted) return;
@@ -94,31 +128,7 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
     return () => clearTimeout(timer);
   }, [submitted, onClose]);
 
-  const errors = {
-    nome: form.nome.trim().length < 2 ? "Informe seu nome completo" : "",
-    tipoParceiro: !form.tipoParceiro ? "Selecione o tipo de parceiro" : "",
-    cidade: form.cidade.trim().length < 2 ? "Informe a cidade" : "",
-    estado: form.estado.length !== 2 ? "Selecione o estado" : "",
-    whatsapp: !isValidWhatsapp(form.whatsapp) ? "Informe um WhatsApp válido com DDD" : "",
-    email: form.email.trim() && !isValidEmail(form.email.trim()) ? "E-mail inválido" : "",
-    consentimento: !form.consentimento ? "É necessário autorizar o contato" : "",
-  };
-
-  const isValid = Object.values(errors).every((e) => !e);
-
-  const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
-
-  const handleSubmit = async () => {
-    setTouched({
-      nome: true, tipoParceiro: true, cidade: true, estado: true,
-      whatsapp: true, email: true, consentimento: true,
-    });
-
-    if (!isValid) {
-      toast.error("Confira os campos obrigatórios do formulário");
-      return;
-    }
-
+  const onSubmit = async (values: LeadFormValues) => {
     const now = Date.now();
     if (now - lastSubmitAt.current < 4000) {
       return;
@@ -127,17 +137,18 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
 
     setSubmitting(true);
     try {
-      const { error } = await (supabase.from("convenio_partner_leads") as any).insert({
-        nome: form.nome.trim(),
-        instituicao: form.instituicao.trim() || null,
-        tipo_parceiro: form.tipoParceiro,
-        cidade: form.cidade.trim(),
-        estado: form.estado,
-        whatsapp: form.whatsapp.replace(/\D/g, ""),
-        email: form.email.trim() || null,
-        mensagem: form.mensagem.trim() || null,
+      const payload: ConvenioPartnerLeadInsert = {
+        nome: values.nome.trim(),
+        instituicao: values.instituicao.trim() || null,
+        tipo_parceiro: values.tipoParceiro,
+        cidade: values.cidade.trim(),
+        estado: values.estado,
+        whatsapp: values.whatsapp.replace(/\D/g, ""),
+        email: values.email.trim() || null,
+        mensagem: values.mensagem.trim() || null,
         consentimento: true,
-      });
+      };
+      const { error } = await supabase.from("convenio_partner_leads").insert(payload);
       if (error) throw error;
 
       setSubmitted(true);
@@ -150,9 +161,13 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
     }
   };
 
+  const onInvalid = () => {
+    toast.error("Confira os campos obrigatórios do formulário");
+  };
+
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) onClose(); }}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[480px] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-2xl border border-white/40 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.2)] rounded-3xl [&>button]:hidden"
         onEscapeKeyDown={(e) => { if (submitting) e.preventDefault(); }}
         onInteractOutside={(e) => { if (submitting) e.preventDefault(); }}
@@ -211,39 +226,33 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
               </button>
             </div>
           ) : (
-            <div className="p-6 space-y-4">
-              <Field label="Nome completo" required error={touched.nome ? errors.nome : ""}>
+            <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="p-6 space-y-4" noValidate>
+              <Field label="Nome completo" required error={errors.nome?.message}>
                 <input
                   type="text"
                   placeholder="Seu nome completo"
-                  value={form.nome}
-                  onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))}
-                  onBlur={() => markTouched("nome")}
                   maxLength={150}
-                  className={inputClass(touched.nome && !!errors.nome)}
+                  className={inputClass(!!errors.nome)}
+                  {...register("nome")}
                 />
               </Field>
 
-              <Field label="Instituição / Empresa">
+              <Field label="Instituição / Empresa" error={errors.instituicao?.message}>
                 <input
                   type="text"
                   placeholder="Nome da instituição (opcional)"
-                  value={form.instituicao}
-                  onChange={(e) => setForm((f) => ({ ...f, instituicao: e.target.value }))}
                   maxLength={150}
-                  className={inputClass(false)}
+                  className={inputClass(!!errors.instituicao)}
+                  {...register("instituicao")}
                 />
               </Field>
 
-              <Field label="Tipo de parceiro" required error={touched.tipoParceiro ? errors.tipoParceiro : ""}>
+              <Field label="Tipo de parceiro" required error={errors.tipoParceiro?.message}>
                 <Select
-                  value={form.tipoParceiro}
-                  onValueChange={(v) => setForm((f) => ({ ...f, tipoParceiro: v }))}
+                  value={tipoParceiro}
+                  onValueChange={(v) => setValue("tipoParceiro", v, { shouldValidate: true })}
                 >
-                  <SelectTrigger
-                    onBlur={() => markTouched("tipoParceiro")}
-                    className={inputClass(touched.tipoParceiro && !!errors.tipoParceiro)}
-                  >
+                  <SelectTrigger className={inputClass(!!errors.tipoParceiro)}>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-white/60 bg-white/90 backdrop-blur-xl shadow-xl">
@@ -256,28 +265,23 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
-                  <Field label="Cidade" required error={touched.cidade ? errors.cidade : ""}>
+                  <Field label="Cidade" required error={errors.cidade?.message}>
                     <input
                       type="text"
                       placeholder="Sua cidade"
-                      value={form.cidade}
-                      onChange={(e) => setForm((f) => ({ ...f, cidade: e.target.value }))}
-                      onBlur={() => markTouched("cidade")}
                       maxLength={100}
-                      className={inputClass(touched.cidade && !!errors.cidade)}
+                      className={inputClass(!!errors.cidade)}
+                      {...register("cidade")}
                     />
                   </Field>
                 </div>
                 <div>
-                  <Field label="Estado" required error={touched.estado ? errors.estado : ""}>
+                  <Field label="Estado" required error={errors.estado?.message}>
                     <Select
-                      value={form.estado}
-                      onValueChange={(v) => setForm((f) => ({ ...f, estado: v }))}
+                      value={estado}
+                      onValueChange={(v) => setValue("estado", v, { shouldValidate: true })}
                     >
-                      <SelectTrigger
-                        onBlur={() => markTouched("estado")}
-                        className={inputClass(touched.estado && !!errors.estado)}
-                      >
+                      <SelectTrigger className={inputClass(!!errors.estado)}>
                         <SelectValue placeholder="UF" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-white/60 bg-white/90 backdrop-blur-xl shadow-xl">
@@ -290,38 +294,34 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
                 </div>
               </div>
 
-              <Field label="WhatsApp" required error={touched.whatsapp ? errors.whatsapp : ""}>
+              <Field label="WhatsApp" required error={errors.whatsapp?.message}>
                 <input
                   type="tel"
                   placeholder="(47) 99999-9999"
-                  value={form.whatsapp}
-                  onChange={(e) => setForm((f) => ({ ...f, whatsapp: formatWhatsapp(e.target.value) }))}
-                  onBlur={() => markTouched("whatsapp")}
                   maxLength={15}
-                  className={inputClass(touched.whatsapp && !!errors.whatsapp)}
+                  className={inputClass(!!errors.whatsapp)}
+                  value={whatsapp}
+                  onChange={(e) => setValue("whatsapp", formatWhatsapp(e.target.value), { shouldValidate: true })}
                 />
               </Field>
 
-              <Field label="E-mail" error={touched.email ? errors.email : ""}>
+              <Field label="E-mail" error={errors.email?.message}>
                 <input
                   type="email"
                   placeholder="voce@email.com (opcional)"
-                  value={form.email}
-                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  onBlur={() => markTouched("email")}
                   maxLength={120}
-                  className={inputClass(touched.email && !!errors.email)}
+                  className={inputClass(!!errors.email)}
+                  {...register("email")}
                 />
               </Field>
 
-              <Field label="Mensagem">
+              <Field label="Mensagem" error={errors.mensagem?.message}>
                 <textarea
                   placeholder="Conte brevemente como gostaria de participar."
-                  value={form.mensagem}
-                  onChange={(e) => setForm((f) => ({ ...f, mensagem: e.target.value }))}
                   rows={3}
                   maxLength={1000}
-                  className={`${inputClass(false)} resize-none py-3.5`}
+                  className={`${inputClass(!!errors.mensagem)} resize-none py-3.5`}
+                  {...register("mensagem")}
                 />
               </Field>
 
@@ -329,11 +329,8 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
                 <div className="relative flex items-center justify-center shrink-0 mt-0.5">
                   <input
                     type="checkbox"
-                    checked={form.consentimento}
-                    onChange={(e) => {
-                      setForm((f) => ({ ...f, consentimento: e.target.checked }));
-                      markTouched("consentimento");
-                    }}
+                    checked={consentimento}
+                    onChange={(e) => setValue("consentimento", e.target.checked, { shouldValidate: true })}
                     className="peer appearance-none w-5 h-5 border-2 border-slate-300 rounded-lg bg-white/50 checked:bg-blue-600 checked:border-blue-600 transition-all cursor-pointer focus:ring-4 focus:ring-blue-600/20"
                   />
                   <CheckCircle className="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
@@ -342,12 +339,13 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
                   Autorizo o contato da equipe Viagg-TX8 para prosseguir com a parceria.
                 </span>
               </label>
-              {touched.consentimento && errors.consentimento && (
-                <p className="text-[11px] text-red-500 font-bold ml-8">{errors.consentimento}</p>
+              {errors.consentimento && (
+                <p className="text-[11px] text-red-500 font-bold ml-8">{errors.consentimento.message}</p>
               )}
 
               <div className="flex gap-3 pt-5 pb-2">
                 <button
+                  type="button"
                   onClick={onClose}
                   disabled={submitting}
                   className="w-1/3 py-3.5 rounded-2xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all disabled:opacity-60"
@@ -355,7 +353,7 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
                   Cancelar
                 </button>
                 <button
-                  onClick={handleSubmit}
+                  type="submit"
                   disabled={submitting}
                   className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-emerald-500 hover:opacity-90 transition-all active:scale-[0.98] shadow-[0_8px_20px_-6px_rgba(16,185,129,0.4)] disabled:opacity-60"
                 >
@@ -363,7 +361,7 @@ export function PartnerLeadModal({ open, onClose }: PartnerLeadModalProps) {
                   {submitting ? "Enviando..." : "Enviar solicitação"}
                 </button>
               </div>
-            </div>
+            </form>
           )}
         </div>
       </DialogContent>

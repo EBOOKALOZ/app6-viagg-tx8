@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { assertStatusTransition } from "@/lib/convenio/statusTransitions";
 import type {
   ConvenioAgreement,
   ConvenioAgreementHistory,
@@ -40,8 +41,18 @@ export async function updateAgreement(id: string, patch: ConvenioAgreementUpdate
   return data;
 }
 
-export async function changeAgreementStatus(id: string, status: ConvenioAgreementStatus): Promise<ConvenioAgreement> {
-  return updateAgreement(id, { status });
+/**
+ * Muda o status respeitando a máquina de estados (rascunho → em_aprovacao →
+ * ativo → suspenso/encerrado). Validação aqui gera erro amigável; o trigger
+ * trg_convenio_status_transition no banco é a autoridade final.
+ */
+export async function changeAgreementStatus(
+  id: string,
+  from: ConvenioAgreementStatus,
+  to: ConvenioAgreementStatus
+): Promise<ConvenioAgreement> {
+  assertStatusTransition("agreement", from, to);
+  return updateAgreement(id, { status: to });
 }
 
 export async function listAgreementHistory(agreementId: string): Promise<ConvenioAgreementHistory[]> {

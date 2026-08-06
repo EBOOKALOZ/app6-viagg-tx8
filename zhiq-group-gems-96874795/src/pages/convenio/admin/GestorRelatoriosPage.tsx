@@ -10,7 +10,7 @@ import { GestorPageHeader } from "@/components/convenio/GestorPageHeader";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { listAgreements } from "@/services/convenio/agreements";
-import { listDonations } from "@/services/convenio/donations";
+import { listAllDonationsForExport } from "@/services/convenio/donations";
 import { listCampaigns } from "@/services/convenio/campaigns";
 import { getDashboardStats } from "@/services/convenio/dashboard";
 import { exportReportToExcel, exportReportToPdf, type ReportColumn } from "@/lib/convenio/exportReport";
@@ -63,7 +63,7 @@ export default function GestorRelatoriosPage() {
         ];
         exportReportToPdf("Indicadores", columns, rows);
       } else if (key === "estatisticas") {
-        const [donations, campaigns] = await Promise.all([listDonations(), listCampaigns()]);
+        const [donations, campaigns] = await Promise.all([listAllDonationsForExport(), listCampaigns()]);
         exportReportToExcel("Doacoes", DONATION_COLUMNS, donations as unknown as Record<string, unknown>[]);
         exportReportToExcel("Campanhas", CAMPAIGN_COLUMNS, campaigns as unknown as Record<string, unknown>[]);
       }

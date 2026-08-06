@@ -9,6 +9,7 @@ import { GestorPageHeader } from "@/components/convenio/GestorPageHeader";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import { useConvenioSettings } from "@/hooks/convenio/useConvenioSettings";
 
 export default function GestorConfiguracoesPage() {
@@ -19,6 +20,18 @@ export default function GestorConfiguracoesPage() {
     <div>
       <GestorPageHeader icon={Settings} title="Configurações" subtitle="Parâmetros gerais do módulo Doações & Convênios" />
 
+      <GestorQueryState
+        isLoading={settingsQuery.isLoading}
+        isError={settingsQuery.isError}
+        error={settingsQuery.error}
+        onRetry={() => settingsQuery.refetch()}
+        skeleton={
+          <div className="space-y-4">
+            <Skeleton className="h-24 w-full rounded-2xl" />
+            <Skeleton className="h-24 w-full rounded-2xl" />
+          </div>
+        }
+      >
       <div className="space-y-4">
         <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
           <div className="flex items-center justify-between gap-4">
@@ -28,7 +41,7 @@ export default function GestorConfiguracoesPage() {
               </div>
               <div>
                 <Label className="font-black text-white">
-                  Desconto Social ({settingsQuery.isLoading ? "…" : `${(Number(settings?.desconto_social_pct ?? 0) * 100).toFixed(1)}%`})
+                  Desconto Social ({`${(Number(settings?.desconto_social_pct ?? 0) * 100).toFixed(1)}%`})
                 </Label>
                 <p className="text-xs text-white/40 max-w-md">
                   Estrutura preparada para aplicar o desconto social conforme regras do projeto.
@@ -36,11 +49,7 @@ export default function GestorConfiguracoesPage() {
                 </p>
               </div>
             </div>
-            {settingsQuery.isLoading ? (
-              <Skeleton className="h-6 w-11 rounded-full" />
-            ) : (
-              <Switch checked={settings?.desconto_social_ativo ?? false} disabled />
-            )}
+            <Switch checked={settings?.desconto_social_ativo ?? false} disabled />
           </div>
         </div>
 
@@ -58,14 +67,11 @@ export default function GestorConfiguracoesPage() {
                 </p>
               </div>
             </div>
-            {settingsQuery.isLoading ? (
-              <Skeleton className="h-6 w-11 rounded-full" />
-            ) : (
-              <Switch checked={settings?.repasses_ativos ?? false} disabled />
-            )}
+            <Switch checked={settings?.repasses_ativos ?? false} disabled />
           </div>
         </div>
       </div>
+      </GestorQueryState>
     </div>
   );
 }

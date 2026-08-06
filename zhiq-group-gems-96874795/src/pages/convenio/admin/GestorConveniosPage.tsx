@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -24,9 +25,8 @@ import {
   useCreateConvenioAgreement,
 } from "@/hooks/convenio/useConvenioAgreements";
 import { useConvenioEntitiesForPicker } from "@/hooks/convenio/useConvenioEntities";
+import { allowedNextStatuses } from "@/lib/convenio/statusTransitions";
 import type { ConvenioAgreementStatus } from "@/services/convenio/types";
-
-const STATUS_OPTIONS: ConvenioAgreementStatus[] = ["rascunho", "em_aprovacao", "ativo", "suspenso", "encerrado"];
 
 function CreateAgreementDialog() {
   const [open, setOpen] = useState(false);
@@ -117,6 +117,18 @@ function HistoryDialog({ agreementId, title }: { agreementId: string; title: str
             <Skeleton className="h-8 w-full" />
             <Skeleton className="h-8 w-full" />
           </div>
+        ) : historyQuery.isError ? (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-center">
+            <p className="text-xs text-red-400">Não foi possível carregar o histórico.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2 h-7 rounded-lg text-xs"
+              onClick={() => historyQuery.refetch()}
+            >
+              Tentar novamente
+            </Button>
+          </div>
         ) : (historyQuery.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhuma mudança de status registrada ainda.</p>
         ) : (
@@ -149,13 +161,12 @@ export default function GestorConveniosPage() {
         action={<CreateAgreementDialog />}
       />
 
-      {agreementsQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
+      <GestorQueryState
+        isLoading={agreementsQuery.isLoading}
+        isError={agreementsQuery.isError}
+        error={agreementsQuery.error}
+        onRetry={() => agreementsQuery.refetch()}
+      >
         <GestorEntityTable
           getRowKey={(row) => row.id}
           rows={agreementsQuery.data ?? []}
@@ -165,25 +176,33 @@ export default function GestorConveniosPage() {
             { header: "Entidade", render: (r) => r.entity_name ?? "—" },
             {
               header: "Status",
-              render: (r) => (
-                <Select
-                  value={r.status}
-                  onValueChange={(status) =>
-                    changeStatusMutation.mutate({ id: r.id, status: status as ConvenioAgreementStatus })
-                  }
-                >
-                  <SelectTrigger className="h-7 w-36 border-none bg-transparent p-0">
-                    <GestorStatusBadge status={r.status} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s.replace(/_/g, " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ),
+              render: (r) => {
+                const next = allowedNextStatuses("agreement", r.status) as ConvenioAgreementStatus[];
+                if (next.length === 0) return <GestorStatusBadge status={r.status} />;
+                return (
+                  <Select
+                    value={r.status}
+                    onValueChange={(status) =>
+                      changeStatusMutation.mutate({
+                        id: r.id,
+                        from: r.status as ConvenioAgreementStatus,
+                        to: status as ConvenioAgreementStatus,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="h-7 w-36 border-none bg-transparent p-0">
+                      <GestorStatusBadge status={r.status} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {next.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              },
             },
             {
               header: "Ações",
@@ -195,7 +214,7 @@ export default function GestorConveniosPage() {
             },
           ]}
         />
-      )}
+      </GestorQueryState>
     </div>
   );
 }

@@ -1,44 +1,119 @@
-import { useState } from "react";
+/**
+ * EntityReferralModal — "Indicar entidade" (Comando Convênio).
+ * Formulário público da página /medprev para indicar entidades beneficentes.
+ * Grava em convenio_entity_referrals (RLS: INSERT público, leitura restrita
+ * ao Gestor); validação com zod + react-hook-form; a tela de sucesso só
+ * aparece após o INSERT confirmado.
+ */
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Dialog, DialogContent, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { HeartHandshake, CheckCircle, X } from "lucide-react";
+import { CheckCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useCreateEntityReferral } from "@/hooks/convenio/useEntityReferral";
+
+const referralSchema = z.object({
+  nomeEntidade: z
+    .string()
+    .trim()
+    .min(2, "Informe o nome da entidade")
+    .max(150, "Máximo de 150 caracteres"),
+  cidade: z
+    .string()
+    .trim()
+    .min(2, "Informe a cidade")
+    .max(100, "Máximo de 100 caracteres"),
+  telefone: z
+    .string()
+    .trim()
+    .refine((v) => {
+      if (!v) return true;
+      const digits = v.replace(/\D/g, "");
+      return digits.length >= 10 && digits.length <= 11;
+    }, "Informe um telefone válido com DDD"),
+  responsavel: z.string().trim().max(150, "Máximo de 150 caracteres"),
+  motivo: z.string().trim().max(1000, "Máximo de 1000 caracteres"),
+  consentimento: z
+    .boolean()
+    .refine((v) => v === true, { message: "É necessário concordar com o envio da indicação" }),
+});
+
+type ReferralFormValues = z.infer<typeof referralSchema>;
+
+const DEFAULT_VALUES: ReferralFormValues = {
+  nomeEntidade: "",
+  cidade: "",
+  telefone: "",
+  responsavel: "",
+  motivo: "",
+  consentimento: false,
+};
+
+function formatPhone(value: string): string {
+  let v = value.replace(/\D/g, "");
+  if (v.length > 11) v = v.substring(0, 11);
+  if (v.length > 2) v = `(${v.substring(0, 2)}) ${v.substring(2)}`;
+  if (v.length > 9) v = `${v.substring(0, 10)}-${v.substring(10)}`;
+  return v;
+}
 
 export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const createReferral = useCreateEntityReferral();
+  const loading = createReferral.isPending;
 
-  const [formData, setFormData] = useState({
-    nomeEntidade: "",
-    cidade: "",
-    responsavel: "",
-    telefone: "",
-    motivo: "",
-    consentimento: false,
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<ReferralFormValues>({
+    resolver: zodResolver(referralSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    defaultValues: DEFAULT_VALUES,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    // Simula envio
-    setTimeout(() => {
-      setLoading(false);
+  const telefone = watch("telefone") ?? "";
+  const consentimento = watch("consentimento") ?? false;
+
+  useEffect(() => {
+    if (!open) {
+      setSuccess(false);
+      reset(DEFAULT_VALUES);
+      createReferral.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, reset]);
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => onOpenChange(false), 3000);
+    return () => clearTimeout(timer);
+  }, [success, onOpenChange]);
+
+  const onSubmit = async (values: ReferralFormValues) => {
+    try {
+      await createReferral.mutateAsync({
+        nome_entidade: values.nomeEntidade,
+        cidade: values.cidade,
+        responsavel: values.responsavel || null,
+        telefone: values.telefone || null,
+        motivo: values.motivo || null,
+      });
       setSuccess(true);
-      setTimeout(() => {
-        onOpenChange(false);
-        setSuccess(false);
-        setFormData({
-          nomeEntidade: "",
-          cidade: "",
-          responsavel: "",
-          telefone: "",
-          motivo: "",
-          consentimento: false,
-        });
-      }, 3000);
-    }, 1200);
+    } catch (err) {
+      console.error("[EntityReferralModal] error:", err);
+      toast.error("Não foi possível enviar a indicação. Verifique sua conexão e tente novamente.");
+    }
   };
 
   const handleClose = () => {
@@ -51,7 +126,7 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
+      <DialogContent
         className="sm:max-w-[480px] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-slate-50/95 backdrop-blur-2xl border border-white/40 shadow-[0_24px_64px_-12px_rgba(0,0,0,0.2)] rounded-3xl [&>button]:hidden"
         onEscapeKeyDown={(e) => { if (loading) e.preventDefault(); }}
         onInteractOutside={(e) => { if (loading) e.preventDefault(); }}
@@ -99,19 +174,21 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <div className="space-y-1">
                 <Label htmlFor="nomeEntidade" className="text-xs font-bold text-slate-700 ml-1">
                   NOME DA ENTIDADE / INSTITUIÇÃO *
                 </Label>
                 <Input
                   id="nomeEntidade"
-                  required
                   placeholder="Ex: Associação de Amparo XYZ"
-                  className={inputClass}
-                  value={formData.nomeEntidade}
-                  onChange={(e) => setFormData({ ...formData, nomeEntidade: e.target.value })}
+                  maxLength={150}
+                  className={cn(inputClass, errors.nomeEntidade && "border-red-400 focus:border-red-500")}
+                  {...register("nomeEntidade")}
                 />
+                {errors.nomeEntidade && (
+                  <p className="text-[11px] text-red-500 font-bold ml-1">{errors.nomeEntidade.message}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -121,12 +198,14 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
                   </Label>
                   <Input
                     id="cidade"
-                    required
                     placeholder="Cidade - UF"
-                    className={inputClass}
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                    maxLength={100}
+                    className={cn(inputClass, errors.cidade && "border-red-400 focus:border-red-500")}
+                    {...register("cidade")}
                   />
+                  {errors.cidade && (
+                    <p className="text-[11px] text-red-500 font-bold ml-1">{errors.cidade.message}</p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="telefone" className="text-xs font-bold text-slate-700 ml-1">
@@ -136,16 +215,13 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
                     id="telefone"
                     type="tel"
                     placeholder="(00) 00000-0000"
-                    className={inputClass}
-                    value={formData.telefone}
-                    onChange={(e) => {
-                      let v = e.target.value.replace(/\D/g, "");
-                      if (v.length > 11) v = v.substring(0, 11);
-                      if (v.length > 2) v = `(${v.substring(0, 2)}) ${v.substring(2)}`;
-                      if (v.length > 9) v = `${v.substring(0, 10)}-${v.substring(10)}`;
-                      setFormData({ ...formData, telefone: v });
-                    }}
+                    className={cn(inputClass, errors.telefone && "border-red-400 focus:border-red-500")}
+                    value={telefone}
+                    onChange={(e) => setValue("telefone", formatPhone(e.target.value), { shouldValidate: true })}
                   />
+                  {errors.telefone && (
+                    <p className="text-[11px] text-red-500 font-bold ml-1">{errors.telefone.message}</p>
+                  )}
                 </div>
               </div>
 
@@ -156,10 +232,13 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
                 <Input
                   id="responsavel"
                   placeholder="Se conhecer alguém lá, informe"
-                  className={inputClass}
-                  value={formData.responsavel}
-                  onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
+                  maxLength={150}
+                  className={cn(inputClass, errors.responsavel && "border-red-400 focus:border-red-500")}
+                  {...register("responsavel")}
                 />
+                {errors.responsavel && (
+                  <p className="text-[11px] text-red-500 font-bold ml-1">{errors.responsavel.message}</p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -169,22 +248,24 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
                 <textarea
                   id="motivo"
                   rows={3}
-                  className={cn("w-full resize-none", inputClass)}
+                  maxLength={1000}
+                  className={cn("w-full resize-none", inputClass, errors.motivo && "border-red-400 focus:border-red-500")}
                   placeholder="Conte um pouco sobre o trabalho incrível que eles fazem..."
-                  value={formData.motivo}
-                  onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
+                  {...register("motivo")}
                 />
+                {errors.motivo && (
+                  <p className="text-[11px] text-red-500 font-bold ml-1">{errors.motivo.message}</p>
+                )}
               </div>
 
               <div className="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 flex gap-3 mt-4">
                 <div className="pt-0.5">
                   <label className="relative flex items-center justify-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="peer sr-only" 
-                      checked={formData.consentimento}
-                      onChange={(e) => setFormData({ ...formData, consentimento: e.target.checked })}
-                      required
+                    <input
+                      type="checkbox"
+                      className="peer sr-only"
+                      checked={consentimento}
+                      onChange={(e) => setValue("consentimento", e.target.checked, { shouldValidate: true })}
                     />
                     <div className="w-5 h-5 rounded-md border-2 border-slate-300 peer-checked:bg-emerald-500 peer-checked:border-emerald-500 transition-colors shadow-sm bg-white" />
                     <CheckCircle className="absolute w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none scale-50 peer-checked:scale-100 duration-200" strokeWidth={3} />
@@ -193,11 +274,14 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
                 <Label
                   htmlFor="consentimento"
                   className="text-xs font-medium text-slate-600 leading-relaxed cursor-pointer select-none"
-                  onClick={() => setFormData(prev => ({ ...prev, consentimento: !prev.consentimento }))}
+                  onClick={() => setValue("consentimento", !consentimento, { shouldValidate: true })}
                 >
                   Concordo em enviar esta indicação para análise da equipe MedPrev, ciente de que o cadastro final depende de aprovação.
                 </Label>
               </div>
+              {errors.consentimento && (
+                <p className="text-[11px] text-red-500 font-bold ml-1">{errors.consentimento.message}</p>
+              )}
 
               <div className="pt-4 pb-2">
                 <Button
@@ -212,6 +296,8 @@ export function EntityReferralModal({ open, onOpenChange }: { open: boolean; onO
                         <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white" />
                         Enviando indicação...
                       </>
+                    ) : createReferral.isError ? (
+                      "Tentar novamente"
                     ) : (
                       "Enviar Indicação"
                     )}

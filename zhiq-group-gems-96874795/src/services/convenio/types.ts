@@ -32,6 +32,14 @@ export type ConvenioSettingsUpdate = Tables["convenio_settings"]["Update"];
 
 export type ConvenioDashboardStats = Database["public"]["Views"]["convenio_dashboard_stats"]["Row"];
 
+export type ConvenioPartnerLead = Tables["convenio_partner_leads"]["Row"];
+export type ConvenioPartnerLeadInsert = Tables["convenio_partner_leads"]["Insert"];
+export type ConvenioPartnerLeadUpdate = Tables["convenio_partner_leads"]["Update"];
+
+export type ConvenioEntityReferral = Tables["convenio_entity_referrals"]["Row"];
+export type ConvenioEntityReferralInsert = Tables["convenio_entity_referrals"]["Insert"];
+export type ConvenioEntityReferralUpdate = Tables["convenio_entity_referrals"]["Update"];
+
 export type ConvenioEntityCategory =
   | "clinica"
   | "laboratorio"

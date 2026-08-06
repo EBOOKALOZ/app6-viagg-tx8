@@ -8,6 +8,7 @@ import { ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { GestorPageHeader } from "@/components/convenio/GestorPageHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import { useConvenioAuditLog } from "@/hooks/convenio/useConvenioAuditLog";
 
 export default function GestorAuditoriaPage() {
@@ -19,13 +20,20 @@ export default function GestorAuditoriaPage() {
     <div>
       <GestorPageHeader icon={ShieldCheck} title="Auditoria" subtitle="Logs, histórico e rastreabilidade de eventos do módulo" />
 
-      {auditQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-        </div>
-      ) : rows.length === 0 ? (
+      <GestorQueryState
+        isLoading={auditQuery.isLoading}
+        isError={auditQuery.isError}
+        error={auditQuery.error}
+        onRetry={() => auditQuery.refetch()}
+        skeleton={
+          <div className="space-y-2">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+        }
+      >
+      {rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
           <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-white/20" />
           <p className="text-sm text-white/40">Nenhum evento registrado ainda.</p>
@@ -69,6 +77,7 @@ export default function GestorAuditoriaPage() {
           </div>
         </>
       )}
+      </GestorQueryState>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GestorQueryState } from "@/components/convenio/GestorQueryState";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -20,9 +20,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useConvenioEntities, useCreateConvenioEntity, useUpdateConvenioEntity } from "@/hooks/convenio/useConvenioEntities";
+import { allowedNextStatuses } from "@/lib/convenio/statusTransitions";
 import type { ConvenioEntity, ConvenioEntityCategory, ConvenioEntityStatus } from "@/services/convenio/types";
 
-const STATUS_OPTIONS: ConvenioEntityStatus[] = ["em_analise", "ativo", "suspenso", "encerrado", "reprovado"];
 const DOC_STATUS_OPTIONS = ["pendente", "em_analise", "aprovada", "reprovada"] as const;
 
 interface GestorCredenciamentoCategoryPageProps {
@@ -198,13 +198,12 @@ export function GestorCredenciamentoCategoryPage({
         }
       />
 
-      {entitiesQuery.isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : (
+      <GestorQueryState
+        isLoading={entitiesQuery.isLoading}
+        isError={entitiesQuery.isError}
+        error={entitiesQuery.error}
+        onRetry={() => entitiesQuery.refetch()}
+      >
         <GestorEntityTable
           getRowKey={(row) => row.id}
           rows={entitiesQuery.data ?? []}
@@ -214,23 +213,27 @@ export function GestorCredenciamentoCategoryPage({
             { header: "Cidade", render: (r) => r.address_city ?? "—" },
             {
               header: "Status",
-              render: (r) => (
-                <Select
-                  value={r.status}
-                  onValueChange={(status) => updateMutation.mutate({ id: r.id, patch: { status } })}
-                >
-                  <SelectTrigger className="h-7 w-32 border-none bg-transparent p-0">
-                    <GestorStatusBadge status={r.status} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {s.replace(/_/g, " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ),
+              render: (r) => {
+                const next = allowedNextStatuses("entity", r.status) as ConvenioEntityStatus[];
+                if (next.length === 0) return <GestorStatusBadge status={r.status} />;
+                return (
+                  <Select
+                    value={r.status}
+                    onValueChange={(status) => updateMutation.mutate({ id: r.id, patch: { status } })}
+                  >
+                    <SelectTrigger className="h-7 w-32 border-none bg-transparent p-0">
+                      <GestorStatusBadge status={r.status} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {next.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              },
             },
             {
               header: "Documentação",
@@ -269,7 +272,7 @@ export function GestorCredenciamentoCategoryPage({
             },
           ]}
         />
-      )}
+      </GestorQueryState>
     </div>
   );
 }

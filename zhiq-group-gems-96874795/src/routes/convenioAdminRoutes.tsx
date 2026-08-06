@@ -13,6 +13,7 @@ import {
   GestorDashboardPage,
   GestorConveniosPage,
   GestorLeadsParceirosPage,
+  GestorIndicacoesPage,
   GestorCredenciamentoHubPage,
   GestorClinicasPage,
   GestorLaboratoriosPage,
@@ -48,6 +49,7 @@ export const convenioAdminRoutes = (
       <Route path="/convenio-admin" element={<Suspense fallback={<PageFallback />}><GestorDashboardPage /></Suspense>} />
       <Route path="/convenio-admin/convenios" element={<Suspense fallback={<PageFallback />}><GestorConveniosPage /></Suspense>} />
       <Route path="/convenio-admin/leads-parceiros" element={<Suspense fallback={<PageFallback />}><GestorLeadsParceirosPage /></Suspense>} />
+      <Route path="/convenio-admin/indicacoes" element={<Suspense fallback={<PageFallback />}><GestorIndicacoesPage /></Suspense>} />
       <Route path="/convenio-admin/credenciamento" element={<Suspense fallback={<PageFallback />}><GestorCredenciamentoHubPage /></Suspense>} />
       <Route path="/convenio-admin/credenciamento/clinicas" element={<Suspense fallback={<PageFallback />}><GestorClinicasPage /></Suspense>} />
       <Route path="/convenio-admin/credenciamento/laboratorios" element={<Suspense fallback={<PageFallback />}><GestorLaboratoriosPage /></Suspense>} />

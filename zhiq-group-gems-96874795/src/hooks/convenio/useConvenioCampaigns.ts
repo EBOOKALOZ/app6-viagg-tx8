@@ -1,7 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { createCampaign, listActiveCampaignsForPicker, listCampaigns, updateCampaign } from "@/services/convenio/campaigns";
-import type { ConvenioCampaignInsert, ConvenioCampaignUpdate } from "@/services/convenio/types";
+import {
+  changeCampaignStatus,
+  createCampaign,
+  listActiveCampaignsForPicker,
+  listCampaigns,
+  updateCampaign,
+} from "@/services/convenio/campaigns";
+import type { ConvenioCampaignInsert, ConvenioCampaignStatus, ConvenioCampaignUpdate } from "@/services/convenio/types";
 
 const KEY = ["convenio", "campaigns"];
 
@@ -29,6 +35,24 @@ export function useCreateConvenioCampaign() {
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erro ao criar campanha", description: error.message });
+    },
+  });
+}
+
+export function useChangeConvenioCampaignStatus() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: ({ id, from, to }: { id: string; from: ConvenioCampaignStatus; to: ConvenioCampaignStatus }) =>
+      changeCampaignStatus(id, from, to),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: KEY });
+      queryClient.invalidateQueries({ queryKey: ["convenio", "dashboard-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["convenio", "public"] });
+      toast({ title: "Status da campanha atualizado" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Erro ao mudar status da campanha", description: error.message });
     },
   });
 }
