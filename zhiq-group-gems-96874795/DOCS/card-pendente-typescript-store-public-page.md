@@ -1,6 +1,6 @@
 # CARD PENDENTE — Erros de TypeScript em StorePublicPage.tsx
 
-**Status:** Aberto — aguardando investigação
+**Status:** Parcialmente fechado em 2026-08-06 — critério 1 ATENDIDO: `npx tsc --noEmit` global PASS (exit 0) após regeneração de `src/integrations/supabase/types.ts`; nenhum dos erros TS listados abaixo se reproduz mais. Critério 2 (teste funcional da full view de Viagens e add-to-cart em browser) segue pendente.
 **Origem:** Detectados pelo IDE em 2026-08-05 durante a correção visual do overflow dos cards no mobile (correção exclusivamente de layout, que NÃO tocou nas regiões abaixo).
 **Escopo:** Somente tipos/TypeScript. Nenhum destes erros foi introduzido ou alterado pela correção do carrossel.
 

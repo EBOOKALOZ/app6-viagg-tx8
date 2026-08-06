@@ -31,6 +31,8 @@ Os dois defeitos P0 apontados na auditoria de 04/08 (dollar-quoting truncado e p
 **Aplicação no banco vivo (via `supabase db query --file --linked`):** APLICADA e VERIFICADA:
 `rls_on=true`, `policies=2`, `truncate_grants=null`, `secdef=true`, `fn_config={search_path=public}`, `anon_can_exec=false`, `auth_can_exec=true`, `triggers=1`. Replay da própria migration executado sem erro (idempotência comprovada). Smoke-test `SELECT update_dynamic_category_images()` OK (no-op com config vazia). Tabelas-fonte da rotação (`merchant_marketing_products`, `merchant_stores`, `categorias_loja`) confirmadas no banco.
 
+**Fechamento de gap adicional — QA Fase 3:** verificação pós-consolidação constatou que `20260805_orion_qa_fase3_ecosystem.sql` (commitada) nunca havia sido aplicada. APLICADA e VERIFICADA em 06/08: `qa_integration_runs`/`qa_events`/`qa_alerts`/`qa_releases` criadas, RLS em todas, 6 policies via `is_admin()`, `qa_events` append-only (UPDATE negado a authenticated), TRUNCATE revogado, anon sem acesso. Convênio P1/P2/P3 e QA Fases 1–2 confirmadas já aplicadas (`convenio_public_stats` é função, não view).
+
 **Sanidade das 782 migrations:** zero BOM; zero dollar-quoting desbalanceado (named tags e `$$`) após excluir falso positivo do símbolo monetário "R$". Replay completo em shadow DB local permanece indisponível neste ambiente (sem Docker) — validação estática + replay da migration nova no banco real.
 
 ## FASE 3 — Gates (2026-08-06)
