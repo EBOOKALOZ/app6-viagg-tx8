@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { DynamicCategoryIcon } from "@/components/ui/DynamicCategoryIcon";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -213,93 +214,8 @@ interface CategoriaLoja {
     created_at: string;
 }
 
-// Default emoji map for common category names
-const CATEGORY_ICONS: Record<string, string> = {
-    "lanches": "🍔", "pizzas": "🍕", "pizza": "🍕", "japonesa": "🍣",
-    "marmitas": "🥗", "marmita": "🥗", "bebidas": "🧃", "mercado": "🛒",
-    "doces": "🍰", "açaí": "🫐", "sorvetes": "🍦", "pastel": "🩹",
-    "churrasco": "🍖", "saudável": "🥦", "vegano": "🥑", "café": "☕",
-    "padaria": "🥐", "farmácia": "💊", "pet": "🐾", "flores": "🌻",
-    "eletrônicos": "📱", "moda": "👗", "beleza": "💄", "esportes": "⚽",
-    "casa": "🏠", "automotivo": "🚗", "brinquedos": "🧸", "livros": "📚",
-    "serviços": "🛠️", "artesanato": "🎨", "games": "🎮", "ferramentas": "🔧",
-    "informática": "💻", "celulares": "📲", "outros": "📦",
-    "alimentos": "🍽️", "alimentos & bebidas": "🍽️",
-    "casa & decoração": "🏠", "beleza & saúde": "💄",
-    "imóveis": "🏠", "imoveis": "🏠", "terrenos": "🚜",
-};
-
-// Palavras-chave → emoji. Casa por "contém", cobrindo nomes longos de categoria
-// (ex.: "Celulares e Smartphones", "Acessórios de Computador"). Ordem importa:
-// chaves mais específicas vêm antes das genéricas.
-const CATEGORY_KEYWORDS: Array<[string, string]> = [
-    ["hortifruti", "🥬"], ["horti", "🥬"], ["verdura", "🥬"], ["legume", "🥕"], ["fruta", "🍎"],
-    ["videoaula", "🎬"], ["curso", "🎓"], ["aula", "🎓"], ["ebook", "📘"], ["educac", "🎓"], ["treinamento", "🎓"],
-    ["tipografi", "🔤"], ["fonte", "🔤"],
-    ["abajur", "💡"], ["luminaria", "💡"], ["lampada", "💡"], ["ilumin", "💡"],
-    ["construc", "🧱"], ["ferramenta", "🔧"], ["eletrica", "🔌"], ["hidraulic", "🚿"],
-    ["smartphone", "📱"], ["celular", "📱"], ["telefone", "📞"],
-    ["acessorios de computador", "🖱️"], ["acessorio de computador", "🖱️"], ["mouse", "🖱️"], ["teclado", "⌨️"], ["monitor", "🖥️"],
-    ["software", "💿"], ["licenca", "🔑"], ["aplicativo", "📲"], ["app", "📲"],
-    ["informatica", "🖥️"], ["notebook", "💻"], ["computador", "💻"], ["hardware", "🖥️"],
-    ["arte", "🎨"], ["design", "🎨"], ["grafic", "🎨"], ["artesanato", "🧶"],
-    ["alimento", "🥗"], ["comida", "🍽️"], ["lanche", "🍔"], ["bebida", "🧃"], ["doce", "🍰"], ["cafe", "☕"], ["padaria", "🥐"],
-    ["fone", "🎧"], ["camera", "📷"], ["televis", "📺"], ["console", "🕹️"], ["game", "🎮"], ["eletronic", "🔌"],
-    ["moda", "👗"], ["roupa", "👕"], ["calcado", "👟"], ["sapato", "👟"], ["bolsa", "👜"], ["joia", "💍"], ["relogio", "⌚"], ["oculos", "🕶️"],
-    ["beleza", "💄"], ["cosmetic", "💄"], ["perfume", "🧴"], ["saude", "💊"], ["farmac", "💊"],
-    ["esporte", "⚽"], ["fitness", "🏋️"], ["bicicleta", "🚲"],
-    ["decorac", "🛋️"], ["movel", "🛋️"], ["movei", "🛋️"], ["cozinha", "🍳"], ["casa", "🏠"],
-    ["automov", "🚗"], ["veiculo", "🚗"], ["carro", "🚗"], ["moto", "🏍️"], ["pneu", "🛞"], ["pecas", "⚙️"],
-    ["pet", "🐾"], ["animal", "🐾"], ["flor", "🌻"], ["planta", "🪴"], ["jardim", "🌱"],
-    ["brinquedo", "🧸"], ["bebe", "🍼"], ["infantil", "🧸"],
-    ["livro", "📚"], ["papelaria", "✏️"], ["escritorio", "🗂️"],
-    ["musica", "🎵"], ["instrumento", "🎸"],
-    ["imovel", "🏠"], ["imovei", "🏠"], ["terreno", "🌳"], ["aluguel", "🔑"],
-    ["servico", "🛠️"],
-];
-
-function getCategoryIcon(nome: string, icone: string | null): string {
-    // Respeita um ícone real vindo do banco, mas ignora o selo genérico 🏷️.
-    if (icone && icone.trim() && icone.trim() !== "🏷️") return icone.trim();
-    const key = normalizeCategoryKey(nome);
-    // 1) match exato no mapa de emojis
-    const exact = CATEGORY_ICONS[key] ?? CATEGORY_ICONS[nome.toLowerCase().trim()];
-    if (exact) return exact;
-    // 2) match por palavra-chave (nomes longos)
-    for (const [kw, emoji] of CATEGORY_KEYWORDS) {
-        if (key.includes(kw)) return emoji;
-    }
-    // 3) fallback genérico
-    return icone?.trim() || "🏷️";
-}
-
-// Converte um emoji na URL da imagem SVG colorida (Twemoji) — ícones "reais",
-// nítidos e consistentes em qualquer aparelho. Remove o seletor de variação (FE0F).
-function twemojiUrl(emoji: string): string {
-    const cps: string[] = [];
-    for (const ch of emoji) {
-        const cp = ch.codePointAt(0);
-        if (cp === undefined || cp === 0xfe0f || cp === 0x200d) continue;
-        cps.push(cp.toString(16));
-    }
-    return `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${cps.join("-")}.svg`;
-}
-
-// Ícone de categoria como imagem (Twemoji). Se a imagem falhar, cai pro emoji.
-function CategoryIcon({ nome, icone }: { nome: string; icone: string | null }) {
-    const emoji = getCategoryIcon(nome, icone);
-    const [failed, setFailed] = useState(false);
-    if (failed) return <span className="text-3xl leading-none">{emoji}</span>;
-    return (
-        <img
-            src={twemojiUrl(emoji)}
-            alt=""
-            loading="lazy"
-            className="w-8 h-8 object-contain select-none pointer-events-none"
-            onError={() => setFailed(true)}
-        />
-    );
-}
+// A lógica de ícones foi migrada para DynamicCategoryIcon.tsx para ORION-540
+// As categorias dinâmicas usam o cache global do banco e fallback para emojis.
 
 // Normalize category keys: strip accents, lowercase, trim, collapse whitespace.
 // Ensures "Eletrônicos" and "Eletronicos" are treated as the same category.
@@ -1793,7 +1709,7 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                                                 ? "bg-[#FF6A00] text-white shadow-md shadow-orange-200 scale-105"
                                                 : "bg-white text-gray-500 shadow-sm hover:bg-orange-50 hover:text-[#FF6A00]"
                                         )}>
-                                        <CategoryIcon nome={cat.nome} icone={cat.icone} />
+                                        <DynamicCategoryIcon nome={cat.nome} icone={cat.icone} />
                                         <span className="text-[10px] md:text-xs font-bold whitespace-nowrap truncate w-full text-center">{cat.nome}</span>
                                         <span className={cn(
                                             "absolute -top-1 -right-1 text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 shadow-sm",

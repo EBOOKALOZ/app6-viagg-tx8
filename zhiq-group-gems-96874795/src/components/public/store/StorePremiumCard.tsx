@@ -131,7 +131,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
             </div>
 
             {/* Content Area */}
-            <div className="p-3 flex flex-col flex-1 gap-2">
+            <div className="p-3 flex flex-col flex-1 gap-2 min-w-0 overflow-hidden">
                 <h3 className="st-card-title text-zinc-800 text-xs sm:text-sm font-medium line-clamp-2 leading-tight min-h-[2.5em] group-hover:text-[#FF6A00] transition-colors">
                     {product.title}
                 </h3>
@@ -171,10 +171,10 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                 </div>
 
                 {/* Desktop Button - usually visible on hover on desktops, but let's keep it visible for UX */}
-                <div className="flex flex-col gap-1.5 mt-2">
+                <div className="flex flex-col gap-1.5 mt-2 w-full overflow-hidden">
                     <Button 
                         className={cn(
-                            "w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[10.5px] sm:text-[11px] tracking-normal sm:tracking-wide transition-all flex items-center justify-center gap-1.5 px-2 text-center whitespace-normal",
+                            "w-full h-auto min-h-[36px] sm:min-h-[40px] py-1 rounded-xl font-black uppercase text-[10.5px] sm:text-[11px] tracking-normal sm:tracking-wide transition-all flex items-center justify-center gap-1.5 px-2 text-center whitespace-normal break-words",
                             isRecentlyAdded
                                 ? "bg-emerald-500 text-white hover:bg-emerald-600"
                                 : "st-btn bg-[#FF6A00] hover:bg-[#E65C00] text-white"
@@ -208,7 +208,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     {onMakeOffer && (
                         <Button
                             variant="default"
-                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-[#68c7f2] text-zinc-900 hover:opacity-90 border-none shadow-sm flex items-center justify-center text-center px-1"
+                            className="w-full h-auto min-h-[36px] sm:min-h-[40px] py-1 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-[#68c7f2] text-zinc-900 hover:opacity-90 border-none shadow-sm flex items-center justify-center text-center px-1 whitespace-normal break-words"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onMakeOffer(product);
@@ -221,7 +221,7 @@ export function StorePremiumCard({ product, isRecentlyAdded, onAddToCart, onClic
                     {onAskQuestion && (
                         <Button
                             variant="default"
-                            className="w-full h-9 sm:h-10 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-green-500 text-white hover:bg-green-600 border-none shadow-sm flex items-center justify-center text-center px-1"
+                            className="w-full h-auto min-h-[36px] sm:min-h-[40px] py-1 rounded-xl font-black uppercase text-[9px] tracking-tight transition-all bg-green-500 text-white hover:bg-green-600 border-none shadow-sm flex items-center justify-center text-center px-1 whitespace-normal break-words"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onAskQuestion(product);

@@ -1087,7 +1087,7 @@ export default function StorePublicPage() {
                                         </div>
                                     )}
 
-                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4" alwaysShowArrows>
+                                    <HorizontalCarousel cardWidth="w-full sm:w-[280px]" gap="gap-4" alwaysShowArrows>
                                         {[
                                             ...visible.map(p => (
                                                 <StorePremiumCard
@@ -1295,7 +1295,7 @@ export default function StorePublicPage() {
                                             Ver Tudo
                                         </Button>
                                     </div>
-                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-full sm:w-[280px]" gap="gap-4">
                                         {homeFeatured.map(product => (
                                             <StorePremiumCard 
                                                 key={product.id}
@@ -1330,7 +1330,7 @@ export default function StorePublicPage() {
                                             Recém-Chegados
                                         </h3>
                                     </div>
-                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-full sm:w-[280px]" gap="gap-4">
                                         {homeLatest.map(product => (
                                             <StorePremiumCard
                                                 key={product.id}
@@ -1490,7 +1490,7 @@ export default function StorePublicPage() {
                                 return productGridClass ? (
                                     <div className={productGridClass}>{cards}</div>
                                 ) : (
-                                    <HorizontalCarousel cardWidth="w-[calc(100vw-2rem)] sm:w-[280px]" gap="gap-4">
+                                    <HorizontalCarousel cardWidth="w-full sm:w-[280px]" gap="gap-4">
                                         {cards}
                                     </HorizontalCarousel>
                                 );

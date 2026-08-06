@@ -84,6 +84,8 @@ import {
   Gavel,
   GraduationCap,
   CheckSquare,
+  FlaskConical,
+  Bug,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -180,6 +182,7 @@ const menuSections: MenuSection[] = [
     title: "ORION AI CENTER",
     emoji: "🧠",
     items: [
+      { title: "🧪 ORION LOCAL TEST LAB", url: "/admin/orion-local-test-lab", icon: FlaskConical, badge: "OLT" },
       { title: "Executive AI · CEO Copilot", url: "/admin/orion-executive", icon: Gem, badge: "CEO" },
       { title: "Command Center", url: "/admin/orion-command", icon: Crown, badge: "TOP" },
       { title: "Operations AI", url: "/admin/orion-operations", icon: Briefcase, badge: "COO" },
@@ -288,6 +291,7 @@ const menuSections: MenuSection[] = [
       { title: "Serviços", url: "/admin/servicos", icon: Briefcase },
       { title: "Fretes & Transportes", url: "/admin/fretes", icon: Truck },
       { title: "Viagens & Turismo", url: "/admin/viagens", icon: Plane },
+      { title: "Central de Problemas", url: "/admin/qa", icon: Bug, badge: "QA" },
       { title: "SHC – Sistema de Homologação", url: "/admin/shc", icon: CheckSquare, badge: "SHC" },
       { title: "Moderação de Viagens", url: "/admin/viagens/moderacao", icon: Plane },
       { title: "Imagens de Viagens", url: "/admin/viagens/aprovacao-imagens", icon: Camera },
@@ -299,6 +303,7 @@ const menuSections: MenuSection[] = [
       { title: "Marketplace", url: "/admin/marketplace", icon: BarChart3 },
       { title: "Produtos Marketplace", url: "/admin/marketplace/products", icon: Package },
       { title: "Imagens Produtos", url: "/admin/moderacao-imagens", icon: Camera },
+      { title: "Categorias Dinâmicas", url: "/admin/categorias-dinamicas", icon: Camera, badge: "PREMIUM" },
       { title: "Financeiro", url: "/admin/financeiro", icon: Wallet },
       { title: "Config. Mercado Pago", url: "/admin/pagamentos/mercadopago", icon: CreditCard, badge: "NOVO" },
     ],

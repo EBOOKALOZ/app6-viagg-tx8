@@ -72,11 +72,11 @@ export function HorizontalCarousel({
       >
         {Array.isArray(children)
           ? children.map((child, i) => (
-              <div key={i} className={cn("flex-none", snap && "snap-start snap-always", cardWidth)}>
+              <div key={i} className={cn("flex-none max-w-full min-w-0", snap && "snap-start snap-always", cardWidth)}>
                 {child}
               </div>
             ))
-          : <div className={cn("flex-none", snap && "snap-start snap-always", cardWidth)}>{children}</div>}
+          : <div className={cn("flex-none max-w-full min-w-0", snap && "snap-start snap-always", cardWidth)}>{children}</div>}
       </div>
 
       {/* Flechas futuristas coladas ao card */}

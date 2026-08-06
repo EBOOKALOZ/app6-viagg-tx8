@@ -429,6 +429,7 @@ export const GestorLoginPage = lazy(() => import("@/pages/convenio/GestorLoginPa
 export const GestorDashboardPage = lazy(() => import("@/pages/convenio/admin/GestorDashboardPage"));
 export const GestorConveniosPage = lazy(() => import("@/pages/convenio/admin/GestorConveniosPage"));
 export const GestorLeadsParceirosPage = lazy(() => import("@/pages/convenio/admin/GestorLeadsParceirosPage"));
+export const GestorIndicacoesPage = lazy(() => import("@/pages/convenio/admin/GestorIndicacoesPage"));
 export const GestorCredenciamentoHubPage = lazy(() => import("@/pages/convenio/admin/GestorCredenciamentoHubPage"));
 export const GestorClinicasPage = lazy(() => import("@/pages/convenio/admin/credenciamento/GestorClinicasPage"));
 export const GestorLaboratoriosPage = lazy(() => import("@/pages/convenio/admin/credenciamento/GestorLaboratoriosPage"));
@@ -444,3 +445,11 @@ export const GestorAuditoriaPage = lazy(() => import("@/pages/convenio/admin/Ges
 export const GestorMensagensPage = lazy(() => import("@/pages/convenio/admin/GestorMensagensPage"));
 export const GestorAcessoPage = lazy(() => import("@/pages/convenio/admin/GestorAcessoPage"));
 export const GestorConfiguracoesPage = lazy(() => import("@/pages/convenio/admin/GestorConfiguracoesPage"));
+export const AdminDynamicCategories = lazy(() => import("@/pages/admin/AdminDynamicCategories").then(m => ({ default: m.AdminDynamicCategories })));
+
+/* ── ORION-QA Fase 1 — Central de Problemas ── */
+export const AdminQACentralPage = lazy(() => import("@/pages/admin/qa/AdminQACentralPage"));
+export const AdminQAIssueDetailPage = lazy(() => import("@/pages/admin/qa/AdminQAIssueDetailPage"));
+
+/* ── ORION LOCAL TEST LAB (OLT) — laboratório permanente de testes locais ── */
+export const AdminOrionLocalTestLab = lazy(() => import("@/pages/admin/AdminOrionLocalTestLab"));

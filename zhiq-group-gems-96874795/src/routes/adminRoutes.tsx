@@ -201,7 +201,11 @@ import {
   AdminSHCAudit,
   AdminSHCCertification,
   AdminSHCCertificationTab,
-  AdminSHCEvolution
+  AdminSHCEvolution,
+  AdminDynamicCategories,
+  AdminOrionLocalTestLab,
+  AdminQACentralPage,
+  AdminQAIssueDetailPage
 } from "./lazyPages";
 
 export const adminRoutes = (
@@ -231,6 +235,7 @@ export const adminRoutes = (
       <Route path="/admin/notificacoes" element={<AdminNotificationsDashboard />} />
       <Route path="/admin/marketplace/comercio" element={<AdminMarketplaceCommerce />} />
       <Route path="/admin/moderacao-imagens" element={<AdminImageModeration />} />
+      <Route path="/admin/categorias-dinamicas" element={<AdminDynamicCategories />} />
       <Route path="/admin/expansao" element={<AdminExpansao />} />
       <Route path="/admin/financeiro" element={<AdminFinanceiro />}>
         <Route path="ajustes" element={<AdminFinanceAdjustments />} />
@@ -405,12 +410,19 @@ export const adminRoutes = (
       <Route path="/admin/multimidia" element={<AdminMultimidia />} />
       <Route path="/admin/orion-pricing" element={<AdminOrionPricing />} />
       <Route path="/admin/orion-forecast" element={<AdminOrionForecast />} />
+      {/* ORION LOCAL TEST LAB (OLT) — rota canônica + alias curto */}
+      <Route path="/admin/orion-local-test-lab" element={<AdminOrionLocalTestLab />} />
+      <Route path="/admin/olt" element={<Navigate to="/admin/orion-local-test-lab" replace />} />
       {/* Auditoria de Categorias — segmentação por módulo */}
       <Route path="/admin/auditoria-categorias" element={<AdminAuditoriaCategorias />} />
       {/* Redirect legado */}
       <Route path="/admin/fila-postador" element={<Navigate to="/admin/fila-impulsionar" replace />} />
       <Route path="/admin/postador-central" element={<Navigate to="/admin/impulsionar-central" replace />} />
       
+      {/* ORION-QA — Central de Problemas */}
+      <Route path="/admin/qa" element={<AdminQACentralPage />} />
+      <Route path="/admin/qa/:id" element={<AdminQAIssueDetailPage />} />
+
       {/* SHC */}
       <Route path="/admin/shc" element={<AdminSHCCentral />} />
       <Route path="/admin/shc/:moduleId" element={<AdminSHCOverview />} />
