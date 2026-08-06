@@ -4178,6 +4178,63 @@ export type Database = {
         }
         Relationships: []
       }
+      convenio_entity_referrals: {
+        Row: {
+          cidade: string
+          consentimento: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          motivo: string | null
+          nome_entidade: string
+          observacoes: string | null
+          origem: string
+          responsavel: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_ip: string | null
+          status: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cidade: string
+          consentimento?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          nome_entidade: string
+          observacoes?: string | null
+          origem?: string
+          responsavel?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_ip?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string
+          consentimento?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          nome_entidade?: string
+          observacoes?: string | null
+          origem?: string
+          responsavel?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_ip?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       convenio_financial_records: {
         Row: {
           amount: number
@@ -4245,6 +4302,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      convenio_partner_leads: {
+        Row: {
+          cidade: string
+          consentimento: boolean
+          created_at: string
+          email: string | null
+          estado: string
+          id: string
+          instituicao: string | null
+          mensagem: string | null
+          nome: string
+          observacoes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_ip: string | null
+          status: string
+          tipo_parceiro: string
+          updated_at: string
+          whatsapp: string
+        }
+        Insert: {
+          cidade: string
+          consentimento?: boolean
+          created_at?: string
+          email?: string | null
+          estado: string
+          id?: string
+          instituicao?: string | null
+          mensagem?: string | null
+          nome: string
+          observacoes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_ip?: string | null
+          status?: string
+          tipo_parceiro: string
+          updated_at?: string
+          whatsapp: string
+        }
+        Update: {
+          cidade?: string
+          consentimento?: boolean
+          created_at?: string
+          email?: string | null
+          estado?: string
+          id?: string
+          instituicao?: string | null
+          mensagem?: string | null
+          nome?: string
+          observacoes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_ip?: string | null
+          status?: string
+          tipo_parceiro?: string
+          updated_at?: string
+          whatsapp?: string
+        }
+        Relationships: []
       }
       convenio_settings: {
         Row: {
@@ -29438,6 +29555,564 @@ export type Database = {
           },
         ]
       }
+      qa_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string
+          event_id: string | null
+          id: string
+          issue_id: string | null
+          message: string | null
+          run_id: string | null
+          severity: string
+          source: string
+          title: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          issue_id?: string | null
+          message?: string | null
+          run_id?: string | null
+          severity?: string
+          source?: string
+          title: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          issue_id?: string | null
+          message?: string | null
+          run_id?: string | null
+          severity?: string
+          source?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_alerts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "qa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_alerts_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_alerts_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_alerts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "qa_integration_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_table: string
+          id: string
+          ip: string | null
+          new_value: Json | null
+          old_value: Json | null
+          origin: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_table: string
+          id?: string
+          ip?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          origin?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_table?: string
+          id?: string
+          ip?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          origin?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      qa_events: {
+        Row: {
+          author: string | null
+          branch: string | null
+          commit_hash: string | null
+          created_at: string
+          created_by: string | null
+          environment: string
+          event_number: number
+          event_type: string
+          id: string
+          issue_id: string | null
+          module: string | null
+          payload: Json
+          pull_request: string | null
+          release_version: string | null
+          run_id: string | null
+          severity: string
+          source: string
+          title: string
+        }
+        Insert: {
+          author?: string | null
+          branch?: string | null
+          commit_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          event_number?: never
+          event_type: string
+          id?: string
+          issue_id?: string | null
+          module?: string | null
+          payload?: Json
+          pull_request?: string | null
+          release_version?: string | null
+          run_id?: string | null
+          severity?: string
+          source?: string
+          title: string
+        }
+        Update: {
+          author?: string | null
+          branch?: string | null
+          commit_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          event_number?: never
+          event_type?: string
+          id?: string
+          issue_id?: string | null
+          module?: string | null
+          payload?: Json
+          pull_request?: string | null
+          release_version?: string | null
+          run_id?: string | null
+          severity?: string
+          source?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_events_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_events_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues_enriched"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "qa_integration_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_integration_runs: {
+        Row: {
+          author: string | null
+          branch: string | null
+          build_number: string | null
+          commit_hash: string | null
+          created_at: string
+          created_by: string | null
+          details: Json
+          duration_ms: number | null
+          environment: string
+          external_ref: string | null
+          failed: number
+          finished_at: string | null
+          id: string
+          kind: string
+          module: string | null
+          passed: number
+          release_version: string | null
+          run_number: number
+          score: number | null
+          source: string
+          started_at: string
+          status: string
+          total: number
+          updated_at: string
+          warnings: number
+        }
+        Insert: {
+          author?: string | null
+          branch?: string | null
+          build_number?: string | null
+          commit_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          duration_ms?: number | null
+          environment?: string
+          external_ref?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          module?: string | null
+          passed?: number
+          release_version?: string | null
+          run_number?: never
+          score?: number | null
+          source: string
+          started_at?: string
+          status?: string
+          total?: number
+          updated_at?: string
+          warnings?: number
+        }
+        Update: {
+          author?: string | null
+          branch?: string | null
+          build_number?: string | null
+          commit_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          duration_ms?: number | null
+          environment?: string
+          external_ref?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          module?: string | null
+          passed?: number
+          release_version?: string | null
+          run_number?: never
+          score?: number | null
+          source?: string
+          started_at?: string
+          status?: string
+          total?: number
+          updated_at?: string
+          warnings?: number
+        }
+        Relationships: []
+      }
+      qa_issue_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          issue_id: string
+          mime_type: string
+          size_bytes: number
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          issue_id: string
+          mime_type: string
+          size_bytes: number
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          issue_id?: string
+          mime_type?: string
+          size_bytes?: number
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_issue_attachments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_issue_attachments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues_enriched"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_issue_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          created_by: string | null
+          id: string
+          issue_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issue_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          issue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_issue_comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_issue_comments_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues_enriched"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_issue_history: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          ip: string | null
+          issue_id: string
+          new_value: string | null
+          old_value: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          ip?: string | null
+          issue_id: string
+          new_value?: string | null
+          old_value?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip?: string | null
+          issue_id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_issue_history_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qa_issue_history_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "qa_issues_enriched"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_issues: {
+        Row: {
+          actual_behavior: string | null
+          assigned_to: string | null
+          browser: string | null
+          build_number: string | null
+          closed_at: string | null
+          commit_hash: string | null
+          created_at: string
+          created_by: string | null
+          current_version: string | null
+          description: string
+          device: string | null
+          environment: string
+          error_message: string | null
+          expected_behavior: string | null
+          fixed_version: string | null
+          id: string
+          issue_number: number
+          metadata: Json
+          module: string
+          operating_system: string | null
+          origin: string
+          priority: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          severity: string
+          stack_trace: string | null
+          status: string
+          steps_to_reproduce: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actual_behavior?: string | null
+          assigned_to?: string | null
+          browser?: string | null
+          build_number?: string | null
+          closed_at?: string | null
+          commit_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_version?: string | null
+          description?: string
+          device?: string | null
+          environment?: string
+          error_message?: string | null
+          expected_behavior?: string | null
+          fixed_version?: string | null
+          id?: string
+          issue_number?: never
+          metadata?: Json
+          module?: string
+          operating_system?: string | null
+          origin?: string
+          priority?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string
+          stack_trace?: string | null
+          status?: string
+          steps_to_reproduce?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actual_behavior?: string | null
+          assigned_to?: string | null
+          browser?: string | null
+          build_number?: string | null
+          closed_at?: string | null
+          commit_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_version?: string | null
+          description?: string
+          device?: string | null
+          environment?: string
+          error_message?: string | null
+          expected_behavior?: string | null
+          fixed_version?: string | null
+          id?: string
+          issue_number?: never
+          metadata?: Json
+          module?: string
+          operating_system?: string | null
+          origin?: string
+          priority?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string
+          stack_trace?: string | null
+          status?: string
+          steps_to_reproduce?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      qa_releases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string | null
+          notes: string | null
+          released_at: string | null
+          status: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       radar_admin_decisions: {
         Row: {
           admin_id: string | null
@@ -37846,6 +38521,117 @@ export type Database = {
           },
         ]
       }
+      qa_issues_enriched: {
+        Row: {
+          actual_behavior: string | null
+          assigned_to: string | null
+          attachments_count: number | null
+          browser: string | null
+          build_number: string | null
+          closed_at: string | null
+          comments_count: number | null
+          commit_hash: string | null
+          created_at: string | null
+          created_by: string | null
+          current_version: string | null
+          description: string | null
+          device: string | null
+          environment: string | null
+          error_message: string | null
+          expected_behavior: string | null
+          fixed_version: string | null
+          history_count: number | null
+          id: string | null
+          issue_number: number | null
+          metadata: Json | null
+          module: string | null
+          operating_system: string | null
+          origin: string | null
+          priority: string | null
+          reopen_count: number | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          severity: string | null
+          stack_trace: string | null
+          status: string | null
+          steps_to_reproduce: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_behavior?: string | null
+          assigned_to?: string | null
+          attachments_count?: never
+          browser?: string | null
+          build_number?: string | null
+          closed_at?: string | null
+          comments_count?: never
+          commit_hash?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_version?: string | null
+          description?: string | null
+          device?: string | null
+          environment?: string | null
+          error_message?: string | null
+          expected_behavior?: string | null
+          fixed_version?: string | null
+          history_count?: never
+          id?: string | null
+          issue_number?: number | null
+          metadata?: Json | null
+          module?: string | null
+          operating_system?: string | null
+          origin?: string | null
+          priority?: string | null
+          reopen_count?: never
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          status?: string | null
+          steps_to_reproduce?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_behavior?: string | null
+          assigned_to?: string | null
+          attachments_count?: never
+          browser?: string | null
+          build_number?: string | null
+          closed_at?: string | null
+          comments_count?: never
+          commit_hash?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          current_version?: string | null
+          description?: string | null
+          device?: string | null
+          environment?: string | null
+          error_message?: string | null
+          expected_behavior?: string | null
+          fixed_version?: string | null
+          history_count?: never
+          id?: string | null
+          issue_number?: number | null
+          metadata?: Json | null
+          module?: string | null
+          operating_system?: string | null
+          origin?: string | null
+          priority?: string | null
+          reopen_count?: never
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          status?: string | null
+          steps_to_reproduce?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       territory_group_density: {
         Row: {
           city: string | null
@@ -42037,6 +42823,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      convenio_public_stats: {
+        Args: never
+        Returns: {
+          convenios_beneficiados: number
+          doacoes_confirmadas: number
+          total_arrecadado: number
+          total_destinado: number
+        }[]
+      }
+      convenio_request_meta: { Args: never; Returns: Json }
       convenio_revoke_role: {
         Args: { p_email: string }
         Returns: {
@@ -46756,6 +47552,7 @@ export type Database = {
         }
         Returns: Json
       }
+      qa_request_meta: { Args: never; Returns: Json }
       queue_platform_payout_request:
         | {
             Args: { p_payout_request_id: string }
