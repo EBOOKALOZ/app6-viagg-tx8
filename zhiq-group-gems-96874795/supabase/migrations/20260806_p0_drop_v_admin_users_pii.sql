@@ -1,0 +1,32 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- P0 SEGURANÇA — Remoção da view v_admin_users (exposição de PII de admins)
+-- ORION-480 Certificação Parcial 2026-07-30, achado P0 #1.
+-- ═══════════════════════════════════════════════════════════════════════════
+--
+-- ESTADO REAL ENCONTRADO NO BANCO VIVO EM 2026-08-06 (a view nunca teve
+-- CREATE versionado em migrations — este registro documenta o que existia):
+--
+--   CREATE VIEW public.v_admin_users AS
+--     SELECT id, email, created_at, active_profile, available_profiles,
+--            legal_compliant, profile_complete, cidade, estado, avatar_url,
+--            cpf, whatsapp AS phone, name, estado_civil, data_nascimento,
+--            telefone, updated_at, store_latitude, store_longitude,
+--            store_address, bairro, categoria, cep, rua, numero, cpf_cnpj,
+--            nome_loja, logo_url, is_admin
+--       FROM profiles
+--      WHERE is_admin = true;
+--
+--   * SEM security_invoker (reloptions = null) → executava com privilégio do
+--     owner (postgres) e BYPASSAVA a RLS de profiles.
+--   * GRANTs vigentes: anon SELECT/INSERT/UPDATE/DELETE e authenticated
+--     SELECT/INSERT/UPDATE/DELETE — view auto-atualizável: leitura E escrita
+--     ANÔNIMA sobre CPF/CNPJ/telefone/e-mail/endereço/nascimento dos admins.
+--   * Zero dependências no banco (pg_depend) e zero uso no código
+--     (frontend/edge functions) — aparece apenas em dumps gerados de types.
+--
+-- CORREÇÃO: remoção da view. Sem CASCADE de propósito — se alguma dependência
+-- surgir em ambiente futuro, o DROP falha ruidosamente em vez de arrastar
+-- objetos silenciosamente.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+DROP VIEW IF EXISTS public.v_admin_users;
