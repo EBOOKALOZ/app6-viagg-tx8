@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bot, User, Sparkles, Loader2, Trash2 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -143,8 +144,14 @@ export function FloatingAIChat() {
   };
 
   const formatContent = (content: string) => {
-    // Simple markdown-like bold
-    return content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Simple markdown-like bold — content is untrusted (user input AND
+    // AI-generated text), so escape everything except the <strong> tags
+    // we generate ourselves before rendering with dangerouslySetInnerHTML.
+    const withBold = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    return DOMPurify.sanitize(withBold, {
+      ALLOWED_TAGS: ['strong'],
+      ALLOWED_ATTR: [],
+    });
   };
 
   return (

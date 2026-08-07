@@ -31,6 +31,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 interface NewVersionData {
   code: string;
@@ -250,7 +251,9 @@ export function NewVersionModal({
                     {data.content ? (
                       <div
                         className="prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: data.content }}
+                        dangerouslySetInnerHTML={{
+                          __html: sanitizeHtml(data.content),
+                        }}
                       />
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">

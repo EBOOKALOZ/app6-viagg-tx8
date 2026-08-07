@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 import {
   LegalDocumentsHeader,
@@ -499,7 +500,7 @@ export default function AdminLegalDocuments() {
                   <div className="p-4 border rounded-lg bg-muted/20 max-h-[350px] overflow-y-auto">
                     <div
                       className="prose prose-sm max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: selectedDoc.content }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedDoc.content) }}
                     />
                   </div>
                 </div>

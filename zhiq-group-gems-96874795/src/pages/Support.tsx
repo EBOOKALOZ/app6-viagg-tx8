@@ -18,6 +18,7 @@ import MotoboyBottomNav from '@/components/motoboy/MotoboyBottomNav';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLegalContent } from '@/hooks/useLegalContent';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -517,7 +518,7 @@ export default function Support() {
           {/* Dynamic Admin Content */}
           {supportContent && supportContent.content && (
             <div className="rounded-xl border border-[#2A3038]/60 bg-[#1B1F24] p-6 shadow-sm prose prose-sm max-w-none text-white [&_h1]:text-lg [&_h1]:font-bold [&_p]:text-sm">
-              <div dangerouslySetInnerHTML={{ __html: supportContent.content }} />
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(supportContent.content) }} />
             </div>
           )}
 

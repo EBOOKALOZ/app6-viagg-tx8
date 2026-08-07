@@ -160,10 +160,8 @@ As correções foram:
 | Edge Function deployada | `send-ticket-response` |
 | Método de deploy | `supabase functions deploy send-ticket-response --project-ref broifhfqmnzqoongtokm` |
 | Data/hora da aplicação | 07/08/2026 (mesma sessão desta certificação) |
-| Hash do commit | **PENDENTE — as três alterações de arquivo (migration nova + edge function + `src/pages/admin/AdminSupport.tsx`) ainda NÃO foram commitadas no git no momento da emissão deste documento.** As correções estão vigentes em produção (aplicadas diretamente via CLI), mas não versionadas no histórico do repositório. |
-| Responsável pela implantação | Sessão Claude Code, branch `integracao/orion480-deploy-veiculos-leiloes`, mediante confirmação explícita do usuário |
-
-**Ressalva de rastreabilidade:** até que o commit seja criado, o estado do banco/função de produção está à frente do que o `git log` reflete — qualquer nova sessão que use `git blame`/`git log` para reconstituir o histórico não verá esta correção até o commit ser feito. Recomenda-se commitar antes de considerar este documento definitivo.
+| Hash do commit | `993ed64` — branch `integracao/orion480-deploy-veiculos-leiloes` |
+| Responsável pela implantação | Sessão Claude Code, mediante confirmação explícita do usuário |
 
 ---
 
@@ -188,5 +186,5 @@ A Auditoria da Fase 4 prossegue com foco na remediação dos achados de Alta cri
 | Vulnerabilidades Críticas Pendentes  | ✅ Nenhuma                                        |
 | Achados Altos                        | 🔄 Em tratamento                                 |
 | Testes Dinâmicos                     | ⏳ Pendente de Evidência                          |
-| Commit das correções no git          | ⏳ Pendente                                       |
+| Commit das correções no git          | ✅ `993ed64`                                      |
 | Certificação Final da Fase 4         | ⏳ Aguardando conclusão dos itens remanescentes  |

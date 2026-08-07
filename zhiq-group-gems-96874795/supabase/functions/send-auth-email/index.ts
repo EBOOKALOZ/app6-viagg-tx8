@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Configuração SMTP
 const smtpHost = Deno.env.get("SMTP_HOST") || "";
@@ -13,13 +9,161 @@ const smtpUser = Deno.env.get("SMTP_USER") || "";
 const smtpPass = Deno.env.get("SMTP_PASS") || "";
 const smtpFrom = Deno.env.get("SMTP_FROM") || "";
 
-// 🔐 Secret adicional (API_CLIENT_SECRET)
+// 🔐 Secret do Auth Hook (API_CLIENT_SECRET)
 const CLIENT_SECRET = Deno.env.get("API_CLIENT_SECRET");
 if (!CLIENT_SECRET) {
   throw new Error("API_CLIENT_SECRET não configurado nos Secrets do Supabase");
 }
 
 console.log("API_CLIENT_SECRET OK?", !!CLIENT_SECRET);
+
+// ---------------------------------------------------------------------------
+// Verificação do chamador (Supabase Auth "Send Email" Hook)
+//
+// O GoTrue chama este endpoint HTTP como um Auth Hook. Quando um secret é
+// configurado no Dashboard (Auth > Hooks), o GoTrue assina a requisição no
+// formato Standard Webhooks (https://www.standardwebhooks.com/), enviando os
+// headers `webhook-id`, `webhook-timestamp` e `webhook-signature`
+// (`v1,<base64 hmac-sha256>` sobre `"{id}.{timestamp}.{body}"`, usando o
+// secret no formato `whsec_<base64>`).
+//
+// Esta função aceita esse contrato oficial. Como fallback — para não quebrar
+// caso o secret configurado no Dashboard não siga o formato `whsec_...`
+// (o `API_CLIENT_SECRET` já provisionado neste projeto é uma string simples,
+// não um `whsec_...`) — também aceita um header simples `x-client-secret`
+// comparado byte-a-byte contra `API_CLIENT_SECRET` via HMAC (constant-time).
+// Qualquer requisição sem um dos dois provada é rejeitada com 401 antes de
+// qualquer processamento do payload ou envio de e-mail.
+// ---------------------------------------------------------------------------
+
+const textEncoder = new TextEncoder();
+
+/** Importa o secret cru como chave HMAC-SHA256 para uso com crypto.subtle. */
+async function importHmacKey(rawSecret: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    rawSecret as BufferSource,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+}
+
+/** Decodifica base64 padrão para bytes. */
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * Verifica a assinatura Standard Webhooks enviada pelo GoTrue.
+ * Retorna true somente se a assinatura bater com alguma das versões `v1`
+ * presentes no header (comparação feita via crypto.subtle.verify, que é
+ * constant-time em relação ao MAC).
+ */
+async function verifyStandardWebhookSignature(
+  webhookId: string,
+  webhookTimestamp: string,
+  webhookSignatureHeader: string,
+  rawBody: string,
+  secret: string,
+): Promise<boolean> {
+  // Secret no formato Standard Webhooks: "whsec_<base64>". Se não tiver o
+  // prefixo, trata a string inteira como o material codificado em base64;
+  // se não for base64 válido, usa os bytes UTF-8 crus como fallback.
+  const secretMaterial = secret.startsWith("whsec_") ? secret.slice("whsec_".length) : secret;
+
+  let keyBytes: Uint8Array;
+  try {
+    keyBytes = base64ToBytes(secretMaterial);
+  } catch {
+    keyBytes = textEncoder.encode(secretMaterial);
+  }
+
+  const key = await importHmacKey(keyBytes);
+  const signedContent = `${webhookId}.${webhookTimestamp}.${rawBody}`;
+  const expectedMac = await crypto.subtle.sign("HMAC", key, textEncoder.encode(signedContent));
+
+  // webhook-signature pode conter múltiplas assinaturas espaço-separadas,
+  // cada uma no formato "v1,<base64>".
+  const candidates = webhookSignatureHeader.split(" ").filter(Boolean);
+  for (const candidate of candidates) {
+    const [version, sig] = candidate.split(",");
+    if (version !== "v1" || !sig) continue;
+    let sigBytes: Uint8Array;
+    try {
+      sigBytes = base64ToBytes(sig);
+    } catch {
+      continue;
+    }
+    const valid = await crypto.subtle.verify("HMAC", key, sigBytes as BufferSource, textEncoder.encode(signedContent));
+    if (valid) return true;
+    // fallback redundante (crypto.subtle.verify já é o caminho correto,
+    // mas comparamos o MAC calculado também por robustez de runtime)
+    if (sigBytes.length === new Uint8Array(expectedMac).length) {
+      let diff = 0;
+      const expected = new Uint8Array(expectedMac);
+      for (let i = 0; i < expected.length; i++) diff |= expected[i] ^ sigBytes[i];
+      if (diff === 0) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Compara duas strings em tempo constante usando HMAC-SHA256 sobre uma
+ * chave efêmera aleatória (evita early-exit de comparação char-a-char).
+ * Usado apenas no fallback de header simples (x-client-secret).
+ */
+async function constantTimeStringEqual(a: string, b: string): Promise<boolean> {
+  const randomKeyBytes = crypto.getRandomValues(new Uint8Array(32));
+  const key = await importHmacKey(randomKeyBytes);
+  const macA = await crypto.subtle.sign("HMAC", key, textEncoder.encode(a));
+  const macB = await crypto.subtle.sign("HMAC", key, textEncoder.encode(b));
+  const bytesA = new Uint8Array(macA);
+  const bytesB = new Uint8Array(macB);
+  if (bytesA.length !== bytesB.length) return false;
+  let diff = 0;
+  for (let i = 0; i < bytesA.length; i++) diff |= bytesA[i] ^ bytesB[i];
+  return diff === 0;
+}
+
+/**
+ * Autentica a requisição recebida contra API_CLIENT_SECRET.
+ * Tenta primeiro o contrato oficial do Auth Hook (Standard Webhooks);
+ * cai para o header simples `x-client-secret` se os headers de assinatura
+ * não estiverem presentes.
+ */
+async function verifyCallerAuthenticity(req: Request, rawBody: string): Promise<boolean> {
+  const webhookId = req.headers.get("webhook-id");
+  const webhookTimestamp = req.headers.get("webhook-timestamp");
+  const webhookSignature = req.headers.get("webhook-signature");
+
+  if (webhookId && webhookTimestamp && webhookSignature) {
+    // Rejeita timestamps fora de uma janela de 5 minutos (proteção básica
+    // contra replay), igual à tolerância padrão do Standard Webhooks.
+    const ts = Number(webhookTimestamp);
+    if (!Number.isFinite(ts)) return false;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (Math.abs(nowSeconds - ts) > 300) return false;
+
+    return verifyStandardWebhookSignature(
+      webhookId,
+      webhookTimestamp,
+      webhookSignature,
+      rawBody,
+      CLIENT_SECRET as string,
+    );
+  }
+
+  // Fallback: header simples comparado em tempo constante.
+  const simpleHeader = req.headers.get("x-client-secret") || req.headers.get("authorization");
+  if (!simpleHeader) return false;
+  const bearer = simpleHeader.startsWith("Bearer ") ? simpleHeader.slice("Bearer ".length) : simpleHeader;
+  return constantTimeStringEqual(bearer, CLIENT_SECRET as string);
+}
 
 // Templates de e-mail em português
 const getEmailTemplate = (type: string, data: EmailData): { subject: string; html: string } => {
@@ -222,13 +366,30 @@ interface WebhookPayload {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const corsHeaders = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const payload: WebhookPayload = await req.json();
+    const rawBody = await req.text();
+
+    const isAuthentic = await verifyCallerAuthenticity(req, rawBody);
+    if (!isAuthentic) {
+      console.error("send-auth-email: chamador não autenticado (secret/assinatura ausente ou inválida)");
+      return new Response(
+        JSON.stringify({ error: { message: "Não autorizado", http_code: 401 } }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
+
+    const payload: WebhookPayload = JSON.parse(rawBody);
 
     console.log(
       "Recebido webhook de e-mail:",

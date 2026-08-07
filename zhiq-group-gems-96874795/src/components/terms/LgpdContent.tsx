@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 export function LgpdContent() {
     const { data: dbLgpdContent, isLoading } = useQuery({
@@ -39,7 +40,9 @@ export function LgpdContent() {
                     <CardContent className="pt-6">
                         <div
                             className="prose prose-sm max-w-none dark:prose-invert"
-                            dangerouslySetInnerHTML={{ __html: dbLgpdContent.content }}
+                            dangerouslySetInnerHTML={{
+                                __html: sanitizeHtml(dbLgpdContent.content),
+                            }}
                         />
                     </CardContent>
                 </Card>
