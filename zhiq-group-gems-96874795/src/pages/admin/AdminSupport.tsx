@@ -248,23 +248,19 @@ export default function AdminSupport() {
 
       if (ticketError) throw ticketError;
 
-      // Send e-mail notification to client
+      // Send e-mail notification to client — a function agora resolve o
+      // e-mail e o assunto direto do ticket no banco (server-side), então
+      // não enviamos mais client_email/assunto no payload.
       if (selectedTicket) {
-        const clientProfile = userProfiles[selectedTicket.user_id];
-        const clientEmail = clientProfile?.email;
-        if (clientEmail) {
-          try {
-            await supabase.functions.invoke("send-ticket-response", {
-              body: {
-                ticket_number: selectedTicket.ticket_number,
-                assunto: selectedTicket.assunto,
-                resposta: content,
-                client_email: clientEmail,
-              },
-            });
-          } catch (emailErr) {
-            console.warn("E-mail de notificação não enviado:", emailErr);
-          }
+        try {
+          await supabase.functions.invoke("send-ticket-response", {
+            body: {
+              ticket_number: selectedTicket.ticket_number,
+              resposta: content,
+            },
+          });
+        } catch (emailErr) {
+          console.warn("E-mail de notificação não enviado:", emailErr);
         }
       }
     },
