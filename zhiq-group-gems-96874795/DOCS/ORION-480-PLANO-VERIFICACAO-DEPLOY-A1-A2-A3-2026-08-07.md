@@ -6,9 +6,9 @@
 
 **Documento:** `DOCS/ORION-480-PLANO-VERIFICACAO-DEPLOY-A1-A2-A3-2026-08-07.md`
 
-**Versão:** 1.1
+**Versão:** 1.2
 **Data:** 07/08/2026
-**Status:** VERIFICAÇÃO EXECUTADA — 2 ITENS NÃO DEPLOYADOS, 1 ACHADO NOVO
+**Status:** A-2 E A-3 DEPLOYADOS E VERIFICADOS EM PRODUÇÃO; A-1 SEGUE PENDENTE DE ESCLARECIMENTO
 
 ---
 
@@ -22,9 +22,9 @@ Confirmar se as correções dos achados HIGH A-1, A-2 e A-3 foram efetivamente i
 
 | Item | Resultado da verificação |
 |---|---|
-| A-2 (CSP/headers, `vercel.json`) | ❌ **NÃO deployado** — confirmado via headers HTTP reais |
-| A-3 (sanitização DOMPurify) | ❌ **NÃO deployado** — confirmado via bundle JS real servido |
-| A-1 (`send-auth-email`) | ⚠️ **Achado novo, mais grave que "não deployado"**: a função não existe no Supabase remoto sob nenhum nome correspondente ao código local |
+| A-2 (CSP/headers, `vercel.json`) | ✅ **Deployado e confirmado em produção** (ver Etapa 5) |
+| A-3 (sanitização DOMPurify) | ✅ **Deployado e confirmado em produção** (ver Etapa 5) |
+| A-1 (`send-auth-email`) | ⚠️ **Achado novo, ainda sem resolução**: a função não existe no Supabase remoto sob nenhum nome correspondente ao código local; deploy não realizado até esclarecimento do usuário |
 
 ---
 
@@ -100,15 +100,45 @@ Não aplicável nesta rodada — sem deploy, não há regressão possível em pr
 
 ---
 
-# AÇÃO NECESSÁRIA (NÃO EXECUTADA NESTA SESSÃO)
+# ETAPA 5 — DEPLOY REAL DE A-2 E A-3 (executado nesta sessão, após confirmação do usuário)
 
-1. **Deploy do frontend** (Vercel) para aplicar A-2 (headers CSP) e A-3 (sanitização) em produção — normalmente automático via push/merge, dependendo da configuração de CI/CD do projeto; não disparado nesta sessão sem confirmação do usuário.
-2. **Esclarecer com o usuário** qual função está de fato configurada como Auth Hook de e-mail no Dashboard do Supabase (Authentication > Hooks > Send Email Hook), para determinar se `send-auth-email` precisa ser deployada pela primeira vez, ou se a correção de A-1 é irrelevante porque o hook real usa outro código.
+**Método:** para não publicar mudanças não commitadas de outra sessão (o `vercel.json` do working tree principal já tinha sido estendido por trabalho paralelo em A-5/A-8, com domínios adicionais ainda não commitados), o deploy foi feito a partir de um `git worktree` isolado no commit exato `72acd1b` — garantindo que só o código já commitado e validado adversarialmente fosse publicado.
+
+**Comando:** `vercel --prod --yes` (Vercel CLI 54.14.0, autenticado como `angelozanatta100-7278`, projeto `tx8-viagg-analise-programador`).
+
+**Resultado do deploy:**
+```
+deploymentId: dpl_6R2H3P61Ad4FkeMuLo4rWnpZo8cW
+target: production
+readyState: READY
+Aliased: https://www.viagg-tx8.com.br
+```
+
+**Verificação pós-deploy (headers HTTP reais, `curl -sI https://www.viagg-tx8.com.br/`):**
+```
+Content-Security-Policy: default-src 'self'; ... media-src 'self' blob: https://broifhfqmnzqoongtokm.supabase.co https://jifnpjnffhzosxrdhvxb.supabase.co; ...
+Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(self "https://sdk.mercadopago.com"), ...
+Referrer-Policy: strict-origin-when-cross-origin
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+```
+Todos os headers da correção de A-2 confirmados presentes na resposta real do domínio de produção.
+
+**Verificação do bundle JS real** (`curl` do arquivo `index-*.js` referenciado pela página servida): string `sanitizeHtml` presente no bundle publicado — confirma que a correção de A-3 está no código executado em produção.
+
+**Conclusão desta etapa:** A-2 e A-3 estão **confirmados deployados e ativos em produção**, com evidência de rede real (não apenas leitura de código/config local).
+
+---
+
+# AÇÃO AINDA NECESSÁRIA
+
+1. ~~Deploy do frontend (Vercel) para A-2/A-3~~ — **concluído nesta sessão, ver Etapa 5.**
+2. **Esclarecer com o usuário** qual função está de fato configurada como Auth Hook de e-mail no Dashboard do Supabase (Authentication > Hooks > Send Email Hook), para determinar se `send-auth-email` precisa ser deployada pela primeira vez, ou se a correção de A-1 é irrelevante porque o hook real usa outro código. **Ainda pendente** — usuário indicou que vai checar o Dashboard.
 
 ---
 
 # CONCLUSÃO
 
-A verificação de deploy planejada revelou que **nenhuma das três correções (A-1, A-2, A-3) está de fato em produção** — diferente do que a documentação anterior desta sessão registrava como "aguardando próximo ciclo de deploy" (uma formulação correta para A-2/A-3, mas insuficiente para A-1, cujo problema é mais estrutural: incerteza sobre qual função é a real).
+A verificação de deploy planejada revelou inicialmente que nenhuma das três correções estava em produção. Após confirmação do usuário, **A-2 e A-3 foram deployados nesta mesma sessão e reverificados com evidência real de rede** (headers HTTP e bundle JS servidos pelo domínio de produção) — ambos confirmados ativos.
 
-Este documento corrige essa lacuna de rastreabilidade encontrada pela própria etapa de verificação — exatamente o objetivo de distinguir código versionado de código efetivamente implantado.
+**A-1 permanece em aberto**: o problema não é falta de deploy, é incerteza sobre qual função é de fato o Auth Hook em produção. Não deployar `send-auth-email` "no escuro" foi a decisão correta — publicar uma função sob um nome que talvez nunca seja invocada pelo GoTrue não fecharia a vulnerabilidade original, e poderia criar falsa sensação de segurança resolvida.
