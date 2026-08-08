@@ -194,3 +194,37 @@ A Auditoria da Fase 4 concluiu com êxito a remediação técnica dos oito achad
 Entretanto, a consolidação operacional identificou diferenças entre o estado do código e o estado da produção, impedindo a emissão da Certificação HIGH neste momento.
 
 A continuidade da Fase 4 dependerá exclusivamente da conclusão das pendências operacionais descritas neste documento, da obtenção das evidências correspondentes e da posterior reavaliação para fins de certificação.
+
+---
+
+# ADENDO — DEPLOY REAL EXECUTADO (2026-08-07, mesma data, após autorização)
+
+Autorizado pelo usuário o deploy de A-5, A-6, A-7, A-8 e da expansão de CSP do A-2 (A-1 excluído do escopo — usuário confirmará o Auth Hook separadamente). Execução:
+
+**Método:** worktree Git isolado (`git worktree add`) fixado exatamente no commit `41dfc11`, replicando a prática já usada com sucesso pela sessão anterior para A-2/A-3 — garante que nenhum arquivo não commitado (incluindo os ~25 docs órfãos de sessão paralela) pudesse vazar para o deploy. Confirmado `git status --porcelain` vazio e `HEAD=41dfc11` no worktree no momento do deploy.
+
+**Edge Functions (A-7):** `supabase functions deploy` de 32 functions em lote contra o projeto `broifhfqmnzqoongtokm`. Resposta da API: `{"message":"Deployed Functions."}`, todas as 32 confirmadas na lista retornada.
+
+**Frontend (A-5, A-6, A-8, CSP expandida):** `vercel --prod` a partir do mesmo worktree. Deployment `dpl_BfEDxwva4Gz5drKhzkKuc5x2cyNi`, promovido e aliasado para o domínio de produção real `https://www.viagg-tx8.com.br`.
+
+**Evidência de rede real (não fabricada, coletada após o deploy):**
+- `curl -I https://www.viagg-tx8.com.br/` retorna CSP contendo os 7 domínios da expansão (`api.x.ai`, `viacep.com.br`, `brasilapi.com.br`, `api.openweathermap.org`, `api.open-meteo.com`, `player.twitch.tv`, `*.radio-browser.info`), além de HSTS, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Permissions-Policy — todos ativos no domínio real.
+- `curl -X OPTIONS` contra a edge function `get-exchange-rate` com `Origin: https://evil.example.com` retorna `200 OK` **sem** o header `Access-Control-Allow-Origin` (bloqueado); com `Origin: https://www.viagg-tx8.com.br` o header é corretamente ecoado (permitido).
+- Bundle `index-CWLzHC7q.js` (hash gerado neste build) confirmado servido pela página; contém as strings `AbortController`/`abort()` da correção de timeout (A-5). Verificação de strings específicas de A-6/A-8 em chunks lazy-loaded não foi conclusiva por grep (code-splitting do Vite carrega esses chunks sob demanda, não no HTML inicial) — a garantia de que o código correto foi ao ar vem da cadeia de custódia do worktree (commit exato, working tree limpo), não do grep de bundle.
+
+## Matriz atualizada pós-deploy
+
+| Achado | Código | Commit | Deploy |
+| ------ | :----: | :----: | :----: |
+| A-1    |    ✅   |    ✅   |     ⏳ (pendente decisão do usuário sobre Auth Hook) |
+| A-2 (base + expansão) | ✅ | ✅ | ✅ |
+| A-3    |    ✅   |    ✅   |     ✅    |
+| A-4    |    ✅   |    ✅   |     ✅    |
+| A-5    |    ✅   |    ✅   |     ✅    |
+| A-6    |    ✅   |    ✅   |     ✅    |
+| A-7    |    ✅   |    ✅   |     ✅    |
+| A-8    |    ✅   |    ✅   |     ✅    |
+
+**Estado oficial revisado:** Remediação Técnica Concluída / Implantação Operacional Concluída para A-2 a A-8. A-1 permanece com implantação pendente por decisão de negócio externa a este workflow (confirmação do Auth Hook no Supabase Dashboard).
+
+**Certificação HIGH:** permanece formalmente NÃO EMITIDA nesta sessão — depende ainda da conclusão do A-1 e da regularização do drift de `schema_migrations` do A-4 (Seção "Pendências Operacionais"), ambos fora do controle técnico deste deploy.

@@ -1,0 +1,26 @@
+=== REQUEST ===
+GET https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/moderacao/12921e5d-4632-49b7-82fe-de937f383553/1784751899640-Screenshot_2026-07-12_205427.png
+apikey: <anon_key>
+
+=== RESPONSE (headers + status; body suprimido se binário) ===
+HTTP/1.1 400 Bad Request
+Date: Fri, 07 Aug 2026 03:07:04 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 88
+Connection: keep-alive
+CF-Ray: a27311a8fe4700c1-GRU
+CF-Cache-Status: BYPASS
+Access-Control-Allow-Origin: *
+Server: cloudflare
+sb-gateway-mode: direct
+sb-gateway-version: 1
+sb-project-ref: broifhfqmnzqoongtokm
+sb-request-id: 019fda30-45a0-7f72-a8be-4872860e9dd6
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+set-cookie: __cf_bm=T6mrGq0sQuhftwog0.G9YCVMXTNKRIr987Fmt6JwmbQ-1786072024.4713302-1.0.1.1-brt8xgOfXDJmsvTq5TUANm9jnZSz0JET0yleXdPGyJ0l3itGRaTEyHEa8VJvblzezAXYeot.T79NrSTfjK.BTgpdb98QDvicSplf4ZVXsRDZtLmU2eunNXMzhYW8g0yl; HttpOnly; SameSite=None; Secure; Path=/; Domain=supabase.co; Expires=Fri, 07 Aug 2026 03:37:04 GMT
+alt-svc: h3=":443"; ma=86400
+
+
+HTTP_STATUS:400
+{"statusCode":"404","error":"not_found","message":"Object not found","code":"NoSuchKey"}
+HTTP_STATUS:400

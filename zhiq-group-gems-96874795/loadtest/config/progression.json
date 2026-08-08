@@ -1,0 +1,109 @@
+{
+  "_comment": "Matriz oficial de progressão ORION-480. Cada etapa só deve ser executada após análise aprovada da etapa anterior — ver docs/EXECUCAO.md. Nenhum campo aqui contém URL ou credencial; isso vem de env vars no momento da execução.",
+  "stages": [
+    {
+      "stage": "S0",
+      "label": "25k-validacao-gerador",
+      "users": 25000,
+      "rampUp": "3m",
+      "duration": "5m",
+      "rampDown": "2m",
+      "objective": "Validar gerador, cenários, coleta de métricas e consumo do PC/gerador. Primeira execução obrigatória.",
+      "requiresApprovalOfPreviousStage": false
+    },
+    {
+      "stage": "S1",
+      "label": "50k-validacao-intermediaria",
+      "users": 50000,
+      "rampUp": "3m",
+      "duration": "5m",
+      "rampDown": "2m",
+      "objective": "Confirmar linearidade de custo/recurso entre 25k e 50k antes do primeiro teste oficial.",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S2",
+      "label": "100k-primeiro-teste-oficial",
+      "users": 100000,
+      "rampUp": "5m",
+      "duration": "8m",
+      "rampDown": "3m",
+      "objective": "Primeiro teste oficial de capacidade. Provável necessidade de gerador distribuído (ver docs/DISTRIBUICAO.md) dependendo do resultado de S0/S1.",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S3",
+      "label": "200k",
+      "users": 200000,
+      "rampUp": "6m",
+      "duration": "8m",
+      "rampDown": "3m",
+      "objective": "Escala além do primeiro teste oficial.",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S4",
+      "label": "300k",
+      "users": 300000,
+      "rampUp": "7m",
+      "duration": "8m",
+      "rampDown": "3m",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S5",
+      "label": "400k",
+      "users": 400000,
+      "rampUp": "8m",
+      "duration": "8m",
+      "rampDown": "4m",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S6",
+      "label": "500k",
+      "users": 500000,
+      "rampUp": "9m",
+      "duration": "8m",
+      "rampDown": "4m",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S7",
+      "label": "600k",
+      "users": 600000,
+      "rampUp": "10m",
+      "duration": "8m",
+      "rampDown": "4m",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S8",
+      "label": "700k",
+      "users": 700000,
+      "rampUp": "11m",
+      "duration": "8m",
+      "rampDown": "5m",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S9",
+      "label": "800k",
+      "users": 800000,
+      "rampUp": "12m",
+      "duration": "8m",
+      "rampDown": "5m",
+      "requiresApprovalOfPreviousStage": true
+    },
+    {
+      "stage": "S10",
+      "label": "900k-meta-final",
+      "users": 900000,
+      "rampUp": "15m",
+      "duration": "10m",
+      "rampDown": "5m",
+      "objective": "Meta máxima. Só executar se S9 (800k) não apresentou degradação significativa.",
+      "requiresApprovalOfPreviousStage": true
+    }
+  ]
+}

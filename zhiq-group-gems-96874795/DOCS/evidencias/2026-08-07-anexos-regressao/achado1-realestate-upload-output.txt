@@ -1,0 +1,26 @@
+=== REQUEST ===
+POST https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/real-estate-original/_auditoria_teste_2026-08-07/orion480-anexos-evidencia-test.txt
+apikey: <anon_key>
+Content-Type: text/plain
+Body: (arquivo de teste inofensivo, 1 linha de texto)
+
+=== RESPONSE ===
+HTTP/1.1 200 OK
+Date: Fri, 07 Aug 2026 03:07:45 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 137
+Connection: keep-alive
+CF-Ray: a27312a60cacf256-GRU
+CF-Cache-Status: DYNAMIC
+Access-Control-Allow-Origin: *
+Server: cloudflare
+sb-gateway-mode: direct
+sb-gateway-version: 1
+sb-project-ref: broifhfqmnzqoongtokm
+sb-request-id: 019fda30-e3ce-7820-b86a-4c0a6e9f53ad
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+set-cookie: __cf_bm=.hUVa48Gh4C_ZhmehQhG7SULSTXOXEeDBph2mIFjdXs-1786072064.9690993-1.0.1.1-fusShjtvozAkPkIUQBWIi8v9rgO1VOh8CgMNBQQiRcUnaNYFZRmfrCcqC0Z1ib1Yuobu09dSUFa82SkP4QtWOQ4KdBHNWHGS.eEMfrRwtcv4.1N7UQnWV4R1CFJS6GiE; HttpOnly; SameSite=None; Secure; Path=/; Domain=supabase.co; Expires=Fri, 07 Aug 2026 03:37:45 GMT
+alt-svc: h3=":443"; ma=86400
+
+{"Key":"real-estate-original/_auditoria_teste_2026-08-07/orion480-anexos-evidencia-test.txt","Id":"828f3b72-0ea6-4497-b5ca-cbf9ab0b3eaf"}
+HTTP_STATUS:200

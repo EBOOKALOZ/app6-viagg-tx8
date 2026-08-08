@@ -1,12 +1,56 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { HeartHandshake, LogOut, Menu, X } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown, HeartHandshake, LayoutList, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { GESTOR_NAV_ITEMS } from "@/lib/convenio/gestorNav";
+import { GESTOR_NAV_SECTIONS, type GestorNavItem } from "@/lib/convenio/gestorNav";
 
 interface GestorPanelLayoutProps {
   children: React.ReactNode;
+}
+
+function navLinkClassName({ isActive }: { isActive: boolean }) {
+  return cn(
+    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+    isActive
+      ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+      : "text-white/60 hover:bg-white/[0.06] hover:text-white"
+  );
+}
+
+function NavItemWithChildren({ item, onNavigate }: { item: GestorNavItem; onNavigate: () => void }) {
+  const location = useLocation();
+  const hasActiveChild = item.children?.some((child) => location.pathname.startsWith(child.path)) ?? false;
+  const [open, setOpen] = useState(hasActiveChild);
+  const Icon = item.icon;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/[0.06] hover:text-white"
+      >
+        <Icon className="h-4 w-4 flex-shrink-0" />
+        <span className="flex-1 truncate text-left">{item.label}</span>
+        <ChevronDown className={cn("h-3.5 w-3.5 flex-shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <div className="mt-1 space-y-1 border-l border-white/10 pl-3">
+          <NavLink to={item.path} end onClick={onNavigate} className={navLinkClassName}>
+            <LayoutList className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate text-xs uppercase tracking-wide text-white/40">Visão geral</span>
+          </NavLink>
+          {item.children!.map((child) => (
+            <NavLink key={child.path} to={child.path} onClick={onNavigate} className={navLinkClassName}>
+              <child.icon className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{child.label}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -37,25 +81,31 @@ export function GestorPanelLayout({ children }: GestorPanelLayoutProps) {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 space-y-1 pb-4">
-        {GESTOR_NAV_ITEMS.map(({ label, path, icon: Icon }) => (
-          <NavLink
-            key={path}
-            to={path}
-            end={path === "/convenio-admin"}
-            onClick={() => setMobileOpen(false)}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive
-                  ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
-                  : "text-white/60 hover:bg-white/[0.06] hover:text-white"
-              )
-            }
-          >
-            <Icon className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{label}</span>
-          </NavLink>
+      <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-4">
+        {GESTOR_NAV_SECTIONS.map((section) => (
+          <div key={section.label}>
+            <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-white/30">
+              {section.label}
+            </p>
+            <div className="space-y-1">
+              {section.items.map((item) =>
+                item.children ? (
+                  <NavItemWithChildren key={item.path} item={item} onNavigate={() => setMobileOpen(false)} />
+                ) : (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    end={item.path === "/convenio-admin"}
+                    onClick={() => setMobileOpen(false)}
+                    className={navLinkClassName}
+                  >
+                    <item.icon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                )
+              )}
+            </div>
+          </div>
         ))}
       </nav>
 

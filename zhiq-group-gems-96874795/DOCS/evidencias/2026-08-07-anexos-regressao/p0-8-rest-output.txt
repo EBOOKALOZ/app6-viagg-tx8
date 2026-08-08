@@ -1,0 +1,7 @@
+=== REQUEST ===
+GET https://broifhfqmnzqoongtokm.supabase.co/storage/v1/object/list/moderacao
+apikey: <anon_key>
+
+=== RESPONSE ===
+[]
+HTTP_STATUS:200

@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 375, height: 812 } });
+await page.goto("http://localhost:8081/_dev-preview-gestor-nav", { waitUntil: "domcontentloaded", timeout: 15000 });
+await page.waitForTimeout(1500);
+await page.locator("header button").click();
+await page.waitForTimeout(400);
+await page.screenshot({ path: "_tmp-review-6-mobile-menu-open.png", fullPage: true });
+console.log("Dashboard visível no mobile menu aberto?", await page.getByText("Dashboard", { exact: true }).count());
+await browser.close();

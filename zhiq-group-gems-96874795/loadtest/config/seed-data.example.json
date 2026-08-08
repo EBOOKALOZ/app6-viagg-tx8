@@ -1,0 +1,7 @@
+{
+  "_comment": "Exemplo de shape para SEED_DATA_FILE. Preencher com IDs reais de registros sintéticos criados em STAGING (nunca produção) pelo script de seed — ver docs/CHECKLIST_STAGING.md item 4. Os valores abaixo são placeholders ilustrativos, não IDs reais.",
+  "products": ["00000000-0000-0000-0000-000000000001"],
+  "vehicles": ["00000000-0000-0000-0000-000000000002"],
+  "auctions": ["00000000-0000-0000-0000-000000000003"],
+  "profiles": ["00000000-0000-0000-0000-000000000004"]
+}

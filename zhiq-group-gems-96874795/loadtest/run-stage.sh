@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# ORION-480 — Monta e (opcionalmente) executa o comando k6 para UMA etapa
+# da matriz de progressão. Nunca executa mais de uma etapa por chamada, e
+# nunca avança de etapa automaticamente — isso é deliberado: a regra do
+# ORION-480 é "cada etapa só roda após análise aprovada da anterior".
+#
+# Uso:
+#   ./loadtest/run-stage.sh S0 --dry-run       # só imprime o comando k6
+#   ./loadtest/run-stage.sh S0                 # executa de fato (requer env de staging carregado)
+#
+# Pré-requisitos antes de rodar sem --dry-run:
+#   1. k6 instalado (não vem instalado neste ambiente — ver docs/README.md)
+#   2. loadtest/config/.env.staging preenchido com URL/keys de STAGING
+#   3. Seed de dados de staging gerado (docs/CHECKLIST_STAGING.md item 4)
+#   4. Aprovação explícita da etapa anterior (exceto S0)
+
+set -euo pipefail
+
+STAGE="${1:-}"
+DRY_RUN="${2:-}"
+
+if [ -z "$STAGE" ]; then
+  echo "Uso: $0 <STAGE_ID> [--dry-run]"
+  echo "Etapas válidas: S0 S1 S2 S3 S4 S5 S6 S7 S8 S9 S10"
+  exit 1
+fi
+
+PROGRESSION_FILE="$(dirname "$0")/config/progression.json"
+ENV_FILE="$(dirname "$0")/config/.env.staging"
+
+if [ ! -f "$PROGRESSION_FILE" ]; then
+  echo "ERRO: matriz de progressão não encontrada em $PROGRESSION_FILE"
+  exit 1
+fi
+
+# Requer node (já disponível neste projeto) só para ler o JSON com segurança,
+# sem depender de jq estar instalado.
+STAGE_JSON=$(node -e "
+  const fs = require('fs');
+  const data = JSON.parse(fs.readFileSync('$PROGRESSION_FILE', 'utf8'));
+  const stage = data.stages.find(s => s.stage === '$STAGE');
+  if (!stage) { console.error('Etapa $STAGE não encontrada'); process.exit(1); }
+  console.log(JSON.stringify(stage));
+")
+
+USERS=$(node -e "console.log(JSON.parse(process.argv[1]).users)" "$STAGE_JSON")
+DURATION=$(node -e "console.log(JSON.parse(process.argv[1]).duration)" "$STAGE_JSON")
+RAMP_UP=$(node -e "console.log(JSON.parse(process.argv[1]).rampUp)" "$STAGE_JSON")
+RAMP_DOWN=$(node -e "console.log(JSON.parse(process.argv[1]).rampDown)" "$STAGE_JSON")
+LABEL=$(node -e "console.log(JSON.parse(process.argv[1]).label)" "$STAGE_JSON")
+
+echo "=== ORION-480 — Etapa $STAGE ($LABEL) ==="
+echo "USERS=$USERS DURATION=$DURATION RAMP_UP=$RAMP_UP RAMP_DOWN=$RAMP_DOWN"
+echo ""
+
+if [ ! -f "$ENV_FILE" ]; then
+  echo "AVISO: $ENV_FILE não existe ainda. Copie de config/.env.example e preencha com dados de STAGING."
+  echo "Sem esse arquivo, o comando abaixo não vai rodar (faltam BASE_URL/SUPABASE_URL/SUPABASE_ANON_KEY)."
+  echo ""
+fi
+
+CMD="k6 run loadtest/k6/main.js \\
+  --env-file $ENV_FILE \\
+  -e USERS=$USERS -e DURATION=$DURATION -e RAMP_UP=$RAMP_UP -e RAMP_DOWN=$RAMP_DOWN \\
+  -e STAGE_LABEL=${STAGE}-${LABEL}"
+
+echo "Comando a executar:"
+echo "$CMD"
+echo ""
+
+if [ "$DRY_RUN" = "--dry-run" ]; then
+  echo "[--dry-run] Nada foi executado."
+  exit 0
+fi
+
+if ! command -v k6 >/dev/null 2>&1; then
+  echo "ERRO: k6 não está instalado neste ambiente. Instale antes de executar (ver docs/README.md)."
+  exit 1
+fi
+
+read -r -p "Confirma execução da etapa $STAGE contra o ambiente definido em $ENV_FILE? Digite 'sim' para prosseguir: " CONFIRM
+if [ "$CONFIRM" != "sim" ]; then
+  echo "Cancelado pelo usuário."
+  exit 1
+fi
+
+eval "$CMD"
