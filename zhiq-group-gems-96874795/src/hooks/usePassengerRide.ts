@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ServiceType } from '@/lib/serviceTypes';
 import { broadcastNewRideGlobal } from '@/lib/broadcastDeliveryAccepted';
 import { sendRidePushNotification } from '@/lib/sendPushNotification';
+import { handleChannelStatus, clearReconnectTimeout } from '@/hooks/realtime/reconnect';
 
 export interface PassengerRide {
   id: string;
@@ -69,6 +70,11 @@ export function usePassengerRide() {
   
   const lastProcessedStatusRef = useRef<string | null>(null);
   const motoTaxiFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // CORREÇÃO A-6: reconexão automática do canal realtime em
+  // CHANNEL_ERROR/TIMED_OUT/CLOSED (mesmo padrão de RealtimeService.ts:31-42).
+  const [reconnectTick, setReconnectTick] = useState(0);
+  const isMountedRef = useRef(true);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Buscar informações do moto-táxi com retry e timeout
@@ -280,6 +286,14 @@ export function usePassengerRide() {
       )
       .subscribe((status) => {
         console.log('[usePassengerRide] Realtime status:', status);
+        // CORREÇÃO A-6: reconectar em 5s se o canal cair, senão o passageiro
+        // para de receber atualização de status silenciosamente.
+        handleChannelStatus(status, {
+          label: '[usePassengerRide]',
+          isMountedRef,
+          reconnectTimeoutRef,
+          onReconnect: () => setReconnectTick((t) => t + 1),
+        });
       });
 
     // POLLING de backup (a cada 2s enquanto pesquisando OU enquanto carregando moto-táxi)
@@ -332,11 +346,25 @@ export function usePassengerRide() {
     }
 
     return () => {
+      // CORREÇÃO A-6: cancelar timer de reconexão pendente ao desmontar/
+      // reexecutar o efeito — evita setState em componente desmontado.
+      clearReconnectTimeout(reconnectTimeoutRef);
       supabase.removeChannel(channel);
       if (pollInterval) clearInterval(pollInterval);
       if (motoTaxiFetchTimeoutRef.current) clearTimeout(motoTaxiFetchTimeoutRef.current);
     };
-  }, [currentRide?.id, currentRide?.status, currentRide?.moto_taxi_id, user?.id, motoTaxiInfo, fetchMotoTaxiInfo]);
+  // reconnectTick: incrementado ao detectar CHANNEL_ERROR/TIMED_OUT/CLOSED,
+  // força a remontagem do canal após o backoff de 5s.
+  }, [currentRide?.id, currentRide?.status, currentRide?.moto_taxi_id, user?.id, motoTaxiInfo, fetchMotoTaxiInfo, reconnectTick]);
+
+  // Unmount definitivo do hook: impede que um timer de reconexão em voo
+  // dispare setReconnectTick depois que o componente já foi desmontado.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   /**
    * Criar nova corrida

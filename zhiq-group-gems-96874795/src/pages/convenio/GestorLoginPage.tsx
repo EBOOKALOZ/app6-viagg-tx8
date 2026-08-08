@@ -5,7 +5,7 @@
  * de autenticação paralelo. Após login, o gate GestorConvenioProtectedRoute
  * verifica o papel "gestor_convenio" e libera ou barra o acesso ao painel.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { HeartHandshake, Loader2, Lock, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +13,8 @@ import { useGestorConvenioRole } from "@/hooks/useGestorConvenioRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MathCaptchaDialog } from "@/components/ui/math-captcha-dialog";
+import { useLoginBruteForceGuard } from "@/hooks/useLoginBruteForceGuard";
 
 export default function GestorLoginPage() {
   const { user, signInWithPassword, initialized } = useAuth();
@@ -26,25 +28,56 @@ export default function GestorLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Anti-brute-force de login por senha — mitigação client-side apenas.
+  // Ver nota de limitação honesta em src/hooks/useLoginBruteForceGuard.ts.
+  const { loginCooldown, checkCooldown, needsCaptcha, registerFailedAttempt, registerSuccessfulLogin } =
+    useLoginBruteForceGuard(email);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const pendingSubmitRef = useRef(false);
+
   // Já logado e já com o papel confirmado → segue direto para o painel.
   if (initialized && user && !roleLoading && isGestorConvenio) {
     return <Navigate to={from} replace />;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runSubmit = async () => {
     setErrorMsg(null);
     setSubmitting(true);
     try {
       const { error } = await signInWithPassword(email, password);
       if (error) {
+        registerFailedAttempt(email);
         setErrorMsg("E-mail ou senha inválidos.");
         return;
       }
+      registerSuccessfulLogin();
       navigate(from, { replace: true });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const remaining = checkCooldown(email);
+    if (remaining > 0) {
+      setErrorMsg(`Muitas tentativas. Aguarde ${remaining}s antes de tentar novamente.`);
+      return;
+    }
+    if (needsCaptcha(email)) {
+      pendingSubmitRef.current = true;
+      setCaptchaOpen(true);
+      return;
+    }
+
+    await runSubmit();
+  };
+
+  const handleCaptchaConfirmed = async () => {
+    if (!pendingSubmitRef.current) return;
+    pendingSubmitRef.current = false;
+    await runSubmit();
   };
 
   return (
@@ -107,10 +140,16 @@ export default function GestorLoginPage() {
 
           <Button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || loginCooldown > 0}
             className="w-full h-11 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl"
           >
-            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Entrar no Painel"}
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : loginCooldown > 0 ? (
+              `Aguarde ${loginCooldown}s`
+            ) : (
+              "Entrar no Painel"
+            )}
           </Button>
         </form>
 
@@ -118,6 +157,17 @@ export default function GestorLoginPage() {
           Acesso restrito · Gestor de Convênios
         </p>
       </div>
+
+      <MathCaptchaDialog
+        open={captchaOpen}
+        onOpenChange={(open) => {
+          setCaptchaOpen(open);
+          if (!open) pendingSubmitRef.current = false;
+        }}
+        onConfirmed={handleCaptchaConfirmed}
+        title="Verificação de segurança"
+        description="Detectamos várias tentativas de login seguidas. Resolva a soma abaixo para tentar novamente."
+      />
     </div>
   );
 }

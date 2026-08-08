@@ -26,16 +26,7 @@
  * Azure) é escrever uma função nova, sem tocar no fluxo.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type Verdict = {
   decisao: "aprovada" | "revisao" | "bloqueada";
@@ -95,6 +86,14 @@ const b64ToBytes = (b64: string) =>
   Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
 Deno.serve(async (req) => {
+  const CORS = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const url = Deno.env.get("SUPABASE_URL")!;

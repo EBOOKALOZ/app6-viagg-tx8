@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { calculateDistanceKm, calculateMotoboyValue } from '@/lib/deliveryPricing';
 import { usePaymentsOrchestrator } from '@/hooks/usePaymentsOrchestrator';
 import { fetchOrderPayContext } from '@/lib/payments/deliveryPay';
+import { handleChannelStatus, clearReconnectTimeout } from '@/hooks/realtime/reconnect';
 
 // Taxa padrão de comissão (fallback)
 const DEFAULT_COMMISSION_RATE = 0.25; // 25% de taxa para motoboys sem grupos
@@ -68,6 +69,12 @@ export function useDeliveryOrder() {
   const [activeOrder, setActiveOrder] = useState<DeliveryOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
+
+  // CORREÇÃO A-6: reconexão automática do canal realtime em
+  // CHANNEL_ERROR/TIMED_OUT/CLOSED (mesmo padrão de RealtimeService.ts:31-42).
+  const [reconnectTick, setReconnectTick] = useState(0);
+  const isMountedRef = useRef(true);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchActiveOrder = useCallback(async () => {
     if (!user?.id) return;
@@ -224,13 +231,35 @@ export function useDeliveryOrder() {
       )
       .subscribe((status) => {
         console.log('[useDeliveryOrder] Subscription status:', status);
+        // CORREÇÃO A-6: reconectar em 5s se o canal cair, senão o motoboy
+        // para de receber atualização de entrega silenciosamente.
+        handleChannelStatus(status, {
+          label: '[useDeliveryOrder]',
+          isMountedRef,
+          reconnectTimeoutRef,
+          onReconnect: () => setReconnectTick((t) => t + 1),
+        });
       });
 
     return () => {
       console.log('[useDeliveryOrder] Removendo subscription');
+      // CORREÇÃO A-6: cancelar timer de reconexão pendente — evita setState
+      // em componente desmontado e vazamento de timer.
+      clearReconnectTimeout(reconnectTimeoutRef);
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  // reconnectTick: incrementado ao detectar CHANNEL_ERROR/TIMED_OUT/CLOSED,
+  // força a remontagem do canal após o backoff de 5s.
+  }, [user?.id, reconnectTick]);
+
+  // Unmount definitivo do hook: impede que um timer de reconexão em voo
+  // dispare setReconnectTick depois que o componente já foi desmontado.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const validateCode = async (orderId: string, code: string): Promise<boolean> => {
     // LOG DETALHADO: Dados de entrada da validação de ENTREGA (codigo_entrega do cliente)

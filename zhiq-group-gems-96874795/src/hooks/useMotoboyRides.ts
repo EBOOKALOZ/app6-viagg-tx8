@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRideRoute, RideRouteData } from '@/hooks/useRideRoute';
+import { handleChannelStatus, clearReconnectTimeout } from '@/hooks/realtime/reconnect';
 
 interface ActiveRide {
   id: string;
@@ -42,6 +43,12 @@ export function useMotoboyRides() {
   
   // Ref para controlar se já calculamos a rota após carregar a corrida
   const routeCalculatedRef = useRef<string | null>(null);
+
+  // CORREÇÃO A-6: reconexão automática do canal realtime em
+  // CHANNEL_ERROR/TIMED_OUT/CLOSED (mesmo padrão de RealtimeService.ts:31-42).
+  const [reconnectTick, setReconnectTick] = useState(0);
+  const isMountedRef = useRef(true);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadRideStatus = useCallback(async () => {
     if (!user) return;
@@ -225,13 +232,35 @@ export function useMotoboyRides() {
       )
       .subscribe((status) => {
         console.log('[useMotoboyRides] Realtime status:', status);
+        // CORREÇÃO A-6: reconectar em 5s se o canal cair, senão o motoboy
+        // para de receber notificação de corrida silenciosamente.
+        handleChannelStatus(status, {
+          label: '[useMotoboyRides]',
+          isMountedRef,
+          reconnectTimeoutRef,
+          onReconnect: () => setReconnectTick((t) => t + 1),
+        });
       });
-    
+
     return () => {
       console.log('[useMotoboyRides] Removendo canal realtime');
+      // CORREÇÃO A-6: cancelar timer de reconexão pendente — evita setState
+      // em componente desmontado e vazamento de timer.
+      clearReconnectTimeout(reconnectTimeoutRef);
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeProfile, getCurrentPosition, position, calculateRoute, clearRoute]);
+  // reconnectTick: incrementado ao detectar CHANNEL_ERROR/TIMED_OUT/CLOSED,
+  // força a remontagem do canal após o backoff de 5s.
+  }, [user?.id, activeProfile, getCurrentPosition, position, calculateRoute, clearRoute, reconnectTick]);
+
+  // Unmount definitivo do hook: impede que um timer de reconexão em voo
+  // dispare setReconnectTick depois que o componente já foi desmontado.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const toggleAcceptsPassengers = async (value: boolean) => {
     if (!user) return;

@@ -1,10 +1,11 @@
 // supabase/functions/webhook-bridge/index.ts
+import { getCorsHeaders } from "../_shared/cors.ts";
+
 Deno.serve(async (req) => {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+  const corsHeaders = getCorsHeaders(req.headers.get("Origin"), {
     "Access-Control-Allow-Headers": "authorization, content-type, apikey",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-  };
+  });
 
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

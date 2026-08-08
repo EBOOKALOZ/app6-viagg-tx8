@@ -15,17 +15,7 @@
  * pendente — invocações simultâneas não duplicam decisão.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type TextVerdict = {
   decisao: "aprovada" | "revisao" | "bloqueada";
@@ -67,6 +57,14 @@ async function analisar(payload: string): Promise<{ verdict: TextVerdict; modelo
 }
 
 Deno.serve(async (req) => {
+  const CORS = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const svc = createClient(

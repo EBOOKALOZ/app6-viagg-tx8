@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useRideRoute } from '@/hooks/useRideRoute';
+import { handleChannelStatus, clearReconnectTimeout } from '@/hooks/realtime/reconnect';
 
 export interface MotoTaxiRide {
   id: string;
@@ -75,6 +76,12 @@ export function useMotoTaxiRides() {
   
   // Flag para controlar se o tracking GPS está ativo
   const [isGpsTrackingActive, setIsGpsTrackingActive] = useState(false);
+
+  // CORREÇÃO A-6: reconexão automática do canal realtime em
+  // CHANNEL_ERROR/TIMED_OUT/CLOSED (mesmo padrão de RealtimeService.ts:31-42).
+  const [reconnectTick, setReconnectTick] = useState(0);
+  const isMountedRef = useRef(true);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Buscar informações do passageiro
@@ -392,12 +399,34 @@ export function useMotoTaxiRides() {
       )
       .subscribe((status) => {
         console.log('[useMotoTaxiRides] Realtime status:', status);
+        // CORREÇÃO A-6: reconectar em 5s se o canal cair, senão o moto-táxi
+        // para de receber notificação de corrida silenciosamente.
+        handleChannelStatus(status, {
+          label: '[useMotoTaxiRides]',
+          isMountedRef,
+          reconnectTimeoutRef,
+          onReconnect: () => setReconnectTick((t) => t + 1),
+        });
       });
-    
+
     return () => {
+      // CORREÇÃO A-6: cancelar timer de reconexão pendente — evita setState
+      // em componente desmontado e vazamento de timer.
+      clearReconnectTimeout(reconnectTimeoutRef);
       supabase.removeChannel(channel);
     };
-  }, [user?.id, activeProfile, geoHook, calculateRoute, clearRoute, fetchPassengerInfo]);
+  // reconnectTick: incrementado ao detectar CHANNEL_ERROR/TIMED_OUT/CLOSED,
+  // força a remontagem do canal após o backoff de 5s.
+  }, [user?.id, activeProfile, geoHook, calculateRoute, clearRoute, fetchPassengerInfo, reconnectTick]);
+
+  // Unmount definitivo do hook: impede que um timer de reconexão em voo
+  // dispare setReconnectTick depois que o componente já foi desmontado.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   /**
    * Aceitar corrida - UPDATE CONDICIONAL (só aceita se status === 'pesquisando')

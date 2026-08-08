@@ -20,21 +20,19 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { mpCharge, mpChargeCard, type MpCreds, type MpCardInput } from "./mp.ts";
 import { resolveMpGateway } from "../_shared/mp-gateway-resolver.ts";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-api-version",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  });
+  function json(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 

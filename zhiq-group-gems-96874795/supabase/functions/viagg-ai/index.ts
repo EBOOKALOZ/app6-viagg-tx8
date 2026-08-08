@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // Prioridade: AI_API_KEY (genérico) → OPENAI_API_KEY → GLM_API_KEY (legado)
 const GLM_API_KEY = Deno.env.get("AI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || Deno.env.get("GLM_API_KEY") || "";
@@ -11,12 +12,10 @@ Nunca mencione "GLM", "Zhipu" ou qualquer outra tecnologia de IA — você é ex
 Quando não souber a resposta, seja honesto e sugira contato com o suporte da VIAGG.
 Use emojis moderadamente para tornar a conversa mais amigável.`;
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }

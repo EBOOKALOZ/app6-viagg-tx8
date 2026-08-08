@@ -1,17 +1,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
 import { mpGetPaymentStatus, mpStatusToEvent, mpValidateWebhook, type MpCreds } from "./mp.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-signature, x-request-id",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
-}
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-signature, x-request-id",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  });
+  function json(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
+  }
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 

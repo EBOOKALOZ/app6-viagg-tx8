@@ -12,12 +12,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.0";
-
-// ─── CORS (necessário para qualquer Edge Function) ────────────────────────────
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 // ─── App base URL (configurar como Supabase Secret: APP_BASE_URL) ─────────────
 // Fallback: Lovable preview URL padrão do projeto
@@ -106,6 +101,9 @@ function buildHtml(opts: {
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
+  const CORS = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
   // Preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS });

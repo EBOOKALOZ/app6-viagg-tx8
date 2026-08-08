@@ -12,14 +12,7 @@
  * Retorna: "approved" (>=85 aprovada) · "manual_review" (ambíguo/falha) · "blocked" (>=85 bloqueada)
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type TextVerdict = {
   decisao: "aprovada" | "revisao" | "bloqueada";
@@ -61,6 +54,11 @@ async function analisarViaGateway(payload: string): Promise<{ verdict: TextVerdi
 }
 
 Deno.serve(async (req) => {
+  const CORS = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const url = Deno.env.get("SUPABASE_URL")!;

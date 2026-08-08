@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
 import { ServiceType } from '@/lib/serviceTypes';
+import { handleChannelStatus, clearReconnectTimeout } from '@/hooks/realtime/reconnect';
 
 export interface IncomingDeliveryCall {
   type: 'delivery';
@@ -111,6 +112,34 @@ export function useRealtimeCalls({
   const onNewCallRef = useRef(onNewCall);
   const onCallRemovedRef = useRef(onCallRemoved);
   const onStatusChangeRef = useRef(onStatusChange);
+  // CORREÇÃO A-6: reconexão automática em CHANNEL_ERROR/TIMED_OUT/CLOSED
+  // (mesmo padrão de src/lib/events/RealtimeService.ts:31-42, 5s de backoff).
+  // reconnectTick força o efeito de subscrição a remontar os 3 canais.
+  const [reconnectTick, setReconnectTick] = useState(0);
+  const isMountedRef = useRef(true);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const broadcastReconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const newRideReconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // CORREÇÃO A-6: isConnected deve refletir a saúde dos 3 canais, não só o
+  // principal — se o canal de broadcast (delivery_accepted/ride_accepted) ou
+  // o de new-ride cair, a UI precisa deixar de dizer "conectado" mesmo que o
+  // canal de postgres_changes continue de pé. Guardamos o status individual
+  // de cada canal aplicável e derivamos isConnected como AND dos 3.
+  const channelStatusesRef = useRef<{
+    main: boolean;
+    broadcast: boolean;
+    newRideBroadcast: boolean;
+  }>({ main: false, broadcast: false, newRideBroadcast: false });
+
+  const recomputeIsConnected = useCallback(
+    (key: 'main' | 'broadcast' | 'newRideBroadcast', subscribed: boolean, rideChannelActive: boolean) => {
+      channelStatusesRef.current[key] = subscribed;
+      const { main, broadcast, newRideBroadcast } = channelStatusesRef.current;
+      const combined = main && broadcast && (!rideChannelActive || newRideBroadcast);
+      setIsConnected(combined);
+    },
+    []
+  );
 
   // Keep callback refs updated
   useEffect(() => {
@@ -174,7 +203,12 @@ export function useRealtimeCalls({
   // Setup realtime subscriptions
   useEffect(() => {
     const effectiveProfileId = activeProfileId || user?.id;
-    
+
+    // CORREÇÃO A-6: zera o status combinado a cada (re)montagem do efeito —
+    // evita herdar "true" de uma execução anterior enquanto os novos canais
+    // ainda não confirmaram SUBSCRIBED.
+    channelStatusesRef.current = { main: false, broadcast: false, newRideBroadcast: false };
+
     console.log('[useRealtimeCalls] Effect triggered');
     console.log('[useRealtimeCalls] - enabled:', enabled);
     console.log('[useRealtimeCalls] - userId:', user?.id);
@@ -487,9 +521,17 @@ export function useRealtimeCalls({
     }
 
     // Subscribe and track connection status
+    // CORREÇÃO A-6: em CHANNEL_ERROR/TIMED_OUT/CLOSED, agenda reconexão em 5s
+    // (mesmo padrão do RealtimeService) em vez de ficar mudo silenciosamente.
     channel.subscribe((status) => {
       console.log('[Realtime] Subscription status:', status);
-      setIsConnected(status === 'SUBSCRIBED');
+      handleChannelStatus(status, {
+        label: '[useRealtimeCalls]',
+        isMountedRef,
+        reconnectTimeoutRef,
+        onReconnect: () => setReconnectTick((t) => t + 1),
+        onStatusChange: (s) => recomputeIsConnected('main', s === 'SUBSCRIBED', listenRides),
+      });
     });
 
     channelRef.current = channel;
@@ -607,13 +649,21 @@ export function useRealtimeCalls({
       );
       
       // CORREÇÃO CRÍTICA: Subscribe DENTRO do if para garantir que o canal seja ativado
+      // CORREÇÃO A-6: reconexão automática (mesmo padrão do RealtimeService)
       newRideBroadcastChannel.subscribe((status) => {
         console.log('[Broadcast] NEW_RIDE channel status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('[Broadcast] ✅ Canal NEW_RIDE conectado e PRONTO para receber corridas!');
         }
+        handleChannelStatus(status, {
+          label: '[useRealtimeCalls][new-ride-broadcast]',
+          isMountedRef,
+          reconnectTimeoutRef: newRideReconnectTimeoutRef,
+          onReconnect: () => setReconnectTick((t) => t + 1),
+          onStatusChange: (s) => recomputeIsConnected('newRideBroadcast', s === 'SUBSCRIBED', listenRides),
+        });
       });
-      
+
       newRideBroadcastChannelRef.current = newRideBroadcastChannel;
     }
 
@@ -631,11 +681,19 @@ export function useRealtimeCalls({
       }
     );
 
+    // CORREÇÃO A-6: reconexão automática (mesmo padrão do RealtimeService)
     broadcastChannel.subscribe((status) => {
       console.log('[Broadcast] Subscription status:', status);
       if (status === 'SUBSCRIBED') {
         console.log('[Broadcast] ✅ Canal de broadcast conectado e pronto');
       }
+      handleChannelStatus(status, {
+        label: '[useRealtimeCalls][broadcast]',
+        isMountedRef,
+        reconnectTimeoutRef: broadcastReconnectTimeoutRef,
+        onReconnect: () => setReconnectTick((t) => t + 1),
+        onStatusChange: (s) => recomputeIsConnected('broadcast', s === 'SUBSCRIBED', listenRides),
+      });
     });
 
     broadcastChannelRef.current = broadcastChannel;
@@ -643,6 +701,11 @@ export function useRealtimeCalls({
     // Cleanup on unmount or when dependencies change
     return () => {
       console.log('[Realtime] Unsubscribing from channel:', channelName);
+      // CORREÇÃO A-6: cancelar QUALQUER timer de reconexão pendente dos 3
+      // canais — evita setState em componente desmontado e vazamento de timer.
+      clearReconnectTimeout(reconnectTimeoutRef);
+      clearReconnectTimeout(broadcastReconnectTimeoutRef);
+      clearReconnectTimeout(newRideReconnectTimeoutRef);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -660,7 +723,19 @@ export function useRealtimeCalls({
       setIsConnected(false);
     };
   // CRITICAL: activeProfile é importante para resubscribe ao trocar perfil
-  }, [enabled, user?.id, activeProfile, activeProfileId, listenDeliveries, listenRides, vehicleType, JSON.stringify(serviceTypes)]);
+  // reconnectTick: incrementado pelo handler de CHANNEL_ERROR/TIMED_OUT/CLOSED
+  // para forçar recriação dos canais após o backoff de 5s.
+  }, [enabled, user?.id, activeProfile, activeProfileId, listenDeliveries, listenRides, vehicleType, JSON.stringify(serviceTypes), reconnectTick, recomputeIsConnected]);
+
+  // Marca isMountedRef=false no unmount definitivo do hook, para que nenhum
+  // timer de reconexão em voo (agendado pouco antes de desmontar) chame
+  // setReconnectTick/setIsConnected depois que o componente já se foi.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Função para broadcast de aceite de entrega
   // CORREÇÃO: Verificar se canal está subscribed antes de enviar

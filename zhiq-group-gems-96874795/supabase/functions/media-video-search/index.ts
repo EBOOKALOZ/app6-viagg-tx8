@@ -17,12 +17,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type VideoType = "official" | "lyric" | "live" | "visualizer";
 const TYPE_PRIORITY: VideoType[] = ["official", "lyric", "live", "visualizer"];
@@ -102,6 +97,10 @@ function isoToSeconds(iso: string): number | null {
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  });
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });

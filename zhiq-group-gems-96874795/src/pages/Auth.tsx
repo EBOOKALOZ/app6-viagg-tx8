@@ -23,11 +23,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ComplianceBadge } from "@/components/compliance/ComplianceBadge";
+import { MathCaptchaDialog } from "@/components/ui/math-captcha-dialog";
+import { useLoginBruteForceGuard, CAPTCHA_THRESHOLD } from "@/hooks/useLoginBruteForceGuard";
 
 const emailSchema = z.string().email("Email inválido");
 const COOLDOWN_KEY = "viagg_auth_cooldown_until";
 
-type AuthState = "idle" | "sending" | "sent" | "error";
+/* ================================================================
+   Anti-brute-force de login por senha — MITIGAÇÃO CLIENT-SIDE APENAS.
+   ================================================================
+   A lógica de contagem de tentativas/backoff/limiar de captcha foi
+   centralizada em src/hooks/useLoginBruteForceGuard.ts (reusada também
+   por RealEstateAuthCard e GestorLoginPage). Ver a nota de limitação
+   honesta completa nesse arquivo: é mitigação client-side, contornável
+   por quem fala direto com a API do Supabase; rate-limiting real exige
+   camada server-side.
+================================================================= */
 
 const getPersistedCooldown = (): number => {
   try {
@@ -49,6 +60,10 @@ export default function Auth() {
   const [authState, setAuthState] = useState<AuthState>("idle");
   const [cooldown, setCooldown] = useState(() => getPersistedCooldown());
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Anti-brute-force de login por senha (client-side — ver nota no topo do arquivo)
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const pendingPasswordSubmitRef = useRef(false);
 
   const { 
     signInWithPassword, 
@@ -115,6 +130,9 @@ export default function Auth() {
       localStorage.removeItem(COOLDOWN_KEY);
     }
   }, [cooldown]);
+
+  const { loginCooldown, checkCooldown, needsCaptcha, registerFailedAttempt, registerSuccessfulLogin } =
+    useLoginBruteForceGuard(email);
 
   const setPersistentCooldown = (seconds: number) => {
     const until = Date.now() + seconds * 1000;
@@ -239,18 +257,17 @@ export default function Auth() {
     }
   };
 
-  const handlePasswordAuth = async () => {
-    if (isSubmittingRef.current || authState === "sending") return;
-    try {
-      emailSchema.parse(email);
-      if (password.length < 6) {
-        setErrorMessage("A senha deve ter pelo menos 6 caracteres.");
-        return;
-      }
-    } catch {
-      setErrorMessage("Email inválido.");
-      return;
-    }
+  /**
+   * Registra uma tentativa de login falha para o e-mail atual e calcula o
+   * próximo cooldown (backoff progressivo). Client-side apenas — ver nota
+   * no topo do arquivo sobre a limitação real desta camada.
+   */
+  const registerFailedLoginAttempt = () => {
+    if (isSignUp) return undefined; // backoff/captcha só se aplicam ao fluxo de LOGIN, não ao cadastro
+    return registerFailedAttempt(email);
+  };
+
+  const runPasswordAuthRequest = async () => {
     isSubmittingRef.current = true;
     startMusic();
     setAuthState("sending");
@@ -269,12 +286,16 @@ export default function Auth() {
           );
         } else if (!isSignUp && lMsg.includes("invalid login credentials")) {
           // Senha incorreta ou conta criada via Google/OAuth (sem senha)
+          const failCount = registerFailedLoginAttempt();
           // → troca para magic link automaticamente
           setAuthMethod("magic");
           setErrorMessage(
-            "Não foi possível entrar com senha. Se você entrou com Google antes, use o botão Google acima — ou clique em \"Enviar Link de Acesso\" abaixo."
+            failCount && failCount >= CAPTCHA_THRESHOLD
+              ? "E-mail ou senha incorretos várias vezes seguidas. Por segurança, a próxima tentativa vai pedir uma verificação extra. Se você entrou com Google antes, use o botão Google acima — ou clique em \"Enviar Link de Acesso\" abaixo."
+              : "Não foi possível entrar com senha. Se você entrou com Google antes, use o botão Google acima — ou clique em \"Enviar Link de Acesso\" abaixo."
           );
         } else {
+          if (!isSignUp) registerFailedLoginAttempt();
           setErrorMessage(translateError(error.message));
         }
         setAuthState("error");
@@ -282,6 +303,8 @@ export default function Auth() {
         if (isSignUp) {
           toast({ title: "Conta criada!", description: "Verifique seu e-mail para confirmar o cadastro." });
           setAuthState("sent");
+        } else {
+          registerSuccessfulLogin();
         }
         if (isAdvertiserMode) {
           console.log("[Auth] Advertiser mode detected, allowing LoadingTransition to handle redirect.");
@@ -293,6 +316,47 @@ export default function Auth() {
     } finally {
       isSubmittingRef.current = false;
     }
+  };
+
+  const handlePasswordAuth = async () => {
+    if (isSubmittingRef.current || authState === "sending") return;
+    try {
+      emailSchema.parse(email);
+      if (password.length < 6) {
+        setErrorMessage("A senha deve ter pelo menos 6 caracteres.");
+        return;
+      }
+    } catch {
+      setErrorMessage("Email inválido.");
+      return;
+    }
+
+    if (!isSignUp) {
+      // 1ª linha de defesa (UX, client-side): backoff progressivo por e-mail.
+      // Não bloqueia tentativa legítima 1-2 erros de digitação — só entra em
+      // vigor a partir da 2ª falha seguida (ver BACKOFF_SECONDS no hook).
+      const remaining = checkCooldown(email);
+      if (remaining > 0) {
+        setErrorMessage(`Muitas tentativas. Aguarde ${remaining}s antes de tentar novamente.`);
+        return;
+      }
+
+      // 2ª linha de defesa: a partir de CAPTCHA_THRESHOLD falhas seguidas,
+      // exige captcha matemático antes de sequer enviar a tentativa ao Supabase.
+      if (needsCaptcha(email)) {
+        pendingPasswordSubmitRef.current = true;
+        setCaptchaOpen(true);
+        return;
+      }
+    }
+
+    await runPasswordAuthRequest();
+  };
+
+  const handleCaptchaConfirmed = async () => {
+    if (!pendingPasswordSubmitRef.current) return;
+    pendingPasswordSubmitRef.current = false;
+    await runPasswordAuthRequest();
   };
 
   if (authState === "sent") {
@@ -432,13 +496,23 @@ export default function Auth() {
 
                 <Button
                   onClick={authMethod === "magic" ? handleMagicLink : handlePasswordAuth}
-                  disabled={authState === "sending" || (authMethod === "magic" && cooldown > 0)}
+                  disabled={
+                    authState === "sending" ||
+                    (authMethod === "magic" && cooldown > 0) ||
+                    (authMethod === "password" && !isSignUp && loginCooldown > 0)
+                  }
                   className={cn(
                     "w-full h-11 text-[#FFF4E6] shadow-2xl rounded-xl font-black uppercase text-xs tracking-[0.25em] group transition-all",
                     isAdvertiserMode ? "bg-[#EA580C] hover:bg-orange-600 shadow-orange-950/40" : "bg-[#FF6A00] hover:bg-orange-600 shadow-[0_12px_32px_rgba(255,106,0,0.3)]"
                   )}
                 >
-                  {authState === "sending" ? <Loader2 className="h-5 w-5 animate-spin" /> : authMethod === "magic" && cooldown > 0 ? `Reenviar em ${cooldown}s` : <div className="flex items-center gap-2">{authMethod === "magic" ? "Enviar Link de Acesso" : (isSignUp ? (isBuyerMode ? "Criar Conta" : "Criar Painel") : (isBuyerMode ? "Entrar" : "Acessar Painel"))} <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" /></div>}
+                  {authState === "sending"
+                    ? <Loader2 className="h-5 w-5 animate-spin" />
+                    : authMethod === "magic" && cooldown > 0
+                      ? `Reenviar em ${cooldown}s`
+                      : authMethod === "password" && !isSignUp && loginCooldown > 0
+                        ? `Aguarde ${loginCooldown}s`
+                        : <div className="flex items-center gap-2">{authMethod === "magic" ? "Enviar Link de Acesso" : (isSignUp ? (isBuyerMode ? "Criar Conta" : "Criar Painel") : (isBuyerMode ? "Entrar" : "Acessar Painel"))} <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" /></div>}
                 </Button>
 
                 {errorMessage && (
@@ -531,6 +605,17 @@ export default function Auth() {
           </div>
         </div>
       </div>
+
+      <MathCaptchaDialog
+        open={captchaOpen}
+        onOpenChange={(open) => {
+          setCaptchaOpen(open);
+          if (!open) pendingPasswordSubmitRef.current = false;
+        }}
+        onConfirmed={handleCaptchaConfirmed}
+        title="Verificação de segurança"
+        description="Detectamos várias tentativas de login seguidas com esta senha. Resolva a soma abaixo para tentar novamente."
+      />
     </div>
   );
 }

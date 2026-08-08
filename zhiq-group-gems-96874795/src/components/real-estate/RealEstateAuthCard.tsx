@@ -1,46 +1,56 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { 
-  Building2, 
-  Lock, 
-  Mail, 
-  ArrowRight, 
+import {
+  Building2,
+  Lock,
+  Mail,
+  ArrowRight,
   ChevronLeft,
   ShieldCheck,
   Star,
   Chrome,
   Facebook
 } from "lucide-react";
+import { MathCaptchaDialog } from "@/components/ui/math-captcha-dialog";
+import { useLoginBruteForceGuard } from "@/hooks/useLoginBruteForceGuard";
+
 export function RealEstateAuthCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  
+
+  // Anti-brute-force de login por senha — mitigação client-side apenas.
+  // Ver nota de limitação honesta em src/hooks/useLoginBruteForceGuard.ts.
+  const { loginCooldown, checkCooldown, needsCaptcha, registerFailedAttempt, registerSuccessfulLogin } =
+    useLoginBruteForceGuard(email);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
+  const pendingSubmitRef = useRef(false);
+
   const { signInWithPassword, signUp, signInWithGoogle, signInWithFacebook } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runAuthRequest = async () => {
     setLoading(true);
-
     try {
-      const { error } = isSignUp 
+      const { error } = isSignUp
         ? await signUp(email, password)
         : await signInWithPassword(email, password);
 
       if (error) {
+        if (!isSignUp) registerFailedAttempt(email);
         toast({
           variant: "destructive",
           title: "Erro na autenticação",
           description: error.message,
         });
       } else {
+        if (!isSignUp) registerSuccessfulLogin();
         toast({
           title: isSignUp ? "Conta criada!" : "Bem-vindo de volta!",
           description: isSignUp ? "Verifique seu e-mail para confirmar." : "Login realizado com sucesso.",
@@ -50,6 +60,35 @@ export function RealEstateAuthCard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isSignUp) {
+      const remaining = checkCooldown(email);
+      if (remaining > 0) {
+        toast({
+          variant: "destructive",
+          title: "Muitas tentativas",
+          description: `Aguarde ${remaining}s antes de tentar novamente.`,
+        });
+        return;
+      }
+      if (needsCaptcha(email)) {
+        pendingSubmitRef.current = true;
+        setCaptchaOpen(true);
+        return;
+      }
+    }
+
+    await runAuthRequest();
+  };
+
+  const handleCaptchaConfirmed = async () => {
+    if (!pendingSubmitRef.current) return;
+    pendingSubmitRef.current = false;
+    await runAuthRequest();
   };
   return (
     <div className="w-full max-w-[460px] relative z-10 mx-auto">
@@ -116,13 +155,15 @@ export function RealEstateAuthCard() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
-              disabled={loading}
+            <Button
+              type="submit"
+              disabled={loading || (!isSignUp && loginCooldown > 0)}
               className="w-full h-16 bg-[#FF6A00] hover:bg-[#FF7A1A] text-white rounded-2xl font-black text-sm uppercase tracking-[0.25em] shadow-xl shadow-orange-500/10 group transition-all"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : !isSignUp && loginCooldown > 0 ? (
+                `Aguarde ${loginCooldown}s`
               ) : (
                 <div className="flex items-center gap-3">
                   {isSignUp ? "Criar Minha Conta" : "Entrar no Painel"}
@@ -182,6 +223,17 @@ export function RealEstateAuthCard() {
             <span className="text-[10px] font-black text-white uppercase tracking-widest">Premium</span>
           </div>
         </div>
+
+        <MathCaptchaDialog
+          open={captchaOpen}
+          onOpenChange={(open) => {
+            setCaptchaOpen(open);
+            if (!open) pendingSubmitRef.current = false;
+          }}
+          onConfirmed={handleCaptchaConfirmed}
+          title="Verificação de segurança"
+          description="Detectamos várias tentativas de login seguidas. Resolva a soma abaixo para tentar novamente."
+        />
       </div>
   );
 }

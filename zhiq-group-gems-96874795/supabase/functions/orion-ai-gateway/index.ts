@@ -16,15 +16,7 @@
  * Body { action: "health" } → status das chaves e config (sem custo).
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status, headers: { ...CORS, "Content-Type": "application/json" },
-  });
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 type Modelo = {
   provider: string; model_code: string;
@@ -122,6 +114,13 @@ async function chamarProvedor(
 }
 
 Deno.serve(async (req) => {
+  const CORS = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status, headers: { ...CORS, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const url = Deno.env.get("SUPABASE_URL")!;

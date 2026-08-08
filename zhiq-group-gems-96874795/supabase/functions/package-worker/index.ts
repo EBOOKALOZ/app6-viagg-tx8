@@ -12,15 +12,7 @@
  * motor_publish_request (porta única).
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status, headers: { ...CORS, "Content-Type": "application/json" },
-  });
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const SITE = "https://www.viagg-tx8.com.br";
 const ROTA: Record<string, string> = {
@@ -51,6 +43,13 @@ function qualidade(conteudo: Record<string, unknown>, link: string): { ok: boole
 }
 
 Deno.serve(async (req) => {
+  const CORS = getCorsHeaders(req.headers.get("Origin"), {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  });
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status, headers: { ...CORS, "Content-Type": "application/json" },
+    });
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const url = Deno.env.get("SUPABASE_URL")!;
