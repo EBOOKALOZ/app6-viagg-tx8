@@ -3,11 +3,11 @@ import { useToast } from "@/hooks/use-toast";
 import { createDonation, listDonations, updateDonationStatus } from "@/services/convenio/donations";
 import type { ConvenioDonationInsert, ConvenioDonationStatus } from "@/services/convenio/types";
 
-const KEY = ["convenio", "donations"];
+export const KEY = ["convenio", "donations"];
 
 // Doações mudam raised_amount (trigger no banco) e os agregados públicos —
 // toda mutação invalida campanhas, dashboard e vitrine pública juntas.
-function invalidateDonationDependents(queryClient: ReturnType<typeof useQueryClient>) {
+export function invalidateDonationDependents(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: KEY });
   queryClient.invalidateQueries({ queryKey: ["convenio", "campaigns"] });
   queryClient.invalidateQueries({ queryKey: ["convenio", "dashboard-stats"] });

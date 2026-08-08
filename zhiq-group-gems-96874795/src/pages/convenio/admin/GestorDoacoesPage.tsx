@@ -5,6 +5,7 @@
  * Workflow completo: registrada → confirmada → estornada (máquina de estados
  * validada no cliente e imposta por trigger no banco); estorno exige
  * confirmação e ajusta raised_amount da campanha automaticamente.
+ * Cadastro nasce "registrada" por padrão; "já confirmada" é opt-in explícito.
  */
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, HeartHandshake, Plus } from "lucide-react";
@@ -40,6 +41,7 @@ function RegisterDonationDialog() {
   const [amount, setAmount] = useState("");
   const [campaignId, setCampaignId] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [alreadyConfirmed, setAlreadyConfirmed] = useState(false);
   const campaignsQuery = useConvenioCampaignsForPicker();
   const createMutation = useCreateConvenioDonation();
 
@@ -51,7 +53,9 @@ function RegisterDonationDialog() {
         is_anonymous: isAnonymous,
         amount: Number(amount),
         campaign_id: campaignId || null,
-        status: "confirmada",
+        // Nasce "registrada" por padrão (máquina de estados); "já confirmada"
+        // é opt-in explícito para quando o gestor sabe que o valor já entrou.
+        status: alreadyConfirmed ? "confirmada" : "registrada",
       },
       {
         onSuccess: () => {
@@ -60,6 +64,7 @@ function RegisterDonationDialog() {
           setAmount("");
           setCampaignId("");
           setIsAnonymous(false);
+          setAlreadyConfirmed(false);
         },
       }
     );
@@ -105,6 +110,14 @@ function RegisterDonationDialog() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="donation-already-confirmed"
+              checked={alreadyConfirmed}
+              onCheckedChange={(v) => setAlreadyConfirmed(v === true)}
+            />
+            <Label htmlFor="donation-already-confirmed">Valor já recebido (cadastrar como confirmada)</Label>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={createMutation.isPending || !amount}>
