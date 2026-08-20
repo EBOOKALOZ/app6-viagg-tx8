@@ -219,7 +219,6 @@ export function MultimediaMiniPlayer({ channel, watchSignal = 0 }: MiniPlayerPro
             title={channel?.name || 'Transmissão'}
             className="absolute inset-0 h-full w-full"
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
             referrerPolicy="origin"
           />
         )}

@@ -17,7 +17,7 @@ export function pesquisaScenario() {
     const term = SEARCH_TERMS[Math.floor(Math.random() * SEARCH_TERMS.length)];
     const res = http.get(
       `${CONFIG.baseUrl}/busca?q=${encodeURIComponent(term)}`,
-      { timeout: CONFIG.httpTimeout, tags: { name: 'search' } }
+      { headers: CONFIG.frontendHeaders, timeout: CONFIG.httpTimeout, tags: { name: 'search' } }
     );
     recordResponse('pesquisa', res);
     sleep(Math.random() * 1.5 + 0.5);

@@ -27,6 +27,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- 3) RPC: mudar status do slot (pausar/retomar/excluir) — só o dono
+DROP FUNCTION IF EXISTS public.update_slot_status(uuid, text); -- ORION-480: versão anterior retornava jsonb; replay exige drop antes de mudar RETURNS
 CREATE OR REPLACE FUNCTION public.update_slot_status(p_slot_id uuid, p_status text)
 RETURNS void
 LANGUAGE plpgsql

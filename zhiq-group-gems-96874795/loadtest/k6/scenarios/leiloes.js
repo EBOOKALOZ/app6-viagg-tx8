@@ -21,6 +21,7 @@ const MIN_SECONDS_BETWEEN_BIDS = 12; // margem sobre a janela de 10s do banco
 export function leiloesScenario(session) {
   group('leiloes', () => {
     const listRes = http.get(`${CONFIG.baseUrl}/leiloes`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'leiloes_listagem' },
     });
@@ -30,6 +31,7 @@ export function leiloesScenario(session) {
     if (!hasSeed('auctions')) return;
     const id = pickSeedId('auctions');
     const detailRes = http.get(`${CONFIG.baseUrl}/leilao/${id}`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'leiloes_detalhe' },
     });

@@ -34,6 +34,12 @@ export const CONFIG = {
   // fazem ambas (ex.: leilão: ver x dar lance). 0.1 = 10% escreve.
   writeRatio: parseFloat(__ENV.WRITE_RATIO || '0.1'),
 
+  // Header opcional p/ Vercel Deployment Protection do preview de staging
+  // (Protection Bypass for Automation). Vazio = nenhum header extra.
+  frontendHeaders: __ENV.VERCEL_BYPASS
+    ? { 'x-vercel-protection-bypass': __ENV.VERCEL_BYPASS }
+    : undefined,
+
   // Timeout de requisição HTTP individual.
   httpTimeout: __ENV.HTTP_TIMEOUT || '10s',
 };

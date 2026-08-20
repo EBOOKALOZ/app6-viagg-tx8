@@ -24,6 +24,7 @@ export function navegacaoScenario() {
   group('navegacao', () => {
     const path = PUBLIC_PAGES[Math.floor(Math.random() * PUBLIC_PAGES.length)];
     const res = http.get(`${CONFIG.baseUrl}${path}`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'nav_page', page: path },
     });

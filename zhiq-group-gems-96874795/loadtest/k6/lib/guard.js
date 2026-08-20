@@ -18,6 +18,16 @@ const KNOWN_PRODUCTION_URL_FRAGMENTS = [
   'mercadolocal',
 ];
 
+// yqbvzecmaemykeedcdib (viagg-tx8-staging) foi AVALIADO e REJEITADO em
+// 2026-08-08 (dados reais herdados de produção) e depois HOMOLOGADO em
+// 2026-08-09 após: esvaziamento confirmado (auth.users=0, storage=0 em
+// duas leituras consecutivas), auditoria estrutural completa (12/12 itens,
+// sem resíduo de config/role/extensão de produção) e correção verificada
+// de RLS residual (revoke de admin_get_auth_emails/admin_dashboard_overview,
+// policies USING(true) de credit_purchases/store_payment_settings e
+// Admin_Full_Management_Access corrigidas e revalidadas ao vivo).
+const KNOWN_STAGING_HOST = 'yqbvzecmaemykeedcdib.supabase.co';
+
 function fail(message) {
   // eslint-disable-next-line no-console
   console.error(`\n[GUARD] ${message}\n`);

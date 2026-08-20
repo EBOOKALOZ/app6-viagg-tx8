@@ -13,6 +13,7 @@ export function anunciosScenario() {
   group('anuncios', () => {
     const id = pickSeedId('products');
     const res = http.get(`${CONFIG.baseUrl}/produto/${id}`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'anuncio_detalhe' },
     });

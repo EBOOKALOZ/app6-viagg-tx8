@@ -13,6 +13,7 @@ import { authHeaders } from '../lib/auth.js';
 export function veiculosScenario(session) {
   group('veiculos', () => {
     const listRes = http.get(`${CONFIG.baseUrl}/automoveis`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'veiculos_listagem' },
     });
@@ -22,6 +23,7 @@ export function veiculosScenario(session) {
     if (!hasSeed('vehicles')) return;
     const id = pickSeedId('vehicles');
     const detailRes = http.get(`${CONFIG.baseUrl}/veiculos/${id}`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'veiculos_detalhe' },
     });

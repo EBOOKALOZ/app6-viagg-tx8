@@ -89,6 +89,7 @@ $$;
 -- A versão antiga tinha ON CONFLICT inválido em merchant_wallets.
 -- Garante que financial_accounts também seja criada com region_id.
 -- ============================================================
+DROP FUNCTION IF EXISTS public.ensure_merchant_profile(uuid); -- ORION-480: versão anterior (20260216) retornava jsonb; replay exige drop antes de mudar RETURNS
 CREATE OR REPLACE FUNCTION public.ensure_merchant_profile(p_user_id uuid)
 RETURNS void
 LANGUAGE plpgsql

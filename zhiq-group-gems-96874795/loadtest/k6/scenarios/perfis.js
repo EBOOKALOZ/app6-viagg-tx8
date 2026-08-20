@@ -12,6 +12,7 @@ export function perfisScenario() {
   group('perfis', () => {
     const storeId = pickSeedId('profiles');
     const res = http.get(`${CONFIG.baseUrl}/loja/${storeId}`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'perfil_loja' },
     });

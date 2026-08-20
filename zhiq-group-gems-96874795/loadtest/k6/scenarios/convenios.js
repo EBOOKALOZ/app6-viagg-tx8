@@ -12,6 +12,7 @@ import { authHeaders } from '../lib/auth.js';
 export function conveniosScenario(session) {
   group('convenios', () => {
     const pageRes = http.get(`${CONFIG.baseUrl}/medprev`, {
+      headers: CONFIG.frontendHeaders,
       timeout: CONFIG.httpTimeout,
       tags: { name: 'convenios_landing' },
     });

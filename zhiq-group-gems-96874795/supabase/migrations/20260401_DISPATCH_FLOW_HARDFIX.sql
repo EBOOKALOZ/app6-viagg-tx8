@@ -129,6 +129,7 @@ WHERE
 -- ─────────────────────────────────────────────────────────────
 -- [FIX P5] mark_delivery_offer_viewed: garantir que existe
 -- ─────────────────────────────────────────────────────────────
+DROP FUNCTION IF EXISTS public.mark_delivery_offer_viewed(uuid); -- ORION-480: versão anterior retornava jsonb; replay exige drop antes de mudar RETURNS
 CREATE OR REPLACE FUNCTION public.mark_delivery_offer_viewed(p_offer_id uuid)
 RETURNS void
 LANGUAGE plpgsql
