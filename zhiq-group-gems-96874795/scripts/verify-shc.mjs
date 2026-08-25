@@ -45,11 +45,14 @@ const loadEnv = () => {
 
 loadEnv();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const envUrl = process.env.VITE_SUPABASE_URL;
+const envKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+const supabaseUrl = (envUrl && envUrl.trim() !== '') ? envUrl : "https://broifhfqmnzqoongtokm.supabase.co";
+const supabaseKey = (envKey && envKey.trim() !== '') ? envKey : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyb2lmaGZxbW56cW9vbmd0b2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4Mjc2NzAsImV4cCI6MjA4MzQwMzY3MH0.Zk_AsCPkqaRozf0Nbsxd_S8HBef52VBu7rU4fOD0Hv8";
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("ERRO [SHC GATE]: Credenciais do Supabase não encontradas. Verifique VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.");
+  console.error("ERRO [SHC GATE]: Credenciais do Supabase não encontradas.");
   process.exit(1);
 }
 
