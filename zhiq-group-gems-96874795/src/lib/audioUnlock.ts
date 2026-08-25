@@ -8,7 +8,7 @@
 // Flag global para rastrear estado
 let isAudioUnlocked = false;
 let unlockAttempts = 0;
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 10;
 
 /**
  * Verifica se o áudio já foi desbloqueado
@@ -102,7 +102,16 @@ export async function unlockGlobalAudio(): Promise<boolean> {
     return true;
 
   } catch (error) {
-    console.warn('[AudioUnlock] Falha:', error);
+    // NotAllowedError / AbortError = autoplay bloqueado pelo navegador.
+    // É comportamento normal em produção (HTTPS) — não consumir tentativa.
+    const isAutoplayBlock = error instanceof DOMException &&
+      (error.name === 'NotAllowedError' || error.name === 'AbortError' || error.name === 'NotSupportedError');
+    if (isAutoplayBlock) {
+      unlockAttempts--; // Devolver tentativa — bloqueio de autoplay não é falha real
+      console.info('[AudioUnlock] Autoplay bloqueado — aguardando interação real do usuário');
+    } else {
+      console.warn('[AudioUnlock] Falha:', error);
+    }
     return false;
   }
 }
@@ -122,7 +131,7 @@ export function setupAggressiveAudioUnlock(): void {
     // Ignorar
   }
 
-  const events = ['click', 'touchstart', 'touchend', 'keydown', 'mousedown'];
+  const events = ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown', 'mousedown'];
   
   const handleFirstInteraction = () => {
     unlockGlobalAudio().then(success => {

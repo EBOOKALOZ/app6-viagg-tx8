@@ -52,10 +52,16 @@ import type { Database } from './types';
 
 const getEnv = (key: string): string | undefined => {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
-    return (import.meta.env as any)[key];
+    const val = (import.meta.env as any)[key];
+    // Vite substitui variáveis vazias por "" no bundle de produção;
+    // tratar string vazia como undefined para que o fallback ative.
+    if (typeof val === 'string' && val.trim() !== '') return val;
+    return undefined;
   }
   if (typeof process !== 'undefined' && process.env) {
-    return process.env[key];
+    const val = process.env[key];
+    if (typeof val === 'string' && val.trim() !== '') return val;
+    return undefined;
   }
   return undefined;
 };
@@ -63,13 +69,13 @@ const getEnv = (key: string): string | undefined => {
 export const SUPABASE_URL = getEnv("VITE_SUPABASE_URL") || "https://broifhfqmnzqoongtokm.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("VITE_SUPABASE_ANON_KEY") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJyb2lmaGZxbW56cW9vbmd0b2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4Mjc2NzAsImV4cCI6MjA4MzQwMzY3MH0.Zk_AsCPkqaRozf0Nbsxd_S8HBef52VBu7rU4fOD0Hv8";
 
-if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) {
-  console.log('[Supabase] Initializing client:', {
-    url: SUPABASE_URL.substring(0, 40) + '...',
-    usingEnvUrl: Boolean(getEnv("VITE_SUPABASE_URL")),
-    usingEnvKey: Boolean(SUPABASE_PUBLISHABLE_KEY)
-  });
-}
+// Log de diagnóstico em TODOS os ambientes (inclusive produção) para
+// facilitar triagem do erro "Invalid API key" sem expor chaves.
+console.info('[Supabase] Client config:', {
+  url: SUPABASE_URL.substring(0, 40) + '...',
+  keyPrefix: SUPABASE_PUBLISHABLE_KEY.substring(0, 10) + '...',
+  source: getEnv('VITE_SUPABASE_URL') ? 'env' : 'fallback',
+});
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

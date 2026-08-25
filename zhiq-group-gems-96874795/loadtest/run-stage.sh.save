@@ -5,8 +5,15 @@
 # ORION-480 é "cada etapa só roda após análise aprovada da anterior".
 #
 # Uso:
-#   ./loadtest/run-stage.sh S0 --dry-run       # só imprime o comando k6
-#   ./loadtest/run-stage.sh S0                 # executa de fato (requer env de staging carregado)
+if [ ! -f "$ENV_FILE" ]; then
+  echo "ERRO: $ENV_FILE não encontrado."
+  exit 1
+fi
+
+set -a
+source "$ENV_FILE"
+set +a#   ./loadtest/run-stage.sh S0 --dry-run       # só imprime o comando k6
+#   ./if [ ! -f "$ENV_FILE" ]; thenloadtest/run-stage.sh S0                 # executa de fato (requer env de staging carregado)
 #
 # Pré-requisitos antes de rodar sem --dry-run:
 #   1. k6 instalado (não vem instalado neste ambiente — ver docs/README.md)

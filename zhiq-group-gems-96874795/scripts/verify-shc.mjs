@@ -23,14 +23,15 @@ const loadEnv = () => {
       if (fs.existsSync(envPath)) {
         const envFile = fs.readFileSync(envPath, 'utf8');
         envFile.split('\n').forEach(line => {
-          const match = line.match(/^([^#\s]+)\s*=\s*(.*)$/);
+          const trimmedLine = line.trim();
+          const match = trimmedLine.match(/^([^#\s]+)\s*=\s*(.*)$/);
           if (match) {
             const key = match[1].trim();
             let value = match[2].trim();
             if (value.startsWith('"') && value.endsWith('"')) {
               value = value.slice(1, -1);
             }
-            if (!process.env[key]) {
+            if (!process.env[key] && value !== '') {
               process.env[key] = value;
             }
           }

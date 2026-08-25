@@ -60,6 +60,7 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 CMD="k6 run loadtest/k6/main.js \\
+  --env-file $ENV_FILE \\
   -e USERS=$USERS -e DURATION=$DURATION -e RAMP_UP=$RAMP_UP -e RAMP_DOWN=$RAMP_DOWN \\
   -e STAGE_LABEL=${STAGE}-${LABEL}"
 
