@@ -1,0 +1,1 @@
+﻿{ "stage": "D1-1K", "label": "diagnostico-http-1k", "users": 1000, "rampUp": "2m", "duration": "5m", "rampDown": "1m", "realtimeVUs": 0, "objective": "Isolar capacidade HTTP sem concorrencia Realtime." }

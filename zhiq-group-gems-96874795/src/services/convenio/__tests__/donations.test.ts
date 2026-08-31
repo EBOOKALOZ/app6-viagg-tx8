@@ -99,7 +99,11 @@ describe("validateDonationInput", () => {
   });
 });
 
-describe("createDonation", () => {
+// NOTA: os testes abaixo documentam o comportamento esperado quando
+// DONATIONS_ACTIONS_ENABLED = true. Com a flag desabilitada, createDonation e
+// updateDonationStatus lançam "Ação indisponível" antes de qualquer validação.
+// Reativar estes testes (.skip → .only) quando a flag voltar a true.
+describe.skip("createDonation (reativar quando DONATIONS_ACTIONS_ENABLED = true)", () => {
   beforeEach(() => {
     state.insertResult = { data: { id: VALID_UUID, amount: 50 }, error: null };
   });
@@ -121,7 +125,7 @@ describe("createDonation", () => {
   });
 });
 
-describe("updateDonationStatus", () => {
+describe.skip("updateDonationStatus (reativar quando DONATIONS_ACTIONS_ENABLED = true)", () => {
   beforeEach(() => {
     state.updateResult = { data: { id: VALID_UUID, status: "confirmada" }, error: null };
   });
@@ -154,6 +158,26 @@ describe("updateDonationStatus", () => {
   it("aceita transição válida e retorna o registro atualizado", async () => {
     const result = await updateDonationStatus({ id: VALID_UUID, from: "registrada", to: "confirmada" });
     expect(result).toEqual({ id: VALID_UUID, status: "confirmada" });
+  });
+});
+
+describe("feature flag — DONATIONS_ACTIONS_ENABLED = false", () => {
+  it("createDonation lança erro quando ações desativadas", async () => {
+    await expect(createDonation({ donor_name: "Maria", amount: 50 })).rejects.toThrow(
+      /indisponível/
+    );
+  });
+
+  it("updateDonationStatus lança erro quando ações desativadas", async () => {
+    await expect(
+      updateDonationStatus({ id: VALID_UUID, from: "registrada", to: "confirmada" })
+    ).rejects.toThrow(/indisponível/);
+  });
+
+  it("validateDonationInput continua funcionando (não depende da flag)", () => {
+    expect(() =>
+      validateDonationInput({ donor_name: "Maria", amount: 100, campaign_id: VALID_UUID })
+    ).not.toThrow();
   });
 });
 

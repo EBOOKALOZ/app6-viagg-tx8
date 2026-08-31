@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { assertStatusTransition } from "@/lib/convenio/statusTransitions";
+import { DONATIONS_ACTIONS_ENABLED, DISABLED_ACTION_MESSAGE } from "@/lib/featureFlags";
 import type { ConvenioDonation, ConvenioDonationInsert, ConvenioDonationStatus } from "./types";
 
 export interface ConvenioDonationWithCampaign extends ConvenioDonation {
@@ -102,6 +103,7 @@ export async function listAllDonationsForExport(): Promise<ConvenioDonationWithC
 }
 
 export async function createDonation(input: ConvenioDonationInsert): Promise<ConvenioDonation> {
+  if (!DONATIONS_ACTIONS_ENABLED) throw new Error(DISABLED_ACTION_MESSAGE);
   const validated = validateDonationInput(input);
   const { data, error } = await supabase
     .from("convenio_donations")
@@ -124,6 +126,7 @@ export async function updateDonationStatus(params: {
   from: ConvenioDonationStatus;
   to: ConvenioDonationStatus;
 }): Promise<ConvenioDonation> {
+  if (!DONATIONS_ACTIONS_ENABLED) throw new Error(DISABLED_ACTION_MESSAGE);
   if (!UUID_REGEX.test(params.id)) throw new Error("ID de doação inválido");
   assertStatusTransition("donation", params.from, params.to);
   const { data, error } = await supabase

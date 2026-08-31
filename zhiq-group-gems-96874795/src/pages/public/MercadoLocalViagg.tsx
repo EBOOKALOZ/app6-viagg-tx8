@@ -1171,58 +1171,32 @@ const [inquiryOpen, setInquiryOpen] = useState(false);
                 <>
 <InstitutionalSafetyBanner />
 
-            {/* ═══ ORION-510 — Linha de Destaque: Ofertas do Dia · Viagg-TX8 MedPrev · Leilões Ativos ═══ */}
+            {/* ═══ Linha de Destaque: Ofertas do Dia · Leilões Ativos ═══ */}
             <div className="w-full px-4 lg:px-6 pt-5 pb-1">
-                <div className="max-w-[1920px] mx-auto flex flex-col sm:grid sm:grid-cols-3 gap-3 sm:gap-4">
-                    {/* MedPrev — full-width no mobile, aparece primeiro */}
+                <div className="max-w-[1920px] mx-auto grid grid-cols-2 gap-3 sm:gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate("/medprev")}
-                        aria-label="Viagg-TX8 MedPrev — Convênios e Doações"
-                        className="group relative flex items-center gap-3 rounded-2xl p-4 sm:p-5 text-left bg-white shadow-[0_4px_18px_rgba(0,0,0,0.10)] border border-gray-200 ring-1 ring-emerald-200/50 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(16,185,129,0.20)] active:scale-[0.98] transition-all duration-200 cursor-pointer sm:order-2"
+                        onClick={() => { setListingTypeFilter("all"); scrollToProducts(); }}
+                        className="group flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl p-3 py-3 sm:p-5 text-left bg-gradient-to-br from-orange-500 to-amber-500 shadow-[0_4px_18px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 hover:shadow-[0_8px_26px_rgba(0,0,0,0.18)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
                     >
-                        <span className="flex items-center justify-center shrink-0 h-14 w-14 sm:h-[72px] sm:w-[72px] rounded-2xl overflow-hidden bg-emerald-50 ring-1 ring-emerald-200">
-                            <img src="/images/viagg-tx8-logo.jpg" alt="" className="h-full w-full object-cover" />
-                        </span>
-                        <span className="min-w-0 self-center flex-1">
-                            <span className="block leading-tight">
-                                <span className="block text-gray-900 font-black text-sm sm:text-lg tracking-tight truncate">Viagg-TX8</span>
-                                <span className="block text-emerald-600 font-black text-sm sm:text-lg tracking-tight truncate">MedPrev</span>
-                            </span>
-                            <span className="block text-gray-700 text-xs sm:text-sm font-bold truncate mt-1">Convênios &amp; Doações</span>
-                            <span className="block text-gray-500 text-[11px] font-semibold truncate">Clique para conhecer</span>
-                        </span>
-                        <span className="hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md group-hover:translate-x-0.5 transition-transform">
-                            <ArrowRight className="h-4 w-4" />
+                        <span className="text-lg sm:text-3xl leading-none shrink-0">🔥</span>
+                        <span className="min-w-0">
+                            <span className="block text-white font-black text-[11px] sm:text-base tracking-tight truncate">Ofertas do Dia</span>
+                            <span className="block text-white/85 text-[9px] sm:text-xs font-semibold truncate">Os melhores preços de hoje</span>
                         </span>
                     </button>
 
-                    {/* Ofertas + Leilões — lado a lado no mobile, 60% menores */}
-                    <div className="grid grid-cols-2 sm:contents gap-2">
-                        <button
-                            type="button"
-                            onClick={() => { setListingTypeFilter("all"); scrollToProducts(); }}
-                            className="group flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl p-2 py-2.5 sm:p-5 text-left bg-gradient-to-br from-orange-500 to-amber-500 shadow-[0_4px_18px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 hover:shadow-[0_8px_26px_rgba(0,0,0,0.18)] active:scale-[0.98] transition-all duration-200 cursor-pointer sm:order-1"
-                        >
-                            <span className="text-lg sm:text-3xl leading-none shrink-0">🔥</span>
-                            <span className="min-w-0">
-                                <span className="block text-white font-black text-[11px] sm:text-base tracking-tight truncate">Ofertas do Dia</span>
-                                <span className="block text-white/85 text-[9px] sm:text-xs font-semibold truncate">Os melhores preços de hoje</span>
-                            </span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => navigate("/leiloes")}
-                            className="group flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl p-2 py-2.5 sm:p-5 text-left bg-gradient-to-br from-slate-800 to-slate-950 shadow-[0_4px_18px_rgba(0,0,0,0.16)] hover:-translate-y-0.5 hover:shadow-[0_8px_26px_rgba(0,0,0,0.24)] active:scale-[0.98] transition-all duration-200 cursor-pointer sm:order-3"
-                        >
-                            <span className="text-lg sm:text-3xl leading-none shrink-0">🔨</span>
-                            <span className="min-w-0">
-                                <span className="block text-white font-black text-[11px] sm:text-base tracking-tight truncate">Leilões Ativos</span>
-                                <span className="block text-white/80 text-[9px] sm:text-xs font-semibold truncate">Dê seu lance agora</span>
-                            </span>
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => navigate("/leiloes")}
+                        className="group flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-2xl p-3 py-3 sm:p-5 text-left bg-gradient-to-br from-slate-800 to-slate-950 shadow-[0_4px_18px_rgba(0,0,0,0.16)] hover:-translate-y-0.5 hover:shadow-[0_8px_26px_rgba(0,0,0,0.24)] active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                    >
+                        <span className="text-lg sm:text-3xl leading-none shrink-0">🔨</span>
+                        <span className="min-w-0">
+                            <span className="block text-white font-black text-[11px] sm:text-base tracking-tight truncate">Leilões Ativos</span>
+                            <span className="block text-white/80 text-[9px] sm:text-xs font-semibold truncate">Dê seu lance agora</span>
+                        </span>
+                    </button>
                 </div>
             </div>
 

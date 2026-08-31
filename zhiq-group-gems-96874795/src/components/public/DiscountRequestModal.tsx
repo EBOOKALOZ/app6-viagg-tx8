@@ -18,6 +18,7 @@ import { Percent, Store, MapPin, ShoppingBag, Loader2, CheckCircle, Shield, Tag 
 import { trackProductEvent } from "@/skills/growth/trackProductEvent";
 import { displayPriceLabel } from "@/lib/utils";
 import { toast } from "sonner";
+import { OFFERS_ACTIONS_ENABLED, DISABLED_ACTION_MESSAGE } from "@/lib/featureFlags";
 
 // ─── Types ──────────────────────────────
 interface DiscountProduct {
@@ -124,6 +125,11 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
     const imgSrc = normalizeImg(product.image_url);
 
     const handleSubmit = async () => {
+        // Feature flag: ofertas desativadas
+        if (!OFFERS_ACTIONS_ENABLED) {
+            toast.error(DISABLED_ACTION_MESSAGE);
+            return;
+        }
         if (!customerName.trim()) { toast.error("Informe seu nome"); return; }
         if (!validatePhone(customerPhone)) { toast.error("Informe um WhatsApp válido com DDD"); return; }
         if (!requestedPrice.trim() || parseFloat(requestedPrice.replace(",", ".")) <= 0) {
@@ -380,15 +386,15 @@ export default function DiscountRequestModal({ product, open, onClose }: Discoun
                         <div className="px-5 pb-5">
                             <button
                                 onClick={handleSubmit}
-                                disabled={submitting}
-                                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 active:scale-[0.98] transition-all shadow-lg hover:shadow-xl disabled:opacity-60"
+                                disabled={submitting || !OFFERS_ACTIONS_ENABLED}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold text-white bg-purple-600 hover:bg-purple-700 active:scale-[0.98] transition-all shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {submitting ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                     <Percent className="h-4 w-4" />
                                 )}
-                                {submitting ? "Enviando..." : "Enviar Oferta"}
+                                {!OFFERS_ACTIONS_ENABLED ? DISABLED_ACTION_MESSAGE : submitting ? "Enviando..." : "Enviar Oferta"}
                             </button>
                         </div>
                     </>

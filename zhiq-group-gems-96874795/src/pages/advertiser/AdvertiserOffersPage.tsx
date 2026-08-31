@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { unlockContact, quoteUnlockContact, centsToBRL } from "@/lib/credits/unlockContact";
 import { formatCurrencyBRL } from "@/lib/utils";
+import { OFFERS_ACTIONS_ENABLED, DISABLED_ACTION_MESSAGE } from "@/lib/featureFlags";
 
 interface OfferCard {
   id: string;
@@ -30,9 +31,10 @@ export default function AdvertiserOffersPage() {
 
   // Saldo da CARTEIRA OFICIAL (pay_* / customer_wallet) — é exatamente a conta
   // que a wallet_unlock_contact v3 debita (unificação AI-75.3, 2026-07-21).
+  // Feature flag: não buscar saldo quando ofertas estão desativadas
   const { data: walletCents = 0 } = useQuery({
     queryKey: ["wallet-balance", user?.id],
-    enabled: !!user?.id,
+    enabled: !!user?.id && OFFERS_ACTIONS_ENABLED,
     refetchInterval: 15_000,
     queryFn: async () => {
       const { data } = await (supabase.from("pay_financial_accounts" as any)
@@ -122,7 +124,7 @@ export default function AdvertiserOffersPage() {
   const offerIds = offers.map((o) => o.id).join(",");
   const { data: unlockCosts = {} } = useQuery<Record<string, number>>({
     queryKey: ["offer-unlock-costs", offerIds],
-    enabled: offers.length > 0,
+    enabled: offers.length > 0 && OFFERS_ACTIONS_ENABLED,
     queryFn: async () => {
       const out: Record<string, number> = {};
       await Promise.all(
@@ -141,6 +143,8 @@ export default function AdvertiserOffersPage() {
   });
 
   const handleAccept = async (offer: OfferCard) => {
+    // Feature flag: ofertas desativadas
+    if (!OFFERS_ACTIONS_ENABLED) { toast.error(DISABLED_ACTION_MESSAGE); return; }
     if (!offer.product_id) { toast.error("Oferta sem produto vinculado."); return; }
     // Liberar comprador = desbloqueio de contato via Wallet Core (2% do valor anunciado).
     // Permanente por (anúncio, comprador); nunca recobra o mesmo comprador.
@@ -181,6 +185,8 @@ export default function AdvertiserOffersPage() {
   };
 
   const handleReject = async (offer: OfferCard) => {
+    // Feature flag: ofertas desativadas
+    if (!OFFERS_ACTIONS_ENABLED) { toast.error(DISABLED_ACTION_MESSAGE); return; }
     const { error } = await (supabase.from("discount_requests" as any).update({ status: "rejected" }).eq("id", offer.id)) as any;
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("Oferta recusada.");
@@ -188,6 +194,8 @@ export default function AdvertiserOffersPage() {
   };
 
   const handleDelete = async (offer: OfferCard) => {
+    // Feature flag: ofertas desativadas
+    if (!OFFERS_ACTIONS_ENABLED) { toast.error(DISABLED_ACTION_MESSAGE); return; }
     const { error: delErr, count } = await (supabase.from("discount_requests" as any).delete({ count: 'exact' }).eq("id", offer.id)) as any;
     let deleted = !delErr && (count ?? 0) > 0;
     if (!deleted) {
@@ -331,7 +339,8 @@ export default function AdvertiserOffersPage() {
                   </div>
                 </div>
 
-                {/* Saldo atual */}
+                {/* Saldo atual — ocultado quando ofertas desativadas */}
+                {OFFERS_ACTIONS_ENABLED && (
                 <div className={cn(
                   "flex items-center justify-between p-3 rounded-xl border",
                   hasEnough ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
@@ -349,20 +358,33 @@ export default function AdvertiserOffersPage() {
                     {centsToBRL(walletCents)}
                   </span>
                 </div>
+                )}
 
                 {/* Ações */}
                 {offer.status === "pending" && (
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handleAccept(offer)}
-                      className="flex-1 h-11 bg-emerald-700 hover:bg-emerald-800 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30"
+                      disabled={!OFFERS_ACTIONS_ENABLED}
+                      className={cn(
+                        "flex-1 h-11 font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg",
+                        OFFERS_ACTIONS_ENABLED
+                          ? "bg-emerald-700 hover:bg-emerald-800 text-white shadow-emerald-900/30"
+                          : "bg-gray-400 text-white cursor-not-allowed"
+                      )}
                     >
-                      <CheckCheck className="w-4 h-4" /> Liberar comprador {costCents != null ? `(-${centsToBRL(costCents)})` : "(…)"}
+                      <CheckCheck className="w-4 h-4" /> {!OFFERS_ACTIONS_ENABLED ? DISABLED_ACTION_MESSAGE : `Liberar comprador ${costCents != null ? `(-${centsToBRL(costCents)})` : "(…)"}`}
                     </Button>
                     <Button
                       onClick={() => handleReject(offer)}
+                      disabled={!OFFERS_ACTIONS_ENABLED}
                       variant="ghost"
-                      className="h-11 px-4 rounded-xl border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black uppercase text-[11px] gap-1"
+                      className={cn(
+                        "h-11 px-4 rounded-xl border font-black uppercase text-[11px] gap-1",
+                        OFFERS_ACTIONS_ENABLED
+                          ? "border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                          : "border-gray-300 text-gray-400 cursor-not-allowed"
+                      )}
                     >
                       <X className="w-4 h-4" /> Recusar
                     </Button>
@@ -390,9 +412,15 @@ export default function AdvertiserOffersPage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => handleDelete(offer)}
-                    className="w-full h-9 rounded-lg border border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700 font-black text-[10px] uppercase gap-1"
+                    disabled={!OFFERS_ACTIONS_ENABLED}
+                    className={cn(
+                      "w-full h-9 rounded-lg border font-black text-[10px] uppercase gap-1",
+                      OFFERS_ACTIONS_ENABLED
+                        ? "border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                        : "border-gray-300 text-gray-400 cursor-not-allowed"
+                    )}
                   >
-                    <Trash2 className="w-3 h-3" /> Excluir
+                    <Trash2 className="w-3 h-3" /> {OFFERS_ACTIONS_ENABLED ? "Excluir" : DISABLED_ACTION_MESSAGE}
                   </Button>
                 )}
               </div>

@@ -33,6 +33,7 @@ import {
   useUpdateConvenioDonationStatus,
 } from "@/hooks/convenio/useConvenioDonations";
 import { allowedNextStatuses } from "@/lib/convenio/statusTransitions";
+import { DONATIONS_ACTIONS_ENABLED, DISABLED_ACTION_MESSAGE } from "@/lib/featureFlags";
 import type { ConvenioDonationStatus } from "@/services/convenio/types";
 
 function RegisterDonationDialog() {
@@ -44,6 +45,15 @@ function RegisterDonationDialog() {
   const [alreadyConfirmed, setAlreadyConfirmed] = useState(false);
   const campaignsQuery = useConvenioCampaignsForPicker();
   const createMutation = useCreateConvenioDonation();
+
+  // Feature flag: ações de doação desativadas
+  if (!DONATIONS_ACTIONS_ENABLED) {
+    return (
+      <Button disabled className="gap-2 bg-gray-500 text-white font-bold rounded-xl cursor-not-allowed opacity-60">
+        <Plus className="h-4 w-4" /> {DISABLED_ACTION_MESSAGE}
+      </Button>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,6 +189,8 @@ export default function GestorDoacoesPage() {
             {
               header: "Status",
               render: (r) => {
+                // Feature flag: ações de doação desativadas — somente badge estático
+                if (!DONATIONS_ACTIONS_ENABLED) return <GestorStatusBadge status={r.status} />;
                 const next = allowedNextStatuses("donation", r.status) as ConvenioDonationStatus[];
                 if (next.length === 0) return <GestorStatusBadge status={r.status} />;
                 return (
