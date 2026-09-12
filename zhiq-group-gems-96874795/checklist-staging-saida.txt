@@ -1,0 +1,101 @@
+﻿# ORION-480 â€” Checklist de prÃ©-requisitos de staging
+
+Nenhum item deste checklist foi executado por esta preparaÃ§Ã£o â€” sÃ£o
+prÃ©-condiÃ§Ãµes a satisfazer por decisÃ£o/aÃ§Ã£o explÃ­cita do usuÃ¡rio antes da
+primeira execuÃ§Ã£o real (mesmo a de 25k).
+
+## 1. Projeto Supabase de staging existe e estÃ¡ isolado de produÃ§Ã£o
+
+- [ ] Projeto Supabase separado de `broifhfqmnzqoongtokm.supabase.co`
+      criado (ou identificado, se jÃ¡ existir).
+- [ ] Confirmar que o schema/migrations de staging estÃ£o espelhados a
+      partir de `supabase/migrations/` (mesma estrutura de tabelas, RLS,
+      RPCs, rate limits) â€” sem isso os cenÃ¡rios vÃ£o falhar com 404/42883
+      (funÃ§Ã£o/tabela inexistente) em vez de medir capacidade real.
+- [ ] Confirmar que staging **nÃ£o** tem replicaÃ§Ã£o/sync com produÃ§Ã£o que
+      poderia vazar dados sintÃ©ticos de volta, nem vice-versa.
+
+## 2. Credenciais de staging
+
+- [ ] `SUPABASE_URL` de staging obtido.
+- [ ] `SUPABASE_ANON_KEY` de staging obtido (nunca a `service_role` key).
+- [ ] `BASE_URL` do frontend apontando para um deploy do app que fala com
+      esse mesmo projeto de staging (nÃ£o o `.env` de produÃ§Ã£o do
+      repositÃ³rio).
+
+## 3. Pool de usuÃ¡rios sintÃ©ticos de teste
+
+- [ ] Decidir o tamanho do pool (`TEST_USER_POOL_SIZE`, default 2000) â€”
+      recomenda-se que o pool seja bem menor que o total de VUs (VUs
+      reaproveitam contas, o que Ã© esperado e realista: usuÃ¡rios reais
+      tambÃ©m reabrem sessÃ£o).
+- [ ] Criar os usuÃ¡rios em staging com padrÃ£o prefixÃ­vel e
+      reconhecÃ­vel, ex.: `loadtest+000001@example.invalid` ...
+      `loadtest+002000@example.invalid`, todos com a mesma senha
+      sintÃ©tica fixa (`TEST_USER_PASSWORD`).
+- [ ] Confirmar que o domÃ­nio de e-mail usado (`example.invalid` Ã©
+      reservado pela RFC 2606 para esse fim) nÃ£o dispara envio real de
+      e-mail de confirmaÃ§Ã£o/boas-vindas em staging (ou que o envio estÃ¡
+      mockado/desativado nesse ambiente).
+- [ ] Confirmar que a RPC pÃ³s-login `ensure_base_profile_and_wallet`
+      (ver `src/contexts/AuthContext.tsx`) roda sem erro para esses
+      usuÃ¡rios sintÃ©ticos (perfil + wallet base precisam existir para os
+      cenÃ¡rios de wallet/veÃ­culos/leilÃµes autenticados funcionarem).
+
+## 4. Dados de seed (produtos, veÃ­culos, leilÃµes, perfis/lojas)
+
+- [ ] Gerar um lote de registros sintÃ©ticos em staging para cada domÃ­nio
+      usado pelos cenÃ¡rios (ver `config/seed-data.example.json` para o
+      shape esperado):
+  - `products` â€” IDs de anÃºncios de teste (para `/produto/:id`)
+  - `vehicles` â€” IDs de `vehicle_listings` de teste
+  - `auctions` â€” IDs de `auction_listings` de teste, **ativos** (status
+    que aceite lance), com pelo menos alguns tendo lance mÃ­nimo/incremento
+    configurado de forma que `place_auction_bid` nÃ£o rejeite por regra de
+    negÃ³cio alheia Ã  carga (ex.: leilÃ£o encerrado)
+  - `profiles` â€” IDs/slugs de loja/perfil pÃºblico de teste
+- [ ] Preencher esses IDs em `loadtest/config/seed-data.staging.json`
+      (copiar de `seed-data.example.json`) e apontar `SEED_DATA_FILE`
+      para esse arquivo.
+- [ ] Confirmar que os dados de seed sÃ£o claramente marcados como teste
+      (nome/descriÃ§Ã£o prefixados, ex. `[LOADTEST]`) para facilitar limpeza
+      posterior e evitar confusÃ£o com dados reais de staging (se staging
+      tambÃ©m for usado para QA manual por outras pessoas).
+
+## 5. DoaÃ§Ãµes â€” confirmar caminho de escrita antes de habilitar
+
+- [ ] Ler `src/` (grep `convenio_donations`) para confirmar qual Ã© o
+      fluxo real de criaÃ§Ã£o de doaÃ§Ã£o usado pelo frontend hoje (RPC
+      dedicada? insert direto? fluxo de pagamento?). O cenÃ¡rio
+      `scenarios/doacoes.js` estÃ¡ com escrita desabilitada por padrÃ£o
+      (`ENABLE_DONATION_WRITE=no`) atÃ© essa confirmaÃ§Ã£o â€” ver comentÃ¡rio
+      no arquivo.
+
+## 6. Observabilidade do lado do servidor
+
+- [ ] Acesso ao dashboard do projeto Supabase de staging (Database â†’
+      Reports, Edge Functions â†’ Logs, Realtime â†’ Inspector) para coletar,
+      durante cada etapa, as mÃ©tricas de servidor que o k6 nÃ£o vÃª:
+      conexÃµes de banco ativas, CPU/RAM do Postgres, latÃªncia de query,
+      taxa de erro de Edge Function, throughput Realtime.
+- [ ] Confirmar plano/tier do projeto Supabase de staging e seus limites
+      conhecidos (conexÃµes simultÃ¢neas do pooler, cota de Edge Function
+      invocations, cota de Realtime concurrent connections) â€” esses
+      limites de **infraestrutura externa** (categoria D em
+      `docs/LIMITES.md`) precisam ser conhecidos de antemÃ£o para nÃ£o
+      serem confundidos com falha da aplicaÃ§Ã£o.
+
+## 7. Gerador de carga
+
+- [ ] k6 instalado no(s) ambiente(s) que vÃ£o gerar a carga (nÃ£o vem
+      instalado neste ambiente de desenvolvimento â€” instalar Ã© uma aÃ§Ã£o
+      que requer autorizaÃ§Ã£o, nÃ£o foi feita aqui).
+- [ ] Para etapas acima do que 1 PC aguenta (ver `docs/DISTRIBUICAO.md`):
+      decisÃ£o tomada sobre k6 Cloud vs. instÃ¢ncias self-hosted vs.
+      k6-operator, e infraestrutura correspondente provisionada.
+
+## 8. Plano de limpeza pÃ³s-teste
+
+- [ ] Script/checklist para remover os usuÃ¡rios e registros sintÃ©ticos
+      de staging apÃ³s a campanha de testes (ou aceitar deixÃ¡-los,
+      documentado, se staging for descartÃ¡vel).

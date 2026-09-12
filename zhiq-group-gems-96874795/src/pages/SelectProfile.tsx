@@ -124,7 +124,7 @@ const DRIVER_MOSAIC = [
 ];
 
 // Cards de oportunidades: Motoboy (entregas), Lojista (mercado), Imóveis, Veículos, Serviços, Fretes, Viagens e Comprador.
-const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem", "leiloes", "convenios"];
+const CARD_ORDER = ["motoboy", "mototaxi", "driver", "merchant", "imoveis", "veiculos", "servicos", "freteiro", "viagem", "leiloes"];
 const isPassengerEnabled = import.meta.env.VITE_ENABLE_PASSENGER_DEV === "true";
 
 /* ================================

@@ -25,6 +25,12 @@ import { AdvertiserSummaryCard } from '@/components/public/advertiser/Advertiser
 import { CardTopBar } from "@/components/ui/CardTopBar";
 import { shareCardLink } from "@/hooks/useCardTopBarActions";
 import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { ProductBlueprintAdapter } from "@/components/blueprint/adapters/ProductBlueprintAdapter";
+import { useExplodedView } from "@/hooks/useExplodedView";
+import { ExplodedViewCommandInput } from "@/components/explodedView/ExplodedViewCommandInput";
+import { ExplodedViewViewer } from "@/components/explodedView/ExplodedViewViewer";
+import { Expand } from "lucide-react";
+import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function normalizeImageUrl(url: string | null | undefined, bucket: string = 'marketing-materials'): string | null {
@@ -135,6 +141,7 @@ export default function ProductLandingPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [showContactModal, setShowContactModal] = useState(false);
+    const [search, setSearch] = useState("");
 
     // Header Universal dos cards relacionados: favoritos + porta única de auth
     const requireAuthAction = useRequireAuth();
@@ -151,6 +158,19 @@ export default function ProductLandingPage() {
     };
     const [leadModalOpen, setLeadModalOpen] = useState(false);
     const [discountModalOpen, setDiscountModalOpen] = useState(false);
+    const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
+    const explodedView = useExplodedView();
+
+    const handleGenerateExplodedView = () => {
+        if (!product) return;
+        explodedView.generateExplodedView({
+            id: product.id,
+            title: product.title,
+            category: product.category,
+            primaryImage: product.image_url,
+            description: product.short_description
+        });
+    };
 
     const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
     const isStoreContext = outletContext?.isStoreContext;
@@ -565,8 +585,7 @@ export default function ProductLandingPage() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="relative w-full aspect-[4/3] md:aspect-[16/9] bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center">
-                                    <ShoppingBag className="h-20 w-20 text-zinc-300" />
+                                <div className="relative w-full aspect-[4/3] md:aspect-[16/9] overflow-hidden bg-zinc-100 border-b border-zinc-100 flex items-center justify-center">
                                     {product.listing_status?.toLowerCase() === "paused" && (
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                                             <span className="text-white text-2xl md:text-3xl font-black uppercase tracking-wider drop-shadow-lg -rotate-6 border-4 border-white rounded-2xl px-5 py-2">
@@ -597,6 +616,27 @@ export default function ProductLandingPage() {
                                 {product.video_url && (
                                     <a href={product.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm font-bold text-zinc-700 hover:text-[#FF6A00]"><Video className="h-4 w-4" /> Assistir vídeo de demonstração</a>
                                 )}
+
+                                {/* COMMAND INPUT: Vista Explodida */}
+                                <div className="mt-8 pt-6 border-t border-zinc-100">
+                                    <div className="bg-[#121519] p-4 rounded-xl shadow-inner border border-zinc-200">
+                                        <ExplodedViewCommandInput 
+                                            onExecute={handleGenerateExplodedView}
+                                            isProcessing={explodedView.state === "PROCESSING"}
+                                        />
+                                    </div>
+
+                                    {/* VISUALIZADOR */}
+                                    {explodedView.result?.imageUrl && (
+                                        <div className="mt-4">
+                                            <ExplodedViewViewer 
+                                                imageUrl={explodedView.result.imageUrl}
+                                                onClose={explodedView.reset}
+                                                onRetry={handleGenerateExplodedView}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -646,6 +686,18 @@ export default function ProductLandingPage() {
                                 <button onClick={() => setLeadModalOpen(true)} className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl border-2 border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-all">
                                     <MessageCircle className="h-4 w-4" /> Falar com o vendedor
                                 </button>
+                                
+                                {/* ═══ BLUEPRINT TRIGGER ═══ */}
+                                {product.listing_status?.toLowerCase() !== "paused" && (
+                                    <button 
+                                        onClick={() => setIsBlueprintOpen(true)} 
+                                        className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white hover:bg-zinc-800 transition-colors group"
+                                        aria-label="Explorar Blueprint do produto"
+                                    >
+                                        <Expand className="w-4 h-4 text-[#FF7A00] group-hover:scale-110 transition-transform" /> 
+                                        Explorar Blueprint
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -734,6 +786,28 @@ export default function ProductLandingPage() {
             />
 
             <InstitutionalSafetyBanner />
+
+            {/* ═══ BLUEPRINT ENGINE ═══ */}
+            {product && (
+                <ProductBlueprintAdapter
+                    product={{
+                        id: product.id,
+                        title: product.title,
+                        short_description: product.short_description,
+                        image_url: product.image_url,
+                        video_url: product.video_url,
+                        price_label: product.price_label,
+                        category: product.category,
+                        condition: product.condition,
+                        resolvedImageUrl: imgSrc,
+                        storeName: store?.store_name,
+                        city: store?.city,
+                        bairro: store?.bairro,
+                    }}
+                    isOpen={isBlueprintOpen}
+                    onClose={() => setIsBlueprintOpen(false)}
+                />
+            )}
         </>
     );
 
@@ -750,4 +824,5 @@ export default function ProductLandingPage() {
             {content}
         </MarketLayout>
     );
-}
+}
+

@@ -13,11 +13,12 @@ async function createTestAuctions() {
   const { error } = await supabaseAdmin.from('auction_listings').insert({
     title: '[SHC] TV OLED 55 4K - Homologação',
     description: 'Leilão gerado automaticamente para testes do SHC.',
-    merchant_id: merchant.id,
-    start_price: 100000, // R$ 1000.00
-    current_price: 100000,
-    min_increment: 5000, // R$ 50.00
+    owner_user_id: merchant.id,
+    starting_bid: 100000, // R$ 1000.00
+    current_bid: 100000,
+    minimum_increment: 5000, // R$ 50.00
     status: 'active',
+    starts_at: new Date().toISOString(),
     ends_at: tomorrow.toISOString()
   });
 

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { 
     Store, Search, ShoppingBag, Loader2, ArrowLeft, 
-    ShoppingCart, Phone, ShieldCheck, Flame, LayoutGrid, Sparkles
+    ShoppingCart, Phone, ShieldCheck, Flame, LayoutGrid, Sparkles, Expand
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StorePremiumCard, StoreProduct } from "@/components/public/store/StorePremiumCard";
 import { ProductInquiryModal } from "@/components/public/ProductInquiryModal";
 import DiscountRequestModal from "@/components/public/DiscountRequestModal";
+import { ProductBlueprintAdapter } from "@/components/blueprint/adapters/ProductBlueprintAdapter";
 import { consumeMarketplaceProductClick } from "@/lib/credits/consumeMarketplaceProductClick";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { HorizontalCarousel } from "@/components/ui/HorizontalCarousel";
@@ -84,6 +85,7 @@ export default function StorePublicPage() {
     const [activeCategory, setActiveCategory] = useState<string>("all");
     const [inquiryProduct, setInquiryProduct] = useState<StoreProduct | null>(null);
     const [offerProduct, setOfferProduct] = useState<StoreProduct | null>(null);
+    const [isBlueprintOpen, setIsBlueprintOpen] = useState(false);
 
     // Carrossel "Mais produtos desta loja" (abaixo do produto em destaque)
     const [moreCat, setMoreCat] = useState<string>("all");
@@ -1015,6 +1017,20 @@ export default function StorePublicPage() {
                                     <Button onClick={() => handleAskQuestion(featuredProduct)} variant="outline" className="h-12 px-6 font-black uppercase text-xs tracking-widest rounded-xl border-zinc-300">
                                         Tenho Interesse
                                     </Button>
+                                    
+                                    {/* ═══ BLUEPRINT TRIGGER ═══ */}
+                                    {featuredProduct.image_url && (
+                                        <Button 
+                                            onClick={() => setIsBlueprintOpen(true)} 
+                                            variant="outline" 
+                                            className="h-12 px-6 font-black uppercase text-xs tracking-widest rounded-xl border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white gap-2 group"
+                                            aria-label="Explorar Blueprint do produto"
+                                        >
+                                            <Expand className="w-4 h-4 text-[#FF7A00] group-hover:scale-110 transition-transform" /> 
+                                            <span className="hidden sm:inline">Explorar Blueprint</span>
+                                            <span className="sm:hidden">Blueprint</span>
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1573,6 +1589,25 @@ export default function StorePublicPage() {
             />
 
             <InstitutionalSafetyBanner />
+
+            {/* ═══ BLUEPRINT ENGINE ═══ */}
+            {featuredProduct && (
+                <ProductBlueprintAdapter
+                    product={{
+                        id: featuredProduct.id,
+                        title: featuredProduct.title,
+                        short_description: featuredProduct.short_description,
+                        image_url: featuredProduct.image_url,
+                        price_label: featuredProduct.price ? String(featuredProduct.price) : null,
+                        category: featuredProduct.category,
+                        condition: featuredProduct.condition,
+                        storeName: store?.store_name,
+                        city: store?.city,
+                    }}
+                    isOpen={isBlueprintOpen}
+                    onClose={() => setIsBlueprintOpen(false)}
+                />
+            )}
         </>
     );
     }
@@ -1731,6 +1766,19 @@ export default function StorePublicPage() {
                                             >
                                                 Falar no WhatsApp
                                             </Button>
+                                            
+                                            {/* ═══ BLUEPRINT TRIGGER ═══ */}
+                                            {featuredProduct.image_url && (
+                                                <Button 
+                                                    onClick={() => setIsBlueprintOpen(true)} 
+                                                    variant="outline" 
+                                                    className="w-full h-14 font-black uppercase text-sm tracking-wider rounded-xl border-zinc-800 bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white gap-2 group"
+                                                    aria-label="Explorar Blueprint do produto"
+                                                >
+                                                    <Expand className="w-4 h-4 text-[#FF7A00] group-hover:scale-110 transition-transform" /> 
+                                                    Explorar Blueprint
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1746,6 +1794,25 @@ export default function StorePublicPage() {
                     </div>
 
                     <InstitutionalSafetyBanner />
+
+                    {/* ═══ BLUEPRINT ENGINE ═══ */}
+                    {featuredProduct && (
+                        <ProductBlueprintAdapter
+                            product={{
+                                id: featuredProduct.id,
+                                title: featuredProduct.title,
+                                short_description: featuredProduct.short_description,
+                                image_url: featuredProduct.image_url,
+                                price_label: featuredProduct.price ? String(featuredProduct.price) : null,
+                                category: featuredProduct.category,
+                                condition: featuredProduct.condition,
+                                storeName: store?.store_name,
+                                city: store?.city,
+                            }}
+                            isOpen={isBlueprintOpen}
+                            onClose={() => setIsBlueprintOpen(false)}
+                        />
+                    )}
                 </div>
             </StoreThemeScope>
         </MarketLayout>

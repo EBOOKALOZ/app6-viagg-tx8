@@ -327,6 +327,25 @@ export function GlobalAudioPlayer() {
       }, intervalMs);
     }).catch((err) => {
       console.warn('[GlobalAudioPlayer] play() blocked:', err);
+      // FIX: play() bloqueado pelo browser — rearmar listener para tentar de
+      // novo no PRÓXIMO gesto real do usuário (click/touch/key). Sem isso a
+      // música nunca tocava porque o listener original já havia sido removido.
+      const retryOnGesture = () => {
+        document.removeEventListener('click', retryOnGesture, true);
+        document.removeEventListener('touchstart', retryOnGesture, true);
+        document.removeEventListener('keydown', retryOnGesture, true);
+        // Pequeno delay para garantir que o gesto é processado pelo browser
+        // antes de chamar play() novamente
+        setTimeout(() => {
+          if (!isAudioPlaying() && audioRef.current) {
+            setInteracted(true);
+            startMusic();
+          }
+        }, 100);
+      };
+      document.addEventListener('click', retryOnGesture, { capture: true, passive: true, once: true });
+      document.addEventListener('touchstart', retryOnGesture, { capture: true, passive: true, once: true });
+      document.addEventListener('keydown', retryOnGesture, { capture: true, passive: true, once: true });
     });
   }, []);
 
@@ -356,7 +375,6 @@ export function GlobalAudioPlayer() {
     }
 
     const onFirstClick = () => {
-      if (hasInteracted()) return;
       setInteracted(true);
       startMusic();
       document.removeEventListener('click', onFirstClick, true);
@@ -374,6 +392,17 @@ export function GlobalAudioPlayer() {
       document.removeEventListener('keydown', onFirstClick, true);
     };
   }, [startMusic]);
+
+  // FIX: Ao navegar entre rotas, re-tentar tocar a música.
+  // Antes, a música só era tentada no mount e no primeiro gesto.
+  // Se play() falhava (autoplay bloqueado), navegar para outra página não re-tentava.
+  useEffect(() => {
+    if (hasInteracted() && !isAudioPlaying()) {
+      // Delay curto para deixar a nova página montar antes de disputar recursos de áudio
+      const t = setTimeout(() => startMusic(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [location.pathname, startMusic]);
 
   const toggleMute = useCallback(() => {
     setSettings(prev => ({ ...prev, muted: !prev.muted }));

@@ -30,3 +30,24 @@ dist-ssr
 # Artefatos do agente Antigravity IDE
 brain/
 scratch_*
+
+# ORION-480 — Segurança: tokens e credenciais de staging
+loadtest/config/.vercel-staging.env
+*.vercel-staging.env
+
+# Credenciais de teste avulsas
+auth-test.json
+loadtest/k6/auth-test-body.json
+
+# Resultados de loadtest (dados efêmeros, não versionar)
+loadtest/results/
+
+# Resultados do Playwright
+test-results/
+
+# Backups manuais
+*.bak-*
+
+# Logs e saídas de staging
+seed-staging-resultado.txt
+_staging_schema.sql

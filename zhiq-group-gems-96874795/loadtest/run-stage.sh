@@ -6,6 +6,8 @@
 #   Nenhuma etapa seguinte é iniciada automaticamente.
 #
 # Uso:
+#   ./loadtest/run-stage.sh D1-1K --dry-run
+#   ./loadtest/run-stage.sh D1-1K
 #   ./loadtest/run-stage.sh S0 --dry-run
 #   ./loadtest/run-stage.sh S0
 #
@@ -15,7 +17,7 @@
 #   3. k6
 #   4. loadtest/config/.env.staging preenchido
 #   5. seed de staging preparado
-#   6. aprovação explícita da etapa anterior, exceto S0
+#   6. aprovação explícita da etapa anterior, exceto S0 e D1-1K
 
 set -euo pipefail
 
@@ -26,6 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 PROGRESSION_FILE="$SCRIPT_DIR/config/progression.json"
+DIAGNOSTIC_FILE="$SCRIPT_DIR/config/diagnostic-1k.json"
 ENV_FILE="$SCRIPT_DIR/config/.env.staging"
 K6_SCRIPT="$SCRIPT_DIR/k6/main.js"
 
@@ -35,7 +38,7 @@ K6_SCRIPT="$SCRIPT_DIR/k6/main.js"
 
 if [ -z "$STAGE" ]; then
   echo "Uso: $0 <STAGE_ID> [--dry-run]"
-  echo "Etapas válidas: S0 S1 S2 S3 S4 S5 S6 S7 S8 S9 S10"
+  echo "Etapas válidas: D1-1K S0 S1 S2 S3 S4 S5 S6 S7 S8 S9 S10"
   exit 1
 fi
 
@@ -46,6 +49,12 @@ fi
 if [ ! -f "$PROGRESSION_FILE" ]; then
   echo "ERRO: matriz de progressão não encontrada:"
   echo "  $PROGRESSION_FILE"
+  exit 1
+fi
+
+if [ "$STAGE" = "D1-1K" ] && [ ! -f "$DIAGNOSTIC_FILE" ]; then
+  echo "ERRO: configuração do diagnóstico não encontrada:"
+  echo "  $DIAGNOSTIC_FILE"
   exit 1
 fi
 
@@ -111,24 +120,41 @@ fi
 # 6. Ler configuração da etapa
 # ------------------------------------------------------------
 
-STAGE_JSON="$(
-  node -e '
-    const fs = require("fs");
+if [ "$STAGE" = "D1-1K" ]; then
+  STAGE_FILE="$DIAGNOSTIC_FILE"
 
-    const file = process.argv[1];
-    const stageId = process.argv[2];
+  STAGE_JSON="$(
+    node -e '
+      const fs = require("fs");
 
-    const data = JSON.parse(fs.readFileSync(file, "utf8"));
-    const stage = data.stages.find(s => s.stage === stageId);
+      const file = process.argv[1];
+      const data = JSON.parse(fs.readFileSync(file, "utf8"));
 
-    if (!stage) {
-      console.error("Etapa " + stageId + " não encontrada.");
-      process.exit(1);
-    }
+      process.stdout.write(JSON.stringify(data));
+    ' "$STAGE_FILE"
+  )"
+else
+  STAGE_FILE="$PROGRESSION_FILE"
 
-    process.stdout.write(JSON.stringify(stage));
-  ' "$PROGRESSION_FILE" "$STAGE"
-)"
+  STAGE_JSON="$(
+    node -e '
+      const fs = require("fs");
+
+      const file = process.argv[1];
+      const stageId = process.argv[2];
+
+      const data = JSON.parse(fs.readFileSync(file, "utf8"));
+      const stage = data.stages.find(s => s.stage === stageId);
+
+      if (!stage) {
+        console.error("Etapa " + stageId + " não encontrada.");
+        process.exit(1);
+      }
+
+      process.stdout.write(JSON.stringify(stage));
+    ' "$STAGE_FILE" "$STAGE"
+  )"
+fi
 
 USERS="$(
   node -e 'console.log(JSON.parse(process.argv[1]).users)' "$STAGE_JSON"
@@ -150,6 +176,13 @@ LABEL="$(
   node -e 'console.log(JSON.parse(process.argv[1]).label)' "$STAGE_JSON"
 )"
 
+REALTIME_VU_RATIO="$(
+  node -e '
+    const config = JSON.parse(process.argv[1]);
+    console.log(config.realtimeVUs === 0 ? "0" : "0.02");
+  ' "$STAGE_JSON"
+)"
+
 # ------------------------------------------------------------
 # 7. Mostrar configuração
 # ------------------------------------------------------------
@@ -163,6 +196,10 @@ echo "USERS:       $USERS"
 echo "DURATION:    $DURATION"
 echo "RAMP_UP:     $RAMP_UP"
 echo "RAMP_DOWN:   $RAMP_DOWN"
+echo "REALTIME:    $REALTIME_VU_RATIO"
+echo ""
+echo "Configuração:"
+echo "  $STAGE_FILE"
 echo ""
 echo "Ambiente:"
 echo "BASE_URL:    $BASE_URL"
@@ -207,6 +244,8 @@ if [ "$DRY_RUN" = "--dry-run" ]; then
   echo "  -e DURATION=$DURATION \\"
   echo "  -e RAMP_UP=$RAMP_UP \\"
   echo "  -e RAMP_DOWN=$RAMP_DOWN \\"
+  echo "  -e REALTIME_VU_RATIO=$REALTIME_VU_RATIO \\"
+  echo "  -e SCENARIO=all \\"
   echo "  -e STAGE_LABEL=${STAGE}-${LABEL}"
   echo ""
   echo "[--dry-run] Nada foi executado."
@@ -240,6 +279,9 @@ echo ""
 echo "Ramp-down:"
 echo "$RAMP_DOWN"
 echo ""
+echo "Realtime VU ratio:"
+echo "$REALTIME_VU_RATIO"
+echo ""
 
 read -r -p "Confirma execução da etapa $STAGE? Digite 'sim' para prosseguir: " CONFIRM
 
@@ -269,6 +311,8 @@ k6 run \
   -e "DURATION=$DURATION" \
   -e "RAMP_UP=$RAMP_UP" \
   -e "RAMP_DOWN=$RAMP_DOWN" \
+  -e "REALTIME_VU_RATIO=$REALTIME_VU_RATIO" \
+  -e "SCENARIO=all" \
   -e "STAGE_LABEL=${STAGE}-${LABEL}" \
   "$K6_SCRIPT"
 
