@@ -24,6 +24,7 @@ import { resolveServiceTypeLabel, resolveServiceTypeIcon } from '@/lib/services/
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { useAuth } from '@/contexts/AuthContext';
 import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
 export const ServiceDetailPage = () => {
@@ -117,7 +118,15 @@ export const ServiceDetailPage = () => {
     }).then(({ data }: any) => console.log('[SERVICE_CLICK]', data)).catch(() => { /* noop */ });
   }, [id]);
 
+  const { user } = useAuth();
+
   const handleInterest = () => {
+    if (!user) {
+      localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+      navigate("/auth");
+      return;
+    }
+
     try {
       supabase.rpc('charge_service_interest_click' as any, {
         p_listing_id: id,

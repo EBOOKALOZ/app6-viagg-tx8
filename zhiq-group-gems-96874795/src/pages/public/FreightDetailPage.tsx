@@ -25,6 +25,7 @@ import { MarketFreightCard } from '@/components/freight/MarketFreightCard';
 import { InstitutionalSafetyBanner } from '@/components/public/InstitutionalSafetyBanner';
 import { AdvertiserSummaryCard } from '@/components/public/advertiser/AdvertiserSummaryCard';
 import { StoreLocationMap } from '@/components/StoreLocationMap';
+import { useAuth } from '@/contexts/AuthContext';
 import { DetailPageLayout } from '@/components/detail/DetailPageLayout';
 
 export const FreightDetailPage = () => {
@@ -123,7 +124,15 @@ export const FreightDetailPage = () => {
     }).then(() => {}, () => { /* noop */ });
   }, [id]);
 
+  const { user } = useAuth();
+
   const handleInterest = () => {
+    if (!user) {
+      localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+      navigate("/auth");
+      return;
+    }
+
     // Interesse = telemetria sem débito; o lead em si é registrado pelo
     // ContactIntentionModal (fluxo oficial). Nada é cobrado aqui.
     supabase.rpc('freight_track_event' as any, {

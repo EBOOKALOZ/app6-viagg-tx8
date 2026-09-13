@@ -114,11 +114,6 @@ function AddToCartButton({ cart, productId, bgColor, onGlobalAdd }: {
     return (
         <button
             onClick={async () => {
-                try {
-                    await cart.addItem({ productId });
-                } catch (e) {
-                    console.warn("Could not add to store cart, falling back to global cart", e);
-                }
                 onGlobalAdd?.();
             }}
             disabled={isAdding}

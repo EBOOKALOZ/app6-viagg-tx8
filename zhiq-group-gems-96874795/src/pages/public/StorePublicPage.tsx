@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { trackM1Event } from "@/skills/growth/trackM1Event";
-import { useStoreCart } from "@/hooks/useStoreCart";
-import { StoreCartDrawer } from "@/components/public/StoreCartDrawer";
 import { useGlobalCart } from "@/hooks/useGlobalCart";
 import { useStorePaymentSettings } from "@/hooks/useStorePaymentSettings";
 import { useMarketplaceTracking } from "@/hooks/analytics/useMarketplaceTracking";
@@ -21,6 +19,7 @@ import { MarketLayout } from "@/components/layout/MarketLayout";
 import { getListingImageUrl } from "@/lib/real-estate/mediaUtils";
 import { resolveTravelCoverUrl } from "@/lib/viagem/travelMedia";
 import { resolveProductById } from "@/services/resolveProduct";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { StoreHeader } from "@/components/public/store/StoreHeader";
 import { StorePremiumCard, StoreProduct } from "@/components/public/store/StorePremiumCard";
@@ -75,11 +74,11 @@ export default function StorePublicPage() {
     const { pathname } = useLocation();
     const outletContext = useOutletContext<{ isStoreContext?: boolean }>();
     const isStoreContext = outletContext?.isStoreContext;
+    const { user } = useAuth();
 
     // UI State — aba inicial pode vir de ?tab= (novo fluxo: clicar num card de
     // leilão/arremate abre a loja já na aba correta).
     const [search, setSearch] = useState("");
-    const [cartOpen, setCartOpen] = useState(false);
     const [recentlyAdded, setRecentlyAdded] = useState<Record<string, boolean>>({});
     const [activeTab, setActiveTab] = useState<TabValue>(() => tabFromParam(searchParams.get("tab")) ?? "home");
     const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -98,7 +97,6 @@ export default function StorePublicPage() {
     const featuredRef = useRef<HTMLDivElement | null>(null);
 
     // Fetchers
-    const cart = useStoreCart(storeId);
     const globalCart = useGlobalCart();
     const { settings: paySettings } = useStorePaymentSettings(storeId);
     const { trackStoreVisit, trackProductVisit } = useMarketplaceTracking();
@@ -717,7 +715,6 @@ export default function StorePublicPage() {
         : null; // carousel (padrão)
 
     const handleAddToCart = (product: StoreProduct) => {
-        cart.addItem(product.id, 1);
         globalCart.addItem(
             storeId!, product.id, 1, product.title, product.image_url, product.price, store?.store_name || "Loja", store?.logo_url || null
         );
@@ -728,6 +725,12 @@ export default function StorePublicPage() {
     };
 
     const handleAskQuestion = (product: StoreProduct) => {
+        if (!user) {
+            localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+            navigate("/auth");
+            return;
+        }
+
         // Abre o modal: o visitante escreve a pergunta, registramos no painel
         // do vendedor (advertiser_contact_intentions) e só depois oferecemos o
         // WhatsApp. Antes ia direto pro WhatsApp e a mensagem nunca chegava
@@ -1516,32 +1519,6 @@ export default function StorePublicPage() {
                     </div>
                 </div>
 
-                {/* ─── CART DRAWER E OTHERS ─── */}
-                <StoreCartDrawer
-                    open={cartOpen}
-                    onOpenChange={setCartOpen}
-                    storeId={storeId!}
-                    storeName={store.store_name}
-                    cart={cart}
-                />
-
-                <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4">
-                    {/* Cart FAB (Always visible floating button style) */}
-                    <button 
-                        onClick={() => setCartOpen(true)}
-                        className={cn(
-                            "w-14 h-14 rounded-full bg-zinc-900 text-white shadow-2xl flex flex-col items-center justify-center transition-all transform ring-4 ring-white relative",
-                            cart.totalItems > 0 ? "scale-100" : "scale-90 opacity-90 hover:scale-100"
-                        )}
-                    >
-                        <ShoppingCart className="w-5 h-5" />
-                        {cart.totalItems > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-[#FF6A00] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md">
-                                {cart.totalItems}
-                            </span>
-                        )}
-                    </button>
-                </div>
 
                 <div className="w-full px-4 lg:px-8 xl:px-12 mt-20 flex justify-center">
                     {/* Selo de conexão: a Viagg-TX8 é vitrine/plataforma — a negociação é
@@ -1733,16 +1710,17 @@ export default function StorePublicPage() {
                                         <div className="flex flex-col gap-3 mt-auto pt-6 border-t border-zinc-100">
                                             <Button 
                                                 onClick={() => {
-                                                    cart.addItem({
-                                                        id: featuredProduct.id,
-                                                        title: featuredProduct.title,
-                                                        price: typeof featuredProduct.price_label === 'string' ? parseBRLCurrency(featuredProduct.price_label) : (featuredProduct.price_label || 0),
-                                                        price_label: featuredProduct.price_label || "",
-                                                        image_url: normalizeImageUrl(featuredProduct.image_url),
-                                                        merchant_store_id: featuredProduct.merchant_store_id
+                                                    globalCart.addItem({
+                                                        storeId: featuredProduct.merchant_store_id || storeId || "",
+                                                        productId: featuredProduct.id,
+                                                        quantity: 1,
+                                                        productTitle: featuredProduct.title,
+                                                        productImageUrl: normalizeImageUrl(featuredProduct.image_url),
+                                                        productPrice: typeof featuredProduct.price_label === 'string' ? parseBRLCurrency(featuredProduct.price_label) : (featuredProduct.price_label || 0),
+                                                        storeName: store?.store_name || "Loja",
+                                                        storeLogo: store?.logo_url || null
                                                     });
                                                     setRecentlyAdded(p => ({ ...p, [featuredProduct.id]: true }));
-                                                    setCartOpen(true);
                                                     setTimeout(() => setRecentlyAdded(p => ({ ...p, [featuredProduct.id]: false })), 2000);
                                                     if (product?.merchant_store_id) {
                                                         trackM1Event({

@@ -144,11 +144,14 @@ export default function ProductCheckoutPage() {
             const customerEmail = isGuest ? (guestEmail.trim() || null) : user!.email;
             const customerUserId = isGuest ? null : user!.id;
 
+            const intentionId = crypto.randomUUID();
+
             // Create Purchase Intention diretamente (RPC é pra carrinho multi-item).
-            const { data: intention, error: insError } = await supabase
+            const { error: insError } = await supabase
                 .from('purchase_intentions')
                 .insert({
-                    store_id: product.owner_user_id,
+                    id: intentionId,
+                    store_id: product.store_id || product.owner_user_id,
                     customer_name: customerName,
                     customer_whatsapp: customerPhone,
                     customer_email: customerEmail,
@@ -157,16 +160,13 @@ export default function ProductCheckoutPage() {
                     status: 'new',
                     checkout_mode: 'online_payment',
                     payment_status: 'pending',
-                    customer_user_id: customerUserId,
-                })
-                .select()
-                .single();
+                });
 
             if (insError) throw insError;
 
             // Add the item
             await supabase.from('purchase_intention_items').insert({
-                intention_id: intention.id,
+                intention_id: intentionId,
                 product_id: product.id,
                 product_title: product.title,
                 product_image_url: product.cover_image_url,
@@ -175,9 +175,9 @@ export default function ProductCheckoutPage() {
                 subtotal: product.price
             });
 
-            const pixCode = `00020126580014br.gov.bcb.pix0136viagg-product-${intention.id.substring(0,8)}520400005303986540${product.price.toFixed(2)}5802BR5925VIAGG TX86009SAO PAULO62070503***6304`;
+            const pixCode = `00020126580014br.gov.bcb.pix0136viagg-product-${intentionId.substring(0,8)}520400005303986540${product.price.toFixed(2)}5802BR5925VIAGG TX86009SAO PAULO62070503***6304`;
             
-            setActiveOrder({ ...intention, pix_code: pixCode });
+            setActiveOrder({ id: intentionId, pix_code: pixCode });
             setStep("payment");
             toast.info("Pix gerado com sucesso!");
         } catch (err: any) {

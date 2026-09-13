@@ -298,6 +298,7 @@ export function GlobalAudioPlayer() {
 
   // Inicia música com fade-in de 0 → volume padrão em 3s
   const startMusic = useCallback(() => {
+    if (location.pathname.startsWith('/auth')) return;
     if (isAudioPlaying() || !audioRef.current) return;
     // PRIORIDADE: rádio ativa (ou retomando de um reload) → música de fundo NÃO entra
     if (hasPendingRadioSession()) return;
@@ -397,6 +398,10 @@ export function GlobalAudioPlayer() {
   // Antes, a música só era tentada no mount e no primeiro gesto.
   // Se play() falhava (autoplay bloqueado), navegar para outra página não re-tentava.
   useEffect(() => {
+    if (location.pathname.startsWith('/auth')) {
+      forceStopGlobalAudio();
+      return;
+    }
     if (hasInteracted() && !isAudioPlaying()) {
       // Delay curto para deixar a nova página montar antes de disputar recursos de áudio
       const t = setTimeout(() => startMusic(), 300);
@@ -523,6 +528,10 @@ export function GlobalAudioPlayer() {
       />
     </div>
   );
+
+  if (location.pathname.startsWith('/auth')) {
+    return null;
+  }
 
   return (
     <>

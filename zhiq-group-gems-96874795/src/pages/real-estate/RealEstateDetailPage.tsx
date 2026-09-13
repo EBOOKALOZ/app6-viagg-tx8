@@ -28,6 +28,7 @@ import { StoreProductsCarousel } from '@/components/store/StoreProductsCarousel'
 import { RelatedPropertiesCarousel } from '@/components/store/RelatedPropertiesCarousel';
 import { DetailSeoHead } from '@/components/seo/DetailSeoHead';
 import { useAdvertiserSummary } from '@/components/public/advertiser/AdvertiserSummaryCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const RealEstateDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -151,7 +152,15 @@ export const RealEstateDetailPage = () => {
     }
   };
 
+  const { user } = useAuth();
+
   const handleInterest = () => {
+    if (!user) {
+      localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+      navigate("/auth");
+      return;
+    }
+
     try {
       supabase.rpc('charge_real_estate_interest_click' as any, {
         p_listing_id: id,

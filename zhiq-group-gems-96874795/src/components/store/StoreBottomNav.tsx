@@ -93,7 +93,7 @@ export function StoreBottomNav() {
       badge: pendingMessages,
     },
     {
-      label: "Pedidos",
+      label: "Pedidos da Cesta",
       icon: <Package className="w-[18px] h-[18px] mb-1" />,
       path: "/anunciante/pedidos",
       badge: pendingOrders,

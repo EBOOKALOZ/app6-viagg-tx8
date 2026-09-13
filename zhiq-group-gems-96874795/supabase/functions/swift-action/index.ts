@@ -139,6 +139,7 @@ interface EventPayload {
   // Oferta (source = "offer")
   offer_amount?: number | null;
   offer_note?: string | null;
+  order_items?: any[];
   buyer_user_id?: string;   // comprador que fez a oferta (p/ e-mail de confirmação)
   // Recarga de saldo p/ chamar motoboy (source = "wallet_topup")
   // e compra de pacote de créditos (source = "package_purchase")
@@ -543,18 +544,34 @@ async function resolveListing(supabase: unknown, ev: EventPayload): Promise<void
 
 // Pedido: busca a imagem/título do 1º item do pedido (os itens já estão commitados
 // quando a edge function roda, pois o net.http_post é disparado após o commit).
-async function resolveOrderImage(supabase: unknown, ev: EventPayload): Promise<void> {
+async function resolveOrderImage(supabase: any, ev: EventPayload): Promise<void> {
   if (!ev.intention_id) return;
-  const { data: item } = await supabase
+  const { data: items } = await supabase
     .from("purchase_intention_items")
-    .select("product_image_url, product_title")
-    .eq("intention_id", ev.intention_id)
-    .limit(1)
-    .maybeSingle();
-  if (item) {
-    ev.listing_image_url = item.product_image_url || null;
-    ev.listing_title = item.product_title || null;
+    .select("product_image_url, product_title, quantity, unit_price")
+    .eq("intention_id", ev.intention_id);
+  
+  if (items && items.length > 0) {
+    ev.order_items = items;
+    ev.listing_image_url = items[0].product_image_url || null;
+    ev.listing_title = items[0].product_title || null;
   }
+}
+
+function orderItemBlock(item: any) {
+  const priceLine = (item.unit_price !== null && item.unit_price !== undefined)
+    ? `<p style="color:#16a34a; font-size:16px; font-weight:700; margin:4px 0 0;">${item.quantity}x ${formatBRL(item.unit_price)} = ${formatBRL(item.quantity * item.unit_price)}</p>`
+    : "";
+  return `
+  <div style="margin:20px 0; border:1px solid #e4e4e7; border-radius:14px; overflow:hidden; background:#fafafa;">
+    ${item.product_image_url
+      ? `<img src="${item.product_image_url}" alt="${item.product_title || "Produto"}" width="600" style="width:100%; max-height:240px; object-fit:cover; display:block; border-bottom:1px solid #e4e4e7;" />`
+      : ""}
+    <div style="padding:16px 20px;">
+      ${item.product_title ? `<p style="color:#18181b; font-size:16px; font-weight:700; margin:0;">${item.product_title}</p>` : ""}
+      ${priceLine}
+    </div>
+  </div>`;
 }
 
 function leadTemplate(ev: EventPayload, ownerName: string) {
@@ -730,7 +747,9 @@ function orderTemplate(ev: EventPayload, ownerName: string) {
         <h1 style="color:#18181b; font-size:22px;">Você recebeu um novo pedido! 🛒</h1>
         <p style="color:#52525b; font-size:15px;">${greeting}</p>
         <p style="color:#52525b; font-size:15px;"><strong>${customer}</strong> enviou um pedido na sua loja.</p>
-        ${productBlock(ev)}
+        ${ev.order_items && ev.order_items.length > 0 
+           ? ev.order_items.map(item => orderItemBlock(item)).join("") 
+           : productBlock(ev)}
         <div style="margin:24px 0; padding:20px; border-left:4px solid #f59e0b; background:#fffbeb; border-radius:6px;">
           <p style="margin:0 0 6px; font-size:14px;"><strong>Total:</strong> ${subtotal} (${items} ${itemWord})</p>
           <p style="margin:0 0 6px; font-size:14px;"><strong>Forma:</strong> ${modeLabel}</p>

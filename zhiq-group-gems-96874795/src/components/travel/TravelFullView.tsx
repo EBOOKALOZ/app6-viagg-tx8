@@ -7,6 +7,8 @@ import { InstitutionalSafetyBanner } from "@/components/public/InstitutionalSafe
 import { Plane, MapPin, Calendar, Users, Check, Loader2, DollarSign, Clock, ShieldCheck } from "lucide-react";
 import { TRAVEL_INCLUDES, resolveTravelCategoryEmoji } from "@/lib/viagem/travelCategories";
 import { resolveTravelMediaUrl } from "@/lib/viagem/travelMedia";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { DetailPageLayout, DetailRelated } from "@/components/detail/DetailPageLayout";
 import { AdvertiserSummaryCard } from "@/components/public/advertiser/AdvertiserSummaryCard";
 
@@ -82,7 +84,16 @@ export function TravelFullView({ listingId, embedded = false, onBack, relacionad
     }).then(() => {}, () => {});
   }, [listingId]);
 
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const handleInterest = () => {
+    if (!user) {
+      localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+      navigate("/auth");
+      return;
+    }
+
     supabase.rpc("travel_track_event" as any, {
       p_listing_id: listingId, p_event: "interest_click", p_fingerprint: travelFingerprint(listingId),
     }).then(() => {}, () => {});

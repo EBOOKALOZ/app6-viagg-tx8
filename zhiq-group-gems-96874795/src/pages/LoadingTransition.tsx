@@ -75,6 +75,13 @@ export default function LoadingTransition() {
             return;
           }
 
+          const miniReturnTo = localStorage.getItem("viagg_mini_return_to");
+          if (miniReturnTo) {
+            localStorage.removeItem("viagg_mini_return_to");
+            navigate(miniReturnTo, { replace: true });
+            return;
+          }
+
           if (returnTo) {
             sessionStorage.removeItem('returnTo');
             navigate(returnTo, { replace: true });

@@ -214,27 +214,37 @@ export function useGlobalCart() {
       // 1. Call RPC for DB persistence
       let cartId = crypto.randomUUID();
       let itemId = crypto.randomUUID();
-      try {
-        const { data, error } = await supabase.rpc("add_item_to_store_cart", {
-          p_store_id: storeId,
-          p_product_id: productId,
-          p_quantity: quantity,
-          p_customer_note: "",
-          p_session_token: sessionToken,
-        });
-        if (!error && data) {
-          const result = data as Record<string, unknown>;
-          if (result?.success) {
-            cartId = (result.cart_id as string) || cartId;
-            itemId = (result.item_id as string) || itemId;
-            console.log("[GlobalCart] ✅ RPC success:", result);
-          }
-        } else {
-          console.warn("[GlobalCart] RPC error (item saved locally):", error?.message);
-        }
-      } catch (e) {
-        console.warn("[GlobalCart] RPC failed (item saved locally):", e);
+      
+      console.log("[GlobalCart] 🛠️ ENVIANDO PARA RPC add_item_to_store_cart:");
+      console.log(" - store_id:", storeId);
+      console.log(" - product_id:", productId);
+      console.log(" - sessionToken:", sessionToken ? `${sessionToken.slice(0, 6)}...${sessionToken.slice(-4)}` : 'MISSING');
+
+      const { data, error } = await supabase.rpc("add_item_to_store_cart", {
+        p_store_id: storeId,
+        p_product_id: productId,
+        p_quantity: quantity,
+        p_customer_note: "",
+        p_session_token: sessionToken,
+      });
+
+      if (error) {
+        console.error("[GlobalCart] RPC failed:", error);
+        throw new Error(error.message || "Erro de permissão ou falha ao adicionar produto no servidor.");
       }
+      
+      if (!data) {
+        throw new Error("Erro desconhecido ao adicionar produto no servidor.");
+      }
+
+      const result = data as Record<string, unknown>;
+      if (!result?.success) {
+        throw new Error((result?.error as string) || "Falha lógica ao adicionar produto no servidor.");
+      }
+
+      cartId = (result.cart_id as string) || cartId;
+      itemId = (result.item_id as string) || itemId;
+      console.log("[GlobalCart] ✅ RPC success:", result);
 
       // 2. Save to localStorage immediately
       const entries = getLocalCart();
@@ -326,6 +336,7 @@ export function useGlobalCart() {
         checkoutMode: 'in_store' | 'online_payment';
         bairro?: string;
         city?: string;
+        visitor_id?: string;
       }) => {
         // Build groups from localStorage (fallback to in-memory snapshot if needed)
         let localGroups = groupByStore(getLocalCart());
@@ -336,142 +347,40 @@ export function useGlobalCart() {
           throw new Error("Nenhum item na cesta para enviar");
         }
 
-        const purchaseIntentions: NonNullable<MultiSubmitResult["purchase_intentions"]> = [];
-        let grandTotal = 0;
-        let grandItems = 0;
+        // --- DIAGNÓSTICO TEMPORÁRIO ---
+        const safeToken = sessionToken ? `${sessionToken.slice(0, 6)}...${sessionToken.slice(-4)}` : 'MISSING';
+        console.log("[GlobalCart] 🔍 DIAGNÓSTICO DE SESSÃO:");
+        console.log("[GlobalCart] Identificador (sessionToken):", safeToken);
+        console.log("[GlobalCart] Quantidade de lojas locais:", localGroups.length);
+        console.log("[GlobalCart] Quantidade de itens locais:", localGroups.reduce((acc, g) => acc + g.items.length, 0));
+        console.log("[GlobalCart] Identificador válido?", !!sessionToken);
+        // ------------------------------
 
-        for (const group of localGroups) {
-          const subtotal = group.subtotal;
-          const totalItems = group.total_items;
-          const feeAmount = Math.round(subtotal * 0.03 * 100) / 100;
-          const creditsCost = Math.max(Math.ceil(feeAmount), 1);
-          const paymentStatus =
-            params.checkoutMode === "online_payment" ? "pending" : "not_applicable";
+        // O fluxo foi alterado para usar a RPC submit_multi_store_intention
+        // que executa como SECURITY DEFINER e bypassa restrições de RLS.
+        const { data, error } = await supabase.rpc("submit_multi_store_intention", {
+          p_session_token: sessionToken,
+          p_customer_name: params.name,
+          p_customer_whatsapp: params.whatsapp,
+          p_customer_email: params.email || null,
+          p_customer_note: params.note || null,
+          p_checkout_mode: params.checkoutMode,
+          p_visitor_id: params.visitor_id || undefined,
+        });
 
-          // @ts-expect-error - Some schemas might not be fully typed yet
-          const { data: intention, error: piErr } = await supabase.from("purchase_intentions")
-            .insert({
-              cart_id: group.cart_id,
-              store_id: group.store_id,
-              customer_name: params.name,
-              customer_whatsapp: params.whatsapp,
-              customer_email: params.email ?? null,
-              customer_note: params.note ?? null,
-              customer_bairro: params.bairro || "",
-              customer_city: params.city || "",
-              subtotal,
-              total_items: totalItems,
-              status: "new",
-              checkout_mode: params.checkoutMode,
-              payment_status: paymentStatus,
-              source: "marketplace",
-              credits_charged: creditsCost,
-              platform_fee_percent: 3,
-              platform_fee_amount: feeAmount,
-            })
-            .select("id")
-            .single();
-
-          if (piErr || !intention?.id) {
-            console.error("[GlobalCart] insert intention error:", piErr);
-            throw new Error(piErr?.message || "Erro ao registrar intenção para a loja");
-          }
-
-          // Dispara e-mail ao lojista + confirmação ao comprador sem depender do trigger SQL
-          supabase.functions.invoke('swift-action', {
-            body: {
-              source: 'order',
-              store_id: group.store_id,
-              intention_id: intention.id,
-              customer_name: params.name,
-              customer_whatsapp: params.whatsapp,
-              customer_email: params.email ?? null,
-              customer_note: params.note ?? null,
-              subtotal,
-              total_items: totalItems,
-              checkout_mode: params.checkoutMode,
-            },
-          }).catch((e: unknown) => console.warn('[email order]', e));
-
-          const itemsPayload = group.items.map((it) => ({
-            intention_id: intention.id,
-            product_id: it.product_id,
-            product_title: it.product_title || "Produto",
-            product_image_url: it.product_image_url,
-            unit_price: it.product_price || 0,
-            quantity: it.quantity,
-            subtotal: (it.product_price || 0) * it.quantity,
-            customer_note: it.customer_note,
-          }));
-
-          // @ts-expect-error - Some schemas might not be fully typed yet
-          const { error: itErr } = await supabase.from("purchase_intention_items").insert(itemsPayload);
-          if (itErr) console.warn("[GlobalCart] insert items error:", itErr);
-
-          purchaseIntentions.push({
-            store_id: group.store_id,
-            intention_id: intention.id,
-            subtotal,
-            total_items: totalItems,
-          });
-          grandTotal += subtotal;
-          grandItems += totalItems;
+        if (error) {
+          console.error("[GlobalCart] Error submitting multi store cart via RPC:", error);
+          throw new Error(error.message || "Erro ao finalizar pedido (RPC).");
         }
 
-        const result: MultiSubmitResult = {
-          success: true,
-          total_stores: purchaseIntentions.length,
-          total_items: grandItems,
-          grand_total: grandTotal,
-          purchase_intentions: purchaseIntentions,
-        };
-
-        // Post-submit fixes: bairro/city, product data, and credit debit for each intention
-        for (const pi of result.purchase_intentions || []) {
-          try {
-            // Fix intention header with bairro/city
-            // @ts-expect-error - Some schemas might not be fully typed yet
-            await supabase.from("purchase_intentions")
-              .update({
-                customer_bairro: params.bairro || "",
-                customer_city: params.city || "",
-              })
-              .eq("id", pi.intention_id);
-
-            // Fix product data via intention items (find items for this intention)
-            // @ts-expect-error - Some schemas might not be fully typed yet
-            const { data: itemsData } = await supabase.from("purchase_intention_items")
-              .select("*")
-              .eq("intention_id", pi.intention_id);
-            for (const item of itemsData || []) {
-              const localItem = storeGroups
-                .find(g => g.store_id === pi.store_id)
-                ?.items.find(i => i.product_id === item.product_id);
-              if (localItem && (localItem.product_image_url || localItem.product_title || localItem.product_price)) {
-                // @ts-expect-error - Some schemas might not be fully typed yet
-                await supabase.from("purchase_intention_items")
-                  .update({
-                    product_title: localItem.product_title || "Produto",
-                    product_image_url: localItem.product_image_url || null,
-                    unit_price: localItem.product_price || 0,
-                    subtotal: (localItem.product_price || 0) * (localItem.quantity || 1),
-                  })
-                  .eq("id", item.id);
-              }
-            }
-
-            // Cobrança ao lojista por receber a intenção de compra (5cr,
-            // CREDIT_COSTS.visitor_checkout) — feita via RPC segura no banco,
-            // que lê o valor real da regra e debita com trava (sem race condition).
-            // @ts-expect-error - RPC dynamic call
-            await supabase.rpc("consume_purchase_intention_credit", {
-              p_store_id: pi.store_id,
-              p_intention_id: pi.intention_id,
-            });
-          } catch (e) {
-            console.warn(`[GlobalCart] Post-submit fixes failed for intention ${pi.intention_id}:`, e);
-          }
+        if (!data || !data.success) {
+          console.error("[GlobalCart] RPC returned failure:", data);
+          throw new Error(data?.error || "Falha desconhecida ao finalizar pedido (RPC).");
         }
+
+        const result: MultiSubmitResult = data as unknown as MultiSubmitResult;
+
+
 
         return result;
       },

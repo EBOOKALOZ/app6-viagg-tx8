@@ -24,6 +24,7 @@ import { useStorePaymentSettings } from "@/hooks/useStorePaymentSettings";
 import { useVisitorProfile, VisitorProfile } from "@/hooks/useVisitorProfile";
 import { VisitorMiniSignup } from "./VisitorMiniSignup";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Helpers ────────────────────────────
 function normalizeImageUrl(url: string | null | undefined): string | null {
@@ -71,11 +72,13 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
   const [step, setStep] = useState<Step>("cart");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedItems, setSavedItems] = useState<any[]>([]);
   const [checkoutMode, setCheckoutMode] = useState<CheckoutMode>("in_store");
   const { hasDirectPayment, hasInStoreOption, settings } = useStorePaymentSettings(storeId);
   const visitor = useVisitorProfile();
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   // Fetch store info from merchant_stores with profiles fallback
   useEffect(() => {
@@ -134,6 +137,15 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
     if (open && !cart.isSubmitted) setStep("cart");
   }, [open]);
 
+  // Reopen after login
+  useEffect(() => {
+    if (user && localStorage.getItem("viagg_reopen_store_cart") === storeId) {
+      localStorage.removeItem("viagg_reopen_store_cart");
+      onOpenChange(true);
+      setStep("review");
+    }
+  }, [user, storeId, onOpenChange]);
+
   // Show success on submit
   useEffect(() => {
     if (cart.isSubmitted && cart.submitResult?.success) setStep("success");
@@ -160,6 +172,7 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
   const handleFinalSubmit = async () => {
     if (!cart.cartId || isSubmitting) return;
     setIsSubmitting(true);
+    setSavedItems([...cart.items]);
     try {
       await cart.submitIntention(checkoutMode, {
         name: visitor.profile.full_name,
@@ -228,7 +241,14 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
             )}
 
             <button
-              onClick={() => { cart.resetSubmit(); setStep("cart"); onOpenChange(false); navigate("/mercado"); }}
+              onClick={() => {
+                cart.resetSubmit();
+                setStep("cart");
+                onOpenChange(false);
+                if (savedItems.length === 1) {
+                  navigate(`/loja/${storeId}?product=${savedItems[0].product_id}`);
+                }
+              }}
               className="w-full max-w-xs py-3 text-gray-500 font-medium rounded-xl text-sm hover:bg-gray-50 transition-colors"
             >
               Continuar Comprando
@@ -455,11 +475,11 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
 
           {/* Header */}
           <div className="bg-zinc-900 px-5 py-4 shadow-xl">
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center justify-between">
               <button onClick={() => setStep("cart")} className="text-white/40 hover:text-white transition-colors mt-0.5">
                 <ChevronLeft className="h-6 w-6" />
               </button>
-              <div className="flex-1">
+              <div className="flex-1 ml-3">
                 <h2 className="text-white font-black text-lg leading-tight uppercase tracking-tight italic">Seus Dados</h2>
                 <p className="text-emerald-500 font-bold text-[10px] uppercase tracking-widest mb-2">{cart.totalItems} item(ns) • {formatCurrency(cart.subtotal)}</p>
                 {/* Lista de Produtos em verde */}
@@ -472,6 +492,21 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
                   ))}
                 </div>
               </div>
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  if (!user) {
+                    localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+                    localStorage.setItem("viagg_reopen_store_cart", storeId);
+                    navigate("/auth");
+                  } else {
+                    setStep("review");
+                  }
+                }}
+                className="ml-auto w-10 h-10 bg-white/20 hover:bg-white/30 rounded-xl flex items-center justify-center transition-colors"
+              >
+                <CheckCircle className="h-5 w-5 text-white" />
+              </button>
             </div>
           </div>
 
@@ -499,6 +534,26 @@ export function StoreCartDrawer({ open, onOpenChange, storeId, storeName, cart }
                 </div>
               }
             />
+          </div>
+
+          {/* Footer with totals & next step */}
+          <div className="border-t border-gray-200 bg-white p-4 space-y-2.5">
+            <div className="flex justify-between items-center text-lg">
+              <span className="font-bold text-gray-700">Total</span>
+              <span className="font-black text-[#FF6A00]">{formatCurrency(cart.subtotal)}</span>
+            </div>
+            <button onClick={() => {
+              if (!user) {
+                localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+                localStorage.setItem("viagg_reopen_store_cart", storeId);
+                navigate("/auth");
+              } else {
+                setStep("review");
+              }
+            }} className="w-full py-3.5 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-black rounded-xl text-base shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              Continuar para Checkout
+              <ChevronLeft className="h-5 w-5 rotate-180" />
+            </button>
           </div>
         </SheetContent>
       </Sheet>

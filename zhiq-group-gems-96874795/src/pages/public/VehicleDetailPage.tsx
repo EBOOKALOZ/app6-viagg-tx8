@@ -25,6 +25,7 @@ import { cn, formatCurrencyBRL } from '@/lib/utils';
 import { toast } from 'sonner';
 import { getVisitorFingerprint } from '@/lib/cpcTracker';
 import { ContactIntentionModal } from '@/components/listings/ContactIntentionModal';
+import { useAuth } from '@/contexts/AuthContext';
 import { MarketLayout } from "@/components/layout/MarketLayout";
 import { MarketNavButtons } from "@/components/layout/MarketNavButtons";
 import { MarketVehicleCard } from '@/components/advertiser/MarketVehicleCard';
@@ -163,6 +164,8 @@ export const VehicleDetailPage = () => {
     refetchOnWindowFocus: true,
   });
 
+  const { user } = useAuth();
+
   /* ─── Handlers ─── */
   const handleShare = () => {
     if (navigator.share) {
@@ -191,6 +194,12 @@ export const VehicleDetailPage = () => {
   }, [id]);
 
   const handleInterest = () => {
+    if (!user) {
+      localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+      navigate("/auth");
+      return;
+    }
+
     // Tenta descontar 9 créditos pelo botão de interesse da página de detalhes
     try {
       supabase.rpc('charge_vehicle_interest_click' as any, {

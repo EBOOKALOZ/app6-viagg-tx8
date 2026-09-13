@@ -16,8 +16,6 @@ import {
   Twitter
 } from "lucide-react";
 import { z } from "zod";
-import { getRadioState } from "@/lib/radioPlayer";
-import themeMusic from "@/assets/viagg_search_loop.mp3";
 import logoImage from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,8 +106,6 @@ export default function Auth() {
   }, [wantsSignup]);
 
   const isSubmittingRef = useRef(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [musicStarted, setMusicStarted] = useState(false);
 
   useEffect(() => {
     const error = searchParams.get("error");
@@ -140,25 +136,6 @@ export default function Auth() {
     setCooldown(seconds);
   };
 
-  useEffect(() => {
-    audioRef.current = new Audio(themeMusic);
-    audioRef.current.loop = true;
-    audioRef.current.volume = 0.07;
-    return () => {
-      audioRef.current?.pause();
-      audioRef.current = null;
-    };
-  }, []);
-
-  const startMusic = () => {
-    // rádio no ar = áudio prioritário → tema do login não entra por cima
-    if (getRadioState().playing || getRadioState().loading) return;
-    if (!musicStarted && audioRef.current) {
-      audioRef.current.play().catch(() => { });
-      setMusicStarted(true);
-    }
-  };
-
   const handleMagicLink = async () => {
     if (isSubmittingRef.current || authState === "sending") return;
     try {
@@ -168,7 +145,6 @@ export default function Auth() {
       return;
     }
     isSubmittingRef.current = true;
-    startMusic();
     setAuthState("sending");
     setErrorMessage("");
     try {
@@ -269,7 +245,6 @@ export default function Auth() {
 
   const runPasswordAuthRequest = async () => {
     isSubmittingRef.current = true;
-    startMusic();
     setAuthState("sending");
     setErrorMessage("");
     try {
@@ -412,32 +387,6 @@ export default function Auth() {
         )} />
 
         <div className="w-full max-w-[460px] relative z-10">
-          {/* Debug: native audio player + manual play button */}
-          <div className="mb-4 p-3 border border-yellow-500/40 rounded-xl bg-black/60">
-            <p className="text-yellow-400 text-xs font-bold mb-2">🔊 DEBUG AUDIO</p>
-            <audio src={themeMusic} controls className="w-full mb-2" />
-            <Button
-              onClick={() => {
-                console.log('[DEBUG] startMusic clicked');
-                console.log('[DEBUG] radioState:', getRadioState());
-                console.log('[DEBUG] musicStarted:', musicStarted);
-                console.log('[DEBUG] audioRef.current:', audioRef.current);
-                console.log('[DEBUG] themeMusic URL:', themeMusic);
-                // Force play ignoring radio state for debug
-                if (audioRef.current) {
-                  audioRef.current.play()
-                    .then(() => console.log('[DEBUG] ✅ play() succeeded'))
-                    .catch((err) => console.error('[DEBUG] ❌ play() failed:', err));
-                  setMusicStarted(true);
-                } else {
-                  console.error('[DEBUG] ❌ audioRef.current is null');
-                }
-              }}
-              className="w-full bg-[#FF6A00] hover:bg-orange-600 text-white font-black uppercase text-sm px-6 h-10 rounded-lg shadow-lg transition-all"
-            >
-              ▶ FORCE Play Theme Music (Debug)
-            </Button>
-          </div>
           {isAdvertiserMode && (
             <div className="flex flex-col items-center mb-10 animate-in fade-in slide-in-from-top-4 duration-1000">
                <img 

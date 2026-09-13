@@ -8,13 +8,12 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { unlockContact, quoteUnlockContact, centsToBRL } from "@/lib/credits/unlockContact";
+import { useWalletCenter } from "@/hooks/useWalletCenter";
 
 interface PurchaseIntentionCard {
   id: string;
   customer_name: string | null;
   customer_whatsapp: string | null;
-  customer_bairro: string | null;
-  customer_city: string | null;
   subtotal: number | null;
   total_items: number | null;
   status: string | null;
@@ -37,21 +36,9 @@ export default function StoreOrdersPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Saldo da CARTEIRA OFICIAL (pay_* / customer_wallet) — é exatamente a conta
-  // que a wallet_unlock_contact v3 debita (unificação AI-75.3, 2026-07-21).
-  const { data: walletCents = 0 } = useQuery({
-    queryKey: ["wallet-balance", user?.id],
-    enabled: !!user?.id,
-    refetchInterval: 15_000,
-    queryFn: async () => {
-      const { data } = await (supabase.from("pay_financial_accounts" as any)
-        .select("available_balance")
-        .eq("owner_id", user!.id)
-        .eq("account_type", "customer_wallet")
-        .maybeSingle()) as any;
-      return Math.round(Number((data as any)?.available_balance ?? 0) * 100);
-    },
-  });
+  // Saldo da CARTEIRA OFICIAL (unificada)
+  const { totalCents: walletCents, refetch: refetchWallet } = useWalletCenter();
+  
   // NOTA: o custo da liberação NÃO é calculado no front. Ele vem do backend
   // (wallet_unlock_charge_cents → orion_commission_policy: %, piso e teto).
   // Ver o `unlockCosts` abaixo, populado após carregar os pedidos.
@@ -96,7 +83,7 @@ export default function StoreOrdersPage() {
         const availC = Number(res.available_cents ?? walletCents);
         const lackC = Math.max(0, reqC - availC);
         toast.error(
-          `Saldo insuficiente — Disponível: ${centsToBRL(availC)} · Necessário: ${centsToBRL(reqC)} · Faltam: ${centsToBRL(lackC)}`,
+          `Saldo insuficiente. Você precisa de ${centsToBRL(lackC)} para liberar este contato.`,
           { duration: 5000, action: { label: "Adicionar Saldo", onClick: () => navigate("/centro-financeiro") } }
         );
         return;
@@ -107,7 +94,10 @@ export default function StoreOrdersPage() {
     if (res.already_unlocked) toast.success("Comprador já estava liberado.");
     else if ((res.charged_cents ?? 0) > 0) toast.success(`Comprador liberado! ${centsToBRL(res.charged_cents)} debitados — Saldo: ${centsToBRL(res.balance_cents)}`);
     else toast.success("Comprador liberado!");
-    queryClient.invalidateQueries({ queryKey: ["wallet-balance", user?.id] });
+    
+    // Atualiza saldo localmente e refaz a query
+    refetchWallet();
+    queryClient.invalidateQueries({ queryKey: ["store-orders", user?.id] });
 
     // Abre o WhatsApp do comprador
     const clean = String(pi.customer_whatsapp).replace(/\D/g, "").replace(/^55/, "");
@@ -122,10 +112,10 @@ export default function StoreOrdersPage() {
     if (!window.confirm("Excluir este pedido definitivamente? Esta ação não pode ser desfeita.")) return;
     setDeletingId(pi.id);
     try {
-      // Remove os itens primeiro (FK), depois a intenção de compra.
-      await (supabase.from("purchase_intention_items") as any).delete().eq("intention_id", pi.id);
-      const { error } = await (supabase.from("purchase_intentions") as any).delete().eq("id", pi.id);
+      // Exclusão lógica: Marca como 'cancelled' via RPC blindada no backend.
+      const { data: success, error } = await supabase.rpc("cancel_merchant_cesta_order", { p_order_id: pi.id });
       if (error) throw error;
+      if (!success) throw new Error("Acesso negado ou pedido não encontrado");
       toast.success("Pedido excluído.");
       queryClient.invalidateQueries({ queryKey: ["store-orders", user?.id] });
     } catch (err: any) {
@@ -141,15 +131,13 @@ export default function StoreOrdersPage() {
     refetchInterval: 15_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      // A política RLS "pi_select_store_owner" filtra automaticamente por ownership
-      // (ms.user_id = auth.uid()), sem precisar passar store_id explicitamente.
-      // Isso garante que o lojista veja pedidos de TODAS as suas lojas.
-      const { data: pis } = await (supabase.from("purchase_intentions") as any)
-        .select("id, customer_name, customer_whatsapp, customer_bairro, customer_city, subtotal, total_items, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(100);
+      // Usa a RPC oficial que bypassa eventuais problemas de RLS no frontend
+      // e cruza a identidade do lojista no backend com total segurança.
+      const { data: pis } = await supabase.rpc("get_merchant_cesta_orders");
 
-      const list = (pis || []) as any[];
+      // Filtra os cancelados no frontend (a badge na sidebar já os exclui no backend).
+      const list = ((pis || []) as any[]).filter(p => p.status !== "cancelled");
+
       if (list.length === 0) return [];
       const ids = list.map((p) => p.id);
       const { data: items } = await (supabase.from("purchase_intention_items") as any)
@@ -187,9 +175,32 @@ export default function StoreOrdersPage() {
       return out;
     },
   });
+
+  // Query para verificar quais pedidos já foram desbloqueados
+  const { data: unlockedSet = new Set<string>() } = useQuery({
+    queryKey: ["unlocked-contacts", orderIds],
+    enabled: (orders as PurchaseIntentionCard[]).length > 0,
+    queryFn: async () => {
+      // Tentamos buscar na tabela de charges oficial. Se falhar por RLS, cai no fallback.
+      const { data, error } = await supabase
+        .from("orion_marketplace_contact_charges")
+        .select("listing_id")
+        .eq("listing_module", "product")
+        .in("listing_id", (orders as PurchaseIntentionCard[]).map((o) => o.id));
+      
+      const set = new Set<string>();
+      if (!error && data) {
+        data.forEach((d) => set.add(d.listing_id));
+      }
+      return set;
+    },
+  });
+
   // custo do pedido pelo backend (0 = ainda carregando a cotação; nunca calcula)
   const costOf = (pi: PurchaseIntentionCard): number | null =>
     Object.prototype.hasOwnProperty.call(unlockCosts, pi.id) ? unlockCosts[pi.id] : null;
+
+  const isUnlocked = (pi: PurchaseIntentionCard) => unlockedSet.has(pi.id);
 
   const hiddenCount = (orders as PurchaseIntentionCard[]).filter((o) => hiddenIds.includes(o.id)).length;
   const visibleOrders = (orders as PurchaseIntentionCard[]).filter((o) => showHidden || !hiddenIds.includes(o.id));
@@ -207,7 +218,7 @@ export default function StoreOrdersPage() {
 
         <h1 className="text-2xl font-bold flex items-center gap-2 text-[#F5F7FA]">
           <PackageSearch className="text-[#FF6A00]" />
-          Pedidos
+          PEDIDOS DA CESTA
           <span className="ml-2 text-sm font-bold text-[#A7B0BE] bg-[#1B1F24] border border-[#2A3038] px-3 py-1 rounded-full">
             {orders.length}
           </span>
@@ -286,21 +297,11 @@ export default function StoreOrdersPage() {
                   const ddd = digits.slice(-11, -9) || "**";
                   return `(${ddd}) *****-****`;
                 };
-                const maskLocation = (b: string | null, c: string | null) => {
-                  const m = (s: string | null) => s ? s[0].toUpperCase() + "***" : null;
-                  return [m(b), m(c)].filter(Boolean).join(", ");
-                };
                 return (
                   <div className="space-y-1 text-sm text-yellow-900">
                     <p className="flex items-center gap-1.5 font-bold"><User className="w-3.5 h-3.5" /> {maskName(pi.customer_name)}</p>
                     {pi.customer_whatsapp && (
                       <p className="flex items-center gap-1.5 text-xs"><Phone className="w-3.5 h-3.5" /> {maskPhone(pi.customer_whatsapp)}</p>
-                    )}
-                    {(pi.customer_bairro || pi.customer_city) && (
-                      <p className="flex items-center gap-1.5 text-xs">
-                        <MapPin className="w-3.5 h-3.5" />
-                        {maskLocation(pi.customer_bairro, pi.customer_city)}
-                      </p>
                     )}
                   </div>
                 );
@@ -361,11 +362,11 @@ export default function StoreOrdersPage() {
                 return (
                   <div className={cn("rounded-xl border p-3 space-y-1.5", T.box)}>
                     <Row label="Valor do pedido" value={fmtBRL(pi.subtotal)} />
-                    <Row label="Comissão para liberar contato" value={quoting ? "—" : centsToBRL(cost)} />
+                    <Row label="Custo para liberar contato" value={quoting ? "—" : centsToBRL(cost)} />
                     <div className="h-px bg-black/5 my-1" />
-                    <Row label="Saldo disponível" value={centsToBRL(walletCents)} />
+                    <Row label="Saldo da carteira" value={centsToBRL(walletCents)} />
                     {enough ? (
-                      <Row label="Saldo após liberação" value={centsToBRL(afterCents)} strong />
+                      <Row label="Após liberar" value={centsToBRL(afterCents)} strong />
                     ) : !quoting ? (
                       <>
                         <Row label="Necessário" value={centsToBRL(cost)} />
@@ -386,6 +387,28 @@ export default function StoreOrdersPage() {
 
               {/* Botão Liberar Comprador — confirma o débito (valor do backend) antes de liberar */}
               {pi.customer_whatsapp && (() => {
+                const unlocked = isUnlocked(pi);
+                
+                if (unlocked) {
+                  return (
+                    <div className="w-full flex flex-col gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <div className="flex items-center justify-center gap-2 text-emerald-700 font-black uppercase text-[11px] tracking-widest">
+                        <MessageSquare className="w-4 h-4" /> CONTATO LIBERADO
+                      </div>
+                      <Button
+                        onClick={() => {
+                          const clean = String(pi.customer_whatsapp).replace(/\D/g, "").replace(/^55/, "");
+                          const msg = encodeURIComponent(`Olá ${pi.customer_name || ""}! Sobre seu pedido de ${fmtBRL(pi.subtotal)} feito na Viagg-TX8, vamos combinar a entrega?`);
+                          window.open(`https://wa.me/55${clean}?text=${msg}`, "_blank");
+                        }}
+                        className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-lg"
+                      >
+                        <Phone className="w-4 h-4" /> Enviar WhatsApp
+                      </Button>
+                    </div>
+                  );
+                }
+
                 const cost = costOf(pi);
                 const quoting = cost == null;
                 const enough = cost != null && walletCents >= cost;
@@ -393,10 +416,22 @@ export default function StoreOrdersPage() {
                   <Button
                     onClick={() => handleContactBuyer(pi)}
                     disabled={quoting || !enough}
-                    className="w-full h-11 bg-zhiq-teal hover:bg-zhiq-green text-white font-black uppercase text-[11px] tracking-widest gap-2 rounded-xl shadow-lg shadow-emerald-900/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={cn(
+                      "w-full h-12 text-white font-black uppercase text-[11px] tracking-widest flex flex-col items-center justify-center gap-0.5 rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed",
+                      enough 
+                        ? "bg-[#00C853] hover:bg-[#00E676] shadow-green-900/30" 
+                        : "bg-slate-300 text-slate-500 shadow-none"
+                    )}
                   >
-                    <MessageSquare className="w-4 h-4" />
-                    {quoting ? "Calculando…" : enough ? `Liberar comprador (-${centsToBRL(cost)})` : "Saldo insuficiente"}
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      {quoting ? "Calculando…" : enough ? `CHAMAR COMPRADOR — ${centsToBRL(cost)}` : "Saldo insuficiente"}
+                    </div>
+                    {enough && (
+                      <span className="text-[9px] text-white/90 font-bold tracking-normal normal-case">
+                        Negociar o produto
+                      </span>
+                    )}
                   </Button>
                 );
               })()}

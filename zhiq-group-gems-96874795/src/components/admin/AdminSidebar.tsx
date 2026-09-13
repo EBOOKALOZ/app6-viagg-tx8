@@ -397,7 +397,7 @@ export function AdminSidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen w-64 flex-col border-r shrink-0 transition-colors duration-300",
+        "flex h-screen w-72 flex-col border-r shrink-0 transition-colors duration-300",
         isMultiPerfil ? "" : "bg-card"
       )}
       style={isMultiPerfil ? { backgroundColor: "#E8F5E9" } : undefined}
@@ -494,7 +494,7 @@ export function AdminSidebar() {
                       <item.icon className="h-4 w-4 shrink-0" />
                       <span className="truncate">{item.title}</span>
                       {item.badge && (
-                        <span className="ml-auto text-[10px] bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 leading-none font-bold">
+                        <span className="ml-auto shrink-0 text-[10px] bg-destructive text-destructive-foreground rounded-full px-1.5 py-0.5 leading-none font-bold whitespace-nowrap">
                           {item.badge}
                         </span>
                       )}

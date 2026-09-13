@@ -83,15 +83,41 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
     onOpenChange(false);
   };
 
+  // Reset step to cart when drawer opens (unless success)
+  useEffect(() => {
+    if (open && step !== "success") setStep("cart");
+  }, [open]);
+
+  // Reopen after login
+  useEffect(() => {
+    if (user && localStorage.getItem("viagg_reopen_global_cart") === "true") {
+      localStorage.removeItem("viagg_reopen_global_cart");
+      onOpenChange(true);
+      setStep("signup"); // Go straight to review step
+    }
+  }, [user, onOpenChange]);
+
    useEffect(() => {
      if (step === "success") {
        const timer = setTimeout(() => {
          handleClose();
-         if (user) navigate("/anunciante/mensagens");
+         
+         const isSingleStore = savedGroups.length === 1;
+         const isSingleProduct = isSingleStore && savedGroups[0].items.length === 1;
+
+         if (isSingleStore && isSingleProduct) {
+           const sId = savedGroups[0].store_id;
+           const pId = savedGroups[0].items[0].product_id;
+           navigate(`/loja/${sId}?product=${pId}`);
+         } else if (isSingleStore) {
+           const sId = savedGroups[0].store_id;
+           navigate(`/loja/${sId}`);
+         }
+         // Se for múltiplas lojas, simplesmente fecha a gaveta e a pessoa continua onde estava.
        }, 2500);
        return () => clearTimeout(timer);
      }
-   }, [step, navigate, activeProfile, user]);
+   }, [step, navigate, savedGroups]);
 
   // ═══ EMPTY STATE ═══
   if (totalItems === 0 && step !== "success" && open) {
@@ -161,7 +187,15 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
                   R$ {totalSubtotal.toFixed(2).replace(".", ",")}
                 </span>
               </div>
-              <button onClick={() => setStep("signup")}
+              <button onClick={() => {
+                if (!user) {
+                  localStorage.setItem("viagg_mini_return_to", window.location.pathname + window.location.search);
+                  localStorage.setItem("viagg_reopen_global_cart", "true");
+                  navigate("/auth");
+                } else {
+                  setStep("signup");
+                }
+              }}
                 className="w-full py-2.5 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2">
                 <Send className="h-4 w-4" />
                 Finalizar Pedido
@@ -233,15 +267,11 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
               </button>
             </div>
 
-            {/* Signup form */}
+            {/* Confirmation form for authenticated users */}
             <div className="px-4 py-4">
-               <VisitorMiniSignup
-                 visitor={visitor}
-                 isSubmitting={globalCart.isSubmitting}
-                 onComplete={async (_profile) => {
-                   await handleSubmit();
-                 }}
-                 cartSummaryNode={
+               <div className="space-y-4">
+                 <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 shadow-sm">
+                   <p className="text-[12px] font-bold text-emerald-900 mb-3">Resumo do Pedido</p>
                    <div className="space-y-2">
                      <p className="text-[11px] font-bold text-emerald-800 flex justify-between">
                        <span>Itens do Pedido ({totalStores} loja{totalStores > 1 ? "s" : ""})</span>
@@ -263,8 +293,17 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
                        <span>R$ {totalSubtotal.toFixed(2).replace(".", ",")}</span>
                      </div>
                    </div>
-                 }
-               />
+                 </div>
+                 
+                 <button 
+                   onClick={handleSubmit}
+                   disabled={globalCart.isSubmitting}
+                   className="w-full py-3.5 bg-emerald-600 text-white font-black rounded-xl text-sm shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                 >
+                   {globalCart.isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
+                   Confirmar Pedido
+                 </button>
+               </div>
             </div>
           </div>
         )}
@@ -327,17 +366,24 @@ export function GlobalCartDrawer({ open, onOpenChange, globalCart }: Props) {
 
             <FormDisclaimerStrip />
 
-            {user ? (
-              <button onClick={() => { handleClose(); navigate("/anunciante/mensagens"); }}
-                className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg">
-                Ver Mensagens
-              </button>
-            ) : (
-              <button onClick={handleClose}
-                className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg">
-                Continuar Comprando
-              </button>
-            )}
+            <button onClick={() => {
+              handleClose();
+              const isSingleStore = savedGroups.length === 1;
+              const isSingleProduct = isSingleStore && savedGroups[0].items.length === 1;
+              if (isSingleStore && isSingleProduct) {
+                const sId = savedGroups[0].store_id;
+                const pId = savedGroups[0].items[0].product_id;
+                navigate(`/loja/${sId}?product=${pId}`);
+              } else if (isSingleStore) {
+                const sId = savedGroups[0].store_id;
+                navigate(`/loja/${sId}`);
+              } else {
+                navigate("/mercado");
+              }
+            }}
+              className="w-full py-4 bg-gradient-to-r from-[#FF6A00] to-[#FF8C00] text-white font-bold rounded-xl text-base shadow-lg hover:shadow-xl transition-all">
+              Continuar Comprando
+            </button>
           </div>
         )}
         <FooterNeutral label="🛒 Cesta de Compras" />

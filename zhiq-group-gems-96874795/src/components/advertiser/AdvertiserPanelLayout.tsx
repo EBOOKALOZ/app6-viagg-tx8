@@ -38,8 +38,9 @@ import { useContactIntentions } from "@/hooks/useContactIntentions";
 import { FloatingMessageButton } from "./FloatingMessageButton";
 import { FooterProfile } from "@/components/FooterProfile";
 import { FooterNeutral } from "@/components/FooterNeutral";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AdvertiserPanelLayoutProps {
   children: React.ReactNode;
@@ -49,6 +50,43 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   const { user, signOut, activeProfile, availableProfiles, avatarUrl } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  // NOVO: Realtime subscription para atualizar o contador de pedidos (Cesta) instantaneamente
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`cesta_notifications_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "user_notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newData = payload.new as any;
+          // Verifica se a notificação é referente a uma nova intenção de compra da Cesta
+          if (newData && newData.type === "purchase_intention") {
+            toast.success("Você recebeu um novo pedido na Cesta!", {
+              duration: 10000,
+            });
+            // Invalida os caches do contador no menu e da lista de pedidos na página
+            queryClient.invalidateQueries({ queryKey: ["advertiser-cesta-count"] });
+            queryClient.invalidateQueries({ queryKey: ["bottom-nav-pending-orders"] });
+            queryClient.invalidateQueries({ queryKey: ["store-orders"] });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Trava a rolagem do fundo enquanto o menu mobile está aberto (evita scroll duplo)
@@ -81,27 +119,20 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
   }).length;
 
   const { data: marketplaceCount = 0 } = useQuery({
-    queryKey: ["advertiser-marketplace-messages-count", user?.id],
+    queryKey: ["advertiser-cesta-count", user?.id],
     enabled: !!user?.id,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
     queryFn: async () => {
-      const { data: stores } = await (supabase.from("merchant_stores") as any)
-        .select("id")
-        .eq("user_id", user!.id);
-      const storeIds = (stores || []).map((s: any) => s.id);
-      if (storeIds.length === 0) return 0;
-      const { count } = await (supabase.from("purchase_intentions") as any)
-        .select("id", { count: "exact", head: true })
-        .in("store_id", storeIds)
-        .eq("status", "new");
-      return count || 0;
+      // Usa a RPC oficial para evitar falhas de RLS silenciosas no frontend
+      const { data, error } = await supabase.rpc("get_merchant_cesta_orders_count");
+      
+      console.log("CESTA COUNT DEBUG:", { data, error });
+      return (data as number) || 0;
     },
   });
 
   // Mensagens agora conta SÓ leads (Pedidos e Ofertas têm badges próprios)
   const totalMessagesCount = pendingLeadCount;
-  void marketplaceCount;
-
   // Contagem de OFERTAS pendentes (discount_requests)
   const { data: pendingOffersCount = 0 } = useQuery({
     queryKey: ["sidebar-pending-offers", user?.id],
@@ -122,19 +153,6 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     },
   });
 
-  // Contagem de PEDIDOS novos — RLS "pi_select_store_owner" filtra por ownership
-  // automaticamente; não precisa buscar store_id manualmente.
-  const { data: pendingOrdersCount = 0 } = useQuery({
-    queryKey: ["sidebar-pending-orders", user?.id],
-    enabled: !!user?.id,
-    refetchInterval: 15_000,
-    queryFn: async () => {
-      const { count } = await (supabase.from("purchase_intentions" as any)
-        .select("id", { count: "exact", head: true })
-        .eq("status", "new")) as any;
-      return count || 0;
-    },
-  });
 
   // Contagem de ARREMATES em aberto (deals pós-arremate não concluídos do vendedor)
   const { data: arrematesCount = 0 } = useQuery({
@@ -263,7 +281,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
     { name: "Mensagens", href: "/anunciante/mensagens", icon: MessageSquare },
     ...(showMerchantOnlyItems ? [
       { name: "Ofertas Recebidas", href: "/anunciante/ofertas-recebidas", icon: Tag },
-      { name: "Pedidos", href: "/anunciante/pedidos", icon: ShoppingBag },
+      { name: "PEDIDOS DA CESTA", href: "/anunciante/pedidos", icon: ShoppingBag },
       { name: "Visitas", href: "/anunciante/visitas", icon: Eye },
       { name: "Entregas e Rotas", href: "/anunciante/entregas", icon: ClipboardList },
     ] : []),
@@ -305,7 +323,7 @@ export function AdvertiserPanelLayout({ children }: AdvertiserPanelLayoutProps) 
           const badge =
             item.name === "Mensagens" ? totalMessagesCount :
             item.name === "Ofertas Recebidas" ? pendingOffersCount :
-            item.name === "Pedidos" ? pendingOrdersCount :
+            item.name === "PEDIDOS DA CESTA" ? marketplaceCount :
             item.name === "Visitas" ? visitsCount :
             item.name === "Arremates" ? arrematesCount :
             0;

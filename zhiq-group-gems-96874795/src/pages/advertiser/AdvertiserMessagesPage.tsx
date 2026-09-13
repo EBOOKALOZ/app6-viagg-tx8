@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import {
   MessageSquare, ArrowLeft, Loader2, Building2, Car, Package,
   User, Phone, MapPin, Clock, Coins, Unlock, Lock, Trash2,
-  Briefcase, Truck, Plane, Search, Star, Activity, Eye, FileText,
+  Briefcase, Truck, Plane, Search, Star, Activity, Eye, FileText, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
